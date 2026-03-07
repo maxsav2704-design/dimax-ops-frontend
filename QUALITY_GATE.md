@@ -29,6 +29,12 @@ For branch `main`, require both checks:
 
 This gives one gate for general web health and one gate for the installer flow that depends on external E2E credentials.
 
+Normal workflow rule:
+
+- merge through PR only
+- wait for both required checks
+- do not use admin bypass for routine changes
+
 ## Local equivalents
 
 General frontend gate:
@@ -49,3 +55,7 @@ Workspace shortcuts:
 .\workspace.cmd test-frontend-gate
 .\workspace.cmd installer-gate
 ```
+
+Merge checklist reference:
+
+- `../PR_MERGE_CHECKLIST.md`
