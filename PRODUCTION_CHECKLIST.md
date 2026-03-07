@@ -48,3 +48,8 @@ After deploy:
 3. open installer workspace
 4. open installer schedule
 5. open one project details page
+
+Release process source of truth:
+
+- `../RELEASE_TEMPLATE.md`
+- `../POST_DEPLOY_SMOKE.md`
