@@ -6,6 +6,7 @@ describe("admin-access policy", () => {
   it("allows ADMIN across admin routes", () => {
     expect(canAccessAdminPath("ADMIN", "/")).toBe(true);
     expect(canAccessAdminPath("ADMIN", "/projects")).toBe(true);
+    expect(canAccessAdminPath("ADMIN", "/operations")).toBe(true);
     expect(canAccessAdminPath("ADMIN", "/settings")).toBe(true);
   });
 
@@ -16,6 +17,7 @@ describe("admin-access policy", () => {
 
   it("blocks INSTALLER from admin routes", () => {
     expect(canAccessAdminPath("INSTALLER", "/")).toBe(false);
+    expect(canAccessAdminPath("INSTALLER", "/operations")).toBe(false);
     expect(canAccessAdminPath("INSTALLER", "/reports")).toBe(false);
     expect(canAccessAdminPath("INSTALLER", "/projects/abc")).toBe(false);
   });

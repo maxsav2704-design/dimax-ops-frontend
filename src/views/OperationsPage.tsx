@@ -1,0 +1,374 @@
+"use client";
+
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { RefreshCcw, ServerCrash, ShieldAlert, Siren, TimerReset } from "lucide-react";
+
+import { DashboardLayout } from "@/components/DashboardLayout";
+import { apiFetch } from "@/lib/api";
+
+type SyncHealthSummaryResponse = {
+  max_cursor: number;
+  counts: {
+    ok: number;
+    warn: number;
+    danger: number;
+    total: number;
+    dead: number;
+    never_seen: number;
+    danger_pct: number;
+  };
+  alerts_sent: number;
+  top_laggers: Array<{
+    installer_id: string;
+    status: string;
+    lag: number;
+    days_offline: number;
+    last_seen_at: string | null;
+  }>;
+  top_offline: Array<{
+    installer_id: string;
+    status: string;
+    lag: number;
+    days_offline: number;
+    last_seen_at: string | null;
+  }>;
+};
+
+type OutboxSummaryResponse = {
+  total: number;
+  by_channel: Record<string, number>;
+  by_status: Record<string, number>;
+  by_delivery_status: Record<string, number>;
+  pending_overdue_15m: number;
+  failed_total: number;
+};
+
+type OutboxListResponse = {
+  items: Array<{
+    id: string;
+    channel: string;
+    recipient: string | null;
+    subject: string | null;
+    status: string;
+    delivery_status: string;
+    attempts: number;
+    max_attempts: number;
+    scheduled_at: string;
+    created_at: string;
+    last_error: string | null;
+  }>;
+};
+
+type FailedImportRunsQueueResponse = {
+  items: Array<{
+    run_id: string;
+    project_id: string;
+    project_name: string;
+    created_at: string;
+    mode: string;
+    status: string;
+    source_filename: string | null;
+    parsed_rows: number;
+    prepared_rows: number;
+    imported: number;
+    skipped: number;
+    errors_count: number;
+    last_error: string | null;
+    retry_available: boolean;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+function formatDateTime(value: string | null): string {
+  if (!value) {
+    return "Never";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString();
+}
+
+function compactMap(value: Record<string, number>): string {
+  const entries = Object.entries(value);
+  if (entries.length === 0) {
+    return "n/a";
+  }
+  return entries.map(([key, count]) => `${key}: ${count}`).join(" | ");
+}
+
+export default function OperationsPage() {
+  const syncQuery = useQuery({
+    queryKey: ["operations-sync-health"],
+    queryFn: () => apiFetch<SyncHealthSummaryResponse>("/api/v1/admin/sync/health/summary"),
+    refetchInterval: 30_000,
+  });
+
+  const outboxSummaryQuery = useQuery({
+    queryKey: ["operations-outbox-summary"],
+    queryFn: () => apiFetch<OutboxSummaryResponse>("/api/v1/admin/outbox/summary"),
+    refetchInterval: 30_000,
+  });
+
+  const outboxFailedQuery = useQuery({
+    queryKey: ["operations-outbox-failed"],
+    queryFn: () =>
+      apiFetch<OutboxListResponse>("/api/v1/admin/outbox?status=FAILED&limit=8"),
+    refetchInterval: 30_000,
+  });
+
+  const failedImportsQuery = useQuery({
+    queryKey: ["operations-failed-imports"],
+    queryFn: () =>
+      apiFetch<FailedImportRunsQueueResponse>(
+        "/api/v1/admin/projects/import-runs/failed-queue?limit=8&offset=0"
+      ),
+    refetchInterval: 30_000,
+  });
+
+  const isRefreshing =
+    syncQuery.isFetching ||
+    outboxSummaryQuery.isFetching ||
+    outboxFailedQuery.isFetching ||
+    failedImportsQuery.isFetching;
+
+  const hasError =
+    syncQuery.isError ||
+    outboxSummaryQuery.isError ||
+    outboxFailedQuery.isError ||
+    failedImportsQuery.isError;
+
+  const sync = syncQuery.data;
+  const outboxSummary = outboxSummaryQuery.data;
+  const failedOutbox = outboxFailedQuery.data?.items || [];
+  const failedImports = failedImportsQuery.data?.items || [];
+
+  const cards = useMemo(
+    () => [
+      {
+        label: "Sync danger",
+        value: sync?.counts.danger ?? 0,
+        note: sync
+          ? `${sync.counts.danger_pct.toFixed(1)}% of ${sync.counts.total} installers`
+          : "Sync health pending",
+        icon: ShieldAlert,
+      },
+      {
+        label: "Failed imports",
+        value: failedImportsQuery.data?.total ?? 0,
+        note: failedImports.length > 0 ? failedImports[0]?.project_name : "No failed imports",
+        icon: ServerCrash,
+      },
+      {
+        label: "Failed outbox",
+        value: outboxSummary?.failed_total ?? 0,
+        note: outboxSummary ? compactMap(outboxSummary.by_channel) : "No outbox data",
+        icon: Siren,
+      },
+      {
+        label: "Pending > 15m",
+        value: outboxSummary?.pending_overdue_15m ?? 0,
+        note: outboxSummary ? compactMap(outboxSummary.by_delivery_status) : "No queue data",
+        icon: TimerReset,
+      },
+    ],
+    [failedImports.length, failedImportsQuery.data?.total, outboxSummary, sync]
+  );
+
+  async function refetchAll() {
+    await Promise.all([
+      syncQuery.refetch(),
+      outboxSummaryQuery.refetch(),
+      outboxFailedQuery.refetch(),
+      failedImportsQuery.refetch(),
+    ]);
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="p-6 lg:p-8 max-w-[1400px] space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              Operations Center
+            </h1>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
+              Import failures, outbox delivery problems, and installer sync health.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              void refetchAll();
+            }}
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isRefreshing}
+          >
+            <RefreshCcw className="h-4 w-4" />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
+
+        {hasError && (
+          <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
+            Failed to load operations data. Check API availability and admin permissions.
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {cards.map((card) => (
+            <div key={card.label} className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm text-muted-foreground">{card.label}</div>
+                <card.icon className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="mt-2 text-2xl font-semibold">{card.value}</div>
+              <div className="mt-2 text-xs text-muted-foreground">{card.note}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+          <section className="rounded-xl border border-border bg-card">
+            <div className="border-b border-border px-4 py-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Failed Import Queue
+              </h2>
+            </div>
+            <div className="space-y-0">
+              {failedImportsQuery.isLoading && (
+                <div className="px-4 py-6 text-[13px] text-muted-foreground">
+                  Loading failed imports...
+                </div>
+              )}
+              {!failedImportsQuery.isLoading && failedImports.length === 0 && (
+                <div className="px-4 py-6 text-[13px] text-muted-foreground">
+                  No failed import runs.
+                </div>
+              )}
+              {failedImports.map((item) => (
+                <div
+                  key={item.run_id}
+                  className="border-t border-border/70 px-4 py-3 text-[13px]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-medium text-card-foreground">{item.project_name}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {item.mode} | {item.source_filename || "No file"} | {formatDateTime(item.created_at)}
+                      </div>
+                    </div>
+                    <span className="rounded-md border border-border px-2 py-1 text-[11px]">
+                      {item.status}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    rows {item.parsed_rows} / prepared {item.prepared_rows} / imported {item.imported}
+                    {" | "}errors {item.errors_count}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {item.last_error || "No error payload"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-border bg-card">
+            <div className="border-b border-border px-4 py-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Failed Outbox
+              </h2>
+            </div>
+            <div className="space-y-0">
+              {outboxFailedQuery.isLoading && (
+                <div className="px-4 py-6 text-[13px] text-muted-foreground">
+                  Loading outbox failures...
+                </div>
+              )}
+              {!outboxFailedQuery.isLoading && failedOutbox.length === 0 && (
+                <div className="px-4 py-6 text-[13px] text-muted-foreground">
+                  No failed outbox messages.
+                </div>
+              )}
+              {failedOutbox.map((item) => (
+                <div key={item.id} className="border-t border-border/70 px-4 py-3 text-[13px]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-medium text-card-foreground">
+                        {item.recipient || item.subject || item.channel}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {item.channel} | {item.delivery_status} | scheduled {formatDateTime(item.scheduled_at)}
+                      </div>
+                    </div>
+                    <span className="rounded-md border border-border px-2 py-1 text-[11px]">
+                      {item.attempts}/{item.max_attempts}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {item.last_error || "No error payload"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-border bg-card">
+            <div className="border-b border-border px-4 py-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Sync Health
+              </h2>
+            </div>
+            <div className="space-y-0">
+              {syncQuery.isLoading && (
+                <div className="px-4 py-6 text-[13px] text-muted-foreground">
+                  Loading sync health...
+                </div>
+              )}
+              {!syncQuery.isLoading && !sync && (
+                <div className="px-4 py-6 text-[13px] text-muted-foreground">
+                  No sync health data.
+                </div>
+              )}
+              {sync && (
+                <>
+                  <div className="px-4 py-3 text-[13px]">
+                    <div className="font-medium text-card-foreground">
+                      ok {sync.counts.ok} | warn {sync.counts.warn} | danger {sync.counts.danger}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      dead {sync.counts.dead} | never seen {sync.counts.never_seen} | alerts sent{" "}
+                      {sync.alerts_sent}
+                    </div>
+                  </div>
+                  {(sync.top_laggers.length ? sync.top_laggers : sync.top_offline).map((item) => (
+                    <div
+                      key={`${item.installer_id}-${item.status}`}
+                      className="border-t border-border/70 px-4 py-3 text-[13px]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="font-medium text-card-foreground">{item.installer_id}</div>
+                        <span className="rounded-md border border-border px-2 py-1 text-[11px]">
+                          {item.status}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        lag {item.lag} | offline {item.days_offline} days | last seen{" "}
+                        {formatDateTime(item.last_seen_at)}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+}

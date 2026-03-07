@@ -11,6 +11,7 @@ import {
   DoorOpen,
   MessageSquare,
   BarChart3,
+  ActivitySquare,
   Settings,
   HelpCircle,
 } from "lucide-react";
@@ -29,6 +30,7 @@ const navItems = [
   { title: "Door Types", path: "/door-types", icon: DoorOpen },
   { title: "Reasons", path: "/reasons", icon: MessageSquare },
   { title: "Reports", path: "/reports", icon: BarChart3 },
+  { title: "Operations", path: "/operations", icon: ActivitySquare },
   { title: "Settings", path: "/settings", icon: Settings },
 ];
 
