@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const COMPANY_ID =
-  process.env.E2E_COMPANY_ID || "1f16d537-5617-4c4b-a944-dafba2bcead9";
+const COMPANY_ID = process.env.E2E_COMPANY_ID || "";
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "admin@dimax.dev";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "admin12345";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
@@ -128,6 +127,30 @@ test.describe.serial("Admin web smoke", () => {
       await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible();
       await expect(page.getByText("Project Plan vs Fact", { exact: true })).toBeVisible();
       await expect(page.getByText("Risk Concentration", { exact: true })).toBeVisible();
+    });
+
+    await test.step("Operations center opens", async () => {
+      await page.goto("/operations");
+      await expect(page.getByRole("heading", { name: "Operations Center" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Refresh" })).toBeVisible();
+      await expect(page.getByText("Failed Import Queue", { exact: true })).toBeVisible();
+      await expect(page.getByText("Failed Outbox", { exact: true })).toBeVisible();
+      await expect(page.getByText("Sync Health", { exact: true })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Open import workspace" })).toHaveAttribute(
+        "href",
+        /\/projects\?only_failed_runs=1/
+      );
+      await expect(page.getByRole("link", { name: "Open delivery reports" })).toHaveAttribute(
+        "href",
+        "/reports"
+      );
+      await expect(
+        page.getByRole("link", { name: "Open communication queue" })
+      ).toHaveAttribute("href", "/journal");
+      await expect(page.getByRole("link", { name: "Open installer board" })).toHaveAttribute(
+        "href",
+        "/installers"
+      );
     });
   });
 });

@@ -27,7 +27,8 @@
     "test:e2e:installer:strict": "node scripts/installer-e2e-strict.mjs",
     "test:e2e:installer:strict:local": "node scripts/installer-e2e-strict.mjs --env-path .env.e2e.local",
     "test:e2e:headed": "npm run build && node ./node_modules/@playwright/test/cli.js test --headed",
-    "test:e2e:smoke": "npm run build && node ./node_modules/@playwright/test/cli.js test e2e/smoke.spec.ts"
+    "test:e2e:smoke": "npm run build && node ./node_modules/@playwright/test/cli.js test e2e/smoke.spec.ts",
+    "test:e2e:smoke:local": "node scripts/admin-e2e-smoke.mjs --env-path .env.e2e.local"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
