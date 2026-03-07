@@ -542,6 +542,36 @@ export default function InstallerWorkspacePage() {
                 >
                   Open schedule
                 </Link>
+                <Link
+                  href={`/installer/calendar?preset=today&project_id=${project.id}`}
+                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                >
+                  Today on project
+                </Link>
+                <Link
+                  href={`/installer/projects/${project.id}#project-doors`}
+                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                >
+                  Priority doors
+                </Link>
+                {project.status === "PROBLEM" && (
+                  <Link
+                    href={`/installer/projects/${project.id}#project-open-issues`}
+                    className="inline-flex items-center rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs transition-colors hover:bg-amber-500/20"
+                  >
+                    Open issues
+                  </Link>
+                )}
+                {project.waze_url && (
+                  <a
+                    href={project.waze_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                  >
+                    Open Waze
+                  </a>
+                )}
               </div>
             </div>
           ))}

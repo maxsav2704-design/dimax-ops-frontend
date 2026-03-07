@@ -39,7 +39,7 @@ describe("InstallerWorkspacePage", () => {
               name: "Ashdod Towers",
               address: "Harbor 11",
               status: "IN_PROGRESS",
-              waze_url: null,
+              waze_url: "https://waze.example/project-1",
             },
           ],
         };
@@ -93,6 +93,18 @@ describe("InstallerWorkspacePage", () => {
 
     const scheduleLink = screen.getByRole("link", { name: "Open schedule" });
     expect(scheduleLink).toHaveAttribute("href", "/installer/calendar?project_id=project-1");
+    expect(screen.getByRole("link", { name: "Today on project" })).toHaveAttribute(
+      "href",
+      "/installer/calendar?preset=today&project_id=project-1"
+    );
+    expect(screen.getByRole("link", { name: "Priority doors" })).toHaveAttribute(
+      "href",
+      "/installer/projects/project-1#project-doors"
+    );
+    expect(screen.getByRole("link", { name: "Open Waze" })).toHaveAttribute(
+      "href",
+      "https://waze.example/project-1"
+    );
 
     expect(screen.getByTestId("installer-tasks-today")).toHaveTextContent("3");
     expect(screen.getByTestId("installer-tasks-overdue")).toHaveTextContent("1");
@@ -201,6 +213,10 @@ describe("InstallerWorkspacePage", () => {
     expect(screen.getByRole("link", { name: "Open priority Haifa Port" })).toHaveAttribute(
       "href",
       "/installer/projects/project-2"
+    );
+    expect(screen.getByRole("link", { name: "Open issues" })).toHaveAttribute(
+      "href",
+      "/installer/projects/project-2#project-open-issues"
     );
   });
 
