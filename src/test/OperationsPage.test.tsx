@@ -128,6 +128,10 @@ describe("OperationsPage", () => {
     expect(screen.getByText("Failed imports")).toBeInTheDocument();
     expect(screen.getByText("Failed outbox")).toBeInTheDocument();
     expect(screen.getByText("Pending > 15m")).toBeInTheDocument();
+    expect(screen.getByText("Action Summary")).toBeInTheDocument();
+    expect(screen.getByText("Retry failed import for Ashdod Towers")).toBeInTheDocument();
+    expect(screen.getByText("Recover delivery for ops@dimax.test")).toBeInTheDocument();
+    expect(screen.getByText("Investigate installer installer-2")).toBeInTheDocument();
 
     expect(screen.getAllByText("Ashdod Towers")).toHaveLength(2);
     expect(screen.getByText("Unknown door type")).toBeInTheDocument();
@@ -481,9 +485,62 @@ describe("OperationsPage", () => {
     expect(screen.queryByText("installer-3")).not.toBeInTheDocument();
     expect(screen.getAllByText("Ashdod Towers").length).toBeGreaterThan(0);
     expect(screen.getByText("installer-2")).toBeInTheDocument();
+    expect(screen.getByText("actionable mode")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open import workspace" })).toHaveAttribute(
       "href",
       "/projects?only_failed_runs=1&failed_project_ids=project-1"
     );
   }, 10000);
+
+  it("shows calm summary when there are no actionable items", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/sync/health/summary") {
+        return {
+          max_cursor: 4,
+          counts: {
+            ok: 4,
+            warn: 0,
+            danger: 0,
+            total: 4,
+            dead: 0,
+            never_seen: 0,
+            danger_pct: 0,
+          },
+          alerts_sent: 0,
+          top_laggers: [
+            {
+              installer_id: "installer-1",
+              status: "ok",
+              lag: 0,
+              days_offline: 0,
+              last_seen_at: "2026-03-07T08:00:00Z",
+            },
+          ],
+          top_offline: [],
+        };
+      }
+      if (path === "/api/v1/admin/outbox/summary") {
+        return {
+          total: 0,
+          by_channel: {},
+          by_status: {},
+          by_delivery_status: {},
+          pending_overdue_15m: 0,
+          failed_total: 0,
+        };
+      }
+      if (path === "/api/v1/admin/outbox?status=FAILED&limit=8") {
+        return { items: [] };
+      }
+      if (path === "/api/v1/admin/projects/import-runs/failed-queue?limit=8&offset=0") {
+        return { items: [], total: 0, limit: 8, offset: 0 };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    renderSubject();
+
+    expect(await screen.findByText("Operations Center")).toBeInTheDocument();
+    expect(screen.getByText("No active operational actions right now")).toBeInTheDocument();
+  });
 });

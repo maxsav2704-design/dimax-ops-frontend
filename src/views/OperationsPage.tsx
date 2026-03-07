@@ -116,6 +116,60 @@ function buildProjectsImportHref(projectId: string | null, failedProjectIds: str
   return `/projects?${params.toString()}`;
 }
 
+function summarizeActions(params: {
+  actionableImports: number;
+  actionableOutbox: number;
+  actionableSync: number;
+  firstImportProjectName: string | null;
+  firstOutboxRecipient: string | null;
+  firstSyncInstallerId: string | null;
+}): Array<{ label: string; value: string; href: string }> {
+  const items: Array<{ label: string; value: string; href: string }> = [];
+
+  if (params.actionableImports > 0) {
+    items.push({
+      label: "Imports",
+      value:
+        params.actionableImports === 1 && params.firstImportProjectName
+          ? `Retry failed import for ${params.firstImportProjectName}`
+          : `${params.actionableImports} failed imports need retry`,
+      href: "/projects?only_failed_runs=1",
+    });
+  }
+
+  if (params.actionableOutbox > 0) {
+    items.push({
+      label: "Outbox",
+      value:
+        params.actionableOutbox === 1 && params.firstOutboxRecipient
+          ? `Recover delivery for ${params.firstOutboxRecipient}`
+          : `${params.actionableOutbox} delivery failures need retry`,
+      href: "/reports",
+    });
+  }
+
+  if (params.actionableSync > 0) {
+    items.push({
+      label: "Sync",
+      value:
+        params.actionableSync === 1 && params.firstSyncInstallerId
+          ? `Investigate installer ${params.firstSyncInstallerId}`
+          : `${params.actionableSync} installers need sync attention`,
+      href: "/installers",
+    });
+  }
+
+  if (items.length === 0) {
+    items.push({
+      label: "Status",
+      value: "No active operational actions right now",
+      href: "/operations",
+    });
+  }
+
+  return items;
+}
+
 export default function OperationsPage() {
   const userRole = useUserRole();
   const canRunPrivilegedActions = canRunPrivilegedAdminActions(userRole);
@@ -190,6 +244,22 @@ export default function OperationsPage() {
   const visibleFailedImports = onlyActionable ? actionableFailedImports : failedImports;
   const visibleFailedOutbox = onlyActionable ? actionableFailedOutbox : failedOutbox;
   const visibleSyncItems = onlyActionable ? actionableSyncItems : syncItems;
+  const actionSummary = useMemo(
+    () =>
+      summarizeActions({
+        actionableImports: actionableFailedImports.length,
+        actionableOutbox: actionableFailedOutbox.length,
+        actionableSync: actionableSyncItems.length,
+        firstImportProjectName: actionableFailedImports[0]?.project_name || null,
+        firstOutboxRecipient:
+          actionableFailedOutbox[0]?.recipient ||
+          actionableFailedOutbox[0]?.subject ||
+          actionableFailedOutbox[0]?.channel ||
+          null,
+        firstSyncInstallerId: actionableSyncItems[0]?.installer_id || null,
+      }),
+    [actionableFailedImports, actionableFailedOutbox, actionableSyncItems]
+  );
   const failedImportProjectIds = useMemo(
     () => Array.from(new Set(visibleFailedImports.map((item) => item.project_id).filter(Boolean))),
     [visibleFailedImports]
@@ -369,6 +439,38 @@ export default function OperationsPage() {
             </div>
           ))}
         </div>
+
+        <section className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Action Summary
+              </h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Highest-value actions from imports, outbox and sync in one view.
+              </p>
+            </div>
+            {onlyActionable ? (
+              <span className="rounded-md border border-accent/40 px-2 py-1 text-[11px] font-medium text-accent">
+                actionable mode
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {actionSummary.map((item) => (
+              <Link
+                key={`${item.label}-${item.href}`}
+                href={item.href}
+                className="rounded-lg border border-border/70 bg-background/70 px-4 py-3 transition-colors hover:bg-muted"
+              >
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {item.label}
+                </div>
+                <div className="mt-1 text-sm font-medium text-foreground">{item.value}</div>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         <div className="flex flex-wrap gap-2">
           <Link
