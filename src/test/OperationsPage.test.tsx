@@ -137,6 +137,7 @@ describe("OperationsPage", () => {
     expect(screen.getByText("Data Freshness")).toBeInTheDocument();
     expect(screen.getByText("fresh")).toBeInTheDocument();
     expect(screen.getByText(/Fresh as of/)).toBeInTheDocument();
+    expect(screen.queryByText("Last Batch Result")).not.toBeInTheDocument();
     expect(screen.getByText("Retry failed import for Ashdod Towers")).toBeInTheDocument();
     expect(screen.getByText("Recover delivery for ops@dimax.test")).toBeInTheDocument();
     expect(screen.getByText("Investigate installer installer-2")).toBeInTheDocument();
@@ -456,7 +457,17 @@ describe("OperationsPage", () => {
       }
       if (path === "/api/v1/admin/projects/import-runs/retry-failed") {
         return {
-          items: [],
+          items: [
+            {
+              run_id: "run-1",
+              project_id: "project-1",
+              status: "SUCCESS",
+              imported: 10,
+              skipped: 0,
+              errors_count: 0,
+              last_error: null,
+            },
+          ],
           total_runs: 2,
           successful_runs: 2,
           failed_runs: 0,
@@ -487,6 +498,9 @@ describe("OperationsPage", () => {
         screen.getByText("Bulk import retry finished: success 2 | failed 0 | skipped 0.")
       ).toBeInTheDocument();
     });
+    expect(screen.getByText("Last Batch Result")).toBeInTheDocument();
+    expect(screen.getByText("Retry actionable imports over 2 runs")).toBeInTheDocument();
+    expect(screen.getByText("Run run-1")).toBeInTheDocument();
 
     const bulkRetryCall = apiFetchMock.mock.calls.find(
       (call) => call[0] === "/api/v1/admin/projects/import-runs/retry-failed"
@@ -580,7 +594,17 @@ describe("OperationsPage", () => {
       }
       if (path === "/api/v1/admin/projects/import-runs/reconcile-latest") {
         return {
-          items: [],
+          items: [
+            {
+              project_id: "project-1",
+              source_run_id: "run-1",
+              status: "SUCCESS",
+              imported: 10,
+              skipped: 0,
+              errors_count: 0,
+              last_error: null,
+            },
+          ],
           total_projects: 2,
           successful_projects: 1,
           failed_projects: 0,
@@ -606,6 +630,9 @@ describe("OperationsPage", () => {
         screen.getByText("Bulk reconcile finished: success 1 | failed 0 | skipped 1.")
       ).toBeInTheDocument();
     });
+    expect(screen.getByText("Last Batch Result")).toBeInTheDocument();
+    expect(screen.getByText("Reconcile actionable projects over 2 projects")).toBeInTheDocument();
+    expect(screen.getByText("Project project-1")).toBeInTheDocument();
 
     const reconcileCall = apiFetchMock.mock.calls.find(
       (call) => call[0] === "/api/v1/admin/projects/import-runs/reconcile-latest"

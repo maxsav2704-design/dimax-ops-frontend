@@ -127,6 +127,26 @@ type BulkReconcileResponse = {
   skipped_projects: number;
 };
 
+type OperationsBatchResult =
+  | {
+      action: "retry";
+      createdAt: string;
+      successful: number;
+      failed: number;
+      skipped: number;
+      scope: number;
+      items: RetryFailedRunsResponse["items"];
+    }
+  | {
+      action: "reconcile";
+      createdAt: string;
+      successful: number;
+      failed: number;
+      skipped: number;
+      scope: number;
+      items: BulkReconcileResponse["items"];
+    };
+
 function formatDateTime(value: string | null): string {
   if (!value) {
     return "Never";
@@ -239,6 +259,7 @@ export default function OperationsPage() {
   const [busyAction, setBusyAction] = useState("");
   const [onlyActionable, setOnlyActionable] = useState(false);
   const [pendingBatchAction, setPendingBatchAction] = useState<"retry" | "reconcile" | null>(null);
+  const [lastBatchResult, setLastBatchResult] = useState<OperationsBatchResult | null>(null);
   const [actionFeedback, setActionFeedback] = useState<{
     tone: "success" | "error";
     message: string;
@@ -485,6 +506,15 @@ export default function OperationsPage() {
         }
       );
       await refetchAll();
+      setLastBatchResult({
+        action: "retry",
+        createdAt: new Date().toISOString(),
+        successful: response.successful_runs,
+        failed: response.failed_runs,
+        skipped: response.skipped_runs,
+        scope: actionableFailedImports.length,
+        items: response.items || [],
+      });
       setActionFeedback({
         tone: response.failed_runs > 0 ? "error" : "success",
         message:
@@ -520,6 +550,15 @@ export default function OperationsPage() {
         }
       );
       await refetchAll();
+      setLastBatchResult({
+        action: "reconcile",
+        createdAt: new Date().toISOString(),
+        successful: response.successful_projects,
+        failed: response.failed_projects,
+        skipped: response.skipped_projects,
+        scope: actionableImportProjectIds.length,
+        items: response.items || [],
+      });
       setActionFeedback({
         tone: response.failed_projects > 0 ? "error" : "success",
         message:
@@ -733,6 +772,73 @@ export default function OperationsPage() {
             ))}
           </div>
         </section>
+
+        {lastBatchResult ? (
+          <section className="rounded-xl border border-border bg-card p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Last Batch Result
+                </h2>
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  {lastBatchResult.action === "retry"
+                    ? `Retry actionable imports over ${lastBatchResult.scope} runs`
+                    : `Reconcile actionable projects over ${lastBatchResult.scope} projects`}
+                </p>
+              </div>
+              <div className="text-right text-[12px] text-muted-foreground">
+                {formatDateTime(lastBatchResult.createdAt)}
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-4">
+              <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Success</div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{lastBatchResult.successful}</div>
+              </div>
+              <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Failed</div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{lastBatchResult.failed}</div>
+              </div>
+              <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Skipped</div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{lastBatchResult.skipped}</div>
+              </div>
+              <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Scope</div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{lastBatchResult.scope}</div>
+              </div>
+            </div>
+            <div className="mt-4 space-y-2">
+              {lastBatchResult.items.length === 0 ? (
+                <div className="text-[13px] text-muted-foreground">No item details returned.</div>
+              ) : (
+                lastBatchResult.items.slice(0, 5).map((item) => (
+                  <div
+                    key={
+                      lastBatchResult.action === "retry"
+                        ? `retry-${item.run_id}`
+                        : `reconcile-${item.project_id}-${item.source_run_id || "latest"}`
+                    }
+                    className="rounded-lg border border-border/70 bg-background/70 px-4 py-3 text-[13px]"
+                  >
+                    <div className="font-medium text-foreground">
+                      {lastBatchResult.action === "retry"
+                        ? `Run ${item.run_id}`
+                        : `Project ${item.project_id}`}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      status {item.status} | imported {item.imported} | skipped {item.skipped} | errors{" "}
+                      {item.errors_count}
+                    </div>
+                    {"last_error" in item && item.last_error ? (
+                      <div className="mt-1 text-xs text-muted-foreground">{item.last_error}</div>
+                    ) : null}
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        ) : null}
 
         <div className="flex flex-wrap gap-2">
           <Link
