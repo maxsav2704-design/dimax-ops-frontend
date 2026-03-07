@@ -7,6 +7,8 @@ import { RefreshCcw } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
 
+type ProjectQuickFilter = "ALL" | "PROBLEM" | "ACTIVE" | "TODAY_TASKS";
+
 type InstallerProjectListItem = {
   id: string;
   name: string;
@@ -56,6 +58,7 @@ function formatDate(value: string): string {
 
 export default function InstallerWorkspacePage() {
   const [nowIso] = useState(() => new Date().toISOString());
+  const [projectQuickFilter, setProjectQuickFilter] = useState<ProjectQuickFilter>("ALL");
   const [calendarRange] = useState(() => {
     const from = new Date(nowIso);
     const to = new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -131,6 +134,48 @@ export default function InstallerWorkspacePage() {
 
     return { today, overdue, withoutProject };
   }, [nowIso, taskEvents]);
+
+  const todayTaskProjectIds = useMemo(() => {
+    const now = new Date(nowIso);
+    const dayStart = new Date(now);
+    dayStart.setHours(0, 0, 0, 0);
+    const nextDayStart = new Date(dayStart);
+    nextDayStart.setDate(nextDayStart.getDate() + 1);
+
+    return new Set(
+      taskEvents
+        .filter((event) => {
+          const startsAt = new Date(event.starts_at);
+          return startsAt >= dayStart && startsAt < nextDayStart && Boolean(event.project_id);
+        })
+        .map((event) => event.project_id as string)
+    );
+  }, [nowIso, taskEvents]);
+
+  const projectQuickFilterCounts = useMemo(
+    () => ({
+      ALL: projects.length,
+      PROBLEM: projects.filter((project) => project.status === "PROBLEM").length,
+      ACTIVE: projects.filter((project) => project.status !== "DONE").length,
+      TODAY_TASKS: projects.filter((project) => todayTaskProjectIds.has(project.id)).length,
+    }),
+    [projects, todayTaskProjectIds]
+  );
+
+  const filteredProjects = useMemo(() => {
+    return projects.filter((project) => {
+      if (projectQuickFilter === "PROBLEM") {
+        return project.status === "PROBLEM";
+      }
+      if (projectQuickFilter === "ACTIVE") {
+        return project.status !== "DONE";
+      }
+      if (projectQuickFilter === "TODAY_TASKS") {
+        return todayTaskProjectIds.has(project.id);
+      }
+      return true;
+    });
+  }, [projectQuickFilter, projects, todayTaskProjectIds]);
 
   const priorityItems = useMemo(() => {
     const items: PriorityItem[] = [];
@@ -377,8 +422,37 @@ export default function InstallerWorkspacePage() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-5">
-        <section className="space-y-3 lg:col-span-3">
-          <h2 className="text-lg font-semibold">My projects</h2>
+        <section aria-label="My projects list" className="space-y-3 lg:col-span-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">My projects</h2>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["ALL", "All"],
+                  ["PROBLEM", "Only problem"],
+                  ["ACTIVE", "Only active"],
+                  ["TODAY_TASKS", "Has tasks today"],
+                ] as Array<[ProjectQuickFilter, string]>
+              ).map(([value, label]) => {
+                const active = projectQuickFilter === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setProjectQuickFilter(value)}
+                    className={
+                      active
+                        ? "rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground"
+                        : "rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                    }
+                  >
+                    {label} ({projectQuickFilterCounts[value]})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           {projectsQuery.isLoading && (
             <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
               Loading projects...
@@ -389,7 +463,12 @@ export default function InstallerWorkspacePage() {
               No assigned projects yet.
             </div>
           )}
-          {projects.map((project) => (
+          {!projectsQuery.isLoading && projects.length > 0 && filteredProjects.length === 0 && (
+            <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+              No projects for selected filter.
+            </div>
+          )}
+          {filteredProjects.map((project) => (
             <div
               key={project.id}
               className="rounded-xl border border-border bg-card p-4 transition-colors hover:bg-muted/40"
