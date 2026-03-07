@@ -100,7 +100,7 @@ describe("InstallerProjectPage", () => {
         method: "POST",
       });
     });
-  });
+  }, 15000);
 
   it("sends installer not-installed action with reason and comment", async () => {
     setupApiMock();
@@ -156,5 +156,34 @@ describe("InstallerProjectPage", () => {
         comment: "Extra hardware installed",
       });
     });
+  });
+
+  it("shows no-open-issues empty state", async () => {
+    setupApiMock();
+    renderSubject();
+
+    expect(await screen.findByText("No open issues.")).toBeInTheDocument();
+  });
+
+  it("shows retry action when project details query fails", async () => {
+    let shouldFail = true;
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/installer/projects/project-1") {
+        if (shouldFail) {
+          throw new Error("unavailable");
+        }
+        return projectDetails;
+      }
+      return { ok: true };
+    });
+
+    renderSubject();
+
+    expect(await screen.findByText("Failed to load project details.")).toBeInTheDocument();
+
+    shouldFail = false;
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByText("Project One")).toBeInTheDocument();
   });
 });

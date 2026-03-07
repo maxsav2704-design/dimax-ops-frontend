@@ -296,7 +296,8 @@ export default function InstallerSchedulePage() {
                 scheduleExportFilename()
               )
             }
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted"
+            disabled={filteredEvents.length === 0}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
             Export CSV
           </button>
@@ -304,8 +305,15 @@ export default function InstallerSchedulePage() {
       </div>
 
       {eventsQuery.isError && (
-        <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
-          Failed to load installer schedule.
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
+          <span>Failed to load installer schedule.</span>
+          <button
+            type="button"
+            onClick={() => void eventsQuery.refetch()}
+            className="inline-flex items-center rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            Retry
+          </button>
         </div>
       )}
 
@@ -321,8 +329,15 @@ export default function InstallerSchedulePage() {
         </div>
       )}
       {!eventsQuery.isLoading && events.length > 0 && filteredEvents.length === 0 && (
-        <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-          No events match current filters.
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+          <span>No events match current filters.</span>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+          >
+            Reset filters
+          </button>
         </div>
       )}
 

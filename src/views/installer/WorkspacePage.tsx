@@ -124,6 +124,17 @@ export default function InstallerWorkspacePage() {
     return { today, overdue, withoutProject };
   }, [nowIso, taskEvents]);
 
+  const isRefreshing =
+    projectsQuery.isFetching || eventsQuery.isFetching || tasksQuery.isFetching;
+
+  async function refetchWorkspace() {
+    await Promise.all([
+      projectsQuery.refetch(),
+      eventsQuery.refetch(),
+      tasksQuery.refetch(),
+    ]);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -135,20 +146,29 @@ export default function InstallerWorkspacePage() {
         </div>
         <button
           type="button"
+          disabled={isRefreshing}
           onClick={() => {
-            void projectsQuery.refetch();
-            void eventsQuery.refetch();
+            void refetchWorkspace();
           }}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
         >
           <RefreshCcw className="h-4 w-4" />
-          Refresh
+          {isRefreshing ? "Refreshing..." : "Refresh"}
         </button>
       </div>
 
       {(projectsQuery.isError || eventsQuery.isError || tasksQuery.isError) && (
-        <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
-          Failed to load installer workspace. Check API availability and role mapping.
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
+          <span>Failed to load installer workspace. Check API availability and role mapping.</span>
+          <button
+            type="button"
+            onClick={() => {
+              void refetchWorkspace();
+            }}
+            className="inline-flex items-center rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            Retry
+          </button>
         </div>
       )}
 

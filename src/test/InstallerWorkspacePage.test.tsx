@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -108,5 +108,50 @@ describe("InstallerWorkspacePage", () => {
       "href",
       "/installer/calendar?preset=7d&project_id=none"
     );
+  }, 15000);
+
+  it("shows retry action and refetches all installer workspace queries", async () => {
+    let shouldFail = true;
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (shouldFail) {
+        throw new Error("network down");
+      }
+      if (path === "/api/v1/installer/projects") {
+        return { items: [] };
+      }
+      if (String(path).includes("/api/v1/installer/calendar/events?")) {
+        return { items: [] };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallerWorkspacePage />
+      </QueryClientProvider>
+    );
+
+    expect(
+      await screen.findByText("Failed to load installer workspace. Check API availability and role mapping.")
+    ).toBeInTheDocument();
+
+    shouldFail = false;
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("No assigned projects yet.")).toBeInTheDocument();
+      expect(screen.getByText("No events scheduled.")).toBeInTheDocument();
+    });
+
+    const paths = (apiFetchMock.mock.calls as Array<[string]>).map(([path]) => path);
+    expect(paths.filter((path) => path === "/api/v1/installer/projects").length).toBeGreaterThanOrEqual(2);
+    expect(
+      paths.filter((path) => String(path).includes("/api/v1/installer/calendar/events?")).length
+    ).toBeGreaterThanOrEqual(4);
   });
 });

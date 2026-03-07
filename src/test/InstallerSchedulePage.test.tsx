@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -106,9 +106,7 @@ describe("InstallerSchedulePage", () => {
     expect(await screen.findByText("Delivery Project 2")).toBeInTheDocument();
     expect(screen.queryByText("Install Project 1")).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Event type"), {
-      target: { value: "installation" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Overdue only" }));
     expect(await screen.findByText("No events match current filters.")).toBeInTheDocument();
   });
 
@@ -418,5 +416,83 @@ describe("InstallerSchedulePage", () => {
       "aria-pressed",
       "false"
     );
+  });
+
+  it("disables csv export for empty filtered results and restores with reset", async () => {
+    window.history.pushState({}, "", "/installer/calendar?overdue=1");
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/api/v1/installer/calendar/events?")) {
+        return {
+          items: [
+            {
+              id: "event-1",
+              title: "Delivery Project 2",
+              event_type: "delivery",
+              starts_at: "2026-03-08T10:00:00Z",
+              ends_at: "2026-03-08T11:00:00Z",
+              location: null,
+              waze_url: null,
+              description: null,
+              project_id: "project-2",
+              installer_ids: ["installer-1"],
+            },
+          ],
+        };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallerSchedulePage />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
+    });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Reset filters" }).at(-1)!);
+
+    await waitFor(() => {
+      expect(screen.getByText("Delivery Project 2")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Export CSV" })).not.toBeDisabled();
+    });
+  });
+
+  it("shows retry action when schedule query fails", async () => {
+    let shouldFail = true;
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/api/v1/installer/calendar/events?")) {
+        if (shouldFail) {
+          throw new Error("schedule down");
+        }
+        return { items: [] };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallerSchedulePage />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Failed to load installer schedule.")).toBeInTheDocument();
+
+    shouldFail = false;
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByText("No events in selected range.")).toBeInTheDocument();
   });
 });

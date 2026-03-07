@@ -226,6 +226,11 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
   const activeReasonId = selectedReasonId || reasons[0]?.id || "";
   const activeAddonTypeId = selectedAddonTypeId || addonTypes[0]?.id || "";
 
+  function resetDoorFilters() {
+    setOrderFilter("ALL");
+    setLocationFilter("ALL");
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -264,9 +269,35 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
         </div>
       </div>
 
-      {(detailsQuery.isError || actionError) && (
+      {detailsQuery.isError && (
         <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
-          {actionError || "Failed to load project details."}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>Failed to load project details.</span>
+            <button
+              type="button"
+              onClick={() => {
+                void detailsQuery.refetch();
+              }}
+              className="inline-flex items-center rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>{actionError}</span>
+            <button
+              type="button"
+              onClick={() => setActionError(null)}
+              className="inline-flex items-center rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 
@@ -299,7 +330,17 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
 
           <section className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-3 rounded-xl border border-border bg-card p-4">
-              <h2 className="text-lg font-semibold">Door filters</h2>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-lg font-semibold">Door filters</h2>
+                <button
+                  type="button"
+                  onClick={resetDoorFilters}
+                  disabled={orderFilter === "ALL" && locationFilter === "ALL"}
+                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Reset door filters
+                </button>
+              </div>
               <label className="block">
                 <span className="text-xs text-muted-foreground">Order number</span>
                 <select
@@ -387,24 +428,27 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
             </div>
           </section>
 
-          {details.issues_open.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-lg font-semibold">Open issues</h2>
-              {details.issues_open.map((issue) => (
-                <div
-                  key={issue.id}
-                  className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4"
-                >
-                  <div className="text-sm font-medium text-amber-300">
-                    {issue.title || "Issue"}
-                  </div>
-                  <div className="mt-1 text-sm text-amber-100/80">
-                    {issue.details || "No details"}
-                  </div>
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold">Open issues</h2>
+            {details.issues_open.length === 0 && (
+              <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+                No open issues.
+              </div>
+            )}
+            {details.issues_open.map((issue) => (
+              <div
+                key={issue.id}
+                className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4"
+              >
+                <div className="text-sm font-medium text-amber-300">
+                  {issue.title || "Issue"}
                 </div>
-              ))}
-            </section>
-          )}
+                <div className="mt-1 text-sm text-amber-100/80">
+                  {issue.details || "No details"}
+                </div>
+              </div>
+            ))}
+          </section>
 
           <section className="space-y-3">
             <h2 className="text-lg font-semibold">Doors</h2>
