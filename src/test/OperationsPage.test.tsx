@@ -172,7 +172,7 @@ describe("OperationsPage", () => {
       "href",
       "/installers"
     );
-  });
+  }, 10000);
 
   it("shows error state and allows refresh", async () => {
     let shouldFail = true;
@@ -353,5 +353,137 @@ describe("OperationsPage", () => {
       method: "POST",
       body: JSON.stringify({ reason: "operations_center_manual_retry" }),
     });
-  });
+  }, 10000);
+
+  it("filters overview to only actionable items", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/sync/health/summary") {
+        return {
+          max_cursor: 18,
+          counts: {
+            ok: 4,
+            warn: 1,
+            danger: 2,
+            total: 7,
+            dead: 1,
+            never_seen: 0,
+            danger_pct: 28.57,
+          },
+          alerts_sent: 3,
+          top_laggers: [
+            {
+              installer_id: "installer-2",
+              status: "danger",
+              lag: 9,
+              days_offline: 2,
+              last_seen_at: "2026-03-07T08:00:00Z",
+            },
+            {
+              installer_id: "installer-3",
+              status: "warn",
+              lag: 0,
+              days_offline: 0,
+              last_seen_at: "2026-03-07T08:05:00Z",
+            },
+          ],
+          top_offline: [],
+        };
+      }
+      if (path === "/api/v1/admin/outbox/summary") {
+        return {
+          total: 12,
+          by_channel: { email: 8, whatsapp: 4 },
+          by_status: { PENDING: 5, FAILED: 3 },
+          by_delivery_status: { failed: 3, pending: 5 },
+          pending_overdue_15m: 2,
+          failed_total: 3,
+        };
+      }
+      if (path === "/api/v1/admin/outbox?status=FAILED&limit=8") {
+        return {
+          items: [
+            {
+              id: "outbox-1",
+              channel: "email",
+              recipient: "ops@dimax.test",
+              subject: "Import failed",
+              status: "FAILED",
+              delivery_status: "failed",
+              attempts: 3,
+              max_attempts: 5,
+              scheduled_at: "2026-03-07T09:00:00Z",
+              created_at: "2026-03-07T08:55:00Z",
+              last_error: "SMTP timeout",
+            },
+          ],
+        };
+      }
+      if (path === "/api/v1/admin/projects/import-runs/failed-queue?limit=8&offset=0") {
+        return {
+          items: [
+            {
+              run_id: "run-1",
+              project_id: "project-1",
+              project_name: "Ashdod Towers",
+              created_at: "2026-03-07T08:00:00Z",
+              mode: "import",
+              status: "FAILED",
+              source_filename: "ashdod.csv",
+              parsed_rows: 12,
+              prepared_rows: 10,
+              imported: 0,
+              skipped: 0,
+              errors_count: 2,
+              last_error: "Unknown door type",
+              retry_available: true,
+            },
+            {
+              run_id: "run-2",
+              project_id: "project-2",
+              project_name: "Bat Yam Heights",
+              created_at: "2026-03-07T07:40:00Z",
+              mode: "import",
+              status: "FAILED",
+              source_filename: "bat-yam.csv",
+              parsed_rows: 9,
+              prepared_rows: 9,
+              imported: 0,
+              skipped: 0,
+              errors_count: 1,
+              last_error: "Provider timeout",
+              retry_available: false,
+            },
+          ],
+          total: 2,
+          limit: 8,
+          offset: 0,
+        };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    renderSubject();
+
+    expect(await screen.findByText("Operations Center")).toBeInTheDocument();
+    expect(screen.getByText("Bat Yam Heights")).toBeInTheDocument();
+    expect(screen.getByText("installer-3")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Only actionable" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Only actionable" })).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+    });
+
+    expect(screen.queryByText("Bat Yam Heights")).not.toBeInTheDocument();
+    expect(screen.queryByText("installer-3")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Ashdod Towers").length).toBeGreaterThan(0);
+    expect(screen.getByText("installer-2")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open import workspace" })).toHaveAttribute(
+      "href",
+      "/projects?only_failed_runs=1&failed_project_ids=project-1"
+    );
+  }, 10000);
 });

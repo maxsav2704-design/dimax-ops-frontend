@@ -120,6 +120,7 @@ export default function OperationsPage() {
   const userRole = useUserRole();
   const canRunPrivilegedActions = canRunPrivilegedAdminActions(userRole);
   const [busyAction, setBusyAction] = useState("");
+  const [onlyActionable, setOnlyActionable] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<{
     tone: "success" | "error";
     message: string;
@@ -169,9 +170,29 @@ export default function OperationsPage() {
   const outboxSummary = outboxSummaryQuery.data;
   const failedOutbox = outboxFailedQuery.data?.items || [];
   const failedImports = failedImportsQuery.data?.items || [];
-  const failedImportProjectIds = useMemo(
-    () => Array.from(new Set(failedImports.map((item) => item.project_id).filter(Boolean))),
+  const syncItems = useMemo(
+    () => (sync ? (sync.top_laggers.length ? sync.top_laggers : sync.top_offline) : []),
+    [sync]
+  );
+  const actionableFailedImports = useMemo(
+    () => failedImports.filter((item) => item.retry_available),
     [failedImports]
+  );
+  const actionableFailedOutbox = useMemo(() => failedOutbox, [failedOutbox]);
+  const actionableSyncItems = useMemo(
+    () =>
+      syncItems.filter((item) => {
+        const status = item.status.trim().toLowerCase();
+        return status === "danger" || status === "dead" || item.lag > 0 || item.days_offline > 0;
+      }),
+    [syncItems]
+  );
+  const visibleFailedImports = onlyActionable ? actionableFailedImports : failedImports;
+  const visibleFailedOutbox = onlyActionable ? actionableFailedOutbox : failedOutbox;
+  const visibleSyncItems = onlyActionable ? actionableSyncItems : syncItems;
+  const failedImportProjectIds = useMemo(
+    () => Array.from(new Set(visibleFailedImports.map((item) => item.project_id).filter(Boolean))),
+    [visibleFailedImports]
   );
   const failedImportsHref = useMemo(
     () => buildProjectsImportHref(null, failedImportProjectIds),
@@ -182,7 +203,7 @@ export default function OperationsPage() {
     () => [
       {
         label: "Sync danger",
-        value: sync?.counts.danger ?? 0,
+        value: onlyActionable ? visibleSyncItems.length : sync?.counts.danger ?? 0,
         note: sync
           ? `${sync.counts.danger_pct.toFixed(1)}% of ${sync.counts.total} installers`
           : "Sync health pending",
@@ -190,13 +211,18 @@ export default function OperationsPage() {
       },
       {
         label: "Failed imports",
-        value: failedImportsQuery.data?.total ?? 0,
-        note: failedImports.length > 0 ? failedImports[0]?.project_name : "No failed imports",
+        value: onlyActionable ? visibleFailedImports.length : failedImportsQuery.data?.total ?? 0,
+        note:
+          visibleFailedImports.length > 0
+            ? visibleFailedImports[0]?.project_name
+            : onlyActionable
+              ? "No actionable imports"
+              : "No failed imports",
         icon: ServerCrash,
       },
       {
         label: "Failed outbox",
-        value: outboxSummary?.failed_total ?? 0,
+        value: onlyActionable ? visibleFailedOutbox.length : outboxSummary?.failed_total ?? 0,
         note: outboxSummary ? compactMap(outboxSummary.by_channel) : "No outbox data",
         icon: Siren,
       },
@@ -207,7 +233,14 @@ export default function OperationsPage() {
         icon: TimerReset,
       },
     ],
-    [failedImports.length, failedImportsQuery.data?.total, outboxSummary, sync]
+    [
+      failedImportsQuery.data?.total,
+      onlyActionable,
+      outboxSummary,
+      visibleFailedImports,
+      visibleFailedOutbox.length,
+      visibleSyncItems.length,
+    ]
   );
 
   async function refetchAll() {
@@ -284,17 +317,27 @@ export default function OperationsPage() {
               Import failures, outbox delivery problems, and installer sync health.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              void refetchAll();
-            }}
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isRefreshing}
-          >
-            <RefreshCcw className="h-4 w-4" />
-            {isRefreshing ? "Refreshing..." : "Refresh"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setOnlyActionable((value) => !value)}
+              aria-pressed={onlyActionable}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted aria-[pressed=true]:border-accent aria-[pressed=true]:text-accent"
+            >
+              Only actionable
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void refetchAll();
+              }}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isRefreshing}
+            >
+              <RefreshCcw className="h-4 w-4" />
+              {isRefreshing ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
         </div>
 
         {hasError && (
@@ -373,12 +416,12 @@ export default function OperationsPage() {
                   Loading failed imports...
                 </div>
               )}
-              {!failedImportsQuery.isLoading && failedImports.length === 0 && (
+              {!failedImportsQuery.isLoading && visibleFailedImports.length === 0 && (
                 <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                  No failed import runs.
+                  {onlyActionable ? "No actionable import runs." : "No failed import runs."}
                 </div>
               )}
-              {failedImports.map((item) => (
+              {visibleFailedImports.map((item) => (
                 <div
                   key={item.run_id}
                   className="border-t border-border/70 px-4 py-3 text-[13px]"
@@ -452,12 +495,12 @@ export default function OperationsPage() {
                   Loading outbox failures...
                 </div>
               )}
-              {!outboxFailedQuery.isLoading && failedOutbox.length === 0 && (
+              {!outboxFailedQuery.isLoading && visibleFailedOutbox.length === 0 && (
                 <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                  No failed outbox messages.
+                  {onlyActionable ? "No actionable outbox messages." : "No failed outbox messages."}
                 </div>
               )}
-              {failedOutbox.map((item) => (
+              {visibleFailedOutbox.map((item) => (
                 <div key={item.id} className="border-t border-border/70 px-4 py-3 text-[13px]">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -535,7 +578,12 @@ export default function OperationsPage() {
                       {sync.alerts_sent}
                     </div>
                   </div>
-                  {(sync.top_laggers.length ? sync.top_laggers : sync.top_offline).map((item) => (
+                  {visibleSyncItems.length === 0 ? (
+                    <div className="border-t border-border/70 px-4 py-6 text-[13px] text-muted-foreground">
+                      No actionable sync items.
+                    </div>
+                  ) : null}
+                  {visibleSyncItems.map((item) => (
                     <div
                       key={`${item.installer_id}-${item.status}`}
                       className="border-t border-border/70 px-4 py-3 text-[13px]"
