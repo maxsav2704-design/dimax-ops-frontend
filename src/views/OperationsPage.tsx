@@ -85,6 +85,22 @@ type FailedImportRunsQueueResponse = {
   offset: number;
 };
 
+type RetryFailedRunsResponse = {
+  items: Array<{
+    run_id: string;
+    project_id: string | null;
+    status: string;
+    imported: number;
+    skipped: number;
+    errors_count: number;
+    last_error?: string | null;
+  }>;
+  total_runs: number;
+  successful_runs: number;
+  failed_runs: number;
+  skipped_runs: number;
+};
+
 function formatDateTime(value: string | null): string {
   if (!value) {
     return "Never";
@@ -421,6 +437,39 @@ export default function OperationsPage() {
     }
   }
 
+  async function handleRetryAllImports() {
+    if (!canRunPrivilegedActions || actionableFailedImports.length === 0) {
+      return;
+    }
+    setBusyAction("imports:bulk");
+    setActionFeedback(null);
+    try {
+      const response = await apiFetch<RetryFailedRunsResponse>(
+        "/api/v1/admin/projects/import-runs/retry-failed",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            run_ids: actionableFailedImports.map((item) => item.run_id),
+          }),
+        }
+      );
+      await refetchAll();
+      setActionFeedback({
+        tone: response.failed_runs > 0 ? "error" : "success",
+        message:
+          `Bulk import retry finished: success ${response.successful_runs} | ` +
+          `failed ${response.failed_runs} | skipped ${response.skipped_runs}.`,
+      });
+    } catch (error) {
+      setActionFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Failed to retry actionable imports",
+      });
+    } finally {
+      setBusyAction("");
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="p-6 lg:p-8 max-w-[1400px] space-y-6">
@@ -531,11 +580,29 @@ export default function OperationsPage() {
                 Highest-value actions from imports, outbox and sync in one view.
               </p>
             </div>
-            {onlyActionable ? (
-              <span className="rounded-md border border-accent/40 px-2 py-1 text-[11px] font-medium text-accent">
-                actionable mode
-              </span>
-            ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              {onlyActionable ? (
+                <span className="rounded-md border border-accent/40 px-2 py-1 text-[11px] font-medium text-accent">
+                  actionable mode
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => {
+                  void handleRetryAllImports();
+                }}
+                disabled={
+                  !canRunPrivilegedActions ||
+                  actionableFailedImports.length === 0 ||
+                  busyAction === "imports:bulk"
+                }
+                className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {busyAction === "imports:bulk"
+                  ? "Retrying imports..."
+                  : `Retry actionable imports (${actionableFailedImports.length})`}
+              </button>
+            </div>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {actionSummary.map((item) => (
