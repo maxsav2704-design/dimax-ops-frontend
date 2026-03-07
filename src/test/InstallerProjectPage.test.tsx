@@ -324,6 +324,34 @@ describe("InstallerProjectPage", () => {
     );
   });
 
+  it("shows priority doors for the next likely actions", async () => {
+    setupApiMock({
+      ...projectDetails,
+      issues_open: [
+        {
+          id: "issue-1",
+          door_id: "door-2",
+          status: "OPEN",
+          title: "Blocked lock",
+          details: "Door remains blocked",
+        },
+      ],
+    });
+    renderSubject();
+
+    const summaryBar = await screen.findByLabelText("Door summary bar");
+
+    expect(summaryBar).toHaveTextContent("Priority doors:");
+    expect(screen.getByRole("link", { name: "B-202 - Issue" })).toHaveAttribute(
+      "href",
+      "#door-door-2"
+    );
+    expect(screen.getByRole("link", { name: "A-101 - Not installed" })).toHaveAttribute(
+      "href",
+      "#door-door-1"
+    );
+  });
+
   it("shows retry action when project details query fails", async () => {
     let shouldFail = true;
     apiFetchMock.mockImplementation(async (path: string) => {

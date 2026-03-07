@@ -228,6 +228,40 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
     });
   }, [filteredDoors, issueDoorIds]);
 
+  const priorityDoors = useMemo(() => {
+    return filteredDoors
+      .filter((door) => issueDoorIds.has(door.id) || door.status === "NOT_INSTALLED")
+      .sort((left, right) => {
+        const leftIssue = issueDoorIds.has(left.id) ? 1 : 0;
+        const rightIssue = issueDoorIds.has(right.id) ? 1 : 0;
+        if (leftIssue !== rightIssue) {
+          return rightIssue - leftIssue;
+        }
+        const leftUnlocked = left.is_locked ? 0 : 1;
+        const rightUnlocked = right.is_locked ? 0 : 1;
+        if (leftUnlocked !== rightUnlocked) {
+          return rightUnlocked - leftUnlocked;
+        }
+        return left.unit_label.localeCompare(right.unit_label);
+      })
+      .slice(0, 5)
+      .map((door) => ({
+        id: door.id,
+        unitLabel: door.unit_label,
+        href: `#door-${door.id}`,
+        tone: issueDoorIds.has(door.id)
+          ? "issue"
+          : door.is_locked
+            ? "locked"
+            : "ready",
+        label: issueDoorIds.has(door.id)
+          ? "Issue"
+          : door.is_locked
+            ? "Locked"
+            : "Not installed",
+      }));
+  }, [filteredDoors, issueDoorIds]);
+
   const installMutation = useMutation({
     mutationFn: (doorId: string) =>
       apiFetch<{ ok: boolean }>(`/api/v1/installer/doors/${doorId}/install`, {
@@ -641,6 +675,26 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                         className="inline-flex items-center rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-amber-900 transition-colors hover:bg-amber-500/20"
                       >
                         {door.unit_label}
+                      </a>
+                    ))}
+                  </div>
+                )}
+                {priorityDoors.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-muted-foreground">Priority doors:</span>
+                    {priorityDoors.map((door) => (
+                      <a
+                        key={door.id}
+                        href={door.href}
+                        className={
+                          door.tone === "issue"
+                            ? "inline-flex items-center rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-amber-900 transition-colors hover:bg-amber-500/20"
+                            : door.tone === "locked"
+                              ? "inline-flex items-center rounded-lg border border-border bg-muted px-2.5 py-1.5 transition-colors hover:bg-muted/80"
+                              : "inline-flex items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-emerald-900 transition-colors hover:bg-emerald-500/20"
+                        }
+                      >
+                        {door.unitLabel} - {door.label}
                       </a>
                     ))}
                   </div>
