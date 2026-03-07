@@ -89,3 +89,14 @@ jobs:
           name: installer-playwright-test-results
           path: test-results
           if-no-files-found: ignore
+
+  quality-gate:
+    name: quality-gate
+    runs-on: ubuntu-latest
+    needs:
+      - installer-unit
+      - installer-e2e
+
+    steps:
+      - name: Installer gate passed
+        run: echo "Installer quality gate passed"
