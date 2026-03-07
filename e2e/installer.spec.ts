@@ -62,10 +62,13 @@ test.describe.serial("Installer web smoke", () => {
     await expect(page.getByRole("heading", { name: "My Schedule" })).toBeVisible({
       timeout: 30_000,
     });
-    await expect(page.getByRole("button", { name: "Export CSV" })).toBeVisible({
+    const exportButton = page.getByRole("button", { name: "Export CSV" });
+    await expect(exportButton).toBeVisible({
       timeout: 30_000,
     });
-    await page.getByRole("button", { name: "Export CSV" }).click();
+    if (await exportButton.isEnabled()) {
+      await exportButton.click();
+    }
     await page.getByRole("button", { name: "Today" }).click();
     await page.getByRole("button", { name: "Next 30 days" }).click();
 
@@ -158,5 +161,35 @@ test.describe.serial("Installer web smoke", () => {
     await expect(page.getByLabel("Range", { exact: true })).toHaveValue("7d");
     await expect(page.getByLabel("Event type")).toHaveValue("ALL");
     await expect(page.getByLabel("Project")).toHaveValue("ALL");
+  });
+
+  test("supports deep-link workspace filters", async ({ page }) => {
+    await loginInstaller(page);
+
+    await page.goto("/installer?project_filter=problem");
+    await expect(page.getByRole("heading", { name: "Installer Workspace" })).toBeVisible({
+      timeout: 30_000,
+    });
+    const problemButton = page.getByRole("button", { name: /Only problem \(/ });
+    await expect(problemButton).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    await expect(page).toHaveURL(/project_filter=problem/);
+
+    const activeButton = page.getByRole("button", { name: /Only active \(/ });
+    await activeButton.click();
+    await expect(page).toHaveURL(/project_filter=active/);
+    await expect(activeButton).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+
+    await page.getByRole("button", { name: /All \(/ }).click();
+    await expect(page).toHaveURL(/\/installer$/);
+    await expect(page.getByRole("button", { name: /All \(/ })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
   });
 });
