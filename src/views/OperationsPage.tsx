@@ -253,6 +253,19 @@ function summarizeActions(params: {
   return items;
 }
 
+function extractBatchProjectIds(result: OperationsBatchResult | null): string[] {
+  if (!result) {
+    return [];
+  }
+  const ids = new Set<string>();
+  for (const item of result.items) {
+    if ("project_id" in item && item.project_id) {
+      ids.add(item.project_id);
+    }
+  }
+  return [...ids];
+}
+
 export default function OperationsPage() {
   const userRole = useUserRole();
   const canRunPrivilegedActions = canRunPrivilegedAdminActions(userRole);
@@ -381,6 +394,14 @@ export default function OperationsPage() {
   const failedImportsHref = useMemo(
     () => buildProjectsImportHref(null, failedImportProjectIds),
     [failedImportProjectIds]
+  );
+  const batchResultProjectIds = useMemo(() => extractBatchProjectIds(lastBatchResult), [lastBatchResult]);
+  const batchResultFollowupHref = useMemo(
+    () =>
+      batchResultProjectIds.length > 0
+        ? buildProjectsImportHref(null, batchResultProjectIds)
+        : "/projects?only_failed_runs=1",
+    [batchResultProjectIds]
   );
 
   const cards = useMemo(
@@ -836,6 +857,20 @@ export default function OperationsPage() {
                   </div>
                 ))
               )}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                href={batchResultFollowupHref}
+                className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
+              >
+                Review affected imports
+              </Link>
+              <Link
+                href="/operations"
+                className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
+              >
+                Back to overview
+              </Link>
             </div>
           </section>
         ) : null}

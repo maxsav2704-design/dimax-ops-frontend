@@ -501,6 +501,14 @@ describe("OperationsPage", () => {
     expect(screen.getByText("Last Batch Result")).toBeInTheDocument();
     expect(screen.getByText("Retry actionable imports over 2 runs")).toBeInTheDocument();
     expect(screen.getByText("Run run-1")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Review affected imports" })).toHaveAttribute(
+      "href",
+      "/projects?only_failed_runs=1&failed_project_ids=project-1"
+    );
+    expect(screen.getByRole("link", { name: "Back to overview" })).toHaveAttribute(
+      "href",
+      "/operations"
+    );
 
     const bulkRetryCall = apiFetchMock.mock.calls.find(
       (call) => call[0] === "/api/v1/admin/projects/import-runs/retry-failed"
@@ -633,6 +641,10 @@ describe("OperationsPage", () => {
     expect(screen.getByText("Last Batch Result")).toBeInTheDocument();
     expect(screen.getByText("Reconcile actionable projects over 2 projects")).toBeInTheDocument();
     expect(screen.getByText("Project project-1")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Review affected imports" })).toHaveAttribute(
+      "href",
+      "/projects?only_failed_runs=1&failed_project_ids=project-1"
+    );
 
     const reconcileCall = apiFetchMock.mock.calls.find(
       (call) => call[0] === "/api/v1/admin/projects/import-runs/reconcile-latest"
