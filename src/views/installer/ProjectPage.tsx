@@ -265,6 +265,12 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
 
   const activeReasonId = selectedReasonId || reasons[0]?.id || "";
   const activeAddonTypeId = selectedAddonTypeId || addonTypes[0]?.id || "";
+  const activeDoorFilterCount = [
+    orderFilter !== "ALL",
+    locationFilter !== "ALL",
+    doorSearch.trim().length > 0,
+    doorQuickFilter !== "ALL",
+  ].filter(Boolean).length;
 
   function resetDoorFilters() {
     setOrderFilter("ALL");
@@ -457,7 +463,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               </label>
             </div>
 
-            <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+            <div id="project-add-on-fact" className="space-y-3 rounded-xl border border-border bg-card p-4">
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <Wrench className="h-5 w-5" />
                 Add-on fact
@@ -512,7 +518,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
             </div>
           </section>
 
-          <section className="space-y-3">
+          <section id="project-open-issues" className="space-y-3">
             <h2 className="text-lg font-semibold">Open issues</h2>
             {details.issues_open.length === 0 && (
               <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
@@ -534,7 +540,55 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
             ))}
           </section>
 
-          <section className="space-y-3">
+          <section
+            className="sticky top-4 z-10 rounded-xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur"
+            aria-label="Door summary bar"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-4 text-sm">
+                <div>
+                  Visible doors: <span className="font-semibold">{filteredDoors.length}</span> /{" "}
+                  <span className="font-semibold">{details.doors.length}</span>
+                </div>
+                <div>
+                  Active filters: <span className="font-semibold">{activeDoorFilterCount}</span>
+                </div>
+                <div>
+                  Open issues: <span className="font-semibold">{details.issues_open.length}</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href="#project-doors"
+                  className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                >
+                  Doors
+                </a>
+                <a
+                  href="#project-open-issues"
+                  className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                >
+                  Issues
+                </a>
+                <a
+                  href="#project-add-on-fact"
+                  className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                >
+                  Add-on fact
+                </a>
+                <button
+                  type="button"
+                  onClick={resetDoorFilters}
+                  disabled={activeDoorFilterCount === 0}
+                  className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Reset all door filters
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section id="project-doors" className="space-y-3">
             <h2 className="text-lg font-semibold">Doors</h2>
             {doorsByFloor.length === 0 && (
               <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">

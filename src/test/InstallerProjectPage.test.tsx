@@ -248,6 +248,49 @@ describe("InstallerProjectPage", () => {
     });
   });
 
+  it("shows sticky door summary bar and resets filters from it", async () => {
+    setupApiMock({
+      ...projectDetails,
+      issues_open: [
+        {
+          id: "issue-1",
+          door_id: "door-2",
+          status: "OPEN",
+          title: "Blocked lock",
+          details: "Door remains blocked",
+        },
+      ],
+    });
+    renderSubject();
+
+    expect(await screen.findByLabelText("Door summary bar")).toHaveTextContent(
+      "Visible doors: 2 / 2"
+    );
+    expect(screen.getByLabelText("Door summary bar")).toHaveTextContent("Active filters: 0");
+    expect(screen.getByLabelText("Door summary bar")).toHaveTextContent("Open issues: 1");
+
+    fireEvent.change(
+      screen.getByPlaceholderText("Unit, order, apartment, location, marking"),
+      {
+        target: { value: "A-101" },
+      }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Door summary bar")).toHaveTextContent("Visible doors: 1 / 2");
+      expect(screen.getByLabelText("Door summary bar")).toHaveTextContent("Active filters: 1");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset all door filters" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Door summary bar")).toHaveTextContent("Visible doors: 2 / 2");
+      expect(screen.getByLabelText("Door summary bar")).toHaveTextContent("Active filters: 0");
+      expect(screen.getByText("A-101")).toBeInTheDocument();
+      expect(screen.getByText("B-202")).toBeInTheDocument();
+    });
+  });
+
   it("shows retry action when project details query fails", async () => {
     let shouldFail = true;
     apiFetchMock.mockImplementation(async (path: string) => {
