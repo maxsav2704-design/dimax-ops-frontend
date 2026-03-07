@@ -1,0 +1,91 @@
+name: Installer Quality Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: installer-quality-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  installer-unit:
+    name: Installer Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run installer test suite
+        run: npm run test:installer
+
+  installer-e2e:
+    name: Installer E2E Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: installer-unit
+
+    env:
+      CI: "true"
+      E2E_COMPANY_ID: ${{ secrets.E2E_COMPANY_ID }}
+      E2E_INSTALLER_EMAIL: ${{ secrets.E2E_INSTALLER_EMAIL }}
+      E2E_INSTALLER_PASSWORD: ${{ secrets.E2E_INSTALLER_PASSWORD }}
+      NEXT_PUBLIC_API_BASE_URL: ${{ secrets.E2E_API_BASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Validate required secrets
+        run: |
+          test -n "$E2E_COMPANY_ID" || (echo "Missing secret: E2E_COMPANY_ID" && exit 1)
+          test -n "$E2E_INSTALLER_EMAIL" || (echo "Missing secret: E2E_INSTALLER_EMAIL" && exit 1)
+          test -n "$E2E_INSTALLER_PASSWORD" || (echo "Missing secret: E2E_INSTALLER_PASSWORD" && exit 1)
+          test -n "$NEXT_PUBLIC_API_BASE_URL" || (echo "Missing secret: E2E_API_BASE_URL" && exit 1)
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run installer e2e smoke
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm run test:e2e:installer:strict
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-playwright-report
+          path: playwright-report
+          if-no-files-found: ignore
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-playwright-test-results
+          path: test-results
+          if-no-files-found: ignore
