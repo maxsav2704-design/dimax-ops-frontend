@@ -37,6 +37,22 @@ const projectDetails = {
       comment: null,
       is_locked: false,
     },
+    {
+      id: "door-2",
+      unit_label: "B-202",
+      door_type_id: "door-type-1",
+      our_price: "120.00",
+      order_number: "ORD-2",
+      house_number: "2",
+      floor_label: "2",
+      apartment_number: "202",
+      location_code: "L2",
+      door_marking: "MARK-2",
+      status: "NOT_INSTALLED",
+      reason_id: null,
+      comment: null,
+      is_locked: false,
+    },
   ],
   issues_open: [],
   addons: {
@@ -93,7 +109,7 @@ describe("InstallerProjectPage", () => {
 
     expect(await screen.findByText("Project One")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Installed" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Installed" })[0]);
 
     await waitFor(() => {
       expect(apiFetchMock).toHaveBeenCalledWith("/api/v1/installer/doors/door-1/install", {
@@ -108,10 +124,10 @@ describe("InstallerProjectPage", () => {
 
     expect(await screen.findByText("Project One")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByPlaceholderText("Comment for NOT_INSTALLED"), {
+    fireEvent.change(screen.getAllByPlaceholderText("Comment for NOT_INSTALLED")[0], {
       target: { value: "Need crane access" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Not installed" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Not installed" })[0]);
 
     await waitFor(() => {
       const calls = apiFetchMock.mock.calls as Array<[string, RequestInit | undefined]>;
@@ -163,6 +179,33 @@ describe("InstallerProjectPage", () => {
     renderSubject();
 
     expect(await screen.findByText("No open issues.")).toBeInTheDocument();
+  });
+
+  it("filters doors by quick search and resets filters", async () => {
+    setupApiMock();
+    renderSubject();
+
+    expect(await screen.findByText("A-101")).toBeInTheDocument();
+    expect(screen.getByText("B-202")).toBeInTheDocument();
+
+    fireEvent.change(
+      screen.getByPlaceholderText("Unit, order, apartment, location, marking"),
+      {
+        target: { value: "mark-2" },
+      }
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText("A-101")).not.toBeInTheDocument();
+      expect(screen.getByText("B-202")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset door filters" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("A-101")).toBeInTheDocument();
+      expect(screen.getByText("B-202")).toBeInTheDocument();
+    });
   });
 
   it("shows retry action when project details query fails", async () => {

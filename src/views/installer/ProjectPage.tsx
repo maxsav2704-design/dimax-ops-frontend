@@ -104,6 +104,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
   const [addonComment, setAddonComment] = useState("");
   const [orderFilter, setOrderFilter] = useState("ALL");
   const [locationFilter, setLocationFilter] = useState("ALL");
+  const [doorSearch, setDoorSearch] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
 
   const detailsQuery = useQuery({
@@ -139,14 +140,28 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
 
   const filteredDoors = useMemo(() => {
     const rows = details?.doors || [];
+    const searchNeedle = doorSearch.trim().toLowerCase();
     return rows.filter((door) => {
       const matchesOrder =
         orderFilter === "ALL" || door.order_number === orderFilter;
       const matchesLocation =
         locationFilter === "ALL" || door.location_code === locationFilter;
-      return matchesOrder && matchesLocation;
+      const matchesSearch =
+        searchNeedle.length === 0 ||
+        [
+          door.unit_label,
+          door.order_number,
+          door.house_number,
+          door.floor_label,
+          door.apartment_number,
+          door.location_code,
+          door.door_marking,
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(searchNeedle));
+      return matchesOrder && matchesLocation && matchesSearch;
     });
-  }, [details?.doors, locationFilter, orderFilter]);
+  }, [details?.doors, doorSearch, locationFilter, orderFilter]);
 
   const doorsByFloor = useMemo(() => {
     const groups = new Map<string, InstallerDoor[]>();
@@ -229,6 +244,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
   function resetDoorFilters() {
     setOrderFilter("ALL");
     setLocationFilter("ALL");
+    setDoorSearch("");
   }
 
   return (
@@ -335,12 +351,25 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 <button
                   type="button"
                   onClick={resetDoorFilters}
-                  disabled={orderFilter === "ALL" && locationFilter === "ALL"}
+                  disabled={
+                    orderFilter === "ALL" &&
+                    locationFilter === "ALL" &&
+                    doorSearch.trim().length === 0
+                  }
                   className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Reset door filters
                 </button>
               </div>
+              <label className="block">
+                <span className="text-xs text-muted-foreground">Quick search</span>
+                <input
+                  value={doorSearch}
+                  onChange={(event) => setDoorSearch(event.target.value)}
+                  className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
+                  placeholder="Unit, order, apartment, location, marking"
+                />
+              </label>
               <label className="block">
                 <span className="text-xs text-muted-foreground">Order number</span>
                 <select
