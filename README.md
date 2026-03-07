@@ -1,73 +1,85 @@
-# Welcome to your Lovable project
+# DIMAX Operations Suite Frontend
 
-## Project info
+Web frontend for the DIMAX Operations Suite.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Scope
 
-## How can I edit this code?
+This repository is the shipped web client for:
 
-There are several ways of editing your application.
+- installer workspace
+- installer schedule/calendar
+- installer project flow
+- admin-facing web surfaces already integrated in the current stack
 
-**Use Lovable**
+The current production baseline is web-first. Mobile exists as a separate repository and is not required to run the released installer flow.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- Next.js
+- React
+- TypeScript
+- Tailwind
+- Vitest
+- Playwright
 
-**Use your preferred IDE**
+## Key commands
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Install dependencies:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+npm ci
+```
 
-Follow these steps:
+Run locally:
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Production build:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+npm run build
+npm run start
+```
 
-**Use GitHub Codespaces**
+## Quality gates
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Main checks:
 
-## What technologies are used for this project?
+```bash
+npm run test
+npm run build
+```
 
-This project is built with:
+Installer-focused checks:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```bash
+npm run test:installer
+npm run test:e2e:installer
+npm run test:e2e:installer:strict
+```
 
-## How can I deploy this project?
+Local strict installer gate with env file:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+```bash
+npm run test:e2e:installer:strict:local
+```
 
-## Can I connect a custom domain to my Lovable project?
+See `TESTING.md` for the full bootstrap and local flow.
 
-Yes, you can!
+## Environment
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+The frontend expects an API base URL in environment configuration.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Use `.env.example` as the starting point for local setup.
+
+For strict installer E2E, use `.env.e2e.local` with valid installer credentials and company identifiers.
+
+## Repository role
+
+This repository owns frontend code only.
+
+- backend lives in `dimax-ops-backend`
+- mobile lives in `dimax-ops-mobile`
+- workspace orchestration lives in `dimax-ops-workspace`
