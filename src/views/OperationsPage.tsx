@@ -101,6 +101,22 @@ type RetryFailedRunsResponse = {
   skipped_runs: number;
 };
 
+type BulkReconcileResponse = {
+  items: Array<{
+    project_id: string;
+    source_run_id: string | null;
+    status: string;
+    imported: number;
+    skipped: number;
+    errors_count: number;
+    last_error?: string | null;
+  }>;
+  total_projects: number;
+  successful_projects: number;
+  failed_projects: number;
+  skipped_projects: number;
+};
+
 function formatDateTime(value: string | null): string {
   if (!value) {
     return "Never";
@@ -306,6 +322,10 @@ export default function OperationsPage() {
   const visibleFailedImports = onlyActionable ? actionableFailedImports : failedImports;
   const visibleFailedOutbox = onlyActionable ? actionableFailedOutbox : failedOutbox;
   const visibleSyncItems = onlyActionable ? actionableSyncItems : syncItems;
+  const actionableImportProjectIds = useMemo(
+    () => Array.from(new Set(actionableFailedImports.map((item) => item.project_id).filter(Boolean))),
+    [actionableFailedImports]
+  );
   const actionSummary = useMemo(
     () =>
       summarizeActions({
@@ -470,6 +490,41 @@ export default function OperationsPage() {
     }
   }
 
+  async function handleReconcileActionableProjects() {
+    if (!canRunPrivilegedActions || actionableImportProjectIds.length === 0) {
+      return;
+    }
+    setBusyAction("imports:reconcile");
+    setActionFeedback(null);
+    try {
+      const response = await apiFetch<BulkReconcileResponse>(
+        "/api/v1/admin/projects/import-runs/reconcile-latest",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            project_ids: actionableImportProjectIds,
+            only_failed_runs: true,
+          }),
+        }
+      );
+      await refetchAll();
+      setActionFeedback({
+        tone: response.failed_projects > 0 ? "error" : "success",
+        message:
+          `Bulk reconcile finished: success ${response.successful_projects} | ` +
+          `failed ${response.failed_projects} | skipped ${response.skipped_projects}.`,
+      });
+    } catch (error) {
+      setActionFeedback({
+        tone: "error",
+        message:
+          error instanceof Error ? error.message : "Failed to reconcile actionable projects",
+      });
+    } finally {
+      setBusyAction("");
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="p-6 lg:p-8 max-w-[1400px] space-y-6">
@@ -597,10 +652,26 @@ export default function OperationsPage() {
                   busyAction === "imports:bulk"
                 }
                 className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-              >
+                >
                 {busyAction === "imports:bulk"
                   ? "Retrying imports..."
                   : `Retry actionable imports (${actionableFailedImports.length})`}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void handleReconcileActionableProjects();
+                }}
+                disabled={
+                  !canRunPrivilegedActions ||
+                  actionableImportProjectIds.length === 0 ||
+                  busyAction === "imports:reconcile"
+                }
+                className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {busyAction === "imports:reconcile"
+                  ? "Reconciling projects..."
+                  : `Reconcile actionable projects (${actionableImportProjectIds.length})`}
               </button>
             </div>
           </div>
