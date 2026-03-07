@@ -135,6 +135,43 @@ describe("OperationsPage", () => {
     expect(screen.getByText("SMTP timeout")).toBeInTheDocument();
     expect(screen.getByText("installer-2")).toBeInTheDocument();
     expect(screen.getByText(/lag 9/)).toBeInTheDocument();
+
+    expect(screen.getByRole("link", { name: "Open import workspace" })).toHaveAttribute(
+      "href",
+      "/projects?only_failed_runs=1&failed_project_ids=project-1"
+    );
+    expect(screen.getByRole("link", { name: "Open delivery reports" })).toHaveAttribute(
+      "href",
+      "/reports"
+    );
+    expect(screen.getByRole("link", { name: "Open communication queue" })).toHaveAttribute(
+      "href",
+      "/journal"
+    );
+    expect(screen.getByRole("link", { name: "Open installer board" })).toHaveAttribute(
+      "href",
+      "/installers"
+    );
+    expect(screen.getByRole("link", { name: "Project imports" })).toHaveAttribute(
+      "href",
+      "/projects?only_failed_runs=1&project_id=project-1&failed_project_ids=project-1"
+    );
+    expect(screen.getByRole("link", { name: "Open project" })).toHaveAttribute(
+      "href",
+      "/projects?project_id=project-1"
+    );
+    expect(screen.getByRole("link", { name: "Reports outbox" })).toHaveAttribute(
+      "href",
+      "/reports"
+    );
+    expect(screen.getByRole("link", { name: "Journal outbox" })).toHaveAttribute(
+      "href",
+      "/journal"
+    );
+    expect(screen.getByRole("link", { name: "Installer board" })).toHaveAttribute(
+      "href",
+      "/installers"
+    );
   });
 
   it("shows error state and allows refresh", async () => {

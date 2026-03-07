@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw, ServerCrash, ShieldAlert, Siren, TimerReset } from "lucide-react";
@@ -101,6 +102,18 @@ function compactMap(value: Record<string, number>): string {
   return entries.map(([key, count]) => `${key}: ${count}`).join(" | ");
 }
 
+function buildProjectsImportHref(projectId: string | null, failedProjectIds: string[]): string {
+  const params = new URLSearchParams();
+  params.set("only_failed_runs", "1");
+  if (projectId) {
+    params.set("project_id", projectId);
+  }
+  if (failedProjectIds.length > 0) {
+    params.set("failed_project_ids", failedProjectIds.join(","));
+  }
+  return `/projects?${params.toString()}`;
+}
+
 export default function OperationsPage() {
   const syncQuery = useQuery({
     queryKey: ["operations-sync-health"],
@@ -146,6 +159,14 @@ export default function OperationsPage() {
   const outboxSummary = outboxSummaryQuery.data;
   const failedOutbox = outboxFailedQuery.data?.items || [];
   const failedImports = failedImportsQuery.data?.items || [];
+  const failedImportProjectIds = useMemo(
+    () => Array.from(new Set(failedImports.map((item) => item.project_id).filter(Boolean))),
+    [failedImports]
+  );
+  const failedImportsHref = useMemo(
+    () => buildProjectsImportHref(null, failedImportProjectIds),
+    [failedImportProjectIds]
+  );
 
   const cards = useMemo(
     () => [
@@ -232,12 +253,45 @@ export default function OperationsPage() {
           ))}
         </div>
 
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={failedImportsHref}
+            className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
+          >
+            Open import workspace
+          </Link>
+          <Link
+            href="/reports"
+            className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
+          >
+            Open delivery reports
+          </Link>
+          <Link
+            href="/journal"
+            className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
+          >
+            Open communication queue
+          </Link>
+          <Link
+            href="/installers"
+            className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
+          >
+            Open installer board
+          </Link>
+        </div>
+
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <section className="rounded-xl border border-border bg-card">
-            <div className="border-b border-border px-4 py-3">
+            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Failed Import Queue
               </h2>
+              <Link
+                href={failedImportsHref}
+                className="text-[12px] font-medium text-accent hover:underline"
+              >
+                Open queue
+              </Link>
             </div>
             <div className="space-y-0">
               {failedImportsQuery.isLoading && (
@@ -273,16 +327,38 @@ export default function OperationsPage() {
                   <div className="mt-1 text-xs text-muted-foreground">
                     {item.last_error || "No error payload"}
                   </div>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    <Link
+                      href={buildProjectsImportHref(item.project_id, [item.project_id])}
+                      className="font-medium text-accent hover:underline"
+                    >
+                      Project imports
+                    </Link>
+                    <Link
+                      href={`/projects?project_id=${encodeURIComponent(item.project_id)}`}
+                      className="font-medium text-muted-foreground hover:text-foreground hover:underline"
+                    >
+                      Open project
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
           </section>
 
           <section className="rounded-xl border border-border bg-card">
-            <div className="border-b border-border px-4 py-3">
+            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Failed Outbox
               </h2>
+              <div className="flex gap-3 text-[12px]">
+                <Link href="/reports" className="font-medium text-accent hover:underline">
+                  Reports
+                </Link>
+                <Link href="/journal" className="font-medium text-accent hover:underline">
+                  Journal
+                </Link>
+              </div>
             </div>
             <div className="space-y-0">
               {outboxFailedQuery.isLoading && (
@@ -313,16 +389,33 @@ export default function OperationsPage() {
                   <div className="mt-1 text-xs text-muted-foreground">
                     {item.last_error || "No error payload"}
                   </div>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    <Link href="/reports" className="font-medium text-accent hover:underline">
+                      Reports outbox
+                    </Link>
+                    <Link
+                      href="/journal"
+                      className="font-medium text-muted-foreground hover:text-foreground hover:underline"
+                    >
+                      Journal outbox
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
           </section>
 
           <section className="rounded-xl border border-border bg-card">
-            <div className="border-b border-border px-4 py-3">
+            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Sync Health
               </h2>
+              <Link
+                href="/installers"
+                className="text-[12px] font-medium text-accent hover:underline"
+              >
+                Open installers
+              </Link>
             </div>
             <div className="space-y-0">
               {syncQuery.isLoading && (
@@ -360,6 +453,14 @@ export default function OperationsPage() {
                       <div className="mt-1 text-xs text-muted-foreground">
                         lag {item.lag} | offline {item.days_offline} days | last seen{" "}
                         {formatDateTime(item.last_seen_at)}
+                      </div>
+                      <div className="mt-3 text-xs">
+                        <Link
+                          href="/installers"
+                          className="font-medium text-accent hover:underline"
+                        >
+                          Installer board
+                        </Link>
                       </div>
                     </div>
                   ))}
