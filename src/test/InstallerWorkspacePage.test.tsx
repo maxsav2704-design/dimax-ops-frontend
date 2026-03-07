@@ -17,6 +17,7 @@ describe("InstallerWorkspacePage", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-03-07T12:00:00.000Z"));
     apiFetchMock.mockReset();
+    window.history.replaceState({}, "", "/installer");
   });
 
   afterEach(() => {
@@ -301,6 +302,86 @@ describe("InstallerWorkspacePage", () => {
       expect(within(projectsSection).getByText("Ashdod Towers")).toBeInTheDocument();
       expect(within(projectsSection).getByText("Haifa Port")).toBeInTheDocument();
       expect(within(projectsSection).queryByText("Jerusalem Mall")).not.toBeInTheDocument();
+    });
+  });
+
+  it("syncs workspace quick filter to URL query params", async () => {
+    const base = new Date();
+    base.setHours(12, 0, 0, 0);
+    const iso = (hoursShift: number) =>
+      new Date(base.getTime() + hoursShift * 60 * 60 * 1000).toISOString();
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/installer/projects") {
+        return {
+          items: [
+            {
+              id: "project-1",
+              name: "Ashdod Towers",
+              address: "Harbor 11",
+              status: "IN_PROGRESS",
+              waze_url: null,
+            },
+            {
+              id: "project-2",
+              name: "Haifa Port",
+              address: "Dock 7",
+              status: "PROBLEM",
+              waze_url: null,
+            },
+          ],
+        };
+      }
+      if (String(path).includes("/api/v1/installer/calendar/events?")) {
+        return {
+          items: [
+            {
+              id: "event-1",
+              title: "Morning visit",
+              starts_at: iso(1),
+              ends_at: iso(2),
+              event_type: "INSTALLATION",
+              project_id: "project-1",
+            },
+          ],
+        };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    window.history.replaceState({}, "", "/installer?project_filter=problem");
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallerWorkspacePage />
+      </QueryClientProvider>
+    );
+
+    const projectsSection = screen.getByLabelText("My projects list");
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Only problem (1)" })).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+      expect(within(projectsSection).getByText("Haifa Port")).toBeInTheDocument();
+      expect(within(projectsSection).queryByText("Ashdod Towers")).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Only active (2)" }));
+
+    await waitFor(() => {
+      expect(window.location.search).toContain("project_filter=active");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "All (2)" }));
+
+    await waitFor(() => {
+      expect(window.location.search).toBe("");
     });
   });
 });

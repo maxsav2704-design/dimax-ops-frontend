@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
@@ -59,6 +59,7 @@ function formatDate(value: string): string {
 export default function InstallerWorkspacePage() {
   const [nowIso] = useState(() => new Date().toISOString());
   const [projectQuickFilter, setProjectQuickFilter] = useState<ProjectQuickFilter>("ALL");
+  const [isQueryInitialized, setIsQueryInitialized] = useState(false);
   const [calendarRange] = useState(() => {
     const from = new Date(nowIso);
     const to = new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -176,6 +177,50 @@ export default function InstallerWorkspacePage() {
       return true;
     });
   }, [projectQuickFilter, projects, todayTaskProjectIds]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const rawProjectFilter = params.get("project_filter");
+    setProjectQuickFilter(
+      rawProjectFilter === "problem"
+        ? "PROBLEM"
+        : rawProjectFilter === "active"
+          ? "ACTIVE"
+          : rawProjectFilter === "today"
+            ? "TODAY_TASKS"
+            : "ALL"
+    );
+    setIsQueryInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isQueryInitialized) {
+      return;
+    }
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(window.location.search);
+    nextParams.delete("project_filter");
+    if (projectQuickFilter === "PROBLEM") {
+      nextParams.set("project_filter", "problem");
+    } else if (projectQuickFilter === "ACTIVE") {
+      nextParams.set("project_filter", "active");
+    } else if (projectQuickFilter === "TODAY_TASKS") {
+      nextParams.set("project_filter", "today");
+    }
+
+    const nextSearch = nextParams.toString();
+    const nextUrl = nextSearch
+      ? `${window.location.pathname}?${nextSearch}`
+      : window.location.pathname;
+    window.history.replaceState(window.history.state, "", nextUrl);
+  }, [isQueryInitialized, projectQuickFilter]);
 
   const priorityItems = useMemo(() => {
     const items: PriorityItem[] = [];
