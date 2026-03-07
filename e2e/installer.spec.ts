@@ -97,7 +97,7 @@ test.describe.serial("Installer web smoke", () => {
 
     expect(projectsResponse.ok()).toBeTruthy();
     const projectsBody = (await projectsResponse.json()) as {
-      items: Array<{ id: string; name: string }>;
+      items: Array<{ id: string; name: string; status: string; waze_url: string | null }>;
     };
 
     if (!projectsBody.items.length) {
@@ -119,9 +119,51 @@ test.describe.serial("Installer web smoke", () => {
       timeout: 30_000,
     });
 
+    const todayOnProjectLink = page.locator(
+      `a[href="/installer/calendar?preset=today&project_id=${targetProject.id}"]`
+    );
+    await expect(todayOnProjectLink).toBeVisible({ timeout: 30_000 });
+    await todayOnProjectLink.click();
+    await expect(page).toHaveURL(
+      new RegExp(`/installer/calendar\\?preset=today&project_id=${targetProject.id}`)
+    );
+    await expect(page.getByRole("heading", { name: "My Schedule" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await page.getByRole("link", { name: "Workspace" }).click();
+    await expect(page.getByRole("heading", { name: "Installer Workspace" })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const priorityDoorsLink = page.locator(
+      `a[href="/installer/projects/${targetProject.id}#project-doors"]`
+    );
+    await expect(priorityDoorsLink).toBeVisible({ timeout: 30_000 });
+    await priorityDoorsLink.click();
+    await expect(page).toHaveURL(
+      new RegExp(`/installer/projects/${targetProject.id}#project-doors$`)
+    );
+    await expect(page.getByText("Door filters")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("#project-doors")).toBeVisible({ timeout: 30_000 });
+
     await page.goto(`/installer/projects/${targetProject.id}`);
     await expect(page.getByText("Door filters")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("Add-on fact")).toBeVisible({ timeout: 30_000 });
+
+    const problemProject = projectsBody.items.find((project) => project.status === "PROBLEM");
+    if (problemProject) {
+      await page.goto("/installer");
+      const openIssuesLink = page.locator(
+        `a[href="/installer/projects/${problemProject.id}#project-open-issues"]`
+      );
+      if (await openIssuesLink.count()) {
+        await openIssuesLink.first().click();
+        await expect(page).toHaveURL(
+          new RegExp(`/installer/projects/${problemProject.id}#project-open-issues$`)
+        );
+        await expect(page.locator("#project-open-issues")).toBeVisible({ timeout: 30_000 });
+      }
+    }
   });
 
   test("supports deep-link schedule filters", async ({ page }) => {
