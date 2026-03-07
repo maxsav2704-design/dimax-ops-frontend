@@ -53,6 +53,15 @@ describe("InstallerSchedulePage", () => {
 
     expect(await screen.findByText("My Schedule")).toBeInTheDocument();
     expect(await screen.findByText("Site visit")).toBeInTheDocument();
+    expect(screen.getByText("Project project-1")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Priority doors" })).toHaveAttribute(
+      "href",
+      "/installer/projects/project-1#project-doors"
+    );
+    expect(screen.getByRole("link", { name: "Open issues" })).toHaveAttribute(
+      "href",
+      "/installer/projects/project-1#project-open-issues"
+    );
     expect(await screen.findByRole("link", { name: "Open project" })).toBeInTheDocument();
   });
 
@@ -257,6 +266,7 @@ describe("InstallerSchedulePage", () => {
     );
 
     expect(await screen.findByText("Overdue no-project")).toBeInTheDocument();
+    expect(screen.getAllByText("No project").length).toBeGreaterThan(0);
     expect(screen.queryByText("Future no-project")).not.toBeInTheDocument();
     expect(screen.queryByText("Overdue with project")).not.toBeInTheDocument();
   });

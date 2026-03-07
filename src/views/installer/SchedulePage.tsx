@@ -354,6 +354,28 @@ export default function InstallerSchedulePage() {
               </div>
             </div>
 
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-md border border-border px-2 py-1 text-foreground">
+                {event.project_id ? `Project ${event.project_id}` : "No project"}
+              </span>
+              {event.project_id && (
+                <>
+                  <Link
+                    href={`/installer/projects/${event.project_id}#project-doors`}
+                    className="inline-flex items-center rounded-lg border border-border bg-background px-2.5 py-1 transition-colors hover:bg-muted"
+                  >
+                    Priority doors
+                  </Link>
+                  <Link
+                    href={`/installer/projects/${event.project_id}#project-open-issues`}
+                    className="inline-flex items-center rounded-lg border border-border bg-background px-2.5 py-1 transition-colors hover:bg-muted"
+                  >
+                    Open issues
+                  </Link>
+                </>
+              )}
+            </div>
+
             {event.location && (
               <div className="mt-2 text-sm text-muted-foreground">{event.location}</div>
             )}
