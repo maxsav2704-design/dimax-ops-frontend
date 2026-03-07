@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import InstallerWorkspacePage from "@/views/installer/WorkspacePage";
 
@@ -14,7 +14,13 @@ vi.mock("@/lib/api", () => ({
 
 describe("InstallerWorkspacePage", () => {
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-03-07T12:00:00.000Z"));
     apiFetchMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("renders installer projects and events", async () => {
