@@ -116,6 +116,27 @@ function buildProjectsImportHref(projectId: string | null, failedProjectIds: str
   return `/projects?${params.toString()}`;
 }
 
+function formatRefreshTimestamp(value: number | null): string {
+  if (!value || Number.isNaN(value)) {
+    return "Waiting for first successful refresh";
+  }
+  return `Fresh as of ${new Date(value).toLocaleTimeString()}`;
+}
+
+function describeAgeMinutes(value: number | null, now: number): string {
+  if (!value || Number.isNaN(value)) {
+    return "No successful snapshot yet";
+  }
+  const ageMinutes = Math.max(0, Math.floor((now - value) / 60_000));
+  if (ageMinutes === 0) {
+    return "Updated less than a minute ago";
+  }
+  if (ageMinutes === 1) {
+    return "Updated 1 minute ago";
+  }
+  return `Updated ${ageMinutes} minutes ago`;
+}
+
 function summarizeActions(params: {
   actionableImports: number;
   actionableOutbox: number;
@@ -224,6 +245,31 @@ export default function OperationsPage() {
   const outboxSummary = outboxSummaryQuery.data;
   const failedOutbox = outboxFailedQuery.data?.items || [];
   const failedImports = failedImportsQuery.data?.items || [];
+  const freshnessTimestamp = useMemo(() => {
+    const timestamps = [
+      syncQuery.dataUpdatedAt,
+      outboxSummaryQuery.dataUpdatedAt,
+      outboxFailedQuery.dataUpdatedAt,
+      failedImportsQuery.dataUpdatedAt,
+    ].filter((value) => value > 0);
+    if (timestamps.length === 0) {
+      return null;
+    }
+    return Math.min(...timestamps);
+  }, [
+    failedImportsQuery.dataUpdatedAt,
+    outboxFailedQuery.dataUpdatedAt,
+    outboxSummaryQuery.dataUpdatedAt,
+    syncQuery.dataUpdatedAt,
+  ]);
+  const freshnessAgeMs = freshnessTimestamp ? Date.now() - freshnessTimestamp : null;
+  const freshnessState = isRefreshing
+    ? "refreshing"
+    : hasError
+      ? "degraded"
+      : freshnessAgeMs !== null && freshnessAgeMs > 120_000
+        ? "stale"
+        : "fresh";
   const syncItems = useMemo(
     () => (sync ? (sync.top_laggers.length ? sync.top_laggers : sync.top_offline) : []),
     [sync]
@@ -439,6 +485,41 @@ export default function OperationsPage() {
             </div>
           ))}
         </div>
+
+        <section className="rounded-xl border border-border bg-card p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Data Freshness
+              </h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                {formatRefreshTimestamp(freshnessTimestamp)}
+              </p>
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                {describeAgeMinutes(freshnessTimestamp, Date.now())}
+              </p>
+            </div>
+            <span
+              className={
+                freshnessState === "fresh"
+                  ? "rounded-md border border-[hsl(var(--success)/0.35)] bg-[hsl(var(--success)/0.08)] px-2 py-1 text-[11px] font-medium text-[hsl(var(--success))]"
+                  : freshnessState === "stale"
+                    ? "rounded-md border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.12)] px-2 py-1 text-[11px] font-medium text-[hsl(var(--warning-foreground))]"
+                    : freshnessState === "degraded"
+                      ? "rounded-md border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-2 py-1 text-[11px] font-medium text-[hsl(var(--destructive))]"
+                      : "rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground"
+              }
+            >
+              {freshnessState === "fresh"
+                ? "fresh"
+                : freshnessState === "stale"
+                  ? "stale"
+                  : freshnessState === "degraded"
+                    ? "degraded"
+                    : "refreshing"}
+            </span>
+          </div>
+        </section>
 
         <section className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center justify-between gap-3">

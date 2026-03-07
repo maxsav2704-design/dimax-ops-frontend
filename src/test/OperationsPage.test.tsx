@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import OperationsPage from "@/views/OperationsPage";
 
@@ -35,6 +35,11 @@ function renderSubject() {
 describe("OperationsPage", () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("renders operational queue health data", async () => {
@@ -129,6 +134,9 @@ describe("OperationsPage", () => {
     expect(screen.getByText("Failed outbox")).toBeInTheDocument();
     expect(screen.getByText("Pending > 15m")).toBeInTheDocument();
     expect(screen.getByText("Action Summary")).toBeInTheDocument();
+    expect(screen.getByText("Data Freshness")).toBeInTheDocument();
+    expect(screen.getByText("fresh")).toBeInTheDocument();
+    expect(screen.getByText(/Fresh as of/)).toBeInTheDocument();
     expect(screen.getByText("Retry failed import for Ashdod Towers")).toBeInTheDocument();
     expect(screen.getByText("Recover delivery for ops@dimax.test")).toBeInTheDocument();
     expect(screen.getByText("Investigate installer installer-2")).toBeInTheDocument();
@@ -543,4 +551,74 @@ describe("OperationsPage", () => {
     expect(await screen.findByText("Operations Center")).toBeInTheDocument();
     expect(screen.getByText("No active operational actions right now")).toBeInTheDocument();
   });
+
+  it("marks data as stale after the freshness threshold", async () => {
+    const nowSpy = vi.spyOn(Date, "now");
+    nowSpy.mockReturnValue(new Date("2026-03-07T10:00:00Z").getTime());
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/sync/health/summary") {
+        return {
+          max_cursor: 18,
+          counts: {
+            ok: 4,
+            warn: 1,
+            danger: 1,
+            total: 6,
+            dead: 0,
+            never_seen: 0,
+            danger_pct: 16.67,
+          },
+          alerts_sent: 1,
+          top_laggers: [
+            {
+              installer_id: "installer-2",
+              status: "danger",
+              lag: 9,
+              days_offline: 2,
+              last_seen_at: "2026-03-07T08:00:00Z",
+            },
+          ],
+          top_offline: [],
+        };
+      }
+      if (path === "/api/v1/admin/outbox/summary") {
+        return {
+          total: 3,
+          by_channel: { email: 3 },
+          by_status: { FAILED: 1 },
+          by_delivery_status: { failed: 1 },
+          pending_overdue_15m: 0,
+          failed_total: 1,
+        };
+      }
+      if (path === "/api/v1/admin/outbox?status=FAILED&limit=8") {
+        return {
+          items: [],
+        };
+      }
+      if (path === "/api/v1/admin/projects/import-runs/failed-queue?limit=8&offset=0") {
+        return {
+          items: [],
+          total: 0,
+          limit: 8,
+          offset: 0,
+        };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    renderSubject();
+
+    expect(await screen.findByText("Operations Center")).toBeInTheDocument();
+    expect(screen.getByText("fresh")).toBeInTheDocument();
+
+    nowSpy.mockReturnValue(new Date("2026-03-07T10:03:30Z").getTime());
+    fireEvent.click(screen.getByRole("button", { name: "Only actionable" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("stale")).toBeInTheDocument();
+      expect(screen.getByText("Updated 3 minutes ago")).toBeInTheDocument();
+    });
+  }, 10000);
 });
