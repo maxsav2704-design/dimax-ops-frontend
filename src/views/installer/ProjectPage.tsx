@@ -249,16 +249,18 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
         id: door.id,
         unitLabel: door.unit_label,
         href: `#door-${door.id}`,
+        floorLabel: door.floor_label || "No floor",
         tone: issueDoorIds.has(door.id)
           ? "issue"
           : door.is_locked
             ? "locked"
             : "ready",
         label: issueDoorIds.has(door.id)
-          ? "Issue"
-          : door.is_locked
-            ? "Locked"
-            : "Not installed",
+            ? "Issue"
+            : door.is_locked
+              ? "Locked"
+              : "Not installed",
+        quickSearchValue: door.unit_label,
       }));
   }, [filteredDoors, issueDoorIds]);
 
@@ -340,6 +342,19 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
     setLocationFilter("ALL");
     setDoorSearch("");
     setDoorQuickFilter("ALL");
+  }
+
+  function focusPriorityDoor(door: {
+    href: string;
+    quickSearchValue: string;
+  }) {
+    setOrderFilter("ALL");
+    setLocationFilter("ALL");
+    setDoorQuickFilter("ALL");
+    setDoorSearch(door.quickSearchValue);
+    if (typeof window !== "undefined") {
+      window.location.hash = door.href.slice(1);
+    }
   }
 
   return (
@@ -683,19 +698,28 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span className="text-muted-foreground">Priority doors:</span>
                     {priorityDoors.map((door) => (
-                      <a
+                      <span
                         key={door.id}
-                        href={door.href}
                         className={
                           door.tone === "issue"
-                            ? "inline-flex items-center rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-amber-900 transition-colors hover:bg-amber-500/20"
+                            ? "inline-flex items-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-amber-900"
                             : door.tone === "locked"
-                              ? "inline-flex items-center rounded-lg border border-border bg-muted px-2.5 py-1.5 transition-colors hover:bg-muted/80"
-                              : "inline-flex items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-emerald-900 transition-colors hover:bg-emerald-500/20"
+                              ? "inline-flex items-center gap-1 rounded-lg border border-border bg-muted px-2 py-1.5"
+                              : "inline-flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5 text-emerald-900"
                         }
                       >
-                        {door.unitLabel} - {door.label}
-                      </a>
+                        <a href={door.href} className="font-medium underline-offset-4 hover:underline">
+                          {door.unitLabel} - {door.label}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => focusPriorityDoor(door)}
+                          aria-label={`Only this ${door.unitLabel}`}
+                          className="rounded border border-current/20 bg-background/70 px-1.5 py-0.5 text-[11px] transition-colors hover:bg-background"
+                        >
+                          Only this
+                        </button>
+                      </span>
                     ))}
                   </div>
                 )}

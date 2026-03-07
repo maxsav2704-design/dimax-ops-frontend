@@ -352,6 +352,32 @@ describe("InstallerProjectPage", () => {
     );
   });
 
+  it("filters directly to a priority door from the summary bar", async () => {
+    setupApiMock({
+      ...projectDetails,
+      issues_open: [
+        {
+          id: "issue-1",
+          door_id: "door-2",
+          status: "OPEN",
+          title: "Blocked lock",
+          details: "Door remains blocked",
+        },
+      ],
+    });
+    renderSubject();
+
+    await screen.findByLabelText("Door summary bar");
+
+    fireEvent.click(screen.getByRole("button", { name: "Only this B-202" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Door summary bar")).toHaveTextContent("Visible doors: 1 / 2");
+      expect(screen.getAllByText("B-202").length).toBeGreaterThan(0);
+      expect(screen.queryByText("A-101")).not.toBeInTheDocument();
+    });
+  });
+
   it("shows retry action when project details query fails", async () => {
     let shouldFail = true;
     apiFetchMock.mockImplementation(async (path: string) => {
