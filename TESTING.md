@@ -29,21 +29,28 @@ cd ..
 .\workspace.cmd installer-gate
 ```
 
+This command now:
+
+- starts backend services
+- runs `seed_dev`
+- auto-generates `dimax-operations-suite-main/.env.e2e.local`
+- runs strict installer e2e
+
 Local bootstrap (no manual SQL required):
 
 ```bash
 cd ..\backend
 docker compose up -d
-docker compose exec -e APP_ENV=dev api python -m app.scripts.seed_dev
+docker compose exec -T -e APP_ENV=dev api python -m app.scripts.seed_dev
 
 cd ..\dimax-operations-suite-main
-copy .env.e2e.example .env.e2e.local
-# fill E2E_COMPANY_ID / E2E_INSTALLER_EMAIL / E2E_INSTALLER_PASSWORD
+# create .env.e2e.local from seed output or fill manually
 npm run test:e2e:installer:strict:local
 ```
 
 `seed_dev` now creates/repairs installer links and sync state automatically.
 Do not use manual SQL inserts for `installers` in the normal local flow.
+Preferred path is `..\workspace.cmd installer-gate`, because it also refreshes `.env.e2e.local`.
 
 Installer smoke test file:
 
@@ -100,6 +107,11 @@ Required environment variables for installer login:
 - `E2E_INSTALLER_EMAIL`
 - `E2E_INSTALLER_PASSWORD`
 - `NEXT_PUBLIC_API_BASE_URL`
+
+Default seeded installer credentials:
+
+- `E2E_INSTALLER_EMAIL=installer1@dimax.dev`
+- `E2E_INSTALLER_PASSWORD=installer12345`
 
 If installer credentials are missing, installer smoke is skipped by design.
 In CI (`CI=true`) missing installer credentials fail the installer smoke job.
