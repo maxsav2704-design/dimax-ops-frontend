@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw, ServerCrash, ShieldAlert, Siren, TimerReset } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { useUserRole } from "@/hooks/use-user-role";
+import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
 
 type SyncHealthSummaryResponse = {
@@ -115,6 +117,14 @@ function buildProjectsImportHref(projectId: string | null, failedProjectIds: str
 }
 
 export default function OperationsPage() {
+  const userRole = useUserRole();
+  const canRunPrivilegedActions = canRunPrivilegedAdminActions(userRole);
+  const [busyAction, setBusyAction] = useState("");
+  const [actionFeedback, setActionFeedback] = useState<{
+    tone: "success" | "error";
+    message: string;
+  } | null>(null);
+
   const syncQuery = useQuery({
     queryKey: ["operations-sync-health"],
     queryFn: () => apiFetch<SyncHealthSummaryResponse>("/api/v1/admin/sync/health/summary"),
@@ -209,6 +219,59 @@ export default function OperationsPage() {
     ]);
   }
 
+  async function handleRetryImport(runId: string, projectId: string) {
+    if (!canRunPrivilegedActions) {
+      return;
+    }
+    setBusyAction(`import:${runId}`);
+    setActionFeedback(null);
+    try {
+      await apiFetch(`/api/v1/admin/projects/${projectId}/doors/import-runs/${runId}/retry`, {
+        method: "POST",
+      });
+      await refetchAll();
+      setActionFeedback({
+        tone: "success",
+        message: `Import run ${runId} moved back to processing.`,
+      });
+    } catch (error) {
+      setActionFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Failed to retry import run",
+      });
+    } finally {
+      setBusyAction("");
+    }
+  }
+
+  async function handleRetryOutbox(outboxId: string) {
+    if (!canRunPrivilegedActions) {
+      return;
+    }
+    setBusyAction(`outbox:${outboxId}`);
+    setActionFeedback(null);
+    try {
+      await apiFetch(`/api/v1/admin/outbox/${outboxId}/retry`, {
+        method: "POST",
+        body: JSON.stringify({
+          reason: "operations_center_manual_retry",
+        }),
+      });
+      await refetchAll();
+      setActionFeedback({
+        tone: "success",
+        message: `Outbox item ${outboxId} moved back to queue.`,
+      });
+    } catch (error) {
+      setActionFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Failed to retry outbox item",
+      });
+    } finally {
+      setBusyAction("");
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="p-6 lg:p-8 max-w-[1400px] space-y-6">
@@ -237,6 +300,17 @@ export default function OperationsPage() {
         {hasError && (
           <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
             Failed to load operations data. Check API availability and admin permissions.
+          </div>
+        )}
+        {actionFeedback && (
+          <div
+            className={
+              actionFeedback.tone === "success"
+                ? "rounded-lg border border-[hsl(var(--success)/0.35)] bg-[hsl(var(--success)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--success))]"
+                : "rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]"
+            }
+          >
+            {actionFeedback.message}
           </div>
         )}
 
@@ -340,6 +414,18 @@ export default function OperationsPage() {
                     >
                       Open project
                     </Link>
+                    {item.retry_available ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleRetryImport(item.run_id, item.project_id);
+                        }}
+                        disabled={!canRunPrivilegedActions || busyAction === `import:${item.run_id}`}
+                        className="font-medium text-accent disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {busyAction === `import:${item.run_id}` ? "Retrying import..." : "Retry import"}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -399,6 +485,16 @@ export default function OperationsPage() {
                     >
                       Journal outbox
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleRetryOutbox(item.id);
+                      }}
+                      disabled={!canRunPrivilegedActions || busyAction === `outbox:${item.id}`}
+                      className="font-medium text-accent disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {busyAction === `outbox:${item.id}` ? "Retrying delivery..." : "Retry delivery"}
+                    </button>
                   </div>
                 </div>
               ))}
