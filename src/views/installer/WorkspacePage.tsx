@@ -32,6 +32,14 @@ type CalendarEventsResponse = {
   items: CalendarEvent[];
 };
 
+type PriorityItem = {
+  id: string;
+  title: string;
+  meta: string;
+  href: string;
+  tone: "problem" | "overdue" | "today";
+};
+
 function formatDate(value: string): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
@@ -123,6 +131,88 @@ export default function InstallerWorkspacePage() {
 
     return { today, overdue, withoutProject };
   }, [nowIso, taskEvents]);
+
+  const priorityItems = useMemo(() => {
+    const items: PriorityItem[] = [];
+    const seen = new Set<string>();
+    const now = new Date(nowIso);
+    const dayStart = new Date(now);
+    dayStart.setHours(0, 0, 0, 0);
+    const nextDayStart = new Date(dayStart);
+    nextDayStart.setDate(nextDayStart.getDate() + 1);
+    const projectsById = new Map(projects.map((project) => [project.id, project]));
+
+    for (const project of projects.filter((item) => item.status === "PROBLEM")) {
+      const key = `project:${project.id}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      items.push({
+        id: key,
+        title: project.name,
+        meta: `Problem project${project.address ? ` | ${project.address}` : ""}`,
+        href: `/installer/projects/${project.id}`,
+        tone: "problem",
+      });
+      if (items.length >= 4) {
+        return items;
+      }
+    }
+
+    const overdueEvents = [...taskEvents]
+      .filter((event) => new Date(event.ends_at) < now)
+      .sort((left, right) => new Date(left.ends_at).getTime() - new Date(right.ends_at).getTime());
+
+    for (const event of overdueEvents) {
+      const key = event.project_id ? `project:${event.project_id}` : `event:${event.id}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      const project = event.project_id ? projectsById.get(event.project_id) : null;
+      items.push({
+        id: key,
+        title: project?.name || event.title,
+        meta: `Overdue task | ${formatDate(event.ends_at)}`,
+        href: project ? `/installer/projects/${project.id}` : "/installer/calendar?preset=7d&overdue=1",
+        tone: "overdue",
+      });
+      if (items.length >= 4) {
+        return items;
+      }
+    }
+
+    const todayEvents = [...taskEvents]
+      .filter((event) => {
+        const startsAt = new Date(event.starts_at);
+        return startsAt >= dayStart && startsAt < nextDayStart && new Date(event.ends_at) >= now;
+      })
+      .sort((left, right) => new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime());
+
+    for (const event of todayEvents) {
+      const key = event.project_id ? `project:${event.project_id}` : `event:${event.id}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      const project = event.project_id ? projectsById.get(event.project_id) : null;
+      items.push({
+        id: key,
+        title: project?.name || event.title,
+        meta: `Today ${event.event_type.toLowerCase()} | ${formatDate(event.starts_at)}`,
+        href: project
+          ? `/installer/projects/${project.id}`
+          : "/installer/calendar?preset=today&project_id=none",
+        tone: "today",
+      });
+      if (items.length >= 4) {
+        return items;
+      }
+    }
+
+    return items;
+  }, [nowIso, projects, taskEvents]);
 
   const isRefreshing =
     projectsQuery.isFetching || eventsQuery.isFetching || tasksQuery.isFetching;
@@ -236,6 +326,54 @@ export default function InstallerWorkspacePage() {
             </Link>
           </div>
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Today priorities</h2>
+          <Link
+            href="/installer/calendar?preset=today"
+            className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+          >
+            Open today board
+          </Link>
+        </div>
+        {tasksQuery.isLoading && (
+          <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+            Building today priorities...
+          </div>
+        )}
+        {!tasksQuery.isLoading && priorityItems.length === 0 && (
+          <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+            No urgent priorities right now.
+          </div>
+        )}
+        {priorityItems.length > 0 && (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {priorityItems.map((item) => (
+              <div
+                key={item.id}
+                className={
+                  item.tone === "problem"
+                    ? "rounded-xl border border-amber-500/40 bg-amber-500/10 p-4"
+                    : item.tone === "overdue"
+                      ? "rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] p-4"
+                      : "rounded-xl border border-border bg-card p-4"
+                }
+              >
+                <div className="text-sm font-semibold">{item.title}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{item.meta}</div>
+                <Link
+                  href={item.href}
+                  aria-label={`Open priority ${item.title}`}
+                  className="mt-3 inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                >
+                  Open priority
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-5">

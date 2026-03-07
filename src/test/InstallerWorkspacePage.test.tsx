@@ -86,7 +86,7 @@ describe("InstallerWorkspacePage", () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText("Ashdod Towers")).toBeInTheDocument();
+    expect((await screen.findAllByText("Ashdod Towers")).length).toBeGreaterThan(0);
     expect(await screen.findByText("Morning visit")).toBeInTheDocument();
     expect(screen.getByText("Assigned projects")).toBeInTheDocument();
 
@@ -107,6 +107,15 @@ describe("InstallerWorkspacePage", () => {
     expect(screen.getByRole("link", { name: "Open no-project tasks" })).toHaveAttribute(
       "href",
       "/installer/calendar?preset=7d&project_id=none"
+    );
+    expect(screen.getByText("Today priorities")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open priority Ashdod Towers" })).toHaveAttribute(
+      "href",
+      "/installer/projects/project-1"
+    );
+    expect(screen.getByRole("link", { name: "Open priority Unassigned pickup" })).toHaveAttribute(
+      "href",
+      "/installer/calendar?preset=today&project_id=none"
     );
   }, 15000);
 
@@ -153,5 +162,44 @@ describe("InstallerWorkspacePage", () => {
     expect(
       paths.filter((path) => String(path).includes("/api/v1/installer/calendar/events?")).length
     ).toBeGreaterThanOrEqual(4);
+  });
+
+  it("surfaces problem projects in today priorities", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/installer/projects") {
+        return {
+          items: [
+            {
+              id: "project-2",
+              name: "Haifa Port",
+              address: "Dock 7",
+              status: "PROBLEM",
+              waze_url: null,
+            },
+          ],
+        };
+      }
+      if (String(path).includes("/api/v1/installer/calendar/events?")) {
+        return { items: [] };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallerWorkspacePage />
+      </QueryClientProvider>
+    );
+
+    expect((await screen.findAllByText("Haifa Port")).length).toBeGreaterThan(0);
+    expect(screen.getByText("Problem project | Dock 7")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open priority Haifa Port" })).toHaveAttribute(
+      "href",
+      "/installer/projects/project-2"
+    );
   });
 });
