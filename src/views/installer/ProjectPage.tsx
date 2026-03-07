@@ -91,6 +91,13 @@ function formatDate(value: string): string {
   });
 }
 
+function toAnchorId(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "item";
+}
+
 type InstallerProjectPageProps = {
   projectId: string;
 };
@@ -198,6 +205,28 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
     }
     return Array.from(groups.entries());
   }, [filteredDoors]);
+
+  const floorJumpTargets = useMemo(
+    () =>
+      doorsByFloor.map(([floor, doors]) => ({
+        floor,
+        count: doors.length,
+        href: `#project-floor-${toAnchorId(floor)}`,
+      })),
+    [doorsByFloor]
+  );
+
+  const issueDoorJumpTargets = useMemo(() => {
+    const doors = filteredDoors.filter((door) => issueDoorIds.has(door.id));
+    const seen = new Set<string>();
+    return doors.filter((door) => {
+      if (seen.has(door.id)) {
+        return false;
+      }
+      seen.add(door.id);
+      return true;
+    });
+  }, [filteredDoors, issueDoorIds]);
 
   const installMutation = useMutation({
     mutationFn: (doorId: string) =>
@@ -586,6 +615,38 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 </button>
               </div>
             </div>
+            {(floorJumpTargets.length > 0 || issueDoorJumpTargets.length > 0) && (
+              <div className="mt-3 space-y-2 border-t border-border/70 pt-3">
+                {floorJumpTargets.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-muted-foreground">Jump to floor:</span>
+                    {floorJumpTargets.map((target) => (
+                      <a
+                        key={target.href}
+                        href={target.href}
+                        className="inline-flex items-center rounded-lg border border-border bg-card px-2.5 py-1.5 transition-colors hover:bg-muted"
+                      >
+                        {target.floor} ({target.count})
+                      </a>
+                    ))}
+                  </div>
+                )}
+                {issueDoorJumpTargets.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-muted-foreground">Issue doors:</span>
+                    {issueDoorJumpTargets.map((door) => (
+                      <a
+                        key={door.id}
+                        href={`#door-${door.id}`}
+                        className="inline-flex items-center rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-amber-900 transition-colors hover:bg-amber-500/20"
+                      >
+                        {door.unit_label}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </section>
 
           <section id="project-doors" className="space-y-3">
@@ -596,12 +657,17 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               </div>
             )}
             {doorsByFloor.map(([floor, doors]) => (
-              <div key={floor} className="space-y-3 rounded-xl border border-border bg-card p-4">
+              <div
+                key={floor}
+                id={`project-floor-${toAnchorId(floor)}`}
+                className="space-y-3 rounded-xl border border-border bg-card p-4"
+              >
                 <div className="text-sm font-semibold">Floor: {floor}</div>
                 <div className="space-y-2">
                   {doors.map((door) => (
                     <div
                       key={door.id}
+                      id={`door-${door.id}`}
                       className="rounded-lg border border-border bg-background p-3"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">

@@ -186,7 +186,7 @@ describe("InstallerProjectPage", () => {
     renderSubject();
 
     expect(await screen.findByText("A-101")).toBeInTheDocument();
-    expect(screen.getByText("B-202")).toBeInTheDocument();
+    expect(screen.getAllByText("B-202").length).toBeGreaterThan(0);
 
     fireEvent.change(
       screen.getByPlaceholderText("Unit, order, apartment, location, marking"),
@@ -197,7 +197,7 @@ describe("InstallerProjectPage", () => {
 
     await waitFor(() => {
       expect(screen.queryByText("A-101")).not.toBeInTheDocument();
-      expect(screen.getByText("B-202")).toBeInTheDocument();
+      expect(screen.getAllByText("B-202").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Reset door filters" }));
@@ -224,27 +224,27 @@ describe("InstallerProjectPage", () => {
     renderSubject();
 
     expect(await screen.findByText("A-101")).toBeInTheDocument();
-    expect(screen.getByText("B-202")).toBeInTheDocument();
+    expect(screen.getAllByText("B-202").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Installed (1)" }));
 
     await waitFor(() => {
       expect(screen.queryByText("A-101")).not.toBeInTheDocument();
-      expect(screen.getByText("B-202")).toBeInTheDocument();
+      expect(screen.getAllByText("B-202").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByRole("button", { name: "With issues (1)" }));
 
     await waitFor(() => {
       expect(screen.queryByText("A-101")).not.toBeInTheDocument();
-      expect(screen.getByText("B-202")).toBeInTheDocument();
+      expect(screen.getAllByText("B-202").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Locked (1)" }));
 
     await waitFor(() => {
       expect(screen.queryByText("A-101")).not.toBeInTheDocument();
-      expect(screen.getByText("B-202")).toBeInTheDocument();
+      expect(screen.getAllByText("B-202").length).toBeGreaterThan(0);
     });
   });
 
@@ -287,8 +287,41 @@ describe("InstallerProjectPage", () => {
       expect(screen.getByLabelText("Door summary bar")).toHaveTextContent("Visible doors: 2 / 2");
       expect(screen.getByLabelText("Door summary bar")).toHaveTextContent("Active filters: 0");
       expect(screen.getByText("A-101")).toBeInTheDocument();
-      expect(screen.getByText("B-202")).toBeInTheDocument();
+      expect(screen.getAllByText("B-202").length).toBeGreaterThan(0);
     });
+  });
+
+  it("shows quick jump links for floors and issue doors", async () => {
+    setupApiMock({
+      ...projectDetails,
+      issues_open: [
+        {
+          id: "issue-1",
+          door_id: "door-2",
+          status: "OPEN",
+          title: "Blocked lock",
+          details: "Door remains blocked",
+        },
+      ],
+    });
+    renderSubject();
+
+    const summaryBar = await screen.findByLabelText("Door summary bar");
+
+    expect(summaryBar).toHaveTextContent("Jump to floor:");
+    expect(screen.getByRole("link", { name: "1 (1)" })).toHaveAttribute(
+      "href",
+      "#project-floor-1"
+    );
+    expect(screen.getByRole("link", { name: "2 (1)" })).toHaveAttribute(
+      "href",
+      "#project-floor-2"
+    );
+    expect(summaryBar).toHaveTextContent("Issue doors:");
+    expect(screen.getByRole("link", { name: "B-202" })).toHaveAttribute(
+      "href",
+      "#door-door-2"
+    );
   });
 
   it("shows retry action when project details query fails", async () => {
