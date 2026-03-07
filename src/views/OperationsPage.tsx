@@ -6,6 +6,16 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw, ServerCrash, ShieldAlert, Siren, TimerReset } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useUserRole } from "@/hooks/use-user-role";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
@@ -228,6 +238,7 @@ export default function OperationsPage() {
   const canRunPrivilegedActions = canRunPrivilegedAdminActions(userRole);
   const [busyAction, setBusyAction] = useState("");
   const [onlyActionable, setOnlyActionable] = useState(false);
+  const [pendingBatchAction, setPendingBatchAction] = useState<"retry" | "reconcile" | null>(null);
   const [actionFeedback, setActionFeedback] = useState<{
     tone: "success" | "error";
     message: string;
@@ -487,6 +498,7 @@ export default function OperationsPage() {
       });
     } finally {
       setBusyAction("");
+      setPendingBatchAction(null);
     }
   }
 
@@ -522,6 +534,37 @@ export default function OperationsPage() {
       });
     } finally {
       setBusyAction("");
+      setPendingBatchAction(null);
+    }
+  }
+
+  function batchActionLabel(): string {
+    if (pendingBatchAction === "retry") {
+      return "Retry actionable imports";
+    }
+    if (pendingBatchAction === "reconcile") {
+      return "Reconcile actionable projects";
+    }
+    return "";
+  }
+
+  function batchActionDescription(): string {
+    if (pendingBatchAction === "retry") {
+      return `This will retry ${actionableFailedImports.length} actionable import runs across ${actionableImportProjectIds.length} projects.`;
+    }
+    if (pendingBatchAction === "reconcile") {
+      return `This will reconcile latest failed import state for ${actionableImportProjectIds.length} actionable projects.`;
+    }
+    return "";
+  }
+
+  async function confirmBatchAction() {
+    if (pendingBatchAction === "retry") {
+      await handleRetryAllImports();
+      return;
+    }
+    if (pendingBatchAction === "reconcile") {
+      await handleReconcileActionableProjects();
     }
   }
 
@@ -644,7 +687,7 @@ export default function OperationsPage() {
               <button
                 type="button"
                 onClick={() => {
-                  void handleRetryAllImports();
+                  setPendingBatchAction("retry");
                 }}
                 disabled={
                   !canRunPrivilegedActions ||
@@ -660,7 +703,7 @@ export default function OperationsPage() {
               <button
                 type="button"
                 onClick={() => {
-                  void handleReconcileActionableProjects();
+                  setPendingBatchAction("reconcile");
                 }}
                 disabled={
                   !canRunPrivilegedActions ||
@@ -935,6 +978,31 @@ export default function OperationsPage() {
           </section>
         </div>
       </div>
+      <AlertDialog
+        open={pendingBatchAction !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingBatchAction(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{batchActionLabel()}</AlertDialogTitle>
+            <AlertDialogDescription>{batchActionDescription()}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                void confirmBatchAction();
+              }}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
