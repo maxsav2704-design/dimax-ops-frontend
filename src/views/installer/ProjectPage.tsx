@@ -95,6 +95,8 @@ type InstallerProjectPageProps = {
   projectId: string;
 };
 
+type DoorQuickFilter = "ALL" | "NOT_INSTALLED" | "INSTALLED" | "LOCKED" | "WITH_ISSUES";
+
 export default function InstallerProjectPage({ projectId }: InstallerProjectPageProps) {
   const queryClient = useQueryClient();
   const [selectedReasonId, setSelectedReasonId] = useState("");
@@ -105,6 +107,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
   const [orderFilter, setOrderFilter] = useState("ALL");
   const [locationFilter, setLocationFilter] = useState("ALL");
   const [doorSearch, setDoorSearch] = useState("");
+  const [doorQuickFilter, setDoorQuickFilter] = useState<DoorQuickFilter>("ALL");
   const [actionError, setActionError] = useState<string | null>(null);
 
   const detailsQuery = useQuery({
@@ -138,6 +141,22 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
     return Array.from(values).sort();
   }, [details?.doors]);
 
+  const issueDoorIds = useMemo(
+    () => new Set((details?.issues_open || []).map((issue) => issue.door_id)),
+    [details?.issues_open]
+  );
+
+  const quickFilterCounts = useMemo(() => {
+    const doors = details?.doors || [];
+    return {
+      ALL: doors.length,
+      NOT_INSTALLED: doors.filter((door) => door.status === "NOT_INSTALLED").length,
+      INSTALLED: doors.filter((door) => door.status === "INSTALLED").length,
+      LOCKED: doors.filter((door) => door.is_locked).length,
+      WITH_ISSUES: doors.filter((door) => issueDoorIds.has(door.id)).length,
+    };
+  }, [details?.doors, issueDoorIds]);
+
   const filteredDoors = useMemo(() => {
     const rows = details?.doors || [];
     const searchNeedle = doorSearch.trim().toLowerCase();
@@ -159,9 +178,15 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
         ]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(searchNeedle));
-      return matchesOrder && matchesLocation && matchesSearch;
+      const matchesQuickFilter =
+        doorQuickFilter === "ALL" ||
+        (doorQuickFilter === "NOT_INSTALLED" && door.status === "NOT_INSTALLED") ||
+        (doorQuickFilter === "INSTALLED" && door.status === "INSTALLED") ||
+        (doorQuickFilter === "LOCKED" && door.is_locked) ||
+        (doorQuickFilter === "WITH_ISSUES" && issueDoorIds.has(door.id));
+      return matchesOrder && matchesLocation && matchesSearch && matchesQuickFilter;
     });
-  }, [details?.doors, doorSearch, locationFilter, orderFilter]);
+  }, [details?.doors, doorQuickFilter, doorSearch, issueDoorIds, locationFilter, orderFilter]);
 
   const doorsByFloor = useMemo(() => {
     const groups = new Map<string, InstallerDoor[]>();
@@ -245,6 +270,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
     setOrderFilter("ALL");
     setLocationFilter("ALL");
     setDoorSearch("");
+    setDoorQuickFilter("ALL");
   }
 
   return (
@@ -354,12 +380,41 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   disabled={
                     orderFilter === "ALL" &&
                     locationFilter === "ALL" &&
-                    doorSearch.trim().length === 0
+                    doorSearch.trim().length === 0 &&
+                    doorQuickFilter === "ALL"
                   }
                   className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Reset door filters
                 </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    ["ALL", "All"],
+                    ["NOT_INSTALLED", "Not installed"],
+                    ["INSTALLED", "Installed"],
+                    ["WITH_ISSUES", "With issues"],
+                    ["LOCKED", "Locked"],
+                  ] as Array<[DoorQuickFilter, string]>
+                ).map(([value, label]) => {
+                  const active = doorQuickFilter === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setDoorQuickFilter(value)}
+                      className={
+                        active
+                          ? "rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground"
+                          : "rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                      }
+                    >
+                      {label} ({quickFilterCounts[value]})
+                    </button>
+                  );
+                })}
               </div>
               <label className="block">
                 <span className="text-xs text-muted-foreground">Quick search</span>

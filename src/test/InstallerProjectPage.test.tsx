@@ -48,10 +48,10 @@ const projectDetails = {
       apartment_number: "202",
       location_code: "L2",
       door_marking: "MARK-2",
-      status: "NOT_INSTALLED",
+      status: "INSTALLED",
       reason_id: null,
       comment: null,
-      is_locked: false,
+      is_locked: true,
     },
   ],
   issues_open: [],
@@ -60,12 +60,12 @@ const projectDetails = {
     plan: [],
     facts: [],
   },
-};
+} as const;
 
-function setupApiMock() {
+function setupApiMock(details = projectDetails) {
   apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
     if (path === "/api/v1/installer/projects/project-1") {
-      return projectDetails;
+      return details;
     }
     if (path === "/api/v1/installer/doors/door-1/install" && init?.method === "POST") {
       return { ok: true };
@@ -204,6 +204,46 @@ describe("InstallerProjectPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("A-101")).toBeInTheDocument();
+      expect(screen.getByText("B-202")).toBeInTheDocument();
+    });
+  });
+
+  it("filters doors by quick status shortcuts", async () => {
+    setupApiMock({
+      ...projectDetails,
+      issues_open: [
+        {
+          id: "issue-1",
+          door_id: "door-2",
+          status: "OPEN",
+          title: "Blocked lock",
+          details: "Door remains blocked",
+        },
+      ],
+    });
+    renderSubject();
+
+    expect(await screen.findByText("A-101")).toBeInTheDocument();
+    expect(screen.getByText("B-202")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Installed (1)" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("A-101")).not.toBeInTheDocument();
+      expect(screen.getByText("B-202")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "With issues (1)" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("A-101")).not.toBeInTheDocument();
+      expect(screen.getByText("B-202")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Locked (1)" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("A-101")).not.toBeInTheDocument();
       expect(screen.getByText("B-202")).toBeInTheDocument();
     });
   });
