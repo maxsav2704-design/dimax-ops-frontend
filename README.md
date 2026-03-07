@@ -73,8 +73,15 @@ See `TESTING.md` for the full bootstrap and local flow.
 The frontend expects an API base URL in environment configuration.
 
 Use `.env.example` as the starting point for local setup.
+Use `.env.production.example` as the starting point for production setup.
 
 For strict installer E2E, use `.env.e2e.local` with valid installer credentials and company identifiers.
+
+Validate production env before deploy:
+
+```bash
+npm run check:env:production -- --env-file .env.production.local
+```
 
 ## Repository role
 
