@@ -199,6 +199,7 @@ describe("OperationsPage", () => {
     expect(screen.getByText("Failed outbox")).toBeInTheDocument();
     expect(screen.getByText("Pending > 15m")).toBeInTheDocument();
     expect(screen.getByText("Action Summary")).toBeInTheDocument();
+    expect(screen.getByText("Delivery Drilldown")).toBeInTheDocument();
     expect(screen.getByText("Webhook Signals")).toBeInTheDocument();
     expect(screen.getByText("Delivery Recovery Audit")).toBeInTheDocument();
     expect(screen.getByText("Data Freshness")).toBeInTheDocument();
@@ -228,6 +229,8 @@ describe("OperationsPage", () => {
     expect(screen.getByText("sendgrid | duplicate")).toBeInTheDocument();
     expect(screen.getByText("twilio | channel_mismatch")).toBeInTheDocument();
     expect(screen.getByText("wrong channel")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Only EMAIL" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Only sendgrid" })).toBeInTheDocument();
     expect(screen.getByText("operations_center_bulk_retry | actor admin-1")).toBeInTheDocument();
     expect(screen.getByText("installer-2")).toBeInTheDocument();
     expect(screen.getByText(/lag 9/)).toBeInTheDocument();
@@ -434,6 +437,100 @@ describe("OperationsPage", () => {
     expect(window.location.search).toBe("");
     expect(screen.getByText("Bat Yam Heights")).toBeInTheDocument();
   }, 10000);
+
+  it("reads and syncs delivery drilldown filters with url state", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/operations?delivery_channel=EMAIL&webhook_provider=sendgrid"
+    );
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
+      if (path === "/api/v1/admin/sync/health/summary") {
+        return {
+          max_cursor: 18,
+          counts: {
+            ok: 4,
+            warn: 1,
+            danger: 2,
+            total: 7,
+            dead: 1,
+            never_seen: 0,
+            danger_pct: 28.57,
+          },
+          alerts_sent: 3,
+          top_laggers: [],
+          top_offline: [],
+        };
+      }
+      if (path === "/api/v1/admin/outbox/summary") {
+        return {
+          total: 12,
+          by_channel: { email: 8, whatsapp: 4 },
+          by_status: { PENDING: 5, FAILED: 3 },
+          by_delivery_status: { failed: 3, pending: 5 },
+          pending_overdue_15m: 2,
+          failed_total: 3,
+        };
+      }
+      if (path === "/api/v1/admin/outbox?status=FAILED&limit=8") {
+        return {
+          items: [
+            {
+              id: "outbox-1",
+              channel: "email",
+              recipient: "ops@dimax.test",
+              subject: "Import failed",
+              status: "FAILED",
+              delivery_status: "failed",
+              attempts: 3,
+              max_attempts: 5,
+              scheduled_at: "2026-03-07T09:00:00Z",
+              created_at: "2026-03-07T08:55:00Z",
+              last_error: "SMTP timeout",
+            },
+            {
+              id: "outbox-2",
+              channel: "whatsapp",
+              recipient: "+15550000000",
+              subject: null,
+              status: "FAILED",
+              delivery_status: "failed",
+              attempts: 2,
+              max_attempts: 4,
+              scheduled_at: "2026-03-07T09:10:00Z",
+              created_at: "2026-03-07T08:50:00Z",
+              last_error: "Twilio rejected",
+            },
+          ],
+        };
+      }
+      if (path === "/api/v1/admin/projects/import-runs/failed-queue?limit=8&offset=0") {
+        return { items: [], total: 0, limit: 8, offset: 0 };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    renderSubject();
+
+    expect(await screen.findByText("Operations Center")).toBeInTheDocument();
+    expect(screen.getByText("scoped to EMAIL")).toBeInTheDocument();
+    expect(screen.getByText("scoped to sendgrid")).toBeInTheDocument();
+    expect(screen.queryByText("+15550000000")).not.toBeInTheDocument();
+    expect(screen.queryByText("twilio | channel_mismatch")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear drilldown" }));
+
+    await waitFor(() => {
+      expect(window.location.search).toBe("");
+    });
+    expect(screen.getByText("+15550000000")).toBeInTheDocument();
+    expect(screen.getByText("twilio | channel_mismatch")).toBeInTheDocument();
+  }, 12000);
 
   it("shows error state and allows refresh", async () => {
     let shouldFail = true;
@@ -1046,6 +1143,125 @@ describe("OperationsPage", () => {
       method: "POST",
       body: JSON.stringify({
         outbox_ids: ["outbox-1", "outbox-2"],
+        reason: "operations_center_bulk_retry",
+      }),
+    });
+  }, 10000);
+
+  it("retries channel-scoped deliveries from the drilldown lane", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
+      if (path === "/api/v1/admin/sync/health/summary") {
+        return {
+          max_cursor: 18,
+          counts: {
+            ok: 4,
+            warn: 1,
+            danger: 2,
+            total: 7,
+            dead: 1,
+            never_seen: 0,
+            danger_pct: 28.57,
+          },
+          alerts_sent: 3,
+          top_laggers: [],
+          top_offline: [],
+        };
+      }
+      if (path === "/api/v1/admin/outbox/summary") {
+        return {
+          total: 12,
+          by_channel: { email: 8, whatsapp: 4 },
+          by_status: { PENDING: 5, FAILED: 3 },
+          by_delivery_status: { failed: 3, pending: 5 },
+          pending_overdue_15m: 2,
+          failed_total: 3,
+        };
+      }
+      if (path === "/api/v1/admin/outbox?status=FAILED&limit=8") {
+        return {
+          items: [
+            {
+              id: "outbox-1",
+              channel: "email",
+              recipient: "ops@dimax.test",
+              subject: "Import failed",
+              status: "FAILED",
+              delivery_status: "failed",
+              attempts: 3,
+              max_attempts: 5,
+              scheduled_at: "2026-03-07T09:00:00Z",
+              created_at: "2026-03-07T08:55:00Z",
+              last_error: "SMTP timeout",
+            },
+            {
+              id: "outbox-2",
+              channel: "whatsapp",
+              recipient: "+15550000000",
+              subject: null,
+              status: "FAILED",
+              delivery_status: "failed",
+              attempts: 2,
+              max_attempts: 4,
+              scheduled_at: "2026-03-07T09:10:00Z",
+              created_at: "2026-03-07T08:50:00Z",
+              last_error: "Twilio rejected",
+            },
+          ],
+        };
+      }
+      if (path === "/api/v1/admin/projects/import-runs/failed-queue?limit=8&offset=0") {
+        return { items: [], total: 0, limit: 8, offset: 0 };
+      }
+      if (path === "/api/v1/admin/outbox/retry-failed") {
+        return {
+          items: [
+            {
+              outbox_id: "outbox-1",
+              status: "retried",
+              item: {
+                id: "outbox-1",
+                recipient: "ops@dimax.test",
+                subject: "Import failed",
+                channel: "email",
+                status: "PENDING",
+                delivery_status: "PENDING",
+              },
+            },
+          ],
+          total_messages: 1,
+          successful_messages: 1,
+          failed_messages: 0,
+          skipped_messages: 0,
+        };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    renderSubject();
+
+    expect(await screen.findByText("Operations Center")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry EMAIL" }));
+    expect(screen.getByText("Retry actionable EMAIL delivery failures")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Bulk delivery retry finished: success 1 | failed 0 | skipped 0.")
+      ).toBeInTheDocument();
+    });
+
+    const bulkRetryCall = apiFetchMock.mock.calls.find(
+      (call) => call[0] === "/api/v1/admin/outbox/retry-failed"
+    );
+    expect(bulkRetryCall?.[1]).toMatchObject({
+      method: "POST",
+      body: JSON.stringify({
+        outbox_ids: ["outbox-1"],
         reason: "operations_center_bulk_retry",
       }),
     });

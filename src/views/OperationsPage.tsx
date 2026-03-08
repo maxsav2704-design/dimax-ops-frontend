@@ -245,6 +245,25 @@ function buildProjectsImportHref(projectId: string | null, failedProjectIds: str
   return `/projects?${params.toString()}`;
 }
 
+function buildOperationsHref(params: {
+  actionable?: boolean;
+  deliveryChannel?: string;
+  webhookProvider?: string;
+}): string {
+  const query = new URLSearchParams();
+  if (params.actionable) {
+    query.set("actionable", "1");
+  }
+  if (params.deliveryChannel) {
+    query.set("delivery_channel", params.deliveryChannel);
+  }
+  if (params.webhookProvider) {
+    query.set("webhook_provider", params.webhookProvider);
+  }
+  const value = query.toString();
+  return value ? `/operations?${value}` : "/operations";
+}
+
 function formatRefreshTimestamp(value: number | null): string {
   if (!value || Number.isNaN(value)) {
     return "Waiting for first successful refresh";
@@ -349,9 +368,16 @@ export default function OperationsPage() {
   const canRunPrivilegedActions = canRunPrivilegedAdminActions(userRole);
   const [busyAction, setBusyAction] = useState("");
   const [onlyActionable, setOnlyActionable] = useState(searchParams.get("actionable") === "1");
+  const [deliveryChannelFilter, setDeliveryChannelFilter] = useState(
+    searchParams.get("delivery_channel")?.trim().toUpperCase() || ""
+  );
+  const [webhookProviderFilter, setWebhookProviderFilter] = useState(
+    searchParams.get("webhook_provider")?.trim().toLowerCase() || ""
+  );
   const [pendingBatchAction, setPendingBatchAction] = useState<
     "retry" | "reconcile" | "outbox-retry" | null
   >(null);
+  const [pendingOutboxChannel, setPendingOutboxChannel] = useState<string | null>(null);
   const [lastBatchResult, setLastBatchResult] = useState<OperationsBatchResult | null>(null);
   const [actionFeedback, setActionFeedback] = useState<{
     tone: "success" | "error";
@@ -468,7 +494,17 @@ export default function OperationsPage() {
     () => failedImports.filter((item) => item.retry_available),
     [failedImports]
   );
-  const actionableFailedOutbox = useMemo(() => failedOutbox, [failedOutbox]);
+  const channelScopedFailedOutbox = useMemo(
+    () =>
+      failedOutbox.filter(
+        (item) => !deliveryChannelFilter || item.channel.toUpperCase() === deliveryChannelFilter
+      ),
+    [deliveryChannelFilter, failedOutbox]
+  );
+  const actionableFailedOutbox = useMemo(
+    () => channelScopedFailedOutbox,
+    [channelScopedFailedOutbox]
+  );
   const actionableSyncItems = useMemo(
     () =>
       syncItems.filter((item) => {
@@ -478,8 +514,79 @@ export default function OperationsPage() {
     [syncItems]
   );
   const visibleFailedImports = onlyActionable ? actionableFailedImports : failedImports;
-  const visibleFailedOutbox = onlyActionable ? actionableFailedOutbox : failedOutbox;
+  const visibleFailedOutbox = onlyActionable ? actionableFailedOutbox : channelScopedFailedOutbox;
+  const visibleWebhookSignals = useMemo(
+    () =>
+      webhookSignals.filter(
+        (item) => !webhookProviderFilter || item.provider.toLowerCase() === webhookProviderFilter
+      ),
+    [webhookProviderFilter, webhookSignals]
+  );
   const visibleSyncItems = onlyActionable ? actionableSyncItems : syncItems;
+  const deliveryChannelGroups = useMemo(() => {
+    const grouped = new Map<
+      string,
+      { channel: string; count: number; firstOutboxId: string; recipients: string[] }
+    >();
+    for (const item of failedOutbox) {
+      const channel = item.channel.toUpperCase();
+      const existing = grouped.get(channel);
+      if (existing) {
+        existing.count += 1;
+        if (item.recipient) {
+          existing.recipients.push(item.recipient);
+        }
+        continue;
+      }
+      grouped.set(channel, {
+        channel,
+        count: 1,
+        firstOutboxId: item.id,
+        recipients: item.recipient ? [item.recipient] : [],
+      });
+    }
+    return [...grouped.values()];
+  }, [failedOutbox]);
+  const webhookProviderGroups = useMemo(() => {
+    const grouped = new Map<
+      string,
+      {
+        provider: string;
+        count: number;
+        duplicateCount: number;
+        unmatchedCount: number;
+        providerFailedCount: number;
+      }
+    >();
+    for (const item of webhookSignals) {
+      const key = item.provider.toLowerCase();
+      const existing =
+        grouped.get(key) || {
+          provider: item.provider,
+          count: 0,
+          duplicateCount: 0,
+          unmatchedCount: 0,
+          providerFailedCount: 0,
+        };
+      existing.count += 1;
+      if (item.result === "duplicate") {
+        existing.duplicateCount += 1;
+      }
+      if (item.result === "message_not_found" || item.result === "channel_mismatch") {
+        existing.unmatchedCount += 1;
+      }
+      if (
+        item.status &&
+        ["failed", "undelivered", "bounced", "bounce", "dropped", "blocked", "rejected", "complained", "error"].includes(
+          item.status.toLowerCase()
+        )
+      ) {
+        existing.providerFailedCount += 1;
+      }
+      grouped.set(key, existing);
+    }
+    return [...grouped.values()];
+  }, [webhookSignals]);
   const actionableImportProjectIds = useMemo(
     () => Array.from(new Set(actionableFailedImports.map((item) => item.project_id).filter(Boolean))),
     [actionableFailedImports]
@@ -510,6 +617,13 @@ export default function OperationsPage() {
   );
   const batchResultProjectIds = useMemo(() => extractBatchProjectIds(lastBatchResult), [lastBatchResult]);
   const batchResultOutboxIds = useMemo(() => extractBatchOutboxIds(lastBatchResult), [lastBatchResult]);
+  const outboxRetryScope = useMemo(
+    () =>
+      pendingOutboxChannel
+        ? actionableFailedOutbox.filter((item) => item.channel.toUpperCase() === pendingOutboxChannel)
+        : actionableFailedOutbox,
+    [actionableFailedOutbox, pendingOutboxChannel]
+  );
   const batchResultFollowupHref = useMemo(
     () => {
       if (lastBatchResult?.action === "outbox-retry") {
@@ -726,7 +840,7 @@ export default function OperationsPage() {
   }
 
   async function handleRetryAllOutbox() {
-    if (!canRunPrivilegedActions || actionableFailedOutbox.length === 0) {
+    if (!canRunPrivilegedActions || outboxRetryScope.length === 0) {
       return;
     }
     setBusyAction("outbox:bulk");
@@ -737,7 +851,7 @@ export default function OperationsPage() {
         {
           method: "POST",
           body: JSON.stringify({
-            outbox_ids: actionableFailedOutbox.map((item) => item.id),
+            outbox_ids: outboxRetryScope.map((item) => item.id),
             reason: "operations_center_bulk_retry",
           }),
         }
@@ -749,7 +863,7 @@ export default function OperationsPage() {
         successful: response.successful_messages,
         failed: response.failed_messages,
         skipped: response.skipped_messages,
-        scope: actionableFailedOutbox.length,
+        scope: outboxRetryScope.length,
         items: response.items || [],
       });
       setActionFeedback({
@@ -766,6 +880,7 @@ export default function OperationsPage() {
     } finally {
       setBusyAction("");
       setPendingBatchAction(null);
+      setPendingOutboxChannel(null);
     }
   }
 
@@ -774,7 +889,9 @@ export default function OperationsPage() {
       return "Retry actionable imports";
     }
     if (pendingBatchAction === "outbox-retry") {
-      return "Retry actionable delivery failures";
+      return pendingOutboxChannel
+        ? `Retry actionable ${pendingOutboxChannel} delivery failures`
+        : "Retry actionable delivery failures";
     }
     if (pendingBatchAction === "reconcile") {
       return "Reconcile actionable projects";
@@ -787,7 +904,9 @@ export default function OperationsPage() {
       return `This will retry ${actionableFailedImports.length} actionable import runs across ${actionableImportProjectIds.length} projects.`;
     }
     if (pendingBatchAction === "outbox-retry") {
-      return `This will retry ${actionableFailedOutbox.length} failed outbox messages and write recovery audit entries.`;
+      return pendingOutboxChannel
+        ? `This will retry ${outboxRetryScope.length} failed ${pendingOutboxChannel} outbox messages and write recovery audit entries.`
+        : `This will retry ${outboxRetryScope.length} failed outbox messages and write recovery audit entries.`;
     }
     if (pendingBatchAction === "reconcile") {
       return `This will reconcile latest failed import state for ${actionableImportProjectIds.length} actionable projects.`;
@@ -809,11 +928,23 @@ export default function OperationsPage() {
     }
   }
 
-  function syncUrlState(nextOnlyActionable: boolean) {
+  function syncUrlState(params: {
+    nextOnlyActionable?: boolean;
+    nextDeliveryChannel?: string;
+    nextWebhookProvider?: string;
+  }) {
     const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.delete("actionable");
-    if (nextOnlyActionable) {
+    nextParams.delete("delivery_channel");
+    nextParams.delete("webhook_provider");
+    if (params.nextOnlyActionable) {
       nextParams.set("actionable", "1");
+    }
+    if (params.nextDeliveryChannel) {
+      nextParams.set("delivery_channel", params.nextDeliveryChannel);
+    }
+    if (params.nextWebhookProvider) {
+      nextParams.set("webhook_provider", params.nextWebhookProvider);
     }
     const nextQuery = nextParams.toString();
     const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
@@ -838,7 +969,11 @@ export default function OperationsPage() {
               onClick={() =>
                 setOnlyActionable((value) => {
                   const nextValue = !value;
-                  syncUrlState(nextValue);
+                  syncUrlState({
+                    nextOnlyActionable: nextValue,
+                    nextDeliveryChannel: deliveryChannelFilter,
+                    nextWebhookProvider: webhookProviderFilter,
+                  });
                   return nextValue;
                 })
               }
@@ -961,6 +1096,7 @@ export default function OperationsPage() {
               <button
                 type="button"
                 onClick={() => {
+                  setPendingOutboxChannel(deliveryChannelFilter || null);
                   setPendingBatchAction("outbox-retry");
                 }}
                 disabled={
@@ -1005,6 +1141,190 @@ export default function OperationsPage() {
                 <div className="mt-1 text-sm font-medium text-foreground">{item.value}</div>
               </Link>
             ))}
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-border bg-card p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Delivery Drilldown
+              </h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Exact channel and provider lanes for delivery failures and webhook diagnostics.
+              </p>
+            </div>
+            {(deliveryChannelFilter || webhookProviderFilter) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDeliveryChannelFilter("");
+                  setWebhookProviderFilter("");
+                  syncUrlState({
+                    nextOnlyActionable: onlyActionable,
+                    nextDeliveryChannel: "",
+                    nextWebhookProvider: "",
+                  });
+                }}
+                className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
+              >
+                Clear drilldown
+              </button>
+            )}
+          </div>
+          <div className="mt-4 grid gap-4 xl:grid-cols-2">
+            <div className="rounded-lg border border-border/70 bg-background/70 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  By channel
+                </div>
+                {deliveryChannelFilter ? (
+                  <span className="rounded-md border border-accent/40 px-2 py-1 text-[11px] font-medium text-accent">
+                    scoped to {deliveryChannelFilter}
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-3 space-y-2">
+                {deliveryChannelGroups.length === 0 ? (
+                  <div className="text-[13px] text-muted-foreground">No failed delivery lanes.</div>
+                ) : (
+                  deliveryChannelGroups.map((group) => (
+                    <div
+                      key={group.channel}
+                      className="rounded-lg border border-border/70 bg-card px-4 py-3 text-[13px]"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="font-medium text-foreground">{group.channel}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {group.count} failed messages
+                            {group.recipients[0] ? ` | ${group.recipients[0]}` : ""}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextValue =
+                              deliveryChannelFilter === group.channel ? "" : group.channel;
+                            setDeliveryChannelFilter(nextValue);
+                            syncUrlState({
+                              nextOnlyActionable: onlyActionable,
+                              nextDeliveryChannel: nextValue,
+                              nextWebhookProvider: webhookProviderFilter,
+                            });
+                          }}
+                          className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
+                        >
+                          {deliveryChannelFilter === group.channel ? "Show all" : `Only ${group.channel}`}
+                        </button>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                        <Link
+                          href={buildOperationsHref({
+                            actionable: true,
+                            deliveryChannel: group.channel,
+                            webhookProvider: webhookProviderFilter || undefined,
+                          })}
+                          className="font-medium text-accent hover:underline"
+                        >
+                          Actionable lane
+                        </Link>
+                        <Link
+                          href={`/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=${encodeURIComponent(group.firstOutboxId)}`}
+                          className="font-medium text-muted-foreground hover:text-foreground hover:underline"
+                        >
+                          Exact failure
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPendingOutboxChannel(group.channel);
+                            setPendingBatchAction("outbox-retry");
+                          }}
+                          disabled={!canRunPrivilegedActions || busyAction === "outbox:bulk"}
+                          className="font-medium text-accent disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Retry {group.channel}
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border/70 bg-background/70 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  By provider
+                </div>
+                {webhookProviderFilter ? (
+                  <span className="rounded-md border border-accent/40 px-2 py-1 text-[11px] font-medium text-accent">
+                    scoped to {webhookProviderFilter}
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-3 space-y-2">
+                {webhookProviderGroups.length === 0 ? (
+                  <div className="text-[13px] text-muted-foreground">No webhook provider lanes.</div>
+                ) : (
+                  webhookProviderGroups.map((group) => (
+                    <div
+                      key={group.provider}
+                      className="rounded-lg border border-border/70 bg-card px-4 py-3 text-[13px]"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="font-medium text-foreground">{group.provider}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {group.count} signals | duplicates {group.duplicateCount} | unmatched{" "}
+                            {group.unmatchedCount} | failed {group.providerFailedCount}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextValue =
+                              webhookProviderFilter === group.provider.toLowerCase()
+                                ? ""
+                                : group.provider.toLowerCase();
+                            setWebhookProviderFilter(nextValue);
+                            syncUrlState({
+                              nextOnlyActionable: onlyActionable,
+                              nextDeliveryChannel: deliveryChannelFilter,
+                              nextWebhookProvider: nextValue,
+                            });
+                          }}
+                          className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
+                        >
+                          {webhookProviderFilter === group.provider.toLowerCase()
+                            ? "Show all"
+                            : `Only ${group.provider}`}
+                        </button>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                        <Link
+                          href={buildOperationsHref({
+                            actionable: onlyActionable,
+                            deliveryChannel: deliveryChannelFilter || undefined,
+                            webhookProvider: group.provider.toLowerCase(),
+                          })}
+                          className="font-medium text-accent hover:underline"
+                        >
+                          Provider lane
+                        </Link>
+                        <Link
+                          href="/reports?focus=delivery&ops_preset=delivery-risk"
+                          className="font-medium text-muted-foreground hover:text-foreground hover:underline"
+                        >
+                          Delivery report
+                        </Link>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </section>
 
@@ -1114,10 +1434,14 @@ export default function OperationsPage() {
           <div className="mt-4 space-y-2">
             {webhookSignalsQuery.isLoading ? (
               <div className="text-[13px] text-muted-foreground">Loading webhook signals...</div>
-            ) : webhookSignals.length === 0 ? (
-              <div className="text-[13px] text-muted-foreground">No webhook signals recorded.</div>
+            ) : visibleWebhookSignals.length === 0 ? (
+              <div className="text-[13px] text-muted-foreground">
+                {webhookProviderFilter
+                  ? "No webhook signals match current provider scope."
+                  : "No webhook signals recorded."}
+              </div>
             ) : (
-              webhookSignals.map((item) => (
+              visibleWebhookSignals.map((item) => (
                 <div
                   key={item.id}
                   className="rounded-lg border border-border/70 bg-background/70 px-4 py-3 text-[13px]"
@@ -1404,7 +1728,11 @@ export default function OperationsPage() {
               )}
               {!outboxFailedQuery.isLoading && visibleFailedOutbox.length === 0 && (
                 <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                  {onlyActionable ? "No actionable outbox messages." : "No failed outbox messages."}
+                  {deliveryChannelFilter
+                    ? `No failed outbox messages for ${deliveryChannelFilter}.`
+                    : onlyActionable
+                      ? "No actionable outbox messages."
+                      : "No failed outbox messages."}
                 </div>
               )}
               {visibleFailedOutbox.map((item) => (
@@ -1535,6 +1863,7 @@ export default function OperationsPage() {
         onOpenChange={(open) => {
           if (!open) {
             setPendingBatchAction(null);
+            setPendingOutboxChannel(null);
           }
         }}
       >
