@@ -1635,14 +1635,32 @@ export default function ReportsPage() {
                   Real-time pressure map
                 </h2>
               </div>
-              <div className="text-right">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Generated
+              <div className="flex flex-col items-end gap-2">
+                <div className="text-right">
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Generated
+                  </div>
+                  <div className="text-[12px] text-foreground">
+                    {operationsCenter?.generated_at
+                      ? formatDateTime(operationsCenter.generated_at)
+                      : "n/a"}
+                  </div>
                 </div>
-                <div className="text-[12px] text-foreground">
-                  {operationsCenter?.generated_at
-                    ? formatDateTime(operationsCenter.generated_at)
-                    : "n/a"}
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => router.push("/operations")}
+                    className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
+                  >
+                    Open Operations Center
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/operations?actionable=1")}
+                    className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
+                  >
+                    Open Actionable Ops
+                  </button>
                 </div>
               </div>
             </div>
