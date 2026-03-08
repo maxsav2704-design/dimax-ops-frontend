@@ -68,6 +68,38 @@ function mockReportWebhookSignals(url: string) {
   };
 }
 
+function mockReportRetryAudits(url: string) {
+  if (!url.includes("/api/v1/admin/outbox/retry-audits")) {
+    return null;
+  }
+  return {
+    items: [
+      {
+        id: "audit-1",
+        outbox_id: "outbox-1",
+        actor_user_id: "admin-1",
+        reason: "operations_center_bulk_retry",
+        before_status: "FAILED",
+        after_status: "PENDING",
+        before_delivery_status: "FAILED",
+        after_delivery_status: "PENDING",
+        created_at: "2026-02-22T18:05:00Z",
+      },
+      {
+        id: "audit-2",
+        outbox_id: "outbox-9",
+        actor_user_id: "admin-2",
+        reason: "manual_retry",
+        before_status: "FAILED",
+        after_status: "PENDING",
+        before_delivery_status: "FAILED",
+        after_delivery_status: "PENDING",
+        created_at: "2026-02-22T18:06:00Z",
+      },
+    ],
+  };
+}
+
 describe("ReportsPage", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -95,6 +127,10 @@ describe("ReportsPage", () => {
       const webhookMock = mockReportWebhookSignals(url);
       if (webhookMock) {
         return webhookMock;
+      }
+      const retryAuditMock = mockReportRetryAudits(url);
+      if (retryAuditMock) {
+        return retryAuditMock;
       }
       if (url.includes("/api/v1/admin/reports/limit-alerts/read")) {
         return {
@@ -970,6 +1006,10 @@ describe("ReportsPage", () => {
       if (webhookMock) {
         return webhookMock;
       }
+      const retryAuditMock = mockReportRetryAudits(url);
+      if (retryAuditMock) {
+        return retryAuditMock;
+      }
       if (url.includes("/api/v1/admin/reports/limit-alerts/read")) {
         return { unread_count: 0, last_read_at: "2026-02-22T18:00:00Z" };
       }
@@ -1173,6 +1213,10 @@ describe("ReportsPage", () => {
       if (webhookMock) {
         return webhookMock;
       }
+      const retryAuditMock = mockReportRetryAudits(url);
+      if (retryAuditMock) {
+        return retryAuditMock;
+      }
       if (url.includes("/api/v1/admin/reports/limit-alerts/read")) {
         return { unread_count: 0, last_read_at: "2026-02-22T18:00:00Z" };
       }
@@ -1370,8 +1414,17 @@ describe("ReportsPage", () => {
     expect(screen.getAllByText("EMAIL").length).toBeGreaterThan(0);
     expect(screen.getAllByText("sendgrid").length).toBeGreaterThan(0);
     expect(screen.getByText("sendgrid | duplicate")).toBeInTheDocument();
+    expect(screen.getByText("Recovery trail")).toBeInTheDocument();
+    expect(screen.getByText("Outbox outbox-1")).toBeInTheDocument();
+    expect(screen.getByText(/actor admin-1/)).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Open recovery lane" }).length).toBeGreaterThan(0);
 
     fireEvent.click(focusQueries.getByRole("button", { name: "Open Actionable Ops" }));
+    expect(pushMock).toHaveBeenCalledWith(
+      "/operations?actionable=1&delivery_channel=EMAIL&webhook_provider=sendgrid"
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Open recovery lane" })[0]);
     expect(pushMock).toHaveBeenCalledWith(
       "/operations?actionable=1&delivery_channel=EMAIL&webhook_provider=sendgrid"
     );
@@ -1395,6 +1448,10 @@ describe("ReportsPage", () => {
       const webhookMock = mockReportWebhookSignals(url);
       if (webhookMock) {
         return webhookMock;
+      }
+      const retryAuditMock = mockReportRetryAudits(url);
+      if (retryAuditMock) {
+        return retryAuditMock;
       }
       if (url.includes("/api/v1/admin/reports/limit-alerts/read")) {
         return { unread_count: 0, last_read_at: "2026-02-22T18:00:00Z" };
@@ -1629,6 +1686,10 @@ describe("ReportsPage", () => {
       const webhookMock = mockReportWebhookSignals(url);
       if (webhookMock) {
         return webhookMock;
+      }
+      const retryAuditMock = mockReportRetryAudits(url);
+      if (retryAuditMock) {
+        return retryAuditMock;
       }
       if (url.includes("/api/v1/admin/reports/delivery")) {
         return {

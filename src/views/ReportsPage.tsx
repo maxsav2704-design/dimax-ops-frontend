@@ -99,6 +99,22 @@ type WebhookSignalListResponse = {
   items: WebhookSignalItem[];
 };
 
+type OutboxRetryAuditItem = {
+  id: string;
+  outbox_id: string;
+  actor_user_id: string;
+  reason: string | null;
+  before_status: string | null;
+  after_status: string | null;
+  before_delivery_status: string | null;
+  after_delivery_status: string | null;
+  created_at: string;
+};
+
+type OutboxRetryAuditListResponse = {
+  items: OutboxRetryAuditItem[];
+};
+
 type AuditCatalogChangeItem = {
   id: string;
   created_at: string;
@@ -1282,6 +1298,12 @@ export default function ReportsPage() {
       apiFetch<WebhookSignalListResponse>("/api/v1/admin/outbox/webhook-signals?limit=12"),
     refetchInterval: 30_000,
   });
+  const retryAuditsQuery = useQuery({
+    queryKey: ["reports-outbox-retry-audits", scopedOutboxId],
+    queryFn: () =>
+      apiFetch<OutboxRetryAuditListResponse>("/api/v1/admin/outbox/retry-audits?limit=12"),
+    refetchInterval: 30_000,
+  });
 
   const auditCatalogsQuery = useQuery({
     queryKey: [
@@ -1471,6 +1493,10 @@ export default function ReportsPage() {
   const webhookSignalItems = webhookSignalsQuery.data?.items || [];
   const scopedWebhookSignals = webhookSignalItems.filter(
     (item) => !scopedWebhookProvider || item.provider.toLowerCase() === scopedWebhookProvider
+  );
+  const retryAuditItems = retryAuditsQuery.data?.items || [];
+  const scopedRetryAuditItems = retryAuditItems.filter(
+    (item) => !scopedOutboxId || item.outbox_id === scopedOutboxId
   );
   const auditItems = auditCatalogsQuery.data?.items || [];
   const auditSummary = auditCatalogsQuery.data?.summary;
@@ -4220,6 +4246,73 @@ export default function ReportsPage() {
                           {item.event_type}
                           {item.status ? ` | status ${item.status}` : ""}
                           {item.error ? ` | ${item.error}` : ""}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-lg border border-border/70 bg-background/60 p-3 md:col-span-2">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Recovery trail
+                </div>
+                {retryAuditsQuery.isLoading ? (
+                  <div className="mt-2 text-[13px] text-muted-foreground">Loading retry audit trail...</div>
+                ) : scopedRetryAuditItems.length === 0 ? (
+                  <div className="mt-2 text-[13px] text-muted-foreground">
+                    {scopedOutboxId
+                      ? "No recovery actions recorded for this outbox yet."
+                      : "No delivery recovery actions recorded yet."}
+                  </div>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    {scopedRetryAuditItems.slice(0, 3).map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-md border border-border/60 bg-card/60 px-3 py-2 text-[13px]"
+                      >
+                        <div className="font-medium text-card-foreground">
+                          Outbox {item.outbox_id}
+                        </div>
+                        <div className="text-muted-foreground">
+                          {formatDateTime(item.created_at)} | actor {item.actor_user_id}
+                        </div>
+                        <div className="text-muted-foreground">
+                          {item.before_status || "unknown"} {"->"} {item.after_status || "unknown"}
+                          {item.before_delivery_status || item.after_delivery_status
+                            ? ` | delivery ${item.before_delivery_status || "unknown"} -> ${item.after_delivery_status || "unknown"}`
+                            : ""}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <button
+                            onClick={() =>
+                              router.push(
+                                buildOperationsHref({
+                                  actionable: true,
+                                  deliveryChannel: scopedDeliveryChannel || undefined,
+                                  webhookProvider: scopedWebhookProvider || undefined,
+                                })
+                              )
+                            }
+                            className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
+                          >
+                            Open recovery lane
+                          </button>
+                          <button
+                            onClick={() =>
+                              router.push(
+                                buildOperationsHref({
+                                  actionable: true,
+                                  deliveryChannel: scopedDeliveryChannel || undefined,
+                                  webhookProvider: scopedWebhookProvider || undefined,
+                                })
+                              )
+                            }
+                            className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
+                          >
+                            Continue in ops
+                          </button>
                         </div>
                       </div>
                     ))}

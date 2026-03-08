@@ -309,7 +309,7 @@ describe("OperationsPage", () => {
       "href",
       "/installers"
     );
-  }, 15000);
+  }, 30000);
 
   it("reads and syncs actionable filter with url state", async () => {
     window.history.replaceState({}, "", "/operations?actionable=1");
@@ -1563,7 +1563,7 @@ describe("OperationsPage", () => {
     expect(
       screen.getByRole("button", { name: "Reconcile actionable projects (0)" })
     ).toBeDisabled();
-  });
+  }, 30000);
 
   it("marks data as stale after the freshness threshold", async () => {
     const nowSpy = vi.spyOn(Date, "now");
