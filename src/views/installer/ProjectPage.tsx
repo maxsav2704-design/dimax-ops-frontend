@@ -115,6 +115,8 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
   const [locationFilter, setLocationFilter] = useState("ALL");
   const [doorSearch, setDoorSearch] = useState("");
   const [doorQuickFilter, setDoorQuickFilter] = useState<DoorQuickFilter>("ALL");
+  const [issueSearch, setIssueSearch] = useState("");
+  const [issueStatusFilter, setIssueStatusFilter] = useState("ALL");
   const [actionError, setActionError] = useState<string | null>(null);
 
   const detailsQuery = useQuery({
@@ -150,6 +152,14 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
 
   const issueDoorIds = useMemo(
     () => new Set((details?.issues_open || []).map((issue) => issue.door_id)),
+    [details?.issues_open]
+  );
+  const issueDoorMap = useMemo(
+    () => new Map((details?.doors || []).map((door) => [door.id, door])),
+    [details?.doors]
+  );
+  const issueStatusOptions = useMemo(
+    () => Array.from(new Set((details?.issues_open || []).map((issue) => issue.status))).sort(),
     [details?.issues_open]
   );
 
@@ -194,6 +204,28 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
       return matchesOrder && matchesLocation && matchesSearch && matchesQuickFilter;
     });
   }, [details?.doors, doorQuickFilter, doorSearch, issueDoorIds, locationFilter, orderFilter]);
+  const filteredIssues = useMemo(() => {
+    const searchNeedle = issueSearch.trim().toLowerCase();
+    return (details?.issues_open || []).filter((issue) => {
+      if (issueStatusFilter !== "ALL" && issue.status !== issueStatusFilter) {
+        return false;
+      }
+      if (!searchNeedle) {
+        return true;
+      }
+      const relatedDoor = issueDoorMap.get(issue.door_id);
+      return [
+        issue.title,
+        issue.details,
+        issue.status,
+        relatedDoor?.unit_label,
+        relatedDoor?.order_number,
+        relatedDoor?.location_code,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(searchNeedle));
+    });
+  }, [details?.issues_open, issueDoorMap, issueSearch, issueStatusFilter]);
 
   const doorsByFloor = useMemo(() => {
     const groups = new Map<string, InstallerDoor[]>();
@@ -336,12 +368,21 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
     doorSearch.trim().length > 0,
     doorQuickFilter !== "ALL",
   ].filter(Boolean).length;
+  const activeIssueFilterCount = [
+    issueSearch.trim().length > 0,
+    issueStatusFilter !== "ALL",
+  ].filter(Boolean).length;
 
   function resetDoorFilters() {
     setOrderFilter("ALL");
     setLocationFilter("ALL");
     setDoorSearch("");
     setDoorQuickFilter("ALL");
+  }
+
+  function resetIssueFilters() {
+    setIssueSearch("");
+    setIssueStatusFilter("ALL");
   }
 
   function focusPriorityDoor(door: {
@@ -597,25 +638,93 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
           </section>
 
           <section id="project-open-issues" className="space-y-3">
-            <h2 className="text-lg font-semibold">Open issues</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Open issues</h2>
+                <div className="text-sm text-muted-foreground">
+                  Visible issues {filteredIssues.length} / {details.issues_open.length}
+                  {activeIssueFilterCount > 0 ? ` | Active filters ${activeIssueFilterCount}` : ""}
+                </div>
+              </div>
+              {details.issues_open.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    value={issueSearch}
+                    onChange={(event) => setIssueSearch(event.target.value)}
+                    placeholder="Issue, details, door"
+                    className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
+                  />
+                  <select
+                    aria-label="Issue status filter"
+                    value={issueStatusFilter}
+                    onChange={(event) => setIssueStatusFilter(event.target.value)}
+                    className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
+                  >
+                    <option value="ALL">All statuses</option>
+                    {issueStatusOptions.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={resetIssueFilters}
+                    disabled={activeIssueFilterCount === 0}
+                    className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Reset issue filters
+                  </button>
+                </div>
+              )}
+            </div>
             {details.issues_open.length === 0 && (
               <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
                 No open issues.
               </div>
             )}
-            {details.issues_open.map((issue) => (
+            {details.issues_open.length > 0 && filteredIssues.length === 0 && (
+              <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+                No issues match current filters.
+              </div>
+            )}
+            {filteredIssues.map((issue) => {
+              const relatedDoor = issueDoorMap.get(issue.door_id);
+              return (
               <div
                 key={issue.id}
                 className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4"
               >
-                <div className="text-sm font-medium text-amber-300">
-                  {issue.title || "Issue"}
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-medium text-amber-300">
+                      {issue.title || "Issue"}
+                    </div>
+                    <div className="mt-1 text-xs text-amber-100/80">
+                      Door {relatedDoor?.unit_label || issue.door_id}
+                    </div>
+                  </div>
+                  <span className="rounded-md border border-amber-400/40 px-2 py-1 text-xs text-amber-200">
+                    {issue.status}
+                  </span>
                 </div>
-                <div className="mt-1 text-sm text-amber-100/80">
+                <div className="mt-2 text-sm text-amber-100/80">
                   {issue.details || "No details"}
                 </div>
+                <div className="mt-3 flex flex-wrap gap-3 text-xs">
+                  {relatedDoor ? (
+                    <a
+                      href={`#door-${relatedDoor.id}`}
+                      className="font-medium text-amber-200 underline-offset-2 hover:underline"
+                    >
+                      Open door {relatedDoor.unit_label}
+                    </a>
+                  ) : (
+                    <span className="text-amber-100/70">Related door missing</span>
+                  )}
+                </div>
               </div>
-            ))}
+            )})}
           </section>
 
           <section

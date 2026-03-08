@@ -181,6 +181,78 @@ describe("InstallerProjectPage", () => {
     expect(await screen.findByText("No open issues.")).toBeInTheDocument();
   });
 
+  it("filters open issues by search and status, then resets issue filters", async () => {
+    setupApiMock({
+      ...projectDetails,
+      issues_open: [
+        {
+          id: "issue-1",
+          door_id: "door-1",
+          status: "OPEN",
+          title: "Frame alignment",
+          details: "Frame needs leveling",
+        },
+        {
+          id: "issue-2",
+          door_id: "door-2",
+          status: "BLOCKED",
+          title: "Lock blocked",
+          details: "Waiting for spare part",
+        },
+      ],
+    });
+    renderSubject();
+
+    expect(await screen.findByText("Frame alignment")).toBeInTheDocument();
+    expect(screen.getByText("Lock blocked")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("Issue, details, door"), {
+      target: { value: "B-202" },
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Frame alignment")).not.toBeInTheDocument();
+      expect(screen.getByText("Lock blocked")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText("Issue status filter"), {
+      target: { value: "OPEN" },
+    });
+
+    expect(await screen.findByText("No issues match current filters.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset issue filters" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Frame alignment")).toBeInTheDocument();
+      expect(screen.getByText("Lock blocked")).toBeInTheDocument();
+    });
+  });
+
+  it("shows related door shortcuts inside open issues", async () => {
+    setupApiMock({
+      ...projectDetails,
+      issues_open: [
+        {
+          id: "issue-1",
+          door_id: "door-2",
+          status: "BLOCKED",
+          title: "Blocked lock",
+          details: "Door remains blocked",
+        },
+      ],
+    });
+    renderSubject();
+
+    expect(await screen.findByText("Blocked lock")).toBeInTheDocument();
+    expect(screen.getByText("Door B-202")).toBeInTheDocument();
+    expect(screen.getAllByText("BLOCKED").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "Open door B-202" })).toHaveAttribute(
+      "href",
+      "#door-door-2"
+    );
+  });
+
   it("filters doors by quick search and resets filters", async () => {
     setupApiMock();
     renderSubject();
