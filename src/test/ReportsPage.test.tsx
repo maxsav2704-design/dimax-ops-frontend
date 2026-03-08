@@ -36,6 +36,38 @@ vi.mock("@/hooks/use-user-role", () => ({
   useUserRole: userRoleMock,
 }));
 
+function mockReportWebhookSignals(url: string) {
+  if (!url.includes("/api/v1/admin/outbox/webhook-signals")) {
+    return null;
+  }
+  return {
+    items: [
+      {
+        id: "webhook-1",
+        provider: "sendgrid",
+        event_type: "delivery_status",
+        external_id: "evt-1",
+        result: "duplicate",
+        status: "delivered",
+        error: null,
+        outbox_id: "outbox-1",
+        created_at: "2026-02-22T18:00:00Z",
+      },
+      {
+        id: "webhook-2",
+        provider: "twilio",
+        event_type: "message_status",
+        external_id: "evt-2",
+        result: "channel_mismatch",
+        status: "failed",
+        error: "wrong channel",
+        outbox_id: "outbox-2",
+        created_at: "2026-02-22T18:02:00Z",
+      },
+    ],
+  };
+}
+
 describe("ReportsPage", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -60,6 +92,10 @@ describe("ReportsPage", () => {
   it("loads reports dashboard sections", async () => {
     apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
       const url = String(path);
+      const webhookMock = mockReportWebhookSignals(url);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (url.includes("/api/v1/admin/reports/limit-alerts/read")) {
         return {
           unread_count: 0,
@@ -930,6 +966,10 @@ describe("ReportsPage", () => {
   it("navigates from reports into operations center variants", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
       const url = String(path);
+      const webhookMock = mockReportWebhookSignals(url);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (url.includes("/api/v1/admin/reports/limit-alerts/read")) {
         return { unread_count: 0, last_read_at: "2026-02-22T18:00:00Z" };
       }
@@ -1121,10 +1161,18 @@ describe("ReportsPage", () => {
   });
 
   it("loads focused reports view from operations deep-link", async () => {
-    window.history.replaceState({}, "", "/reports?focus=delivery&ops_preset=delivery-risk");
+    window.history.replaceState(
+      {},
+      "",
+      "/reports?focus=delivery&ops_preset=delivery-risk&delivery_channel=EMAIL&webhook_provider=sendgrid"
+    );
 
     apiFetchMock.mockImplementation(async (path: string) => {
       const url = String(path);
+      const webhookMock = mockReportWebhookSignals(url);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (url.includes("/api/v1/admin/reports/limit-alerts/read")) {
         return { unread_count: 0, last_read_at: "2026-02-22T18:00:00Z" };
       }
@@ -1317,9 +1365,16 @@ describe("ReportsPage", () => {
 
     expect(focusQueries.getByRole("button", { name: "Open Actionable Ops" })).toBeInTheDocument();
     expect(focusQueries.getByRole("button", { name: "Open Journal Queue" })).toBeInTheDocument();
+    expect(await screen.findByText("Delivery Scope")).toBeInTheDocument();
+    expect(screen.getByText("Channel:")).toBeInTheDocument();
+    expect(screen.getAllByText("EMAIL").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("sendgrid").length).toBeGreaterThan(0);
+    expect(screen.getByText("sendgrid | duplicate")).toBeInTheDocument();
 
     fireEvent.click(focusQueries.getByRole("button", { name: "Open Actionable Ops" }));
-    expect(pushMock).toHaveBeenCalledWith("/operations?actionable=1");
+    expect(pushMock).toHaveBeenCalledWith(
+      "/operations?actionable=1&delivery_channel=EMAIL&webhook_provider=sendgrid"
+    );
 
     fireEvent.click(focusQueries.getByRole("button", { name: "Open Journal Queue" }));
     expect(pushMock).toHaveBeenCalledWith("/journal");
@@ -1337,6 +1392,10 @@ describe("ReportsPage", () => {
 
     apiFetchMock.mockImplementation(async (path: string) => {
       const url = String(path);
+      const webhookMock = mockReportWebhookSignals(url);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (url.includes("/api/v1/admin/reports/limit-alerts/read")) {
         return { unread_count: 0, last_read_at: "2026-02-22T18:00:00Z" };
       }
@@ -1567,6 +1626,10 @@ describe("ReportsPage", () => {
 
     apiFetchMock.mockImplementation(async (path: string) => {
       const url = String(path);
+      const webhookMock = mockReportWebhookSignals(url);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (url.includes("/api/v1/admin/reports/delivery")) {
         return {
           period_from: null,

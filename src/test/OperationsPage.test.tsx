@@ -285,8 +285,17 @@ describe("OperationsPage", () => {
         .some(
           (link) =>
             link.getAttribute("href")
-            === "/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=outbox-1"
+            === "/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=outbox-1&webhook_provider=sendgrid"
         )
+    ).toBe(true);
+    expect(screen.getByRole("link", { name: "Exact failure" })).toHaveAttribute(
+      "href",
+      "/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=outbox-1&delivery_channel=EMAIL"
+    );
+    expect(
+      screen
+        .getAllByRole("link", { name: "Provider lane" })
+        .some((link) => link.getAttribute("href") === "/operations?webhook_provider=sendgrid")
     ).toBe(true);
     expect(screen.getByRole("link", { name: "Journal outbox" })).toHaveAttribute(
       "href",

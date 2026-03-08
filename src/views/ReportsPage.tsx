@@ -83,6 +83,22 @@ type OutboxRetryResponse = {
   item: OutboxItem;
 };
 
+type WebhookSignalItem = {
+  id: string;
+  provider: string;
+  event_type: string;
+  external_id: string | null;
+  result: string;
+  status: string | null;
+  error: string | null;
+  outbox_id: string | null;
+  created_at: string;
+};
+
+type WebhookSignalListResponse = {
+  items: WebhookSignalItem[];
+};
+
 type AuditCatalogChangeItem = {
   id: string;
   created_at: string;
@@ -641,6 +657,8 @@ type ReportsScopedContext = {
   projectId: string | null;
   outboxId: string | null;
   installerId: string | null;
+  deliveryChannel: string | null;
+  webhookProvider: string | null;
 };
 
 function parseReportsFocus(value: string | null): ReportsFocus | null {
@@ -666,6 +684,9 @@ function getReportsFocusTargetId(
   }
   if (scope.outboxId) {
     return "reports-failed-outbox";
+  }
+  if (scope.deliveryChannel || scope.webhookProvider) {
+    return "reports-delivery-scope";
   }
   if (scope.installerId) {
     return "reports-installers-kpi";
@@ -767,6 +788,25 @@ function compactMap(map: Record<string, number> | undefined): string {
   return Object.entries(map)
     .map(([k, v]) => `${k}: ${v}`)
     .join(" | ");
+}
+
+function buildOperationsHref(params: {
+  actionable?: boolean;
+  deliveryChannel?: string;
+  webhookProvider?: string;
+}): string {
+  const query = new URLSearchParams();
+  if (params.actionable) {
+    query.set("actionable", "1");
+  }
+  if (params.deliveryChannel) {
+    query.set("delivery_channel", params.deliveryChannel);
+  }
+  if (params.webhookProvider) {
+    query.set("webhook_provider", params.webhookProvider);
+  }
+  const value = query.toString();
+  return value ? `/operations?${value}` : "/operations";
 }
 
 function formatAmount(value: number | null | undefined): string {
@@ -1008,6 +1048,8 @@ export default function ReportsPage() {
   const scopedProjectId = searchParams.get("project_id");
   const scopedOutboxId = searchParams.get("outbox_id");
   const scopedInstallerId = searchParams.get("installer_id");
+  const scopedDeliveryChannel = searchParams.get("delivery_channel")?.trim().toUpperCase() || null;
+  const scopedWebhookProvider = searchParams.get("webhook_provider")?.trim().toLowerCase() || null;
   const appliedOpsPresetRef = useRef<ReportsOpsPreset | null>(null);
   const appliedProjectScopeRef = useRef<string | null>(null);
   const appliedInstallerScopeRef = useRef<string | null>(null);
@@ -1220,11 +1262,24 @@ export default function ReportsPage() {
   });
 
   const failedOutboxQuery = useQuery({
-    queryKey: ["outbox-failed"],
+    queryKey: ["outbox-failed", scopedDeliveryChannel],
     queryFn: () =>
-      apiFetch<OutboxListResponse>(
-        `/api/v1/admin/outbox?status=FAILED&limit=${FAILED_OUTBOX_LIMIT}`
-      ),
+      apiFetch<OutboxListResponse>(`/api/v1/admin/outbox?${(() => {
+        const params = new URLSearchParams();
+        params.set("status", "FAILED");
+        params.set("limit", String(FAILED_OUTBOX_LIMIT));
+        if (scopedDeliveryChannel) {
+          params.set("channel", scopedDeliveryChannel);
+        }
+        return params.toString();
+      })()}`),
+    refetchInterval: 30_000,
+  });
+
+  const webhookSignalsQuery = useQuery({
+    queryKey: ["reports-webhook-signals", scopedWebhookProvider],
+    queryFn: () =>
+      apiFetch<WebhookSignalListResponse>("/api/v1/admin/outbox/webhook-signals?limit=12"),
     refetchInterval: 30_000,
   });
 
@@ -1413,6 +1468,10 @@ export default function ReportsPage() {
   const slaHistorySummary = operationsSlaHistory?.summary;
   const slaHistoryRecent = slaHistoryPoints.slice(-10).reverse();
   const failedItems = failedOutboxQuery.data?.items || [];
+  const webhookSignalItems = webhookSignalsQuery.data?.items || [];
+  const scopedWebhookSignals = webhookSignalItems.filter(
+    (item) => !scopedWebhookProvider || item.provider.toLowerCase() === scopedWebhookProvider
+  );
   const auditItems = auditCatalogsQuery.data?.items || [];
   const auditSummary = auditCatalogsQuery.data?.summary;
   const auditCanPrev = auditOffset > 0;
@@ -1440,7 +1499,14 @@ export default function ReportsPage() {
       ]
     : activeFocus === "delivery"
       ? [
-          { label: "Open Actionable Ops", href: "/operations?actionable=1" },
+          {
+            label: "Open Actionable Ops",
+            href: buildOperationsHref({
+              actionable: true,
+              deliveryChannel: scopedDeliveryChannel || undefined,
+              webhookProvider: scopedWebhookProvider || undefined,
+            }),
+          },
           { label: "Open Journal Queue", href: "/journal" },
         ]
       : activeFocus === "issues"
@@ -1453,12 +1519,18 @@ export default function ReportsPage() {
     projectId: scopedProjectId,
     outboxId: scopedOutboxId,
     installerId: scopedInstallerId,
+    deliveryChannel: scopedDeliveryChannel,
+    webhookProvider: scopedWebhookProvider,
   };
   const focusTargetId = getReportsFocusTargetId(activeFocus, scopedContext);
   const scopeSummary = scopedProjectId
     ? `Scoped project: ${scopedProjectId}`
     : scopedOutboxId
       ? `Scoped outbox message: ${scopedOutboxId}`
+      : scopedDeliveryChannel
+        ? `Scoped delivery channel: ${scopedDeliveryChannel}`
+        : scopedWebhookProvider
+          ? `Scoped webhook provider: ${scopedWebhookProvider}`
       : scopedInstallerId
         ? `Scoped installer: ${scopedInstallerId}`
         : null;
@@ -4038,6 +4110,125 @@ export default function ReportsPage() {
             )}
           </div>
 
+          <div
+            id="reports-delivery-scope"
+            className="glass-card rounded-xl border border-border p-4 md:col-span-2"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
+                  Delivery Scope
+                </div>
+                <div className="space-y-1 text-[13px]">
+                  <div>
+                    Channel:{" "}
+                    <span className="font-medium text-card-foreground">
+                      {scopedDeliveryChannel || "all channels"}
+                    </span>
+                  </div>
+                  <div>
+                    Webhook provider:{" "}
+                    <span className="font-medium text-card-foreground">
+                      {scopedWebhookProvider || "all providers"}
+                    </span>
+                  </div>
+                  {scopedOutboxId ? (
+                    <div>
+                      Outbox:{" "}
+                      <span className="font-medium text-card-foreground">{scopedOutboxId}</span>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              {(scopedDeliveryChannel || scopedWebhookProvider) && (
+                <button
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    params.set("focus", "delivery");
+                    params.set("ops_preset", activeOpsPreset || "delivery-risk");
+                    if (scopedOutboxId) {
+                      params.set("outbox_id", scopedOutboxId);
+                    }
+                    router.push(`/reports?${params.toString()}`);
+                  }}
+                  className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
+                >
+                  Clear delivery scope
+                </button>
+              )}
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-lg border border-border/70 bg-background/60 p-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Failed outbox lane
+                </div>
+                <div className="mt-2 text-[13px] text-card-foreground">
+                  {failedItems.length} failed messages in current scope
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    onClick={() =>
+                      router.push(
+                        buildOperationsHref({
+                          actionable: true,
+                          deliveryChannel: scopedDeliveryChannel || undefined,
+                          webhookProvider: scopedWebhookProvider || undefined,
+                        })
+                      )
+                    }
+                    className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
+                  >
+                    Open scoped ops
+                  </button>
+                  {scopedOutboxId ? (
+                    <button
+                      onClick={() =>
+                        router.push(
+                          buildOperationsHref({
+                            actionable: true,
+                            deliveryChannel: scopedDeliveryChannel || undefined,
+                            webhookProvider: scopedWebhookProvider || undefined,
+                          })
+                        )
+                      }
+                      className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
+                    >
+                      Continue recovery
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border/70 bg-background/60 p-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Webhook lane
+                </div>
+                {webhookSignalsQuery.isLoading ? (
+                  <div className="mt-2 text-[13px] text-muted-foreground">Loading webhook scope...</div>
+                ) : scopedWebhookSignals.length === 0 ? (
+                  <div className="mt-2 text-[13px] text-muted-foreground">
+                    No webhook signals for current scope.
+                  </div>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    {scopedWebhookSignals.slice(0, 3).map((item) => (
+                      <div key={item.id} className="text-[13px]">
+                        <div className="font-medium text-card-foreground">
+                          {item.provider} | {item.result}
+                        </div>
+                        <div className="text-muted-foreground">
+                          {item.event_type}
+                          {item.status ? ` | status ${item.status}` : ""}
+                          {item.error ? ` | ${item.error}` : ""}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="glass-card rounded-xl border border-border p-4">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
               Catalog Audit
@@ -4091,7 +4282,9 @@ export default function ReportsPage() {
           )}
           {!failedOutboxQuery.isLoading && failedItems.length === 0 && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              No failed outbox messages.
+              {scopedDeliveryChannel
+                ? `No failed outbox messages for ${scopedDeliveryChannel}.`
+                : "No failed outbox messages."}
             </div>
           )}
           {!failedOutboxQuery.isLoading &&

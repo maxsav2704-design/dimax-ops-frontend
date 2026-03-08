@@ -264,6 +264,26 @@ function buildOperationsHref(params: {
   return value ? `/operations?${value}` : "/operations";
 }
 
+function buildDeliveryReportHref(params: {
+  outboxId?: string;
+  deliveryChannel?: string;
+  webhookProvider?: string;
+}): string {
+  const query = new URLSearchParams();
+  query.set("focus", "delivery");
+  query.set("ops_preset", "delivery-risk");
+  if (params.outboxId) {
+    query.set("outbox_id", params.outboxId);
+  }
+  if (params.deliveryChannel) {
+    query.set("delivery_channel", params.deliveryChannel);
+  }
+  if (params.webhookProvider) {
+    query.set("webhook_provider", params.webhookProvider);
+  }
+  return `/reports?${query.toString()}`;
+}
+
 function formatRefreshTimestamp(value: number | null): string {
   if (!value || Number.isNaN(value)) {
     return "Waiting for first successful refresh";
@@ -627,13 +647,9 @@ export default function OperationsPage() {
   const batchResultFollowupHref = useMemo(
     () => {
       if (lastBatchResult?.action === "outbox-retry") {
-        const params = new URLSearchParams();
-        params.set("focus", "delivery");
-        params.set("ops_preset", "delivery-risk");
-        if (batchResultOutboxIds.length > 0) {
-          params.set("outbox_id", batchResultOutboxIds[0]);
-        }
-        return `/reports?${params.toString()}`;
+        return buildDeliveryReportHref({
+          outboxId: batchResultOutboxIds[0],
+        });
       }
       return batchResultProjectIds.length > 0
         ? buildProjectsImportHref(null, batchResultProjectIds)
@@ -1230,7 +1246,11 @@ export default function OperationsPage() {
                           Actionable lane
                         </Link>
                         <Link
-                          href={`/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=${encodeURIComponent(group.firstOutboxId)}`}
+                          href={buildDeliveryReportHref({
+                            outboxId: group.firstOutboxId,
+                            deliveryChannel: group.channel,
+                            webhookProvider: webhookProviderFilter || undefined,
+                          })}
                           className="font-medium text-muted-foreground hover:text-foreground hover:underline"
                         >
                           Exact failure
@@ -1314,7 +1334,10 @@ export default function OperationsPage() {
                           Provider lane
                         </Link>
                         <Link
-                          href="/reports?focus=delivery&ops_preset=delivery-risk"
+                          href={buildDeliveryReportHref({
+                            deliveryChannel: deliveryChannelFilter || undefined,
+                            webhookProvider: group.provider.toLowerCase(),
+                          })}
                           className="font-medium text-muted-foreground hover:text-foreground hover:underline"
                         >
                           Delivery report
@@ -1339,7 +1362,10 @@ export default function OperationsPage() {
               </p>
             </div>
             <Link
-              href="/reports?focus=delivery&ops_preset=delivery-risk"
+              href={buildDeliveryReportHref({
+                deliveryChannel: deliveryChannelFilter || undefined,
+                webhookProvider: webhookProviderFilter || undefined,
+              })}
               className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
             >
               Open delivery reports
@@ -1375,7 +1401,9 @@ export default function OperationsPage() {
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
                     <Link
-                      href={`/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=${encodeURIComponent(item.outbox_id)}`}
+                      href={buildDeliveryReportHref({
+                        outboxId: item.outbox_id,
+                      })}
                       className="font-medium text-accent hover:underline"
                     >
                       Review delivery recovery
@@ -1399,7 +1427,10 @@ export default function OperationsPage() {
               </p>
             </div>
             <Link
-              href="/reports?focus=delivery&ops_preset=delivery-risk"
+              href={buildDeliveryReportHref({
+                deliveryChannel: deliveryChannelFilter || undefined,
+                webhookProvider: webhookProviderFilter || undefined,
+              })}
               className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
             >
               Open delivery reports
@@ -1466,14 +1497,20 @@ export default function OperationsPage() {
                   ) : null}
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
                     <Link
-                      href="/reports?focus=delivery&ops_preset=delivery-risk"
+                      href={buildDeliveryReportHref({
+                        deliveryChannel: deliveryChannelFilter || undefined,
+                        webhookProvider: item.provider.toLowerCase(),
+                      })}
                       className="font-medium text-accent hover:underline"
                     >
                       Delivery report
                     </Link>
                     {item.outbox_id ? (
                       <Link
-                        href={`/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=${encodeURIComponent(item.outbox_id)}`}
+                        href={buildDeliveryReportHref({
+                          outboxId: item.outbox_id,
+                          webhookProvider: item.provider.toLowerCase(),
+                        })}
                         className="font-medium text-muted-foreground hover:text-foreground hover:underline"
                       >
                         Exact outbox
@@ -1594,7 +1631,10 @@ export default function OperationsPage() {
             Open operations reports
           </Link>
           <Link
-            href="/reports?focus=delivery&ops_preset=delivery-risk"
+            href={buildDeliveryReportHref({
+              deliveryChannel: deliveryChannelFilter || undefined,
+              webhookProvider: webhookProviderFilter || undefined,
+            })}
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
             Open delivery reports
@@ -1710,7 +1750,10 @@ export default function OperationsPage() {
               </h2>
               <div className="flex gap-3 text-[12px]">
                 <Link
-                  href="/reports?focus=delivery&ops_preset=delivery-risk"
+                  href={buildDeliveryReportHref({
+                    deliveryChannel: deliveryChannelFilter || undefined,
+                    webhookProvider: webhookProviderFilter || undefined,
+                  })}
                   className="font-medium text-accent hover:underline"
                 >
                   Delivery reports
@@ -1755,7 +1798,10 @@ export default function OperationsPage() {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
                     <Link
-                      href={`/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=${encodeURIComponent(item.id)}`}
+                      href={buildDeliveryReportHref({
+                        outboxId: item.id,
+                        deliveryChannel: item.channel.toUpperCase(),
+                      })}
                       className="font-medium text-accent hover:underline"
                     >
                       Delivery report
