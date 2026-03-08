@@ -152,5 +152,22 @@ test.describe.serial("Admin web smoke", () => {
         "/installers"
       );
     });
+
+    await test.step("Operations center deep-link actionable filter", async () => {
+      await page.goto("/operations?actionable=1");
+      await expect(page.getByRole("heading", { name: "Operations Center" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Only actionable" })).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+      await expect(page).toHaveURL(/\/operations\?actionable=1$/);
+
+      await page.getByRole("button", { name: "Only actionable" }).click();
+      await expect(page.getByRole("button", { name: "Only actionable" })).toHaveAttribute(
+        "aria-pressed",
+        "false"
+      );
+      await expect(page).toHaveURL(/\/operations$/);
+    });
   });
 });
