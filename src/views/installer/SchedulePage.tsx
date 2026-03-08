@@ -62,6 +62,10 @@ function getScheduleIssueStatusPreset(eventType: string) {
   return eventType.trim().toLowerCase() === "service" ? "BLOCKED" : null;
 }
 
+function getScheduleIssueSearchPreset(eventType: string, title: string) {
+  return eventType.trim().toLowerCase() === "service" ? title : null;
+}
+
 export default function InstallerSchedulePage() {
   const [nowIso] = useState(() => new Date().toISOString());
   const [preset, setPreset] = useState<RangePreset>("7d");
@@ -374,6 +378,7 @@ export default function InstallerSchedulePage() {
                   <Link
                     href={buildInstallerIssuesHref(event.project_id, {
                       issueStatus: getScheduleIssueStatusPreset(event.event_type),
+                      issueSearch: getScheduleIssueSearchPreset(event.event_type, event.title),
                     })}
                     className="inline-flex items-center rounded-lg border border-border bg-background px-2.5 py-1 transition-colors hover:bg-muted"
                   >

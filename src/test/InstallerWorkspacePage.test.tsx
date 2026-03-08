@@ -220,6 +220,60 @@ describe("InstallerWorkspacePage", () => {
     );
   });
 
+  it("routes service priorities into scoped issue context", async () => {
+    const base = new Date();
+    base.setHours(12, 0, 0, 0);
+    const iso = (hoursShift: number) =>
+      new Date(base.getTime() + hoursShift * 60 * 60 * 1000).toISOString();
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/installer/projects") {
+        return {
+          items: [
+            {
+              id: "project-1",
+              name: "Ashdod Towers",
+              address: "Harbor 11",
+              status: "IN_PROGRESS",
+              waze_url: null,
+            },
+          ],
+        };
+      }
+      if (String(path).includes("/api/v1/installer/calendar/events?")) {
+        return {
+          items: [
+            {
+              id: "event-1",
+              title: "Blocked lock",
+              starts_at: iso(1),
+              ends_at: iso(2),
+              event_type: "SERVICE",
+              project_id: "project-1",
+            },
+          ],
+        };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallerWorkspacePage />
+      </QueryClientProvider>
+    );
+
+    const priorityLink = await screen.findByRole("link", { name: "Open priority Ashdod Towers" });
+    expect(priorityLink).toHaveAttribute(
+      "href",
+      "/installer/projects/project-1?door_filter=WITH_ISSUES&issue_status=BLOCKED&issue_search=Blocked+lock#project-open-issues"
+    );
+  });
+
   it("filters projects by quick workspace shortcuts", async () => {
     const base = new Date();
     base.setHours(12, 0, 0, 0);

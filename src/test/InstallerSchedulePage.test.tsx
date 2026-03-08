@@ -60,7 +60,7 @@ describe("InstallerSchedulePage", () => {
     );
     expect(screen.getByRole("link", { name: "Open issues" })).toHaveAttribute(
       "href",
-      "/installer/projects/project-1?door_filter=WITH_ISSUES&issue_status=BLOCKED#project-open-issues"
+      "/installer/projects/project-1?door_filter=WITH_ISSUES&issue_status=BLOCKED&issue_search=Site+visit#project-open-issues"
     );
     expect(await screen.findByRole("link", { name: "Open project" })).toBeInTheDocument();
   });

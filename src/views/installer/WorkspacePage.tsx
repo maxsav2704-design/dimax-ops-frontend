@@ -43,6 +43,17 @@ type PriorityItem = {
   tone: "problem" | "overdue" | "today";
 };
 
+function getWorkspaceIssueHref(projectId: string, eventType: string, title: string) {
+  if (eventType.trim().toLowerCase() !== "service") {
+    return `/installer/projects/${projectId}`;
+  }
+
+  return buildInstallerIssuesHref(projectId, {
+    issueStatus: "BLOCKED",
+    issueSearch: title,
+  });
+}
+
 function formatDate(value: string): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
@@ -266,7 +277,9 @@ export default function InstallerWorkspacePage() {
         id: key,
         title: project?.name || event.title,
         meta: `Overdue task | ${formatDate(event.ends_at)}`,
-        href: project ? `/installer/projects/${project.id}` : "/installer/calendar?preset=7d&overdue=1",
+        href: project
+          ? getWorkspaceIssueHref(project.id, event.event_type, event.title)
+          : "/installer/calendar?preset=7d&overdue=1",
         tone: "overdue",
       });
       if (items.length >= 4) {
@@ -293,7 +306,7 @@ export default function InstallerWorkspacePage() {
         title: project?.name || event.title,
         meta: `Today ${event.event_type.toLowerCase()} | ${formatDate(event.starts_at)}`,
         href: project
-          ? `/installer/projects/${project.id}`
+          ? getWorkspaceIssueHref(project.id, event.event_type, event.title)
           : "/installer/calendar?preset=today&project_id=none",
         tone: "today",
       });
