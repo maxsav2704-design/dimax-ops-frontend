@@ -162,6 +162,18 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
     () => Array.from(new Set((details?.issues_open || []).map((issue) => issue.status))).sort(),
     [details?.issues_open]
   );
+  const issueStatusCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const issue of details?.issues_open || []) {
+      counts.set(issue.status, (counts.get(issue.status) || 0) + 1);
+    }
+    return Array.from(counts.entries()).sort((left, right) => {
+      if (right[1] !== left[1]) {
+        return right[1] - left[1];
+      }
+      return left[0].localeCompare(right[0]);
+    });
+  }, [details?.issues_open]);
 
   const quickFilterCounts = useMemo(() => {
     const doors = details?.doors || [];
@@ -206,7 +218,8 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
   }, [details?.doors, doorQuickFilter, doorSearch, issueDoorIds, locationFilter, orderFilter]);
   const filteredIssues = useMemo(() => {
     const searchNeedle = issueSearch.trim().toLowerCase();
-    return (details?.issues_open || []).filter((issue) => {
+    return (details?.issues_open || [])
+      .filter((issue) => {
       if (issueStatusFilter !== "ALL" && issue.status !== issueStatusFilter) {
         return false;
       }
@@ -221,10 +234,25 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
         relatedDoor?.unit_label,
         relatedDoor?.order_number,
         relatedDoor?.location_code,
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(searchNeedle));
-    });
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(searchNeedle));
+      })
+      .sort((left, right) => {
+        const priority = (value: string) => {
+          if (value === "BLOCKED") return 0;
+          if (value === "OPEN") return 1;
+          return 2;
+        };
+        const leftPriority = priority(left.status);
+        const rightPriority = priority(right.status);
+        if (leftPriority !== rightPriority) {
+          return leftPriority - rightPriority;
+        }
+        const leftDoor = issueDoorMap.get(left.door_id)?.unit_label || left.door_id;
+        const rightDoor = issueDoorMap.get(right.door_id)?.unit_label || right.door_id;
+        return leftDoor.localeCompare(rightDoor);
+      });
   }, [details?.issues_open, issueDoorMap, issueSearch, issueStatusFilter]);
 
   const doorsByFloor = useMemo(() => {
@@ -662,6 +690,28 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   Visible issues {filteredIssues.length} / {details.issues_open.length}
                   {activeIssueFilterCount > 0 ? ` | Active filters ${activeIssueFilterCount}` : ""}
                 </div>
+                {issueStatusCounts.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    {issueStatusCounts.map(([status, count]) => {
+                      const active = issueStatusFilter === status;
+                      return (
+                        <button
+                          key={status}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => setIssueStatusFilter(active ? "ALL" : status)}
+                          className={
+                            active
+                              ? "rounded-lg bg-accent px-2.5 py-1 text-accent-foreground"
+                              : "rounded-lg border border-border bg-background px-2.5 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          }
+                        >
+                          {status} ({count})
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               {details.issues_open.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2">

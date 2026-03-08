@@ -288,6 +288,43 @@ describe("InstallerProjectPage", () => {
     });
   });
 
+  it("groups issue statuses in summary chips and prioritizes blocked issues first", async () => {
+    setupApiMock({
+      ...projectDetails,
+      issues_open: [
+        {
+          id: "issue-1",
+          door_id: "door-1",
+          status: "OPEN",
+          title: "Frame alignment",
+          details: "Frame needs leveling",
+        },
+        {
+          id: "issue-2",
+          door_id: "door-2",
+          status: "BLOCKED",
+          title: "Blocked lock",
+          details: "Door remains blocked",
+        },
+      ],
+    });
+    renderSubject();
+
+    expect(await screen.findByRole("button", { name: "BLOCKED (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "OPEN (1)" })).toBeInTheDocument();
+
+    const issueTitles = screen.getAllByText(/Frame alignment|Blocked lock/);
+    expect(issueTitles[0]).toHaveTextContent("Blocked lock");
+    expect(issueTitles[1]).toHaveTextContent("Frame alignment");
+
+    fireEvent.click(screen.getByRole("button", { name: "BLOCKED (1)" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Frame alignment")).not.toBeInTheDocument();
+      expect(screen.getByText("Blocked lock")).toBeInTheDocument();
+    });
+  });
+
   it("filters doors by quick search and resets filters", async () => {
     setupApiMock();
     renderSubject();
