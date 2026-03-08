@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
+import { buildInstallerIssuesHref } from "@/views/installer/issue-links";
 import {
   buildScheduleCsv,
   downloadScheduleCsv,
@@ -55,6 +56,10 @@ function formatDateTime(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function getScheduleIssueStatusPreset(eventType: string) {
+  return eventType.trim().toLowerCase() === "service" ? "BLOCKED" : null;
 }
 
 export default function InstallerSchedulePage() {
@@ -367,7 +372,9 @@ export default function InstallerSchedulePage() {
                     Priority doors
                   </Link>
                   <Link
-                    href={`/installer/projects/${event.project_id}?door_filter=WITH_ISSUES#project-open-issues`}
+                    href={buildInstallerIssuesHref(event.project_id, {
+                      issueStatus: getScheduleIssueStatusPreset(event.event_type),
+                    })}
                     className="inline-flex items-center rounded-lg border border-border bg-background px-2.5 py-1 transition-colors hover:bg-muted"
                   >
                     Open issues

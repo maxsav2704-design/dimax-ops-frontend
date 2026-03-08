@@ -26,7 +26,7 @@ describe("InstallerSchedulePage", () => {
             {
               id: "event-1",
               title: "Site visit",
-              event_type: "installation",
+              event_type: "service",
               starts_at: "2026-03-08T08:00:00Z",
               ends_at: "2026-03-08T09:00:00Z",
               location: "Ashdod Tower A",
@@ -60,7 +60,7 @@ describe("InstallerSchedulePage", () => {
     );
     expect(screen.getByRole("link", { name: "Open issues" })).toHaveAttribute(
       "href",
-      "/installer/projects/project-1?door_filter=WITH_ISSUES#project-open-issues"
+      "/installer/projects/project-1?door_filter=WITH_ISSUES&issue_status=BLOCKED#project-open-issues"
     );
     expect(await screen.findByRole("link", { name: "Open project" })).toBeInTheDocument();
   });

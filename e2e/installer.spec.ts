@@ -154,17 +154,18 @@ test.describe.serial("Installer web smoke", () => {
     if (problemProject) {
       await page.goto("/installer");
       const openIssuesLink = page.locator(
-        `a[href="/installer/projects/${problemProject.id}?door_filter=WITH_ISSUES#project-open-issues"]`
+        `a[href="/installer/projects/${problemProject.id}?door_filter=WITH_ISSUES&issue_status=BLOCKED#project-open-issues"]`
       );
       if (await openIssuesLink.count()) {
         await openIssuesLink.first().click();
         await expect(page).toHaveURL(
           new RegExp(
-            `/installer/projects/${problemProject.id}\\?door_filter=WITH_ISSUES#project-open-issues$`
+            `/installer/projects/${problemProject.id}\\?door_filter=WITH_ISSUES&issue_status=BLOCKED#project-open-issues$`
           )
         );
         await expect(page.locator("#project-open-issues")).toBeVisible({ timeout: 30_000 });
         await expect(page).toHaveURL(/door_filter=WITH_ISSUES/);
+        await expect(page).toHaveURL(/issue_status=BLOCKED/);
       }
     }
   });

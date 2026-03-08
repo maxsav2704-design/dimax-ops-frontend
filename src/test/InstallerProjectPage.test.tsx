@@ -186,7 +186,7 @@ describe("InstallerProjectPage", () => {
     window.history.replaceState(
       {},
       "",
-      "/installer/projects/project-1?door_filter=WITH_ISSUES#project-open-issues"
+      "/installer/projects/project-1?door_filter=WITH_ISSUES&issue_status=BLOCKED#project-open-issues"
     );
     setupApiMock({
       ...projectDetails,
@@ -207,7 +207,8 @@ describe("InstallerProjectPage", () => {
       expect(screen.getAllByText("B-202").length).toBeGreaterThan(0);
       expect(screen.queryByText("A-101")).not.toBeInTheDocument();
     });
-    expect(window.location.search).toBe("?door_filter=WITH_ISSUES");
+    expect(screen.getByLabelText("Issue status filter")).toHaveValue("BLOCKED");
+    expect(window.location.search).toBe("?door_filter=WITH_ISSUES&issue_status=BLOCKED");
   });
 
   it("syncs issue workflow filters back to the url", async () => {

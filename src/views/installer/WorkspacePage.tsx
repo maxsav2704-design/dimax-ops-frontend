@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
+import { buildInstallerIssuesHref } from "@/views/installer/issue-links";
 
 type ProjectQuickFilter = "ALL" | "PROBLEM" | "ACTIVE" | "TODAY_TASKS";
 
@@ -556,7 +557,7 @@ export default function InstallerWorkspacePage() {
                 </Link>
                 {project.status === "PROBLEM" && (
                   <Link
-                    href={`/installer/projects/${project.id}?door_filter=WITH_ISSUES#project-open-issues`}
+                    href={buildInstallerIssuesHref(project.id, { issueStatus: "BLOCKED" })}
                     className="inline-flex items-center rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs transition-colors hover:bg-amber-500/20"
                   >
                     Open issues
