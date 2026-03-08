@@ -367,7 +367,7 @@ export default function InstallerSchedulePage() {
                     Priority doors
                   </Link>
                   <Link
-                    href={`/installer/projects/${event.project_id}#project-open-issues`}
+                    href={`/installer/projects/${event.project_id}?door_filter=WITH_ISSUES#project-open-issues`}
                     className="inline-flex items-center rounded-lg border border-border bg-background px-2.5 py-1 transition-colors hover:bg-muted"
                   >
                     Open issues

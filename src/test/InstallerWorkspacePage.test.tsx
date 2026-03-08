@@ -216,7 +216,7 @@ describe("InstallerWorkspacePage", () => {
     );
     expect(screen.getByRole("link", { name: "Open issues" })).toHaveAttribute(
       "href",
-      "/installer/projects/project-2#project-open-issues"
+      "/installer/projects/project-2?door_filter=WITH_ISSUES#project-open-issues"
     );
   });
 

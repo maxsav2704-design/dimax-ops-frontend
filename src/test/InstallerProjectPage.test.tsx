@@ -101,6 +101,7 @@ function renderSubject() {
 describe("InstallerProjectPage", () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
+    window.history.replaceState({}, "", "/installer/projects/project-1");
   });
 
   it("sends installer install action", async () => {
@@ -179,6 +180,85 @@ describe("InstallerProjectPage", () => {
     renderSubject();
 
     expect(await screen.findByText("No open issues.")).toBeInTheDocument();
+  });
+
+  it("applies issue continuity filters from url query params", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/installer/projects/project-1?door_filter=WITH_ISSUES#project-open-issues"
+    );
+    setupApiMock({
+      ...projectDetails,
+      issues_open: [
+        {
+          id: "issue-1",
+          door_id: "door-2",
+          status: "BLOCKED",
+          title: "Blocked lock",
+          details: "Door remains blocked",
+        },
+      ],
+    });
+    renderSubject();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Door summary bar")).toHaveTextContent("Visible doors: 1 / 2");
+      expect(screen.getAllByText("B-202").length).toBeGreaterThan(0);
+      expect(screen.queryByText("A-101")).not.toBeInTheDocument();
+    });
+    expect(window.location.search).toBe("?door_filter=WITH_ISSUES");
+  });
+
+  it("syncs issue workflow filters back to the url", async () => {
+    setupApiMock({
+      ...projectDetails,
+      issues_open: [
+        {
+          id: "issue-1",
+          door_id: "door-1",
+          status: "OPEN",
+          title: "Frame alignment",
+          details: "Frame needs leveling",
+        },
+        {
+          id: "issue-2",
+          door_id: "door-2",
+          status: "BLOCKED",
+          title: "Blocked lock",
+          details: "Door remains blocked",
+        },
+      ],
+    });
+    renderSubject();
+
+    await screen.findByText("Frame alignment");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show issue doors" }));
+    await waitFor(() => {
+      expect(window.location.search).toContain("door_filter=WITH_ISSUES");
+    });
+
+    fireEvent.change(screen.getByLabelText("Issue status filter"), {
+      target: { value: "BLOCKED" },
+    });
+    await waitFor(() => {
+      expect(window.location.search).toContain("issue_status=BLOCKED");
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("Issue, details, door"), {
+      target: { value: "B-202" },
+    });
+    await waitFor(() => {
+      expect(window.location.search).toContain("issue_search=B-202");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset issue filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reset all door filters" }));
+
+    await waitFor(() => {
+      expect(window.location.search).toBe("");
+    });
   });
 
   it("filters open issues by search and status, then resets issue filters", async () => {

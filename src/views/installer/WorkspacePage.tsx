@@ -556,7 +556,7 @@ export default function InstallerWorkspacePage() {
                 </Link>
                 {project.status === "PROBLEM" && (
                   <Link
-                    href={`/installer/projects/${project.id}#project-open-issues`}
+                    href={`/installer/projects/${project.id}?door_filter=WITH_ISSUES#project-open-issues`}
                     className="inline-flex items-center rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs transition-colors hover:bg-amber-500/20"
                   >
                     Open issues

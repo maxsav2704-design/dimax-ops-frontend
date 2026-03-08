@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Wrench } from "lucide-react";
 
@@ -103,6 +103,19 @@ type InstallerProjectPageProps = {
 };
 
 type DoorQuickFilter = "ALL" | "NOT_INSTALLED" | "INSTALLED" | "LOCKED" | "WITH_ISSUES";
+
+function parseDoorQuickFilter(value: string | null): DoorQuickFilter | null {
+  if (
+    value === "ALL"
+    || value === "NOT_INSTALLED"
+    || value === "INSTALLED"
+    || value === "LOCKED"
+    || value === "WITH_ISSUES"
+  ) {
+    return value;
+  }
+  return null;
+}
 
 export default function InstallerProjectPage({ projectId }: InstallerProjectPageProps) {
   const queryClient = useQueryClient();
@@ -442,6 +455,58 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
       window.location.hash = door.href.slice(1);
     }
   }
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const nextDoorFilter = parseDoorQuickFilter(params.get("door_filter"));
+    if (nextDoorFilter) {
+      setDoorQuickFilter(nextDoorFilter);
+    }
+    const nextIssueStatus = params.get("issue_status");
+    if (nextIssueStatus) {
+      setIssueStatusFilter(nextIssueStatus);
+    }
+    const nextIssueSearch = params.get("issue_search");
+    if (nextIssueSearch) {
+      setIssueSearch(nextIssueSearch);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+
+    if (doorQuickFilter === "ALL") {
+      params.delete("door_filter");
+    } else {
+      params.set("door_filter", doorQuickFilter);
+    }
+
+    if (issueStatusFilter === "ALL") {
+      params.delete("issue_status");
+    } else {
+      params.set("issue_status", issueStatusFilter);
+    }
+
+    const normalizedIssueSearch = issueSearch.trim();
+    if (normalizedIssueSearch.length === 0) {
+      params.delete("issue_search");
+    } else {
+      params.set("issue_search", normalizedIssueSearch);
+    }
+
+    const nextSearch = params.toString();
+    const nextUrl =
+      `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+
+    window.history.replaceState({}, "", nextUrl);
+  }, [doorQuickFilter, issueSearch, issueStatusFilter]);
 
   return (
     <div className="space-y-6">
