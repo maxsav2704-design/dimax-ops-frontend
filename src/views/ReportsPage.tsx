@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   AlertTriangle,
@@ -550,6 +550,8 @@ type ReportsPreset = {
   projectRiskProjectId: string;
 };
 
+type ReportsFocus = "operations" | "delivery" | "issues";
+
 type SortDir = "asc" | "desc";
 type InstallersSortBy =
   | "installed_doors"
@@ -592,6 +594,33 @@ const INSTALLER_MATRIX_LIMIT = 8;
 const INSTALLER_PROJECT_LIMIT = 10;
 const RISK_CONCENTRATION_LIMIT = 5;
 const REPORTS_PRESETS_STORAGE_KEY = "dimax_reports_presets_v1";
+const REPORTS_FOCUS_IDS: Record<ReportsFocus, string> = {
+  operations: "reports-operations-center",
+  delivery: "reports-delivery-risk",
+  issues: "reports-issues-analytics",
+};
+
+const REPORTS_FOCUS_COPY: Record<ReportsFocus, { title: string; description: string }> = {
+  operations: {
+    title: "Focused from Operations: command center",
+    description: "Operational command center and SLA blocks are in focus for queue triage.",
+  },
+  delivery: {
+    title: "Focused from Operations: delivery risk",
+    description: "Delivery and failed outbox blocks are in focus for communication incidents.",
+  },
+  issues: {
+    title: "Focused from Operations: issue pressure",
+    description: "Issues analytics is in focus for backlog and risk follow-up.",
+  },
+};
+
+function parseReportsFocus(value: string | null): ReportsFocus | null {
+  if (value === "operations" || value === "delivery" || value === "issues") {
+    return value;
+  }
+  return null;
+}
 const AUDIT_ENTITY_OPTIONS = ["door_type", "reason", "company", "project"] as const;
 const AUDIT_ACTION_OPTIONS = [
   "DOOR_TYPE_CREATE",
@@ -879,6 +908,7 @@ function SectionMessage({
 
 export default function ReportsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const userRole = useUserRole();
   const canRunPrivilegedActions = userRole !== "INSTALLER";
@@ -919,6 +949,7 @@ export default function ReportsPage() {
   const [savedPresets, setSavedPresets] = useState<ReportsPreset[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState("");
   const [presetNotice, setPresetNotice] = useState<string | null>(null);
+  const activeFocus = parseReportsFocus(searchParams.get("focus"));
   const issueAuditIssueIdTrimmed = issueAuditIssueId.trim();
   const issueAuditIssueIdNormalized = isUuid(issueAuditIssueIdTrimmed)
     ? issueAuditIssueIdTrimmed
@@ -1409,6 +1440,17 @@ export default function ReportsPage() {
     return () => window.clearTimeout(timer);
   }, [presetNotice]);
 
+  useEffect(() => {
+    if (!activeFocus) {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      const target = document.getElementById(REPORTS_FOCUS_IDS[activeFocus]);
+      target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [activeFocus]);
+
   function applyPreset(preset: ReportsPreset): void {
     setSlaHistoryDays(preset.slaHistoryDays);
     setInstallerMatrixSortBy(preset.installerMatrixSortBy);
@@ -1616,6 +1658,27 @@ export default function ReportsPage() {
             {presetNotice}
           </div>
         )}
+        {activeFocus && (
+          <div className="rounded-lg border border-[hsl(var(--accent)/0.35)] bg-[hsl(var(--accent)/0.08)] px-4 py-3 text-[13px]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="font-medium text-foreground">
+                  {REPORTS_FOCUS_COPY[activeFocus].title}
+                </div>
+                <div className="mt-1 text-muted-foreground">
+                  {REPORTS_FOCUS_COPY[activeFocus].description}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push("/reports")}
+                className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
+              >
+                Clear focus
+              </button>
+            </div>
+          </div>
+        )}
         {!canRunPrivilegedActions && (
           <div className="rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.1)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))] flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -1623,7 +1686,10 @@ export default function ReportsPage() {
           </div>
         )}
 
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-[hsl(var(--accent)/0.07)] p-5">
+        <div
+          id="reports-operations-center"
+          className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-[hsl(var(--accent)/0.07)] p-5"
+        >
           <div className="absolute -top-14 -right-14 h-40 w-40 rounded-full bg-[hsl(var(--accent)/0.15)] blur-3xl pointer-events-none" />
           <div className="relative z-10 space-y-4">
             <div className="flex items-start justify-between gap-3">
@@ -1780,7 +1846,10 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="glass-card rounded-2xl border border-border p-5 space-y-4">
+        <div
+          id="reports-operations-sla"
+          className="glass-card rounded-2xl border border-border p-5 space-y-4"
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -1978,7 +2047,10 @@ export default function ReportsPage() {
           )}
         </div>
 
-        <div className="glass-card rounded-2xl border border-border p-5 space-y-4">
+        <div
+          id="reports-issues-analytics"
+          className="glass-card rounded-2xl border border-border p-5 space-y-4"
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -3744,7 +3816,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-4">
+        <div id="reports-delivery-risk" className="grid gap-3 md:grid-cols-4">
           <div className="glass-card rounded-xl border border-border p-4">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
               Delivery
@@ -3837,7 +3909,10 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
+        <div
+          id="reports-failed-outbox"
+          className="glass-card rounded-xl overflow-hidden border border-border"
+        >
           <div className="px-4 py-3 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
             Failed Outbox Queue
           </div>

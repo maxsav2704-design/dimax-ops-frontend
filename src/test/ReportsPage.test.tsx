@@ -29,6 +29,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: pushMock,
   }),
+  useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 
 vi.mock("@/hooks/use-user-role", () => ({
@@ -49,6 +50,7 @@ describe("ReportsPage", () => {
         window.localStorage.removeItem("dimax_reports_presets_v1");
       }
     }
+    window.history.replaceState({}, "", "/reports");
   });
 
   afterEach(() => {
@@ -1116,6 +1118,198 @@ describe("ReportsPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open Actionable Ops" }));
     expect(pushMock).toHaveBeenCalledWith("/operations?actionable=1");
+  });
+
+  it("loads focused reports view from operations deep-link", async () => {
+    window.history.replaceState({}, "", "/reports?focus=delivery");
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+      if (url.includes("/api/v1/admin/reports/limit-alerts/read")) {
+        return { unread_count: 0, last_read_at: "2026-02-22T18:00:00Z" };
+      }
+      if (url.includes("/api/v1/admin/reports/delivery")) {
+        return {
+          period_from: null,
+          period_to: null,
+          whatsapp_pending: 1,
+          whatsapp_delivered: 5,
+          whatsapp_failed: 2,
+          email_sent: 3,
+          email_failed: 1,
+        };
+      }
+      if (url.includes("/api/v1/admin/outbox/summary")) {
+        return {
+          total: 8,
+          by_channel: { EMAIL: 4, WHATSAPP: 4 },
+          by_status: { PENDING: 2, FAILED: 1, SENT: 5 },
+          by_delivery_status: { PENDING: 2, FAILED: 1, DELIVERED: 5 },
+          pending_overdue_15m: 1,
+          failed_total: 1,
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-center")) {
+        return {
+          generated_at: "2026-02-22T18:01:00Z",
+          imports: {
+            window_hours: 24,
+            total_runs: 5,
+            analyze_runs: 1,
+            import_runs: 3,
+            retry_runs: 1,
+            success_runs: 3,
+            partial_runs: 1,
+            failed_runs: 1,
+            empty_runs: 0,
+          },
+          outbox: {
+            total: 8,
+            failed_total: 1,
+            pending_overdue_15m: 1,
+            by_channel: { EMAIL: 4, WHATSAPP: 4 },
+          },
+          alerts: {
+            unread_count: 2,
+            total_last_24h: 3,
+            warn_last_24h: 2,
+            danger_last_24h: 1,
+            latest_created_at: "2026-02-22T17:50:00Z",
+          },
+          top_failing_projects: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-sla/history")) {
+        return {
+          generated_at: "2026-02-22T18:03:00Z",
+          days: 30,
+          points: [],
+          summary: {
+            ok_days: 20,
+            warn_days: 7,
+            danger_days: 3,
+            current_status: "DANGER",
+            delta_import_failure_rate_pct: 33.3,
+            delta_outbox_failed_rate_pct: 25,
+            delta_danger_alerts_count: 1,
+          },
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-sla")) {
+        return {
+          generated_at: "2026-02-22T18:02:00Z",
+          overall_status: "DANGER",
+          metrics: [],
+          playbooks: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/issues-analytics")) {
+        return {
+          generated_at: "2026-02-22T18:04:00Z",
+          days: 30,
+          summary: {
+            total_issues: 0,
+            open_issues: 0,
+            closed_issues: 0,
+            overdue_open_issues: 0,
+            blocked_open_issues: 0,
+            p1_open_issues: 0,
+            overdue_open_rate_pct: 0,
+            mttr_hours: 0,
+            mttr_p50_hours: 0,
+            mttr_sample_size: 0,
+            backlog_by_workflow: {},
+            backlog_by_priority: {},
+          },
+          trend: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/issues-addons-impact")) {
+        return {
+          generated_at: "2026-02-22T18:04:00Z",
+          summary: {
+            open_issues: 0,
+            blocked_open_issues: 0,
+            not_installed_doors: 0,
+            open_issue_revenue_at_risk: 0,
+            open_issue_payroll_at_risk: 0,
+            open_issue_profit_at_risk: 0,
+            blocked_issue_profit_at_risk: 0,
+            delayed_revenue_total: 0,
+            delayed_payroll_total: 0,
+            delayed_profit_total: 0,
+            addon_revenue_total: 0,
+            addon_payroll_total: 0,
+            addon_profit_total: 0,
+            missing_addon_plans_facts: 0,
+          },
+          top_reasons: [],
+          addon_impact: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/risk-concentration")) {
+        return {
+          generated_at: "2026-02-22T18:04:00Z",
+          summary: {
+            open_issue_profit_at_risk: 0,
+            blocked_issue_profit_at_risk: 0,
+            delayed_profit_total: 0,
+            risky_projects: 0,
+            risky_orders: 0,
+            risky_installers: 0,
+            worst_project_profit_total: 0,
+            worst_order_profit_total: 0,
+            worst_installer_profit_total: 0,
+          },
+          projects: [],
+          orders: [],
+          installers: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/installers-profitability-matrix")) {
+        return { total: 0, limit: 8, offset: 0, items: [] };
+      }
+      if (url.includes("/api/v1/admin/reports/installer-project-profitability")) {
+        return { total: 0, limit: 10, offset: 0, items: [] };
+      }
+      if (url.includes("/api/v1/admin/projects?limit=200")) {
+        return { items: [] };
+      }
+      if (url.includes("/api/v1/admin/reports/projects-margin?")) {
+        return { total: 0, limit: 5, offset: 0, items: [] };
+      }
+      if (url.includes("/api/v1/admin/reports/installers-kpi?")) {
+        return { period_from: null, period_to: null, items: [] };
+      }
+      if (url.includes("/api/v1/admin/reports/order-numbers-kpi?")) {
+        return { total: 0, limit: 20, offset: 0, items: [] };
+      }
+      if (url.includes("/api/v1/admin/outbox?status=FAILED")) {
+        return { items: [] };
+      }
+      if (url.includes("/api/v1/admin/reports/audit-catalogs")) {
+        return { items: [], summary: { total: 0, by_entity: {}, by_action: {} } };
+      }
+      if (url.includes("/api/v1/admin/reports/audit-issues")) {
+        return { items: [], summary: { total: 0, by_entity: {}, by_action: {} } };
+      }
+      throw new Error(`Unexpected path: ${url}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ReportsPage />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Focused from Operations: delivery risk")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear focus" }));
+    expect(pushMock).toHaveBeenCalledWith("/reports");
   });
 
   it("disables privileged actions for INSTALLER role", async () => {
