@@ -142,15 +142,15 @@ test.describe.serial("Admin web smoke", () => {
       );
       await expect(page.getByRole("link", { name: "Open operations reports" })).toHaveAttribute(
         "href",
-        "/reports?focus=operations"
+        "/reports?focus=operations&ops_preset=failed-imports"
       );
       await expect(page.getByRole("link", { name: "Open delivery reports" })).toHaveAttribute(
         "href",
-        "/reports?focus=delivery"
+        "/reports?focus=delivery&ops_preset=delivery-risk"
       );
       await expect(page.getByRole("link", { name: "Open issues reports" })).toHaveAttribute(
         "href",
-        "/reports?focus=issues"
+        "/reports?focus=issues&ops_preset=issue-pressure"
       );
       await expect(
         page.getByRole("link", { name: "Open communication queue" })

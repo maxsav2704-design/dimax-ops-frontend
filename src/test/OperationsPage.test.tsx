@@ -163,15 +163,15 @@ describe("OperationsPage", () => {
     );
     expect(screen.getByRole("link", { name: "Open operations reports" })).toHaveAttribute(
       "href",
-      "/reports?focus=operations"
+      "/reports?focus=operations&ops_preset=failed-imports"
     );
     expect(screen.getByRole("link", { name: "Open delivery reports" })).toHaveAttribute(
       "href",
-      "/reports?focus=delivery"
+      "/reports?focus=delivery&ops_preset=delivery-risk"
     );
     expect(screen.getByRole("link", { name: "Open issues reports" })).toHaveAttribute(
       "href",
-      "/reports?focus=issues"
+      "/reports?focus=issues&ops_preset=issue-pressure"
     );
     expect(screen.getByRole("link", { name: "Open communication queue" })).toHaveAttribute(
       "href",
@@ -187,7 +187,7 @@ describe("OperationsPage", () => {
     );
     expect(screen.getByRole("link", { name: "Operations report" })).toHaveAttribute(
       "href",
-      "/reports?focus=operations"
+      "/reports?focus=operations&ops_preset=failed-imports"
     );
     expect(screen.getByRole("link", { name: "Open project" })).toHaveAttribute(
       "href",
@@ -195,11 +195,11 @@ describe("OperationsPage", () => {
     );
     expect(screen.getByRole("link", { name: "Delivery reports" })).toHaveAttribute(
       "href",
-      "/reports?focus=delivery"
+      "/reports?focus=delivery&ops_preset=delivery-risk"
     );
     expect(screen.getByRole("link", { name: "Reports outbox" })).toHaveAttribute(
       "href",
-      "/reports?focus=delivery"
+      "/reports?focus=delivery&ops_preset=delivery-risk"
     );
     expect(screen.getByRole("link", { name: "Journal outbox" })).toHaveAttribute(
       "href",
@@ -207,7 +207,7 @@ describe("OperationsPage", () => {
     );
     expect(screen.getByRole("link", { name: "Issues reports" })).toHaveAttribute(
       "href",
-      "/reports?focus=issues"
+      "/reports?focus=issues&ops_preset=issue-pressure"
     );
     expect(screen.getByRole("link", { name: "Installer board" })).toHaveAttribute(
       "href",

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -551,6 +551,7 @@ type ReportsPreset = {
 };
 
 type ReportsFocus = "operations" | "delivery" | "issues";
+type ReportsOpsPreset = "failed-imports" | "delivery-risk" | "issue-pressure";
 
 type SortDir = "asc" | "desc";
 type InstallersSortBy =
@@ -615,8 +616,36 @@ const REPORTS_FOCUS_COPY: Record<ReportsFocus, { title: string; description: str
   },
 };
 
+const REPORTS_OPS_PRESET_COPY: Record<
+  ReportsOpsPreset,
+  { title: string; description: string; slaHistoryDays: number }
+> = {
+  "failed-imports": {
+    title: "Operations preset: failed imports",
+    description: "Short-range SLA view for import failures and queue recovery.",
+    slaHistoryDays: 7,
+  },
+  "delivery-risk": {
+    title: "Operations preset: delivery risk",
+    description: "Short-range delivery view for failed outbox and communication pressure.",
+    slaHistoryDays: 7,
+  },
+  "issue-pressure": {
+    title: "Operations preset: issue pressure",
+    description: "Two-week issue pressure view for backlog and escalation monitoring.",
+    slaHistoryDays: 14,
+  },
+};
+
 function parseReportsFocus(value: string | null): ReportsFocus | null {
   if (value === "operations" || value === "delivery" || value === "issues") {
+    return value;
+  }
+  return null;
+}
+
+function parseReportsOpsPreset(value: string | null): ReportsOpsPreset | null {
+  if (value === "failed-imports" || value === "delivery-risk" || value === "issue-pressure") {
     return value;
   }
   return null;
@@ -950,6 +979,8 @@ export default function ReportsPage() {
   const [selectedPresetId, setSelectedPresetId] = useState("");
   const [presetNotice, setPresetNotice] = useState<string | null>(null);
   const activeFocus = parseReportsFocus(searchParams.get("focus"));
+  const activeOpsPreset = parseReportsOpsPreset(searchParams.get("ops_preset"));
+  const appliedOpsPresetRef = useRef<ReportsOpsPreset | null>(null);
   const issueAuditIssueIdTrimmed = issueAuditIssueId.trim();
   const issueAuditIssueIdNormalized = isUuid(issueAuditIssueIdTrimmed)
     ? issueAuditIssueIdTrimmed
@@ -1473,6 +1504,19 @@ export default function ReportsPage() {
     return () => window.clearTimeout(timer);
   }, [activeFocus]);
 
+  useEffect(() => {
+    if (!activeOpsPreset) {
+      appliedOpsPresetRef.current = null;
+      return;
+    }
+    if (appliedOpsPresetRef.current === activeOpsPreset) {
+      return;
+    }
+    const preset = REPORTS_OPS_PRESET_COPY[activeOpsPreset];
+    appliedOpsPresetRef.current = activeOpsPreset;
+    setSlaHistoryDays(preset.slaHistoryDays);
+  }, [activeOpsPreset]);
+
   function applyPreset(preset: ReportsPreset): void {
     setSlaHistoryDays(preset.slaHistoryDays);
     setInstallerMatrixSortBy(preset.installerMatrixSortBy);
@@ -1690,6 +1734,12 @@ export default function ReportsPage() {
                 <div className="mt-1 text-muted-foreground">
                   {REPORTS_FOCUS_COPY[activeFocus].description}
                 </div>
+                {activeOpsPreset && (
+                  <div className="mt-2 text-[12px] text-muted-foreground">
+                    {REPORTS_OPS_PRESET_COPY[activeOpsPreset].title}.{" "}
+                    {REPORTS_OPS_PRESET_COPY[activeOpsPreset].description}
+                  </div>
+                )}
               </div>
               <div className="flex flex-wrap items-center justify-end gap-2">
                 {focusFollowupActions.map((action) => (

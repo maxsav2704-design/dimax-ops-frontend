@@ -1121,7 +1121,7 @@ describe("ReportsPage", () => {
   });
 
   it("loads focused reports view from operations deep-link", async () => {
-    window.history.replaceState({}, "", "/reports?focus=delivery");
+    window.history.replaceState({}, "", "/reports?focus=delivery&ops_preset=delivery-risk");
 
     apiFetchMock.mockImplementation(async (path: string) => {
       const url = String(path);
@@ -1310,6 +1310,10 @@ describe("ReportsPage", () => {
     const focusBanner = focusBannerText.closest("div.rounded-lg");
     expect(focusBanner).not.toBeNull();
     const focusQueries = within(focusBanner as HTMLElement);
+    expect(
+      focusQueries.getByText("Operations preset: delivery risk. Short-range delivery view for failed outbox and communication pressure.")
+    ).toBeInTheDocument();
+    expect(await screen.findByText("SLA Trend (last 7 days)")).toBeInTheDocument();
 
     expect(focusQueries.getByRole("button", { name: "Open Actionable Ops" })).toBeInTheDocument();
     expect(focusQueries.getByRole("button", { name: "Open Journal Queue" })).toBeInTheDocument();

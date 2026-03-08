@@ -903,19 +903,19 @@ export default function OperationsPage() {
             Open import workspace
           </Link>
           <Link
-            href="/reports?focus=operations"
+            href="/reports?focus=operations&ops_preset=failed-imports"
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
             Open operations reports
           </Link>
           <Link
-            href="/reports?focus=delivery"
+            href="/reports?focus=delivery&ops_preset=delivery-risk"
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
             Open delivery reports
           </Link>
           <Link
-            href="/reports?focus=issues"
+            href="/reports?focus=issues&ops_preset=issue-pressure"
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
             Open issues reports
@@ -989,7 +989,7 @@ export default function OperationsPage() {
                       Project imports
                     </Link>
                     <Link
-                      href="/reports?focus=operations"
+                      href="/reports?focus=operations&ops_preset=failed-imports"
                       className="font-medium text-muted-foreground hover:text-foreground hover:underline"
                     >
                       Operations report
@@ -1025,7 +1025,7 @@ export default function OperationsPage() {
               </h2>
               <div className="flex gap-3 text-[12px]">
                 <Link
-                  href="/reports?focus=delivery"
+                  href="/reports?focus=delivery&ops_preset=delivery-risk"
                   className="font-medium text-accent hover:underline"
                 >
                   Delivery reports
@@ -1066,7 +1066,7 @@ export default function OperationsPage() {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
                     <Link
-                      href="/reports?focus=delivery"
+                      href="/reports?focus=delivery&ops_preset=delivery-risk"
                       className="font-medium text-accent hover:underline"
                     >
                       Reports outbox
@@ -1149,7 +1149,7 @@ export default function OperationsPage() {
                       </div>
                       <div className="mt-3 text-xs">
                         <Link
-                          href="/reports?focus=issues"
+                          href="/reports?focus=issues&ops_preset=issue-pressure"
                           className="mr-3 font-medium text-accent hover:underline"
                         >
                           Issues reports
