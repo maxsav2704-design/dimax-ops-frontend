@@ -1366,6 +1366,28 @@ export default function ReportsPage() {
   const orderNumbersKpiCanPrev = orderNumbersKpiOffset > 0;
   const orderNumbersKpiCanNext =
     (orderNumbersKpiOffset + KPI_PAGE_SIZE) < (orderNumbersKpiQuery.data?.total || 0);
+  const focusedFailingProjectIds = topFailingProjects.map((item) => item.project_id);
+  const focusedFailedProjectsHref = focusedFailingProjectIds.length > 0
+    ? `/projects?failed_project_ids=${encodeURIComponent(
+        focusedFailingProjectIds.join(",")
+      )}&only_failed_runs=1`
+    : "/projects?only_failed_runs=1";
+  const focusFollowupActions = activeFocus === "operations"
+    ? [
+        { label: "Open Actionable Ops", href: "/operations?actionable=1" },
+        { label: "Open Failed Projects", href: focusedFailedProjectsHref },
+      ]
+    : activeFocus === "delivery"
+      ? [
+          { label: "Open Actionable Ops", href: "/operations?actionable=1" },
+          { label: "Open Journal Queue", href: "/journal" },
+        ]
+      : activeFocus === "issues"
+        ? [
+            { label: "Open Actionable Ops", href: "/operations?actionable=1" },
+            { label: "Open Issues Board", href: "/issues" },
+          ]
+        : [];
 
   useEffect(() => {
     if (projectOptions.length === 0) {
@@ -1669,13 +1691,25 @@ export default function ReportsPage() {
                   {REPORTS_FOCUS_COPY[activeFocus].description}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => router.push("/reports")}
-                className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
-              >
-                Clear focus
-              </button>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {focusFollowupActions.map((action) => (
+                  <button
+                    key={action.label}
+                    type="button"
+                    onClick={() => router.push(action.href)}
+                    className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
+                  >
+                    {action.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => router.push("/reports")}
+                  className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
+                >
+                  Clear focus
+                </button>
+              </div>
             </div>
           </div>
         )}

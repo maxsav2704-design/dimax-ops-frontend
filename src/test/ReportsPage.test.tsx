@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -1306,9 +1306,21 @@ describe("ReportsPage", () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText("Focused from Operations: delivery risk")).toBeInTheDocument();
+    const focusBannerText = await screen.findByText("Focused from Operations: delivery risk");
+    const focusBanner = focusBannerText.closest("div.rounded-lg");
+    expect(focusBanner).not.toBeNull();
+    const focusQueries = within(focusBanner as HTMLElement);
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear focus" }));
+    expect(focusQueries.getByRole("button", { name: "Open Actionable Ops" })).toBeInTheDocument();
+    expect(focusQueries.getByRole("button", { name: "Open Journal Queue" })).toBeInTheDocument();
+
+    fireEvent.click(focusQueries.getByRole("button", { name: "Open Actionable Ops" }));
+    expect(pushMock).toHaveBeenCalledWith("/operations?actionable=1");
+
+    fireEvent.click(focusQueries.getByRole("button", { name: "Open Journal Queue" }));
+    expect(pushMock).toHaveBeenCalledWith("/journal");
+
+    fireEvent.click(focusQueries.getByRole("button", { name: "Clear focus" }));
     expect(pushMock).toHaveBeenCalledWith("/reports");
   });
 
