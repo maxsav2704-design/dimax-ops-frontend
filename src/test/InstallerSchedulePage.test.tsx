@@ -67,6 +67,11 @@ describe("InstallerSchedulePage", () => {
 
   it("applies project query filter and event-type filter", async () => {
     window.history.pushState({}, "", "/installer/calendar?project_id=project-2");
+    const now = Date.now();
+    const installStart = new Date(now + 60 * 60 * 1000).toISOString();
+    const installEnd = new Date(now + 2 * 60 * 60 * 1000).toISOString();
+    const deliveryStart = new Date(now + 3 * 60 * 60 * 1000).toISOString();
+    const deliveryEnd = new Date(now + 4 * 60 * 60 * 1000).toISOString();
 
     apiFetchMock.mockImplementation(async (path: string) => {
       if (path.includes("/api/v1/installer/calendar/events?")) {
@@ -76,8 +81,8 @@ describe("InstallerSchedulePage", () => {
               id: "event-1",
               title: "Install Project 1",
               event_type: "installation",
-              starts_at: "2026-03-08T08:00:00Z",
-              ends_at: "2026-03-08T09:00:00Z",
+              starts_at: installStart,
+              ends_at: installEnd,
               location: null,
               waze_url: null,
               description: null,
@@ -88,8 +93,8 @@ describe("InstallerSchedulePage", () => {
               id: "event-2",
               title: "Delivery Project 2",
               event_type: "delivery",
-              starts_at: "2026-03-08T10:00:00Z",
-              ends_at: "2026-03-08T11:00:00Z",
+              starts_at: deliveryStart,
+              ends_at: deliveryEnd,
               location: null,
               waze_url: null,
               description: null,
