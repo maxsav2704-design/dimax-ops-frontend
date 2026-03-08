@@ -247,10 +247,45 @@ describe("InstallerProjectPage", () => {
     expect(await screen.findByText("Blocked lock")).toBeInTheDocument();
     expect(screen.getByText("Door B-202")).toBeInTheDocument();
     expect(screen.getAllByText("BLOCKED").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Only this door B-202" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open door B-202" })).toHaveAttribute(
       "href",
       "#door-door-2"
     );
+  });
+
+  it("focuses issue-related doors from the issue workflow shortcuts", async () => {
+    setupApiMock({
+      ...projectDetails,
+      issues_open: [
+        {
+          id: "issue-1",
+          door_id: "door-2",
+          status: "BLOCKED",
+          title: "Blocked lock",
+          details: "Door remains blocked",
+        },
+      ],
+    });
+    renderSubject();
+
+    await screen.findByText("Blocked lock");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show issue doors" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Door summary bar")).toHaveTextContent("Visible doors: 1 / 2");
+      expect(screen.getAllByText("B-202").length).toBeGreaterThan(0);
+      expect(screen.queryByText("A-101")).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Only this door B-202" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Door summary bar")).toHaveTextContent("Visible doors: 1 / 2");
+      expect(screen.getAllByText("B-202").length).toBeGreaterThan(0);
+      expect(screen.queryByText("A-101")).not.toBeInTheDocument();
+    });
   });
 
   it("filters doors by quick search and resets filters", async () => {

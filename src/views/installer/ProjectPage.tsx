@@ -385,6 +385,23 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
     setIssueStatusFilter("ALL");
   }
 
+  function focusIssueDoor(door: InstallerDoor) {
+    focusPriorityDoor({
+      href: `#door-${door.id}`,
+      quickSearchValue: door.unit_label,
+    });
+  }
+
+  function focusIssueDoorsList() {
+    setOrderFilter("ALL");
+    setLocationFilter("ALL");
+    setDoorSearch("");
+    setDoorQuickFilter("WITH_ISSUES");
+    if (typeof window !== "undefined") {
+      window.location.hash = "project-doors";
+    }
+  }
+
   function focusPriorityDoor(door: {
     href: string;
     quickSearchValue: string;
@@ -648,6 +665,13 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               </div>
               {details.issues_open.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={focusIssueDoorsList}
+                    className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted"
+                  >
+                    Show issue doors
+                  </button>
                   <input
                     value={issueSearch}
                     onChange={(event) => setIssueSearch(event.target.value)}
@@ -713,12 +737,21 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 </div>
                 <div className="mt-3 flex flex-wrap gap-3 text-xs">
                   {relatedDoor ? (
-                    <a
-                      href={`#door-${relatedDoor.id}`}
-                      className="font-medium text-amber-200 underline-offset-2 hover:underline"
-                    >
-                      Open door {relatedDoor.unit_label}
-                    </a>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => focusIssueDoor(relatedDoor)}
+                        className="font-medium text-amber-200 underline-offset-2 hover:underline"
+                      >
+                        Only this door {relatedDoor.unit_label}
+                      </button>
+                      <a
+                        href={`#door-${relatedDoor.id}`}
+                        className="font-medium text-amber-200 underline-offset-2 hover:underline"
+                      >
+                        Open door {relatedDoor.unit_label}
+                      </a>
+                    </>
                   ) : (
                     <span className="text-amber-100/70">Related door missing</span>
                   )}
