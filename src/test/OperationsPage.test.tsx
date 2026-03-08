@@ -33,6 +33,48 @@ function renderSubject() {
   );
 }
 
+function mockWebhookSignals(path: string) {
+  if (path === "/api/v1/admin/outbox/webhook-signals/summary") {
+    return {
+      window_hours: 24,
+      total_received: 6,
+      updated_total: 3,
+      duplicate_total: 2,
+      unmatched_total: 1,
+      provider_failed_total: 2,
+    };
+  }
+  if (path === "/api/v1/admin/outbox/webhook-signals?limit=6") {
+    return {
+      items: [
+        {
+          id: "webhook-1",
+          provider: "sendgrid",
+          event_type: "delivery_status",
+          external_id: "evt-1",
+          result: "duplicate",
+          status: "delivered",
+          error: null,
+          outbox_id: "outbox-1",
+          created_at: "2026-03-07T09:05:00Z",
+        },
+        {
+          id: "webhook-2",
+          provider: "twilio",
+          event_type: "message_status",
+          external_id: "evt-2",
+          result: "channel_mismatch",
+          status: "failed",
+          error: "wrong channel",
+          outbox_id: "outbox-2",
+          created_at: "2026-03-07T09:00:00Z",
+        },
+      ],
+    };
+  }
+  return null;
+}
+
 describe("OperationsPage", () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
@@ -46,6 +88,10 @@ describe("OperationsPage", () => {
 
   it("renders operational queue health data", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (path === "/api/v1/admin/sync/health/summary") {
         return {
           max_cursor: 18,
@@ -136,6 +182,7 @@ describe("OperationsPage", () => {
     expect(screen.getByText("Failed outbox")).toBeInTheDocument();
     expect(screen.getByText("Pending > 15m")).toBeInTheDocument();
     expect(screen.getByText("Action Summary")).toBeInTheDocument();
+    expect(screen.getByText("Webhook Signals")).toBeInTheDocument();
     expect(screen.getByText("Data Freshness")).toBeInTheDocument();
     expect(screen.getByText("fresh")).toBeInTheDocument();
     expect(screen.getByText(/Fresh as of/)).toBeInTheDocument();
@@ -154,6 +201,12 @@ describe("OperationsPage", () => {
     expect(screen.getByText("Unknown door type")).toBeInTheDocument();
     expect(screen.getByText("ops@dimax.test")).toBeInTheDocument();
     expect(screen.getByText("SMTP timeout")).toBeInTheDocument();
+    expect(screen.getByText("Duplicates")).toBeInTheDocument();
+    expect(screen.getByText("Unmatched")).toBeInTheDocument();
+    expect(screen.getByText("Provider failed")).toBeInTheDocument();
+    expect(screen.getByText("sendgrid | duplicate")).toBeInTheDocument();
+    expect(screen.getByText("twilio | channel_mismatch")).toBeInTheDocument();
+    expect(screen.getByText("wrong channel")).toBeInTheDocument();
     expect(screen.getByText("installer-2")).toBeInTheDocument();
     expect(screen.getByText(/lag 9/)).toBeInTheDocument();
 
@@ -165,7 +218,7 @@ describe("OperationsPage", () => {
       "href",
       "/reports?focus=operations&ops_preset=failed-imports"
     );
-    expect(screen.getByRole("link", { name: "Open delivery reports" })).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: "Open delivery reports" })[0]).toHaveAttribute(
       "href",
       "/reports?focus=delivery&ops_preset=delivery-risk"
     );
@@ -197,10 +250,15 @@ describe("OperationsPage", () => {
       "href",
       "/reports?focus=delivery&ops_preset=delivery-risk"
     );
-    expect(screen.getByRole("link", { name: "Delivery report" })).toHaveAttribute(
-      "href",
-      "/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=outbox-1"
-    );
+    expect(
+      screen
+        .getAllByRole("link", { name: "Exact outbox" })
+        .some(
+          (link) =>
+            link.getAttribute("href")
+            === "/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=outbox-1"
+        )
+    ).toBe(true);
     expect(screen.getByRole("link", { name: "Journal outbox" })).toHaveAttribute(
       "href",
       "/journal"
@@ -219,6 +277,10 @@ describe("OperationsPage", () => {
     window.history.replaceState({}, "", "/operations?actionable=1");
 
     apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (path === "/api/v1/admin/sync/health/summary") {
         return {
           max_cursor: 18,
@@ -351,6 +413,10 @@ describe("OperationsPage", () => {
     let shouldFail = true;
 
     apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (shouldFail) {
         throw new Error("operations down");
       }
@@ -410,6 +476,10 @@ describe("OperationsPage", () => {
 
   it("retries failed import and outbox items from the overview", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (path === "/api/v1/admin/sync/health/summary") {
         return {
           max_cursor: 18,
@@ -530,6 +600,10 @@ describe("OperationsPage", () => {
 
   it("retries actionable imports in bulk from the summary", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (path === "/api/v1/admin/sync/health/summary") {
         return {
           max_cursor: 18,
@@ -675,6 +749,10 @@ describe("OperationsPage", () => {
 
   it("reconciles actionable projects in bulk from the summary", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (path === "/api/v1/admin/sync/health/summary") {
         return {
           max_cursor: 18,
@@ -814,6 +892,10 @@ describe("OperationsPage", () => {
 
   it("cancels batch actions without calling the api", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (path === "/api/v1/admin/sync/health/summary") {
         return {
           max_cursor: 18,
@@ -900,6 +982,10 @@ describe("OperationsPage", () => {
 
   it("filters overview to only actionable items", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (path === "/api/v1/admin/sync/health/summary") {
         return {
           max_cursor: 18,
@@ -1033,6 +1119,10 @@ describe("OperationsPage", () => {
 
   it("shows calm summary when there are no actionable items", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (path === "/api/v1/admin/sync/health/summary") {
         return {
           max_cursor: 4,
@@ -1094,6 +1184,10 @@ describe("OperationsPage", () => {
     nowSpy.mockReturnValue(new Date("2026-03-07T10:00:00Z").getTime());
 
     apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
       if (path === "/api/v1/admin/sync/health/summary") {
         return {
           max_cursor: 18,

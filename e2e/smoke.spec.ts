@@ -136,6 +136,7 @@ test.describe.serial("Admin web smoke", () => {
       await expect(page.getByText("Failed Import Queue", { exact: true })).toBeVisible();
       await expect(page.getByText("Failed Outbox", { exact: true })).toBeVisible();
       await expect(page.getByText("Sync Health", { exact: true })).toBeVisible();
+      await expect(page.getByText("Webhook Signals", { exact: true })).toBeVisible();
       await expect(page.getByRole("link", { name: "Open import workspace" })).toHaveAttribute(
         "href",
         /\/projects\?only_failed_runs=1/
@@ -144,7 +145,7 @@ test.describe.serial("Admin web smoke", () => {
         "href",
         "/reports?focus=operations&ops_preset=failed-imports"
       );
-      await expect(page.getByRole("link", { name: "Open delivery reports" })).toHaveAttribute(
+      await expect(page.getByRole("link", { name: "Open delivery reports" }).first()).toHaveAttribute(
         "href",
         "/reports?focus=delivery&ops_preset=delivery-risk"
       );

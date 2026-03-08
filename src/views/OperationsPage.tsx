@@ -74,6 +74,29 @@ type OutboxListResponse = {
   }>;
 };
 
+type WebhookSignalsSummaryResponse = {
+  window_hours: number;
+  total_received: number;
+  updated_total: number;
+  duplicate_total: number;
+  unmatched_total: number;
+  provider_failed_total: number;
+};
+
+type WebhookSignalsListResponse = {
+  items: Array<{
+    id: string;
+    provider: string;
+    event_type: string;
+    external_id: string | null;
+    result: string;
+    status: string | null;
+    error: string | null;
+    outbox_id: string | null;
+    created_at: string;
+  }>;
+};
+
 type FailedImportRunsQueueResponse = {
   items: Array<{
     run_id: string;
@@ -308,29 +331,49 @@ export default function OperationsPage() {
       ),
     refetchInterval: 30_000,
   });
+  const webhookSummaryQuery = useQuery({
+    queryKey: ["operations-webhook-signals-summary"],
+    queryFn: () =>
+      apiFetch<WebhookSignalsSummaryResponse>("/api/v1/admin/outbox/webhook-signals/summary"),
+    refetchInterval: 30_000,
+  });
+  const webhookSignalsQuery = useQuery({
+    queryKey: ["operations-webhook-signals"],
+    queryFn: () =>
+      apiFetch<WebhookSignalsListResponse>("/api/v1/admin/outbox/webhook-signals?limit=6"),
+    refetchInterval: 30_000,
+  });
 
   const isRefreshing =
     syncQuery.isFetching ||
     outboxSummaryQuery.isFetching ||
     outboxFailedQuery.isFetching ||
-    failedImportsQuery.isFetching;
+    failedImportsQuery.isFetching ||
+    webhookSummaryQuery.isFetching ||
+    webhookSignalsQuery.isFetching;
 
   const hasError =
     syncQuery.isError ||
     outboxSummaryQuery.isError ||
     outboxFailedQuery.isError ||
-    failedImportsQuery.isError;
+    failedImportsQuery.isError ||
+    webhookSummaryQuery.isError ||
+    webhookSignalsQuery.isError;
 
   const sync = syncQuery.data;
   const outboxSummary = outboxSummaryQuery.data;
   const failedOutbox = outboxFailedQuery.data?.items || [];
   const failedImports = failedImportsQuery.data?.items || [];
+  const webhookSummary = webhookSummaryQuery.data;
+  const webhookSignals = webhookSignalsQuery.data?.items || [];
   const freshnessTimestamp = useMemo(() => {
     const timestamps = [
       syncQuery.dataUpdatedAt,
       outboxSummaryQuery.dataUpdatedAt,
       outboxFailedQuery.dataUpdatedAt,
       failedImportsQuery.dataUpdatedAt,
+      webhookSummaryQuery.dataUpdatedAt,
+      webhookSignalsQuery.dataUpdatedAt,
     ].filter((value) => value > 0);
     if (timestamps.length === 0) {
       return null;
@@ -341,6 +384,8 @@ export default function OperationsPage() {
     outboxFailedQuery.dataUpdatedAt,
     outboxSummaryQuery.dataUpdatedAt,
     syncQuery.dataUpdatedAt,
+    webhookSignalsQuery.dataUpdatedAt,
+    webhookSummaryQuery.dataUpdatedAt,
   ]);
   const freshnessAgeMs = freshnessTimestamp ? Date.now() - freshnessTimestamp : null;
   const freshnessState = isRefreshing
@@ -457,6 +502,8 @@ export default function OperationsPage() {
       outboxSummaryQuery.refetch(),
       outboxFailedQuery.refetch(),
       failedImportsQuery.refetch(),
+      webhookSummaryQuery.refetch(),
+      webhookSignalsQuery.refetch(),
     ]);
   }
 
@@ -811,6 +858,101 @@ export default function OperationsPage() {
                 <div className="mt-1 text-sm font-medium text-foreground">{item.value}</div>
               </Link>
             ))}
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-border bg-card p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Webhook Signals
+              </h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Delivery webhook duplicates, mismatches, and provider failures in the last{" "}
+                {webhookSummary?.window_hours ?? 24} hours.
+              </p>
+            </div>
+            <Link
+              href="/reports?focus=delivery&ops_preset=delivery-risk"
+              className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
+            >
+              Open delivery reports
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Received</div>
+              <div className="mt-1 text-lg font-semibold text-foreground">
+                {webhookSummary?.total_received ?? 0}
+              </div>
+            </div>
+            <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duplicates</div>
+              <div className="mt-1 text-lg font-semibold text-foreground">
+                {webhookSummary?.duplicate_total ?? 0}
+              </div>
+            </div>
+            <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Unmatched</div>
+              <div className="mt-1 text-lg font-semibold text-foreground">
+                {webhookSummary?.unmatched_total ?? 0}
+              </div>
+            </div>
+            <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Provider failed</div>
+              <div className="mt-1 text-lg font-semibold text-foreground">
+                {webhookSummary?.provider_failed_total ?? 0}
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            {webhookSignalsQuery.isLoading ? (
+              <div className="text-[13px] text-muted-foreground">Loading webhook signals...</div>
+            ) : webhookSignals.length === 0 ? (
+              <div className="text-[13px] text-muted-foreground">No webhook signals recorded.</div>
+            ) : (
+              webhookSignals.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-lg border border-border/70 bg-background/70 px-4 py-3 text-[13px]"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="font-medium text-foreground">
+                        {item.provider} | {item.result}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {item.event_type}
+                        {item.external_id ? ` | ${item.external_id}` : ""}
+                        {item.status ? ` | status ${item.status}` : ""}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground">
+                      {formatDateTime(item.created_at)}
+                    </div>
+                  </div>
+                  {item.error ? (
+                    <div className="mt-1 text-xs text-muted-foreground">{item.error}</div>
+                  ) : null}
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    <Link
+                      href="/reports?focus=delivery&ops_preset=delivery-risk"
+                      className="font-medium text-accent hover:underline"
+                    >
+                      Delivery report
+                    </Link>
+                    {item.outbox_id ? (
+                      <Link
+                        href={`/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=${encodeURIComponent(item.outbox_id)}`}
+                        className="font-medium text-muted-foreground hover:text-foreground hover:underline"
+                      >
+                        Exact outbox
+                      </Link>
+                    ) : null}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </section>
 
