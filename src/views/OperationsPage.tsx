@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw, ServerCrash, ShieldAlert, Siren, TimerReset } from "lucide-react";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import {
@@ -267,10 +268,12 @@ function extractBatchProjectIds(result: OperationsBatchResult | null): string[] 
 }
 
 export default function OperationsPage() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const userRole = useUserRole();
   const canRunPrivilegedActions = canRunPrivilegedAdminActions(userRole);
   const [busyAction, setBusyAction] = useState("");
-  const [onlyActionable, setOnlyActionable] = useState(false);
+  const [onlyActionable, setOnlyActionable] = useState(searchParams.get("actionable") === "1");
   const [pendingBatchAction, setPendingBatchAction] = useState<"retry" | "reconcile" | null>(null);
   const [lastBatchResult, setLastBatchResult] = useState<OperationsBatchResult | null>(null);
   const [actionFeedback, setActionFeedback] = useState<{
@@ -628,6 +631,17 @@ export default function OperationsPage() {
     }
   }
 
+  function syncUrlState(nextOnlyActionable: boolean) {
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("actionable");
+    if (nextOnlyActionable) {
+      nextParams.set("actionable", "1");
+    }
+    const nextQuery = nextParams.toString();
+    const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
+    window.history.replaceState(window.history.state, "", nextUrl);
+  }
+
   return (
     <DashboardLayout>
       <div className="p-6 lg:p-8 max-w-[1400px] space-y-6">
@@ -643,7 +657,13 @@ export default function OperationsPage() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setOnlyActionable((value) => !value)}
+              onClick={() =>
+                setOnlyActionable((value) => {
+                  const nextValue = !value;
+                  syncUrlState(nextValue);
+                  return nextValue;
+                })
+              }
               aria-pressed={onlyActionable}
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted aria-[pressed=true]:border-accent aria-[pressed=true]:text-accent"
             >
