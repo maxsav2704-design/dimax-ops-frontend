@@ -97,6 +97,20 @@ type WebhookSignalsListResponse = {
   }>;
 };
 
+type OutboxRetryAuditListResponse = {
+  items: Array<{
+    id: string;
+    outbox_id: string;
+    actor_user_id: string;
+    reason: string | null;
+    before_status: string | null;
+    after_status: string | null;
+    before_delivery_status: string | null;
+    after_delivery_status: string | null;
+    created_at: string;
+  }>;
+};
+
 type FailedImportRunsQueueResponse = {
   items: Array<{
     run_id: string;
@@ -151,6 +165,26 @@ type BulkReconcileResponse = {
   skipped_projects: number;
 };
 
+type BulkOutboxRetryResponse = {
+  items: Array<{
+    outbox_id: string;
+    status: string;
+    error?: string | null;
+    item?: {
+      id: string;
+      recipient: string | null;
+      subject: string | null;
+      channel: string;
+      status: string;
+      delivery_status: string;
+    } | null;
+  }>;
+  total_messages: number;
+  successful_messages: number;
+  failed_messages: number;
+  skipped_messages: number;
+};
+
 type OperationsBatchResult =
   | {
       action: "retry";
@@ -169,6 +203,15 @@ type OperationsBatchResult =
       skipped: number;
       scope: number;
       items: BulkReconcileResponse["items"];
+    }
+  | {
+      action: "outbox-retry";
+      createdAt: string;
+      successful: number;
+      failed: number;
+      skipped: number;
+      scope: number;
+      items: BulkOutboxRetryResponse["items"];
     };
 
 function formatDateTime(value: string | null): string {
@@ -278,7 +321,7 @@ function summarizeActions(params: {
 }
 
 function extractBatchProjectIds(result: OperationsBatchResult | null): string[] {
-  if (!result) {
+  if (!result || result.action === "outbox-retry") {
     return [];
   }
   const ids = new Set<string>();
@@ -290,6 +333,15 @@ function extractBatchProjectIds(result: OperationsBatchResult | null): string[] 
   return [...ids];
 }
 
+function extractBatchOutboxIds(result: OperationsBatchResult | null): string[] {
+  if (!result || result.action !== "outbox-retry") {
+    return [];
+  }
+  return result.items
+    .map((item) => item.outbox_id)
+    .filter((value, index, self) => Boolean(value) && self.indexOf(value) === index);
+}
+
 export default function OperationsPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -297,7 +349,9 @@ export default function OperationsPage() {
   const canRunPrivilegedActions = canRunPrivilegedAdminActions(userRole);
   const [busyAction, setBusyAction] = useState("");
   const [onlyActionable, setOnlyActionable] = useState(searchParams.get("actionable") === "1");
-  const [pendingBatchAction, setPendingBatchAction] = useState<"retry" | "reconcile" | null>(null);
+  const [pendingBatchAction, setPendingBatchAction] = useState<
+    "retry" | "reconcile" | "outbox-retry" | null
+  >(null);
   const [lastBatchResult, setLastBatchResult] = useState<OperationsBatchResult | null>(null);
   const [actionFeedback, setActionFeedback] = useState<{
     tone: "success" | "error";
@@ -343,6 +397,12 @@ export default function OperationsPage() {
       apiFetch<WebhookSignalsListResponse>("/api/v1/admin/outbox/webhook-signals?limit=6"),
     refetchInterval: 30_000,
   });
+  const retryAuditsQuery = useQuery({
+    queryKey: ["operations-outbox-retry-audits"],
+    queryFn: () =>
+      apiFetch<OutboxRetryAuditListResponse>("/api/v1/admin/outbox/retry-audits?limit=6"),
+    refetchInterval: 30_000,
+  });
 
   const isRefreshing =
     syncQuery.isFetching ||
@@ -350,7 +410,8 @@ export default function OperationsPage() {
     outboxFailedQuery.isFetching ||
     failedImportsQuery.isFetching ||
     webhookSummaryQuery.isFetching ||
-    webhookSignalsQuery.isFetching;
+    webhookSignalsQuery.isFetching ||
+    retryAuditsQuery.isFetching;
 
   const hasError =
     syncQuery.isError ||
@@ -358,7 +419,8 @@ export default function OperationsPage() {
     outboxFailedQuery.isError ||
     failedImportsQuery.isError ||
     webhookSummaryQuery.isError ||
-    webhookSignalsQuery.isError;
+    webhookSignalsQuery.isError ||
+    retryAuditsQuery.isError;
 
   const sync = syncQuery.data;
   const outboxSummary = outboxSummaryQuery.data;
@@ -366,6 +428,7 @@ export default function OperationsPage() {
   const failedImports = failedImportsQuery.data?.items || [];
   const webhookSummary = webhookSummaryQuery.data;
   const webhookSignals = webhookSignalsQuery.data?.items || [];
+  const retryAudits = retryAuditsQuery.data?.items || [];
   const freshnessTimestamp = useMemo(() => {
     const timestamps = [
       syncQuery.dataUpdatedAt,
@@ -374,6 +437,7 @@ export default function OperationsPage() {
       failedImportsQuery.dataUpdatedAt,
       webhookSummaryQuery.dataUpdatedAt,
       webhookSignalsQuery.dataUpdatedAt,
+      retryAuditsQuery.dataUpdatedAt,
     ].filter((value) => value > 0);
     if (timestamps.length === 0) {
       return null;
@@ -383,6 +447,7 @@ export default function OperationsPage() {
     failedImportsQuery.dataUpdatedAt,
     outboxFailedQuery.dataUpdatedAt,
     outboxSummaryQuery.dataUpdatedAt,
+    retryAuditsQuery.dataUpdatedAt,
     syncQuery.dataUpdatedAt,
     webhookSignalsQuery.dataUpdatedAt,
     webhookSummaryQuery.dataUpdatedAt,
@@ -444,12 +509,23 @@ export default function OperationsPage() {
     [failedImportProjectIds]
   );
   const batchResultProjectIds = useMemo(() => extractBatchProjectIds(lastBatchResult), [lastBatchResult]);
+  const batchResultOutboxIds = useMemo(() => extractBatchOutboxIds(lastBatchResult), [lastBatchResult]);
   const batchResultFollowupHref = useMemo(
-    () =>
-      batchResultProjectIds.length > 0
+    () => {
+      if (lastBatchResult?.action === "outbox-retry") {
+        const params = new URLSearchParams();
+        params.set("focus", "delivery");
+        params.set("ops_preset", "delivery-risk");
+        if (batchResultOutboxIds.length > 0) {
+          params.set("outbox_id", batchResultOutboxIds[0]);
+        }
+        return `/reports?${params.toString()}`;
+      }
+      return batchResultProjectIds.length > 0
         ? buildProjectsImportHref(null, batchResultProjectIds)
-        : "/projects?only_failed_runs=1",
-    [batchResultProjectIds]
+        : "/projects?only_failed_runs=1";
+    },
+    [batchResultOutboxIds, batchResultProjectIds, lastBatchResult]
   );
 
   const cards = useMemo(
@@ -504,6 +580,7 @@ export default function OperationsPage() {
       failedImportsQuery.refetch(),
       webhookSummaryQuery.refetch(),
       webhookSignalsQuery.refetch(),
+      retryAuditsQuery.refetch(),
     ]);
   }
 
@@ -648,9 +725,56 @@ export default function OperationsPage() {
     }
   }
 
+  async function handleRetryAllOutbox() {
+    if (!canRunPrivilegedActions || actionableFailedOutbox.length === 0) {
+      return;
+    }
+    setBusyAction("outbox:bulk");
+    setActionFeedback(null);
+    try {
+      const response = await apiFetch<BulkOutboxRetryResponse>(
+        "/api/v1/admin/outbox/retry-failed",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            outbox_ids: actionableFailedOutbox.map((item) => item.id),
+            reason: "operations_center_bulk_retry",
+          }),
+        }
+      );
+      await refetchAll();
+      setLastBatchResult({
+        action: "outbox-retry",
+        createdAt: new Date().toISOString(),
+        successful: response.successful_messages,
+        failed: response.failed_messages,
+        skipped: response.skipped_messages,
+        scope: actionableFailedOutbox.length,
+        items: response.items || [],
+      });
+      setActionFeedback({
+        tone: response.failed_messages > 0 ? "error" : "success",
+        message:
+          `Bulk delivery retry finished: success ${response.successful_messages} | ` +
+          `failed ${response.failed_messages} | skipped ${response.skipped_messages}.`,
+      });
+    } catch (error) {
+      setActionFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Failed to retry actionable delivery",
+      });
+    } finally {
+      setBusyAction("");
+      setPendingBatchAction(null);
+    }
+  }
+
   function batchActionLabel(): string {
     if (pendingBatchAction === "retry") {
       return "Retry actionable imports";
+    }
+    if (pendingBatchAction === "outbox-retry") {
+      return "Retry actionable delivery failures";
     }
     if (pendingBatchAction === "reconcile") {
       return "Reconcile actionable projects";
@@ -662,6 +786,9 @@ export default function OperationsPage() {
     if (pendingBatchAction === "retry") {
       return `This will retry ${actionableFailedImports.length} actionable import runs across ${actionableImportProjectIds.length} projects.`;
     }
+    if (pendingBatchAction === "outbox-retry") {
+      return `This will retry ${actionableFailedOutbox.length} failed outbox messages and write recovery audit entries.`;
+    }
     if (pendingBatchAction === "reconcile") {
       return `This will reconcile latest failed import state for ${actionableImportProjectIds.length} actionable projects.`;
     }
@@ -671,6 +798,10 @@ export default function OperationsPage() {
   async function confirmBatchAction() {
     if (pendingBatchAction === "retry") {
       await handleRetryAllImports();
+      return;
+    }
+    if (pendingBatchAction === "outbox-retry") {
+      await handleRetryAllOutbox();
       return;
     }
     if (pendingBatchAction === "reconcile") {
@@ -830,6 +961,22 @@ export default function OperationsPage() {
               <button
                 type="button"
                 onClick={() => {
+                  setPendingBatchAction("outbox-retry");
+                }}
+                disabled={
+                  !canRunPrivilegedActions ||
+                  actionableFailedOutbox.length === 0 ||
+                  busyAction === "outbox:bulk"
+                }
+                className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {busyAction === "outbox:bulk"
+                  ? "Retrying deliveries..."
+                  : `Retry actionable deliveries (${actionableFailedOutbox.length})`}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
                   setPendingBatchAction("reconcile");
                 }}
                 disabled={
@@ -858,6 +1005,65 @@ export default function OperationsPage() {
                 <div className="mt-1 text-sm font-medium text-foreground">{item.value}</div>
               </Link>
             ))}
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-border bg-card p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Delivery Recovery Audit
+              </h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Latest manual retries recorded for failed outbox recovery actions.
+              </p>
+            </div>
+            <Link
+              href="/reports?focus=delivery&ops_preset=delivery-risk"
+              className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
+            >
+              Open delivery reports
+            </Link>
+          </div>
+          <div className="mt-4 space-y-2">
+            {retryAuditsQuery.isLoading ? (
+              <div className="text-[13px] text-muted-foreground">Loading delivery recovery audit...</div>
+            ) : retryAudits.length === 0 ? (
+              <div className="text-[13px] text-muted-foreground">No delivery recovery audit entries yet.</div>
+            ) : (
+              retryAudits.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-lg border border-border/70 bg-background/70 px-4 py-3 text-[13px]"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="font-medium text-foreground">Outbox {item.outbox_id}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {item.before_status || "unknown"} → {item.after_status || "unknown"}
+                        {item.before_delivery_status || item.after_delivery_status
+                          ? ` | delivery ${item.before_delivery_status || "unknown"} → ${item.after_delivery_status || "unknown"}`
+                          : ""}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground">
+                      {formatDateTime(item.created_at)}
+                    </div>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {item.reason || "No reason supplied"} | actor {item.actor_user_id}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    <Link
+                      href={`/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=${encodeURIComponent(item.outbox_id)}`}
+                      className="font-medium text-accent hover:underline"
+                    >
+                      Review delivery recovery
+                    </Link>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </section>
 
@@ -966,7 +1172,9 @@ export default function OperationsPage() {
                 <p className="mt-1 text-[13px] text-muted-foreground">
                   {lastBatchResult.action === "retry"
                     ? `Retry actionable imports over ${lastBatchResult.scope} runs`
-                    : `Reconcile actionable projects over ${lastBatchResult.scope} projects`}
+                    : lastBatchResult.action === "outbox-retry"
+                      ? `Retry actionable deliveries over ${lastBatchResult.scope} messages`
+                      : `Reconcile actionable projects over ${lastBatchResult.scope} projects`}
                 </p>
               </div>
               <div className="text-right text-[12px] text-muted-foreground">
@@ -1000,20 +1208,29 @@ export default function OperationsPage() {
                     key={
                       lastBatchResult.action === "retry"
                         ? `retry-${item.run_id}`
-                        : `reconcile-${item.project_id}-${item.source_run_id || "latest"}`
+                        : lastBatchResult.action === "outbox-retry"
+                          ? `outbox-${item.outbox_id}`
+                          : `reconcile-${item.project_id}-${item.source_run_id || "latest"}`
                     }
                     className="rounded-lg border border-border/70 bg-background/70 px-4 py-3 text-[13px]"
                   >
                     <div className="font-medium text-foreground">
                       {lastBatchResult.action === "retry"
                         ? `Run ${item.run_id}`
-                        : `Project ${item.project_id}`}
+                        : lastBatchResult.action === "outbox-retry"
+                          ? `Outbox ${item.outbox_id}`
+                          : `Project ${item.project_id}`}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      status {item.status} | imported {item.imported} | skipped {item.skipped} | errors{" "}
-                      {item.errors_count}
+                      {lastBatchResult.action === "outbox-retry"
+                        ? `status ${item.status} | channel ${item.item?.channel || "n/a"} | delivery ${item.item?.delivery_status || "n/a"}`
+                        : `status ${item.status} | imported ${item.imported} | skipped ${item.skipped} | errors ${item.errors_count}`}
                     </div>
-                    {"last_error" in item && item.last_error ? (
+                    {lastBatchResult.action === "outbox-retry" ? (
+                      item.error ? (
+                        <div className="mt-1 text-xs text-muted-foreground">{item.error}</div>
+                      ) : null
+                    ) : "last_error" in item && item.last_error ? (
                       <div className="mt-1 text-xs text-muted-foreground">{item.last_error}</div>
                     ) : null}
                   </div>
@@ -1025,7 +1242,9 @@ export default function OperationsPage() {
                 href={batchResultFollowupHref}
                 className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
               >
-                Review affected imports
+                {lastBatchResult.action === "outbox-retry"
+                  ? "Review affected deliveries"
+                  : "Review affected imports"}
               </Link>
               <Link
                 href="/operations"
