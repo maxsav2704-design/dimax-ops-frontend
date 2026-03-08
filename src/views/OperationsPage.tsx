@@ -989,10 +989,10 @@ export default function OperationsPage() {
                       Project imports
                     </Link>
                     <Link
-                      href="/reports?focus=operations&ops_preset=failed-imports"
+                      href={`/reports?focus=operations&ops_preset=failed-imports&project_id=${encodeURIComponent(item.project_id)}`}
                       className="font-medium text-muted-foreground hover:text-foreground hover:underline"
                     >
-                      Operations report
+                      Project report
                     </Link>
                     <Link
                       href={`/projects?project_id=${encodeURIComponent(item.project_id)}`}
@@ -1066,10 +1066,10 @@ export default function OperationsPage() {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
                     <Link
-                      href="/reports?focus=delivery&ops_preset=delivery-risk"
+                      href={`/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=${encodeURIComponent(item.id)}`}
                       className="font-medium text-accent hover:underline"
                     >
-                      Reports outbox
+                      Delivery report
                     </Link>
                     <Link
                       href="/journal"
@@ -1149,10 +1149,10 @@ export default function OperationsPage() {
                       </div>
                       <div className="mt-3 text-xs">
                         <Link
-                          href="/reports?focus=issues&ops_preset=issue-pressure"
+                          href={`/reports?focus=operations&ops_preset=issue-pressure&installer_id=${encodeURIComponent(item.installer_id)}`}
                           className="mr-3 font-medium text-accent hover:underline"
                         >
-                          Issues reports
+                          Installer report
                         </Link>
                         <Link
                           href="/installers"

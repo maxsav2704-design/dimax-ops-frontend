@@ -185,9 +185,9 @@ describe("OperationsPage", () => {
       "href",
       "/projects?only_failed_runs=1&project_id=project-1&failed_project_ids=project-1"
     );
-    expect(screen.getByRole("link", { name: "Operations report" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Project report" })).toHaveAttribute(
       "href",
-      "/reports?focus=operations&ops_preset=failed-imports"
+      "/reports?focus=operations&ops_preset=failed-imports&project_id=project-1"
     );
     expect(screen.getByRole("link", { name: "Open project" })).toHaveAttribute(
       "href",
@@ -197,17 +197,17 @@ describe("OperationsPage", () => {
       "href",
       "/reports?focus=delivery&ops_preset=delivery-risk"
     );
-    expect(screen.getByRole("link", { name: "Reports outbox" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Delivery report" })).toHaveAttribute(
       "href",
-      "/reports?focus=delivery&ops_preset=delivery-risk"
+      "/reports?focus=delivery&ops_preset=delivery-risk&outbox_id=outbox-1"
     );
     expect(screen.getByRole("link", { name: "Journal outbox" })).toHaveAttribute(
       "href",
       "/journal"
     );
-    expect(screen.getByRole("link", { name: "Issues reports" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Installer report" })).toHaveAttribute(
       "href",
-      "/reports?focus=issues&ops_preset=issue-pressure"
+      "/reports?focus=operations&ops_preset=issue-pressure&installer_id=installer-2"
     );
     expect(screen.getByRole("link", { name: "Installer board" })).toHaveAttribute(
       "href",

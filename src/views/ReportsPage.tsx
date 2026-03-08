@@ -637,6 +637,12 @@ const REPORTS_OPS_PRESET_COPY: Record<
   },
 };
 
+type ReportsScopedContext = {
+  projectId: string | null;
+  outboxId: string | null;
+  installerId: string | null;
+};
+
 function parseReportsFocus(value: string | null): ReportsFocus | null {
   if (value === "operations" || value === "delivery" || value === "issues") {
     return value;
@@ -649,6 +655,25 @@ function parseReportsOpsPreset(value: string | null): ReportsOpsPreset | null {
     return value;
   }
   return null;
+}
+
+function getReportsFocusTargetId(
+  focus: ReportsFocus | null,
+  scope: ReportsScopedContext
+): string | null {
+  if (scope.projectId) {
+    return "reports-project-plan-fact";
+  }
+  if (scope.outboxId) {
+    return "reports-failed-outbox";
+  }
+  if (scope.installerId) {
+    return "reports-installers-kpi";
+  }
+  if (!focus) {
+    return null;
+  }
+  return REPORTS_FOCUS_IDS[focus];
 }
 const AUDIT_ENTITY_OPTIONS = ["door_type", "reason", "company", "project"] as const;
 const AUDIT_ACTION_OPTIONS = [
@@ -980,7 +1005,12 @@ export default function ReportsPage() {
   const [presetNotice, setPresetNotice] = useState<string | null>(null);
   const activeFocus = parseReportsFocus(searchParams.get("focus"));
   const activeOpsPreset = parseReportsOpsPreset(searchParams.get("ops_preset"));
+  const scopedProjectId = searchParams.get("project_id");
+  const scopedOutboxId = searchParams.get("outbox_id");
+  const scopedInstallerId = searchParams.get("installer_id");
   const appliedOpsPresetRef = useRef<ReportsOpsPreset | null>(null);
+  const appliedProjectScopeRef = useRef<string | null>(null);
+  const appliedInstallerScopeRef = useRef<string | null>(null);
   const issueAuditIssueIdTrimmed = issueAuditIssueId.trim();
   const issueAuditIssueIdNormalized = isUuid(issueAuditIssueIdTrimmed)
     ? issueAuditIssueIdTrimmed
@@ -1419,6 +1449,19 @@ export default function ReportsPage() {
             { label: "Open Issues Board", href: "/issues" },
           ]
         : [];
+  const scopedContext: ReportsScopedContext = {
+    projectId: scopedProjectId,
+    outboxId: scopedOutboxId,
+    installerId: scopedInstallerId,
+  };
+  const focusTargetId = getReportsFocusTargetId(activeFocus, scopedContext);
+  const scopeSummary = scopedProjectId
+    ? `Scoped project: ${scopedProjectId}`
+    : scopedOutboxId
+      ? `Scoped outbox message: ${scopedOutboxId}`
+      : scopedInstallerId
+        ? `Scoped installer: ${scopedInstallerId}`
+        : null;
 
   useEffect(() => {
     if (projectOptions.length === 0) {
@@ -1498,11 +1541,11 @@ export default function ReportsPage() {
       return undefined;
     }
     const timer = window.setTimeout(() => {
-      const target = document.getElementById(REPORTS_FOCUS_IDS[activeFocus]);
+      const target = focusTargetId ? document.getElementById(focusTargetId) : null;
       target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [activeFocus]);
+  }, [activeFocus, focusTargetId]);
 
   useEffect(() => {
     if (!activeOpsPreset) {
@@ -1516,6 +1559,44 @@ export default function ReportsPage() {
     appliedOpsPresetRef.current = activeOpsPreset;
     setSlaHistoryDays(preset.slaHistoryDays);
   }, [activeOpsPreset]);
+
+  useEffect(() => {
+    if (!scopedProjectId) {
+      appliedProjectScopeRef.current = null;
+      return;
+    }
+    if (projectOptions.length === 0 || appliedProjectScopeRef.current === scopedProjectId) {
+      return;
+    }
+    const exists = projectOptions.some((project) => project.id === scopedProjectId);
+    if (!exists) {
+      return;
+    }
+    appliedProjectScopeRef.current = scopedProjectId;
+    setProjectPlanFactProjectId(scopedProjectId);
+    setProjectRiskProjectId(scopedProjectId);
+    setOrderNumbersProjectId(scopedProjectId);
+    setOrderNumbersKpiOffset(0);
+  }, [projectOptions, scopedProjectId]);
+
+  useEffect(() => {
+    if (!scopedInstallerId) {
+      appliedInstallerScopeRef.current = null;
+      return;
+    }
+    if (
+      installersKpiItems.length === 0
+      || appliedInstallerScopeRef.current === scopedInstallerId
+    ) {
+      return;
+    }
+    const exists = installersKpiItems.some((item) => item.installer_id === scopedInstallerId);
+    if (!exists) {
+      return;
+    }
+    appliedInstallerScopeRef.current = scopedInstallerId;
+    setInstallerDetailsId(scopedInstallerId);
+  }, [installersKpiItems, scopedInstallerId]);
 
   function applyPreset(preset: ReportsPreset): void {
     setSlaHistoryDays(preset.slaHistoryDays);
@@ -1739,6 +1820,9 @@ export default function ReportsPage() {
                     {REPORTS_OPS_PRESET_COPY[activeOpsPreset].title}.{" "}
                     {REPORTS_OPS_PRESET_COPY[activeOpsPreset].description}
                   </div>
+                )}
+                {scopeSummary && (
+                  <div className="mt-2 text-[12px] text-muted-foreground">{scopeSummary}</div>
                 )}
               </div>
               <div className="flex flex-wrap items-center justify-end gap-2">
@@ -2486,7 +2570,7 @@ export default function ReportsPage() {
           )}
         </div>
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
+        <div id="reports-project-plan-fact" className="glass-card rounded-xl overflow-hidden border border-border">
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -2652,7 +2736,7 @@ export default function ReportsPage() {
             )}
         </div>
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
+        <div id="reports-project-risk-drilldown" className="glass-card rounded-xl overflow-hidden border border-border">
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -2863,7 +2947,7 @@ export default function ReportsPage() {
             )}
         </div>
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
+        <div id="reports-installers-kpi" className="glass-card rounded-xl overflow-hidden border border-border">
           <div className="px-4 py-3 border-b border-border bg-muted/30">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
               Project Margin Executive
