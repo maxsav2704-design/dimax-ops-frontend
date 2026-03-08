@@ -1613,7 +1613,6 @@ describe("ReportsPage", () => {
       if (url.includes("/api/v1/admin/reports/project-plan-fact/")) {
         return {
           project_id: "project-1",
-          project_name: "Ashdod Towers",
           total_doors: 10,
           installed_doors: 6,
           not_installed_doors: 4,
@@ -1628,16 +1627,44 @@ describe("ReportsPage", () => {
           planned_profit_total: 500,
           actual_profit_total: 450,
           profit_gap_total: -50,
+          planned_addons_qty: 2,
+          actual_addons_qty: 1,
+          missing_planned_rates_doors: 0,
+          missing_actual_rates_doors: 0,
+          missing_addon_plans_facts: 0,
         };
       }
       if (url.includes("/api/v1/admin/reports/project-risk-drilldown/")) {
         return {
+          generated_at: "2026-02-22T18:04:00Z",
           project_id: "project-1",
           project_name: "Ashdod Towers",
-          open_issues: [],
-          blocked_issues: [],
-          delayed_orders: [],
-          addons_missing_plan_fact: [],
+          summary: {
+            total_doors: 10,
+            installed_doors: 6,
+            not_installed_doors: 4,
+            completion_pct: 60,
+            open_issues: 2,
+            blocked_open_issues: 1,
+            planned_revenue_total: 1000,
+            actual_revenue_total: 900,
+            revenue_gap_total: -100,
+            planned_profit_total: 500,
+            actual_profit_total: 450,
+            profit_gap_total: -50,
+            actual_margin_pct: 50,
+            delayed_revenue_total: 100,
+            delayed_profit_total: 50,
+            blocked_issue_profit_at_risk: 25,
+            addon_revenue_total: 40,
+            addon_profit_total: 20,
+            missing_planned_rates_doors: 0,
+            missing_actual_rates_doors: 0,
+            missing_addon_plans_facts: 0,
+          },
+          drivers: [],
+          top_reasons: [],
+          risky_orders: [],
         };
       }
       if (url.includes("/api/v1/admin/reports/projects-margin?")) {
