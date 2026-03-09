@@ -812,24 +812,28 @@ export default function JournalPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="glass-card card-lift rounded-xl p-5 animate-fade-in">
+        <div className="page-hero relative overflow-hidden">
+          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="flex flex-col gap-4 border-b border-border/70 pb-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/[0.06] px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-accent/80">
-                Communications Center
-              </div>
-              <h1 className="mt-3 text-2xl font-semibold text-card-foreground">
+              <div className="page-eyebrow">Communications Center</div>
+              <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-card-foreground sm:text-4xl">
                 Journal queue, delivery channels and resend control
               </h1>
-              <p className="mt-1 max-w-3xl text-[13px] text-muted-foreground">
+              <p className="mt-3 max-w-3xl text-[14px] leading-7 text-muted-foreground">
                 Control customer communication from one place: create journal drafts, mark them
                 ready, queue email and WhatsApp delivery, and recover failed sends from outbox.
               </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">Journals {journalSummary.total}</span>
+                <span className="metric-chip">Failed outbox {outboxSummary?.failed_total ?? 0}</span>
+                <span className="metric-chip">Comms recovery</span>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="surface-subtle flex flex-wrap gap-2 p-4 sm:p-5">
               <button
                 onClick={() => setRefreshTick((value) => value + 1)}
-                className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
+                className="btn-premium rounded-xl px-4 py-2 text-[12px] font-medium"
               >
                 <RefreshCw className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
                 Refresh
@@ -837,7 +841,7 @@ export default function JournalPage() {
               <button
                 onClick={() => selectedJournalId && router.push(`/journal/${selectedJournalId}`)}
                 disabled={!selectedJournalId}
-                className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-4 py-2 text-[12px] font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Open journal form
               </button>
@@ -871,7 +875,7 @@ export default function JournalPage() {
           ) : null}
 
           <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 Journals
               </div>
@@ -882,7 +886,7 @@ export default function JournalPage() {
                 Draft: {journalSummary.draft}
               </div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 Ready
               </div>
@@ -893,7 +897,7 @@ export default function JournalPage() {
                 Signed: {journalSummary.signed}
               </div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 Outbox
               </div>
@@ -904,7 +908,7 @@ export default function JournalPage() {
                 Failed: {outboxSummary?.failed_total ?? 0}
               </div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--destructive)/0.08))] p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 Overdue
               </div>
@@ -915,7 +919,7 @@ export default function JournalPage() {
                 Pending over 15m
               </div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 Email
               </div>
@@ -926,7 +930,7 @@ export default function JournalPage() {
                 Enabled: {integrations?.email_enabled ? "yes" : "no"}
               </div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 WhatsApp
               </div>
@@ -942,7 +946,7 @@ export default function JournalPage() {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
           <div className="xl:col-span-4">
-            <div className="glass-card rounded-xl p-5">
+            <div className="surface-panel">
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-semibold text-card-foreground">Journal Queue</h2>
@@ -953,7 +957,7 @@ export default function JournalPage() {
                 <Clock3 className="h-4 w-4 text-accent" strokeWidth={1.8} />
               </div>
 
-              <div className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
+              <div className="space-y-3 rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-4">
                 <div>
                   <label className="mb-1 block text-[12px] font-medium text-card-foreground">
                     Project
@@ -962,7 +966,7 @@ export default function JournalPage() {
                     aria-label="Create draft project"
                     value={selectedProjectId}
                     onChange={(event) => setSelectedProjectId(event.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                    className="w-full rounded-xl border border-border/70 bg-background/80 px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
                   >
                     {projects.map((project) => (
                       <option key={project.id} value={project.id}>
@@ -980,7 +984,7 @@ export default function JournalPage() {
                     value={createTitle}
                     onChange={(event) => setCreateTitle(event.target.value)}
                     placeholder="Final delivery package"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                    className="w-full rounded-xl border border-border/70 bg-background/80 px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
                   />
                 </div>
                 <button
@@ -988,7 +992,7 @@ export default function JournalPage() {
                   onClick={handleCreateDraft}
                   disabled={!canManage || !selectedProjectId || busyAction === "create"}
                   title={!canManage ? "Admin role required" : undefined}
-                  className="btn-premium w-full rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-sm font-medium text-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="btn-premium w-full rounded-xl px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Plus className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
                   Create Draft
@@ -1003,14 +1007,14 @@ export default function JournalPage() {
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                     placeholder="Search by project, title or status"
-                    className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-card-foreground outline-none focus:border-accent"
+                    className="w-full rounded-xl border border-border/70 bg-background/80 py-2 pl-9 pr-3 text-sm text-card-foreground outline-none focus:border-accent"
                   />
                 </div>
                 <select
                   aria-label="Journal status filter"
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                  className="rounded-xl border border-border/70 bg-background/80 px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
                 >
                   <option value="ALL">All</option>
                   <option value="DRAFT">Draft</option>
