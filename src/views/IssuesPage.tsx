@@ -398,25 +398,25 @@ export default function IssuesPage() {
                 {t("issues.subtitle")}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="metric-chip">Open {metrics.open}</span>
-                <span className="metric-chip">Overdue {metrics.overdue}</span>
+                <span className="metric-chip">{t("common.open")} {metrics.open}</span>
+                <span className="metric-chip">{t("issues.overdue")} {metrics.overdue}</span>
                 <span className="metric-chip">P1 {metrics.p1}</span>
               </div>
             </div>
             <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Status</div>
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{t("common.status")}</div>
                   <div className="mt-1 text-lg font-semibold text-foreground">{statusFilter}</div>
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Workflow</div>
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{t("issues.workflow")}</div>
                   <div className="mt-1 text-lg font-semibold text-foreground">{workflowFilter}</div>
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Mode</div>
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{t("common.mode")}</div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
-                    {canManageIssues ? "Manage" : "Read only"}
+                    {canManageIssues ? t("common.manage") : t("common.readOnly")}
                   </div>
                 </div>
               </div>
@@ -435,22 +435,22 @@ export default function IssuesPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Total</div>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("issues.total")}</div>
             <div className="text-[24px] font-semibold">{metrics.total}</div>
           </div>
           <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Open</div>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("common.open")}</div>
             <div className="text-[24px] font-semibold">{metrics.open}</div>
           </div>
           <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--destructive)/0.10))] p-4">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Overdue</div>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("issues.overdue")}</div>
             <div className="text-[24px] font-semibold text-[hsl(var(--destructive))]">
               {metrics.overdue}
             </div>
           </div>
           <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--warning)/0.12))] p-4">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              Priority P1
+              {t("issues.priorityP1")}
             </div>
             <div className="text-[24px] font-semibold text-[hsl(var(--warning-foreground))]">
               {metrics.p1}
@@ -465,7 +465,7 @@ export default function IssuesPage() {
             onChange={(e) => setStatusFilter(e.target.value as "all" | IssueStatus)}
             className="h-10 rounded-xl border border-border/70 bg-background/80 px-3 text-[12px]"
           >
-            <option value="all">All statuses</option>
+            <option value="all">{t("issues.allStatuses")}</option>
             {STATUS_OPTIONS.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -478,7 +478,7 @@ export default function IssuesPage() {
             onChange={(e) => setWorkflowFilter(e.target.value as "all" | IssueWorkflowState)}
             className="h-10 rounded-xl border border-border/70 bg-background/80 px-3 text-[12px]"
           >
-            <option value="all">All workflow states</option>
+            <option value="all">{t("issues.allWorkflowStates")}</option>
             {WORKFLOW_OPTIONS.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -490,7 +490,7 @@ export default function IssuesPage() {
               aria-label="Owner filter"
               value={ownerFilter}
               onChange={(e) => setOwnerFilter(e.target.value)}
-              placeholder="Owner user UUID"
+              placeholder={t("issues.ownerUserUuid")}
               list="issues-owner-filter-options"
               className="h-10 w-full rounded-xl border border-border/70 bg-background/80 px-3 text-[12px]"
             />
@@ -509,7 +509,7 @@ export default function IssuesPage() {
               checked={overdueOnly}
               onChange={(e) => setOverdueOnly(e.target.checked)}
             />
-            Overdue only
+            {t("issues.overdueOnly")}
           </label>
           <button
             onClick={() => {
@@ -521,7 +521,7 @@ export default function IssuesPage() {
             className="inline-flex h-10 items-center justify-center gap-1 rounded-xl border border-border/70 bg-background/70 text-[12px] font-medium"
           >
             <FilterX className="w-3.5 h-3.5" />
-            Reset filters
+            {t("issues.resetFilters")}
           </button>
         </div>
 
@@ -531,31 +531,31 @@ export default function IssuesPage() {
             <span>
               {issuesQuery.error instanceof Error
                 ? issuesQuery.error.message
-                : "Failed to load issues"}
+                : t("issues.failedToLoad")}
             </span>
           </div>
         )}
         {!canManageIssues && (
           <div className="rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))]">
-            Installer role has read-only access to issue workflow controls.
+            {t("issues.readOnlyNotice")}
           </div>
         )}
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-4">
           <section className="surface-panel overflow-hidden p-0">
             <div className="grid grid-cols-[90px_92px_115px_100px_140px_1fr_150px] gap-2 px-3 py-2 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
-              <span>Status</span>
-              <span>Priority</span>
-              <span>Workflow</span>
-              <span>Overdue</span>
-              <span>Unit</span>
-              <span>Title</span>
-              <span>Updated</span>
+              <span>{t("common.status")}</span>
+              <span>{t("issues.priority")}</span>
+              <span>{t("issues.workflow")}</span>
+              <span>{t("issues.overdue")}</span>
+              <span>{t("issues.unit")}</span>
+              <span>{t("issues.titleLabel")}</span>
+              <span>{t("issues.updated")}</span>
             </div>
             {issuesQuery.isLoading ? (
-              <div className="px-4 py-6 text-[13px] text-muted-foreground">Loading issues...</div>
+              <div className="px-4 py-6 text-[13px] text-muted-foreground">{t("issues.loading")}</div>
             ) : issues.length === 0 ? (
-              <div className="px-4 py-6 text-[13px] text-muted-foreground">No issues found.</div>
+              <div className="px-4 py-6 text-[13px] text-muted-foreground">{t("issues.empty")}</div>
             ) : (
               issues.map((issue) => (
                 <button
@@ -586,7 +586,7 @@ export default function IssuesPage() {
                   </span>
                   <span>{issue.workflow_state}</span>
                   <span className={issue.is_overdue ? "text-[hsl(var(--destructive))]" : "text-muted-foreground"}>
-                    {issue.is_overdue ? "YES" : "NO"}
+                    {issue.is_overdue ? t("issues.yes") : t("issues.no")}
                   </span>
                   <span title={issue.door_id}>
                     {issue.door_unit_label} ({shortId(issue.project_id)})
@@ -602,18 +602,18 @@ export default function IssuesPage() {
 
           <section className="glass-card rounded-xl border border-border p-4">
             <div className="flex items-center justify-between gap-2 mb-3">
-              <h3 className="text-[14px] font-semibold">Workflow Editor</h3>
+              <h3 className="text-[14px] font-semibold">{t("issues.workflowEditor")}</h3>
               {selectedIssue ? (
                 <div className="text-[11px] text-muted-foreground">Issue #{shortId(selectedIssue.id)}</div>
               ) : null}
             </div>
 
             {!selectedIssue ? (
-              <div className="text-[13px] text-muted-foreground">Select an issue to edit workflow.</div>
+              <div className="text-[13px] text-muted-foreground">{t("issues.selectIssue")}</div>
             ) : (
               <div className="space-y-3">
                 <div className="text-[12px] rounded-lg border border-border bg-background px-3 py-2">
-                  <div className="text-muted-foreground">Door / Project</div>
+                  <div className="text-muted-foreground">{t("issues.doorProject")}</div>
                   <div className="font-medium mt-0.5">
                     {selectedIssue.door_unit_label} / {selectedIssue.project_id}
                   </div>
@@ -672,7 +672,7 @@ export default function IssuesPage() {
                 </select>
 
                 <div className="rounded-lg border border-border bg-background p-2.5 space-y-2">
-                  <div className="text-[12px] text-muted-foreground">Owner user</div>
+                  <div className="text-[12px] text-muted-foreground">{t("issues.ownerUser")}</div>
                   <select
                     aria-label="Issue owner select"
                     value={linkedOwners.some((x) => x.user_id === form.owner_user_id) ? form.owner_user_id : ""}
@@ -685,7 +685,7 @@ export default function IssuesPage() {
                     disabled={!canManageIssues}
                     className="h-9 w-full rounded-lg border border-border bg-card px-3 text-[12px] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <option value="">Unassigned</option>
+                    <option value="">{t("issues.unassigned")}</option>
                     {linkedOwners.map((owner) => (
                       <option key={owner.user_id} value={owner.user_id}>
                         {owner.full_name} ({shortId(owner.user_id)})
@@ -701,7 +701,7 @@ export default function IssuesPage() {
                         owner_user_id: e.target.value,
                       }))
                     }
-                    placeholder="Manual owner UUID"
+                    placeholder={t("issues.manualOwnerUuid")}
                     disabled={!canManageIssues}
                     className="h-9 w-full rounded-lg border border-border bg-card px-3 text-[12px] disabled:opacity-60 disabled:cursor-not-allowed"
                   />
@@ -710,7 +710,7 @@ export default function IssuesPage() {
                 <div>
                   <label className="text-[12px] text-muted-foreground inline-flex items-center gap-1.5 mb-1">
                     <CalendarClock className="w-3.5 h-3.5" />
-                    Due at
+                    {t("issues.dueAt")}
                   </label>
                   <input
                     aria-label="Issue due at"
@@ -727,14 +727,14 @@ export default function IssuesPage() {
                   value={form.details}
                   onChange={(e) => setForm((prev) => ({ ...prev, details: e.target.value }))}
                   rows={4}
-                  placeholder="Workflow notes..."
+                  placeholder={t("issues.workflowNotes")}
                   disabled={!canManageIssues}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[12px] disabled:opacity-60 disabled:cursor-not-allowed"
                 />
 
                 <div className="text-[11px] text-muted-foreground rounded-lg border border-border bg-background px-3 py-2">
-                  Created: {formatDateTime(selectedIssue.created_at)} | Updated:{" "}
-                  {formatDateTime(selectedIssue.updated_at)} | Current due:{" "}
+                  {t("issues.created")}: {formatDateTime(selectedIssue.created_at)} | {t("issues.updated")}:{" "}
+                  {formatDateTime(selectedIssue.updated_at)} | {t("issues.currentDue")}:{" "}
                   {formatDateTime(selectedIssue.due_at)}
                 </div>
 
@@ -757,7 +757,7 @@ export default function IssuesPage() {
                   className="h-9 w-full rounded-lg bg-accent text-accent-foreground text-[13px] font-medium inline-flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Save className="w-4 h-4" />
-                  {workflowMutation.isPending ? "Saving..." : "Save Workflow"}
+                  {workflowMutation.isPending ? t("issues.saving") : t("issues.saveWorkflow")}
                 </button>
                 <button
                   onClick={applyWorkflowToFiltered}
@@ -767,8 +767,8 @@ export default function IssuesPage() {
                 >
                   <Save className="w-4 h-4" />
                   {bulkWorkflowMutation.isPending
-                    ? "Applying Bulk..."
-                    : `Apply To Filtered (${issues.length})`}
+                    ? t("issues.applyingBulk")
+                    : `${t("issues.applyToFiltered")} (${issues.length})`}
                 </button>
               </div>
             )}
