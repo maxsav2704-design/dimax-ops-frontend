@@ -1031,7 +1031,7 @@ export default function ReportsPage() {
   const canRunPrivilegedActions = userRole !== "INSTALLER";
   const privilegedActionHint = canRunPrivilegedActions
     ? undefined
-    : "Installer role is read-only in reports";
+    : t("reports.installerReadOnlyHint");
   const [offset, setOffset] = useState(0);
   const [auditOffset, setAuditOffset] = useState(0);
   const [auditEntityType, setAuditEntityType] = useState("");
@@ -1527,25 +1527,25 @@ export default function ReportsPage() {
     : "/projects?only_failed_runs=1";
   const focusFollowupActions = activeFocus === "operations"
     ? [
-        { label: "Open Actionable Ops", href: "/operations?actionable=1" },
-        { label: "Open Failed Projects", href: focusedFailedProjectsHref },
+        { label: t("reports.openActionableOps"), href: "/operations?actionable=1" },
+        { label: t("reports.openFailedProjects"), href: focusedFailedProjectsHref },
       ]
     : activeFocus === "delivery"
       ? [
           {
-            label: "Open Actionable Ops",
+            label: t("reports.openActionableOps"),
             href: buildOperationsHref({
               actionable: true,
               deliveryChannel: scopedDeliveryChannel || undefined,
               webhookProvider: scopedWebhookProvider || undefined,
             }),
           },
-          { label: "Open Journal Queue", href: "/journal" },
+          { label: t("reports.openJournalQueue"), href: "/journal" },
         ]
       : activeFocus === "issues"
         ? [
-            { label: "Open Actionable Ops", href: "/operations?actionable=1" },
-            { label: "Open Issues Board", href: "/issues" },
+            { label: t("reports.openActionableOps"), href: "/operations?actionable=1" },
+            { label: t("reports.openIssuesBoard"), href: "/issues" },
           ]
         : [];
   const scopedContext: ReportsScopedContext = {
@@ -1557,15 +1557,15 @@ export default function ReportsPage() {
   };
   const focusTargetId = getReportsFocusTargetId(activeFocus, scopedContext);
   const scopeSummary = scopedProjectId
-    ? `Scoped project: ${scopedProjectId}`
+    ? t("reports.scopedProject").replace("{id}", scopedProjectId)
     : scopedOutboxId
-      ? `Scoped outbox message: ${scopedOutboxId}`
+      ? t("reports.scopedOutbox").replace("{id}", scopedOutboxId)
       : scopedDeliveryChannel
-        ? `Scoped delivery channel: ${scopedDeliveryChannel}`
+        ? t("reports.scopedDeliveryChannel").replace("{id}", scopedDeliveryChannel)
         : scopedWebhookProvider
-          ? `Scoped webhook provider: ${scopedWebhookProvider}`
+          ? t("reports.scopedWebhookProvider").replace("{id}", scopedWebhookProvider)
       : scopedInstallerId
-        ? `Scoped installer: ${scopedInstallerId}`
+        ? t("reports.scopedInstaller").replace("{id}", scopedInstallerId)
         : null;
 
   useEffect(() => {
@@ -1612,20 +1612,20 @@ export default function ReportsPage() {
 
   const exportErrorMessage =
     (exportAuditMutation.isError &&
-      errorMessageFromUnknown(exportAuditMutation.error, "Catalog audit export failed")) ||
+      errorMessageFromUnknown(exportAuditMutation.error, t("reports.catalogAuditExportFailed"))) ||
     (exportIssueAuditMutation.isError &&
-      errorMessageFromUnknown(exportIssueAuditMutation.error, "Issue audit export failed")) ||
+      errorMessageFromUnknown(exportIssueAuditMutation.error, t("reports.issueAuditExportFailed"))) ||
     (exportInstallersKpiMutation.isError &&
-      errorMessageFromUnknown(exportInstallersKpiMutation.error, "Installers KPI export failed")) ||
+      errorMessageFromUnknown(exportInstallersKpiMutation.error, t("reports.installersKpiExportFailed"))) ||
     (exportOrderNumbersKpiMutation.isError &&
       errorMessageFromUnknown(
         exportOrderNumbersKpiMutation.error,
-        "Order numbers KPI export failed"
+        t("reports.orderNumbersKpiExportFailed")
       )) ||
     (exportExecutiveMutation.isError &&
       errorMessageFromUnknown(
         exportExecutiveMutation.error,
-        "Executive reports export failed"
+        t("reports.executiveExportFailed")
       )) ||
     null;
 
@@ -1719,13 +1719,13 @@ export default function ReportsPage() {
     setProjectRiskProjectId(preset.projectRiskProjectId);
     setInstallersKpiOffset(0);
     setOrderNumbersKpiOffset(0);
-    setPresetNotice(`Preset loaded: ${preset.name}`);
+    setPresetNotice(t("reports.presetLoaded").replace("{name}", preset.name));
   }
 
   function handleSavePreset(): void {
     const normalizedName = presetName.trim();
     if (!normalizedName) {
-      setPresetNotice("Preset name is required");
+      setPresetNotice(t("reports.presetNameRequired"));
       return;
     }
     const preset: ReportsPreset = {
@@ -1751,13 +1751,13 @@ export default function ReportsPage() {
     setSavedPresets(next);
     setSelectedPresetId(preset.id);
     setPresetName("");
-    setPresetNotice(`Preset saved: ${preset.name}`);
+    setPresetNotice(t("reports.presetSaved").replace("{name}", preset.name));
   }
 
   function handleApplySelectedPreset(): void {
     const preset = savedPresets.find((item) => item.id === selectedPresetId);
     if (!preset) {
-      setPresetNotice("Select a preset first");
+      setPresetNotice(t("reports.selectPresetFirst"));
       return;
     }
     applyPreset(preset);
@@ -1765,14 +1765,14 @@ export default function ReportsPage() {
 
   function handleDeleteSelectedPreset(): void {
     if (!selectedPresetId) {
-      setPresetNotice("Select a preset first");
+      setPresetNotice(t("reports.selectPresetFirst"));
       return;
     }
     const next = savedPresets.filter((item) => item.id !== selectedPresetId);
     writeReportsPresets(next);
     setSavedPresets(next);
     setSelectedPresetId("");
-    setPresetNotice("Preset deleted");
+    setPresetNotice(t("reports.presetDeleted"));
   }
 
   return (
@@ -2707,9 +2707,7 @@ export default function ReportsPage() {
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                 Project Plan vs Fact
               </div>
-              <div className="text-[13px] text-muted-foreground">
-                Financial execution and delivery gap on the selected project
-              </div>
+              <div className="text-[13px] text-muted-foreground">{t("reports.projectPlanVsFactSubtitle")}</div>
             </div>
             <select
               aria-label="Project Plan Fact Filter"
@@ -2718,7 +2716,7 @@ export default function ReportsPage() {
               className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
             >
               <option value="">
-                {projectsQuery.isLoading ? "Loading projects..." : "Select project"}
+                {projectsQuery.isLoading ? t("reports.loadingProjects") : t("reports.selectProject")}
               </option>
               {projectOptions.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -2730,35 +2728,35 @@ export default function ReportsPage() {
 
           {projectsQuery.isLoading && !projectPlanFactProjectId && (
             <div className="px-4 py-6">
-              <SectionMessage title="Loading projects" detail="Preparing project plan vs fact filters." />
+              <SectionMessage title={t("reports.loadingProjectsForPlanFact")} detail={t("reports.preparingPlanFactFilters")} />
             </div>
           )}
           {!projectsQuery.isLoading && projectOptions.length === 0 && (
             <div className="px-4 py-6">
               <SectionMessage
-                title="No projects for plan vs fact"
-                detail="Import a factory file into Projects first, then this block will compute plan, fact and profit gap."
+                title={t("reports.noProjectsForPlanFact")}
+                detail={t("reports.importFactoryFileFirst")}
               />
             </div>
           )}
           {!projectsQuery.isLoading && projectOptions.length > 0 && !projectPlanFactProjectId && (
             <div className="px-4 py-6">
               <SectionMessage
-                title="Select a project"
-                detail="Choose a project to calculate planned revenue, actual payroll and realized profit."
+                title={t("reports.selectProject")}
+                detail={t("reports.selectProjectPlanFact")}
               />
             </div>
           )}
           {projectPlanFactQuery.isLoading && projectPlanFactProjectId && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading project plan vs fact...
+              {t("reports.projectPlanVsFact")}
             </div>
           )}
           {projectPlanFactQuery.isError && projectPlanFactProjectId && (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
               {projectPlanFactQuery.error instanceof Error
                 ? projectPlanFactQuery.error.message
-                : "Failed to load project plan vs fact"}
+                : t("reports.failedProjectPlanFact")}
             </div>
           )}
           {!projectPlanFactQuery.isLoading &&
@@ -2768,29 +2766,29 @@ export default function ReportsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Completion
+                      {t("projects.completion")}
                     </div>
                     <div className="mt-2 text-[22px] font-semibold text-foreground">
                       {formatPercent(projectPlanFact.completion_pct)}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      {projectPlanFact.installed_doors} / {projectPlanFact.total_doors} doors installed
+                      {projectPlanFact.installed_doors} / {projectPlanFact.total_doors} {t("reports.doors").toLowerCase()} installed
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Open Issues
+                      {t("reports.openIssuesExposure")}
                     </div>
                     <div className="mt-2 text-[22px] font-semibold text-foreground">
                       {projectPlanFact.open_issues}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      {projectPlanFact.not_installed_doors} doors still pending
+                      {projectPlanFact.not_installed_doors} {t("reports.doors").toLowerCase()} still pending
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Missing Rates
+                      {t("projects.missingRates")}
                     </div>
                     <div className="mt-2 text-[22px] font-semibold text-foreground">
                       {projectPlanFact.missing_planned_rates_doors}
@@ -2801,14 +2799,14 @@ export default function ReportsPage() {
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Addons Qty
+                      {t("projects.addons")}
                     </div>
                     <div className="mt-2 text-[22px] font-semibold text-foreground">
                       {formatAmount(projectPlanFact.actual_addons_qty)} /{" "}
                       {formatAmount(projectPlanFact.planned_addons_qty)}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      Missing addon plans: {projectPlanFact.missing_addon_plans_facts}
+                      {t("reports.missingPlans")}: {projectPlanFact.missing_addon_plans_facts}
                     </div>
                   </div>
                 </div>
@@ -2817,15 +2815,15 @@ export default function ReportsPage() {
                   <table className="w-full text-[13px]">
                     <thead className="bg-muted/40 text-muted-foreground">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">Metric</th>
-                        <th className="text-right px-3 py-2 font-medium">Plan</th>
-                        <th className="text-right px-3 py-2 font-medium">Fact</th>
-                        <th className="text-right px-3 py-2 font-medium">Gap</th>
+                        <th className="text-left px-3 py-2 font-medium">{t("reports.metric")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{t("reports.plan")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{t("reports.fact")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{t("reports.gap")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr className="border-t border-border/70">
-                        <td className="px-3 py-2 font-medium text-foreground">Revenue</td>
+                        <td className="px-3 py-2 font-medium text-foreground">{t("reports.revenue")}</td>
                         <td className="px-3 py-2 text-right">
                           {formatAmount(projectPlanFact.planned_revenue_total)}
                         </td>
