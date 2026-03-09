@@ -2023,7 +2023,8 @@ export default function ReportsPage() {
               <div className="text-[13px] text-muted-foreground">Loading command center...</div>
             ) : (
               <div className="grid gap-3 md:grid-cols-4">
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+                <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
+                  <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     Imports (24h)
                   </div>
@@ -2037,7 +2038,8 @@ export default function ReportsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+                <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
+                  <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     Import Modes
                   </div>
@@ -2050,7 +2052,8 @@ export default function ReportsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+                <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
+                  <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     Outbox Risk
                   </div>
@@ -2062,7 +2065,8 @@ export default function ReportsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+                <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
+                  <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     Limit Alerts
                   </div>
@@ -2077,7 +2081,7 @@ export default function ReportsPage() {
               </div>
             )}
 
-            <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+            <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] px-4 py-4">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   Top Failing Projects (7d import errors)
@@ -2095,7 +2099,7 @@ export default function ReportsPage() {
                     );
                   }}
                   disabled={topFailingProjects.length === 0}
-                  className="h-7 px-2 rounded-md border border-border bg-card text-[11px] disabled:opacity-50"
+                  className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[11px] font-medium disabled:opacity-50"
                 >
                   Open in Projects
                 </button>
@@ -2107,7 +2111,7 @@ export default function ReportsPage() {
                   {topFailingProjects.slice(0, 3).map((item) => (
                     <div
                       key={`${item.project_id}-${item.last_run_at}`}
-                      className="grid grid-cols-[1fr_80px_170px_74px] gap-2 text-[12px] items-center"
+                      className="grid grid-cols-[1fr_80px_170px_74px] items-center gap-2 rounded-xl border border-border/70 bg-background/55 px-3 py-2 text-[12px]"
                     >
                       <div className="font-medium text-foreground truncate">{item.project_name}</div>
                       <div className="text-muted-foreground text-right">{item.failure_runs} fails</div>
@@ -2122,7 +2126,7 @@ export default function ReportsPage() {
                             )}&only_failed_runs=1`
                           )
                         }
-                        className="h-7 px-2 rounded-md border border-border bg-card text-[11px]"
+                        className="h-7 rounded-lg border border-border/70 bg-background/70 px-2 text-[11px] font-medium"
                       >
                         Open
                       </button>
@@ -2134,10 +2138,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div
-          id="reports-operations-sla"
-          className="glass-card rounded-2xl border border-border p-5 space-y-4"
-        >
+        <div id="reports-operations-sla" className="surface-panel space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -2172,8 +2173,9 @@ export default function ReportsPage() {
                 {slaMetrics.map((metric) => (
                   <div
                     key={metric.code}
-                    className="rounded-xl border border-border/70 bg-background/60 px-3 py-3"
+                    className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4"
                   >
+                    <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                       {metric.title}
                     </div>
@@ -2202,14 +2204,14 @@ export default function ReportsPage() {
                 ))}
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3 space-y-2">
+              <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] px-4 py-4 space-y-3">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   Action Playbooks
                 </div>
                 {slaPlaybooks.map((playbook) => (
                   <div
                     key={playbook.code}
-                    className="grid grid-cols-[1fr_120px] gap-2 items-center text-[12px]"
+                    className="grid grid-cols-[1fr_120px] items-center gap-2 rounded-xl border border-border/70 bg-background/55 px-3 py-2.5 text-[12px]"
                   >
                     <div>
                       <div className="font-medium text-foreground">
@@ -2228,7 +2230,7 @@ export default function ReportsPage() {
                     </div>
                     <button
                       onClick={() => router.push(playbook.action_url)}
-                      className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
+                      className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium"
                     >
                       Open Playbook
                     </button>
@@ -2236,12 +2238,12 @@ export default function ReportsPage() {
                 ))}
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3 space-y-2">
+              <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] px-4 py-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     SLA Trend (last {slaHistoryDays} days)
                   </div>
-                  <div className="inline-flex items-center rounded-md border border-border bg-card p-0.5">
+                  <div className="inline-flex items-center rounded-lg border border-border/70 bg-background/70 p-0.5">
                     {SLA_HISTORY_DAYS_OPTIONS.map((option) => (
                       <button
                         key={option}
@@ -2269,24 +2271,24 @@ export default function ReportsPage() {
                 ) : (
                   <>
                     <div className="grid gap-2 md:grid-cols-4 text-[12px]">
-                      <div className="rounded-md border border-border px-2 py-1.5">
+                      <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
                         <div className="text-muted-foreground">Current</div>
                         <div className="font-semibold">{slaHistorySummary?.current_status || "n/a"}</div>
                       </div>
-                      <div className="rounded-md border border-border px-2 py-1.5">
+                      <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
                         <div className="text-muted-foreground">Status Days</div>
                         <div className="font-semibold">
                           OK {slaHistorySummary?.ok_days || 0} | WARN {slaHistorySummary?.warn_days || 0} | DANGER{" "}
                           {slaHistorySummary?.danger_days || 0}
                         </div>
                       </div>
-                      <div className="rounded-md border border-border px-2 py-1.5">
+                      <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
                         <div className="text-muted-foreground">Delta Import % (d-1)</div>
                         <div className="font-semibold">
                           {slaHistorySummary?.delta_import_failure_rate_pct ?? 0}
                         </div>
                       </div>
-                      <div className="rounded-md border border-border px-2 py-1.5">
+                      <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
                         <div className="text-muted-foreground">Delta Outbox % (d-1)</div>
                         <div className="font-semibold">
                           {slaHistorySummary?.delta_outbox_failed_rate_pct ?? 0}

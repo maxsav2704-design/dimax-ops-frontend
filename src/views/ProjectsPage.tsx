@@ -1852,7 +1852,8 @@ export default function ProjectsPage() {
                   ) : projectPlanFact && projectRisk ? (
                     <div className="mt-4 space-y-4">
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
-                        <div className="rounded-xl border border-border bg-card/60 p-3">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                             Completion
                           </div>
@@ -1863,7 +1864,8 @@ export default function ProjectsPage() {
                             Installed: {projectPlanFact.installed_doors}/{projectPlanFact.total_doors}
                           </div>
                         </div>
-                        <div className="rounded-xl border border-border bg-card/60 p-3">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                             Actual Margin
                           </div>
@@ -1874,7 +1876,8 @@ export default function ProjectsPage() {
                             Profit: {formatMoney(projectRisk.summary.actual_profit_total)}
                           </div>
                         </div>
-                        <div className="rounded-xl border border-border bg-card/60 p-3">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                             Revenue Gap
                           </div>
@@ -1885,7 +1888,8 @@ export default function ProjectsPage() {
                             Delayed: {formatMoney(projectRisk.summary.delayed_revenue_total)}
                           </div>
                         </div>
-                        <div className="rounded-xl border border-border bg-card/60 p-3">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                             Profit Gap
                           </div>
@@ -1896,7 +1900,8 @@ export default function ProjectsPage() {
                             Risk: {formatMoney(projectRisk.summary.blocked_issue_profit_at_risk)}
                           </div>
                         </div>
-                        <div className="rounded-xl border border-border bg-card/60 p-3">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                             Open Issues
                           </div>
@@ -1907,7 +1912,8 @@ export default function ProjectsPage() {
                             Blocked: {projectRisk.summary.blocked_open_issues}
                           </div>
                         </div>
-                        <div className="rounded-xl border border-border bg-card/60 p-3">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                             Data Risk
                           </div>
@@ -1921,7 +1927,8 @@ export default function ProjectsPage() {
                       </div>
 
                       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.25fr_0.95fr]">
-                        <div className="rounded-xl border border-border bg-background/40 p-4">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-5">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--foreground)/0.14),transparent)]" />
                           <div className="mb-3 flex items-center justify-between">
                             <h4 className="text-[14px] font-semibold">Plan vs Fact Ledger</h4>
                             <span className="text-[11px] text-muted-foreground">
@@ -1929,9 +1936,9 @@ export default function ProjectsPage() {
                               {projectPlanFact.actual_addons_qty}
                             </span>
                           </div>
-                          <div className="overflow-auto rounded-lg border border-border">
+                          <div className="overflow-auto rounded-xl border border-border/70 bg-background/70">
                             <table className="w-full text-[12px]">
-                              <thead className="bg-muted/40 text-muted-foreground">
+                              <thead className="bg-[linear-gradient(180deg,hsl(var(--muted)/0.65),hsl(var(--muted)/0.35))] text-muted-foreground">
                                 <tr>
                                   <th className="px-3 py-2 text-left font-medium">Metric</th>
                                   <th className="px-3 py-2 text-left font-medium">Plan</th>
@@ -1940,7 +1947,7 @@ export default function ProjectsPage() {
                                 </tr>
                               </thead>
                               <tbody>
-                                <tr className="border-t border-border/70">
+                                <tr className="border-t border-border/70 bg-background/30">
                                   <td className="px-3 py-2 font-medium">Revenue</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.planned_revenue_total)}</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.actual_revenue_total)}</td>
@@ -1952,7 +1959,7 @@ export default function ProjectsPage() {
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.actual_payroll_total)}</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.payroll_gap_total)}</td>
                                 </tr>
-                                <tr className="border-t border-border/70">
+                                <tr className="border-t border-border/70 bg-background/30">
                                   <td className="px-3 py-2 font-medium">Profit</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.planned_profit_total)}</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.actual_profit_total)}</td>
@@ -1971,14 +1978,15 @@ export default function ProjectsPage() {
                           </div>
                         </div>
 
-                        <div className="rounded-xl border border-border bg-background/40 p-4">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-5">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--destructive)/0.35),transparent)]" />
                           <h4 className="text-[14px] font-semibold">Risk Drivers</h4>
                           <div className="mt-3 space-y-2">
                             {projectRisk.drivers.length > 0 ? (
                               projectRisk.drivers.map((driver) => (
                                 <div
                                   key={driver.code}
-                                  className="flex items-center justify-between rounded-lg border border-border bg-card/60 px-3 py-2"
+                                  className="flex items-center justify-between rounded-xl border border-border/70 bg-background/70 px-3 py-2.5"
                                 >
                                   <div>
                                     <div className="text-[12px] font-medium">{driver.label}</div>
@@ -2009,11 +2017,11 @@ export default function ProjectsPage() {
                       </div>
 
                       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                        <div className="rounded-xl border border-border bg-background/40 p-4">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-5">
                           <h4 className="text-[14px] font-semibold">Top Delay Reasons</h4>
-                          <div className="mt-3 overflow-auto rounded-lg border border-border">
+                          <div className="mt-3 overflow-auto rounded-xl border border-border/70 bg-background/70">
                             <table className="w-full text-[12px]">
-                              <thead className="bg-muted/40 text-muted-foreground">
+                              <thead className="bg-[linear-gradient(180deg,hsl(var(--muted)/0.65),hsl(var(--muted)/0.35))] text-muted-foreground">
                                 <tr>
                                   <th className="px-3 py-2 text-left font-medium">Reason</th>
                                   <th className="px-3 py-2 text-left font-medium">Doors</th>
@@ -2046,11 +2054,11 @@ export default function ProjectsPage() {
                           </div>
                         </div>
 
-                        <div className="rounded-xl border border-border bg-background/40 p-4">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-5">
                           <h4 className="text-[14px] font-semibold">Orders at Risk</h4>
-                          <div className="mt-3 overflow-auto rounded-lg border border-border">
+                          <div className="mt-3 overflow-auto rounded-xl border border-border/70 bg-background/70">
                             <table className="w-full text-[12px]">
-                              <thead className="bg-muted/40 text-muted-foreground">
+                              <thead className="bg-[linear-gradient(180deg,hsl(var(--muted)/0.65),hsl(var(--muted)/0.35))] text-muted-foreground">
                                 <tr>
                                   <th className="px-3 py-2 text-left font-medium">Order</th>
                                   <th className="px-3 py-2 text-left font-medium">Completion</th>
@@ -2089,7 +2097,7 @@ export default function ProjectsPage() {
                 </div>
 
                 {bulkReconcileResult && (
-                  <div className="glass-card rounded-xl p-4">
+                  <div className="surface-panel">
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                       <h3 className="text-[14px] font-semibold">Bulk Reconcile Result</h3>
                       <div className="text-[12px] text-muted-foreground">
@@ -2098,7 +2106,7 @@ export default function ProjectsPage() {
                         {bulkReconcileResult.skipped_projects}
                       </div>
                     </div>
-                    <div className="overflow-auto rounded-lg border border-border">
+                    <div className="overflow-auto rounded-xl border border-border/70 bg-background/70">
                       <table className="w-full text-[12px]">
                         <thead className="bg-muted/40 text-muted-foreground">
                           <tr>
@@ -2132,7 +2140,7 @@ export default function ProjectsPage() {
                 )}
 
                 {bulkReviewResult && (
-                  <div className="glass-card rounded-xl p-4">
+                  <div className="surface-panel">
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                       <h3 className="text-[14px] font-semibold">Bulk Import Review</h3>
                       <div className="text-[12px] text-muted-foreground">
@@ -2141,7 +2149,7 @@ export default function ProjectsPage() {
                         {bulkReviewResult.skipped_projects}
                       </div>
                     </div>
-                    <div className="overflow-auto rounded-lg border border-border">
+                    <div className="overflow-auto rounded-xl border border-border/70 bg-background/70">
                       <table className="w-full text-[12px]">
                         <thead className="bg-muted/40 text-muted-foreground">
                           <tr>
