@@ -970,11 +970,12 @@ export default function OperationsPage() {
   return (
     <DashboardLayout>
       <div className="max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <div className="page-hero">
+        <div className="page-hero relative overflow-hidden">
+          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl">
               <div className="page-eyebrow">Operations Center</div>
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+              <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl">
                 Recovery and queue visibility in one surface.
               </h1>
               <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">
@@ -987,38 +988,66 @@ export default function OperationsPage() {
                 <span className="metric-chip">Webhook diagnostics</span>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                setOnlyActionable((value) => {
-                  const nextValue = !value;
-                  syncUrlState({
-                    nextOnlyActionable: nextValue,
-                    nextDeliveryChannel: deliveryChannelFilter,
-                    nextWebhookProvider: webhookProviderFilter,
-                  });
-                  return nextValue;
-                })
-              }
-              aria-pressed={onlyActionable}
-              className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-card/85 px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted aria-[pressed=true]:border-accent aria-[pressed=true]:text-accent"
-            >
-              Only actionable
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                void refetchAll();
-              }}
-              className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-card/85 px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isRefreshing}
-            >
-              <RefreshCcw className="h-4 w-4" />
-              {isRefreshing ? "Refreshing..." : "Refresh"}
-            </button>
+            <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Actionable
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">
+                    {onlyActionable ? "Focused" : "Mixed"}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Delivery lane
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">
+                    {deliveryChannelFilter || "All"}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Provider
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">
+                    {webhookProviderFilter || "All"}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOnlyActionable((value) => {
+                      const nextValue = !value;
+                      syncUrlState({
+                        nextOnlyActionable: nextValue,
+                        nextDeliveryChannel: deliveryChannelFilter,
+                        nextWebhookProvider: webhookProviderFilter,
+                      });
+                      return nextValue;
+                    })
+                  }
+                  aria-pressed={onlyActionable}
+                  className="inline-flex h-11 items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted aria-[pressed=true]:border-accent aria-[pressed=true]:bg-[hsl(var(--accent)/0.12)] aria-[pressed=true]:text-accent"
+                >
+                  Only actionable
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void refetchAll();
+                  }}
+                  className="btn-premium h-11 rounded-xl px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isRefreshing}
+                >
+                  <RefreshCcw className="h-4 w-4" />
+                  {isRefreshing ? "Refreshing..." : "Refresh"}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
         </div>
 
         {hasError && (
@@ -1040,7 +1069,11 @@ export default function OperationsPage() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {cards.map((card) => (
-            <div key={card.label} className="rounded-xl border border-border bg-card p-4">
+            <div
+              key={card.label}
+              className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4"
+            >
+              <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm text-muted-foreground">{card.label}</div>
                 <card.icon className="h-4 w-4 text-muted-foreground" />
@@ -1051,7 +1084,7 @@ export default function OperationsPage() {
           ))}
         </div>
 
-        <section className="rounded-xl border border-border bg-card p-4">
+        <section className="surface-panel">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1086,7 +1119,7 @@ export default function OperationsPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-border bg-card p-4">
+        <section className="surface-panel">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1112,7 +1145,7 @@ export default function OperationsPage() {
                   actionableFailedImports.length === 0 ||
                   busyAction === "imports:bulk"
                 }
-                className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                 >
                 {busyAction === "imports:bulk"
                   ? "Retrying imports..."
@@ -1129,7 +1162,7 @@ export default function OperationsPage() {
                   actionableFailedOutbox.length === 0 ||
                   busyAction === "outbox:bulk"
                 }
-                className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {busyAction === "outbox:bulk"
                   ? "Retrying deliveries..."
@@ -1145,7 +1178,7 @@ export default function OperationsPage() {
                   actionableImportProjectIds.length === 0 ||
                   busyAction === "imports:reconcile"
                 }
-                className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {busyAction === "imports:reconcile"
                   ? "Reconciling projects..."
@@ -1158,7 +1191,7 @@ export default function OperationsPage() {
               <Link
                 key={`${item.label}-${item.href}`}
                 href={item.href}
-                className="rounded-lg border border-border/70 bg-background/70 px-4 py-3 transition-colors hover:bg-muted"
+                className="rounded-xl border border-border/70 bg-background/70 px-4 py-3 transition-colors hover:bg-muted"
               >
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   {item.label}
@@ -1169,7 +1202,7 @@ export default function OperationsPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-border bg-card p-4">
+        <section className="surface-panel">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1198,7 +1231,7 @@ export default function OperationsPage() {
             )}
           </div>
           <div className="mt-4 grid gap-4 xl:grid-cols-2">
-            <div className="rounded-lg border border-border/70 bg-background/70 p-4">
+            <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   By channel
@@ -1216,7 +1249,7 @@ export default function OperationsPage() {
                   deliveryChannelGroups.map((group) => (
                     <div
                       key={group.channel}
-                      className="rounded-lg border border-border/70 bg-card px-4 py-3 text-[13px]"
+                      className="rounded-xl border border-border/70 bg-background/60 px-4 py-3 text-[13px]"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>

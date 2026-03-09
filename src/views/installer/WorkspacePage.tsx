@@ -331,11 +331,14 @@ export default function InstallerWorkspacePage() {
 
   return (
     <div className="space-y-6">
-      <div className="page-hero">
+      <div className="page-hero relative overflow-hidden">
+        <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
         <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
             <div className="page-eyebrow">Field Control</div>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight">Installer Workspace</h1>
+            <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.04em]">
+              Installer Workspace
+            </h1>
             <p className="mt-3 text-sm leading-7 text-muted-foreground">
               Assigned projects, current blockers and the fastest next move across the day.
             </p>
@@ -345,18 +348,40 @@ export default function InstallerWorkspacePage() {
               <span className="metric-chip">Today schedule</span>
             </div>
           </div>
-        <button
-          type="button"
-          disabled={isRefreshing}
-          onClick={() => {
-            void refetchWorkspace();
-          }}
-          className="inline-flex items-center gap-2 rounded-xl border border-border bg-card/85 px-4 py-2.5 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <RefreshCcw className="h-4 w-4" />
-          {isRefreshing ? "Refreshing..." : "Refresh"}
-        </button>
-      </div>
+          <div className="surface-subtle min-w-[280px] max-w-xl space-y-4 p-4 sm:p-5">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Projects
+                </div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{stats.total}</div>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Problem
+                </div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{stats.inProblem}</div>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Today
+                </div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{taskStats.today}</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={isRefreshing}
+              onClick={() => {
+                void refetchWorkspace();
+              }}
+              className="btn-premium h-11 rounded-xl px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCcw className="h-4 w-4" />
+              {isRefreshing ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
+        </div>
       </div>
 
       {(projectsQuery.isError || eventsQuery.isError || tasksQuery.isError) && (
@@ -375,26 +400,34 @@ export default function InstallerWorkspacePage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
           <div className="text-sm text-muted-foreground">Assigned projects</div>
           <div className="mt-1 text-2xl font-semibold">{stats.total}</div>
         </div>
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
           <div className="text-sm text-muted-foreground">Problem projects</div>
           <div className="mt-1 text-2xl font-semibold">{stats.inProblem}</div>
         </div>
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
           <div className="text-sm text-muted-foreground">Completed projects</div>
           <div className="mt-1 text-2xl font-semibold">{stats.done}</div>
         </div>
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Today tasks</h2>
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <div className="page-eyebrow">Execution pulse</div>
+            <h2 className="mt-2 text-lg font-semibold">Today tasks</h2>
+          </div>
+        </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <div
             data-testid="installer-tasks-today"
-            className="rounded-xl border border-border bg-card p-4"
+            className="surface-panel"
           >
             <div className="text-sm text-muted-foreground">Today</div>
             <div className="mt-1 text-2xl font-semibold">
@@ -409,7 +442,7 @@ export default function InstallerWorkspacePage() {
           </div>
           <div
             data-testid="installer-tasks-overdue"
-            className="rounded-xl border border-border bg-card p-4"
+            className="surface-panel"
           >
             <div className="text-sm text-muted-foreground">Overdue</div>
             <div className="mt-1 text-2xl font-semibold">
@@ -424,7 +457,7 @@ export default function InstallerWorkspacePage() {
           </div>
           <div
             data-testid="installer-tasks-no-project"
-            className="rounded-xl border border-border bg-card p-4"
+            className="surface-panel"
           >
             <div className="text-sm text-muted-foreground">Without project</div>
             <div className="mt-1 text-2xl font-semibold">
@@ -445,7 +478,7 @@ export default function InstallerWorkspacePage() {
           <h2 className="text-lg font-semibold">Today priorities</h2>
           <Link
             href="/installer/calendar?preset=today"
-            className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+            className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
           >
             Open today board
           </Link>
@@ -463,18 +496,18 @@ export default function InstallerWorkspacePage() {
         {priorityItems.length > 0 && (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {priorityItems.map((item) => (
-              <div
-                key={item.id}
-                className={
-                  item.tone === "problem"
-                    ? "rounded-xl border border-amber-500/40 bg-amber-500/10 p-4"
-                    : item.tone === "overdue"
-                      ? "rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] p-4"
-                      : "rounded-xl border border-border bg-card p-4"
-                }
-              >
-                <div className="text-sm font-semibold">{item.title}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{item.meta}</div>
+            <div
+              key={item.id}
+              className={
+                item.tone === "problem"
+                  ? "relative overflow-hidden rounded-2xl border border-amber-500/40 bg-[linear-gradient(180deg,hsl(38_100%_60%/0.16),hsl(38_100%_60%/0.08))] p-4"
+                  : item.tone === "overdue"
+                    ? "relative overflow-hidden rounded-2xl border border-[hsl(var(--destructive)/0.35)] bg-[linear-gradient(180deg,hsl(var(--destructive)/0.16),hsl(var(--destructive)/0.08))] p-4"
+                    : "surface-panel"
+              }
+            >
+              <div className="text-sm font-semibold">{item.title}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{item.meta}</div>
                 <Link
                   href={item.href}
                   aria-label={`Open priority ${item.title}`}
@@ -531,15 +564,16 @@ export default function InstallerWorkspacePage() {
             </div>
           )}
           {!projectsQuery.isLoading && projects.length > 0 && filteredProjects.length === 0 && (
-            <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+            <div className="surface-panel text-sm text-muted-foreground">
               No projects for selected filter.
             </div>
           )}
           {filteredProjects.map((project) => (
             <div
               key={project.id}
-              className="rounded-xl border border-border bg-card p-4 transition-colors hover:bg-muted/40"
+              className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.06))] p-4 transition-colors hover:bg-[linear-gradient(180deg,hsl(var(--background)/0.94),hsl(var(--accent)/0.1))]"
             >
+              <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.6),transparent)]" />
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-medium">{project.name}</div>
@@ -547,39 +581,39 @@ export default function InstallerWorkspacePage() {
                     {project.address || "No address"}
                   </div>
                 </div>
-                <span className="rounded-md border border-border px-2 py-1 text-xs">
+                <span className="rounded-lg border border-border/70 bg-background/70 px-2.5 py-1 text-xs">
                   {project.status}
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link
                   href={`/installer/projects/${project.id}`}
-                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                  className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
                   Open project
                 </Link>
                 <Link
                   href={`/installer/calendar?project_id=${project.id}`}
-                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                  className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
                   Open schedule
                 </Link>
                 <Link
                   href={`/installer/calendar?preset=today&project_id=${project.id}`}
-                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                  className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
                   Today on project
                 </Link>
                 <Link
                   href={`/installer/projects/${project.id}#project-doors`}
-                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                  className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
                   Priority doors
                 </Link>
                 {project.status === "PROBLEM" && (
                   <Link
                     href={buildInstallerIssuesHref(project.id, { issueStatus: "BLOCKED" })}
-                    className="inline-flex items-center rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs transition-colors hover:bg-amber-500/20"
+                    className="inline-flex items-center rounded-xl border border-amber-500/40 bg-amber-500/12 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-amber-500/20"
                   >
                     Open issues
                   </Link>
@@ -589,7 +623,7 @@ export default function InstallerWorkspacePage() {
                     href={project.waze_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                    className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                   >
                     Open Waze
                   </a>
@@ -600,19 +634,26 @@ export default function InstallerWorkspacePage() {
         </section>
 
         <section className="space-y-3 lg:col-span-2">
-          <h2 className="text-lg font-semibold">Next 7 days</h2>
+          <div>
+            <div className="page-eyebrow">Forward view</div>
+            <h2 className="mt-2 text-lg font-semibold">Next 7 days</h2>
+          </div>
           {eventsQuery.isLoading && (
-            <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+            <div className="surface-panel text-sm text-muted-foreground">
               Loading events...
             </div>
           )}
           {!eventsQuery.isLoading && events.length === 0 && (
-            <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+            <div className="surface-panel text-sm text-muted-foreground">
               No events scheduled.
             </div>
           )}
           {events.map((event) => (
-            <div key={event.id} className="rounded-xl border border-border bg-card p-4">
+            <div
+              key={event.id}
+              className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.06))] p-4"
+            >
+              <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.6),transparent)]" />
               <div className="font-medium">{event.title}</div>
               <div className="mt-1 text-xs text-muted-foreground">{event.event_type}</div>
               <div className="mt-2 text-sm text-muted-foreground">{formatDate(event.starts_at)}</div>
