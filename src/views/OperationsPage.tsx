@@ -387,12 +387,12 @@ export default function OperationsPage() {
   const userRole = useUserRole();
   const canRunPrivilegedActions = canRunPrivilegedAdminActions(userRole);
   const [busyAction, setBusyAction] = useState("");
-  const [onlyActionable, setOnlyActionable] = useState(searchParams.get("actionable") === "1");
+  const [onlyActionable, setOnlyActionable] = useState(searchParams?.get("actionable") === "1");
   const [deliveryChannelFilter, setDeliveryChannelFilter] = useState(
-    searchParams.get("delivery_channel")?.trim().toUpperCase() || ""
+    searchParams?.get("delivery_channel")?.trim().toUpperCase() || ""
   );
   const [webhookProviderFilter, setWebhookProviderFilter] = useState(
-    searchParams.get("webhook_provider")?.trim().toLowerCase() || ""
+    searchParams?.get("webhook_provider")?.trim().toLowerCase() || ""
   );
   const [pendingBatchAction, setPendingBatchAction] = useState<
     "retry" | "reconcile" | "outbox-retry" | null
@@ -949,7 +949,7 @@ export default function OperationsPage() {
     nextDeliveryChannel?: string;
     nextWebhookProvider?: string;
   }) {
-    const nextParams = new URLSearchParams(searchParams.toString());
+    const nextParams = new URLSearchParams(searchParams?.toString() || "");
     nextParams.delete("actionable");
     nextParams.delete("delivery_channel");
     nextParams.delete("webhook_provider");
@@ -969,17 +969,25 @@ export default function OperationsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 max-w-[1400px] space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              Operations Center
-            </h1>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
-              Import failures, outbox delivery problems, and installer sync health.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+      <div className="max-w-[1400px] space-y-6 p-6 lg:p-8">
+        <div className="page-hero">
+          <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="page-eyebrow">Operations Center</div>
+              <h1 className="mt-4 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                Recovery and queue visibility in one surface.
+              </h1>
+              <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">
+                Import failures, delivery risk, webhook drift and installer sync pressure.
+                This is the operator view that turns alerts into concrete recovery steps.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">Actionable-only view</span>
+                <span className="metric-chip">Batch recovery</span>
+                <span className="metric-chip">Webhook diagnostics</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() =>
@@ -994,7 +1002,7 @@ export default function OperationsPage() {
                 })
               }
               aria-pressed={onlyActionable}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted aria-[pressed=true]:border-accent aria-[pressed=true]:text-accent"
+              className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-card/85 px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted aria-[pressed=true]:border-accent aria-[pressed=true]:text-accent"
             >
               Only actionable
             </button>
@@ -1003,13 +1011,14 @@ export default function OperationsPage() {
               onClick={() => {
                 void refetchAll();
               }}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-card/85 px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isRefreshing}
             >
               <RefreshCcw className="h-4 w-4" />
               {isRefreshing ? "Refreshing..." : "Refresh"}
             </button>
           </div>
+        </div>
         </div>
 
         {hasError && (

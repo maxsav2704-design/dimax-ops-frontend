@@ -187,7 +187,7 @@ function buildWorkflowPatch(
 export default function IssuesPage() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const issueIdParam = searchParams.get("issue_id")?.trim() || null;
+  const issueIdParam = searchParams?.get("issue_id")?.trim() || null;
   const [statusFilter, setStatusFilter] = useState<"all" | IssueStatus>("all");
   const [workflowFilter, setWorkflowFilter] = useState<"all" | IssueWorkflowState>("all");
   const [ownerFilter, setOwnerFilter] = useState("");

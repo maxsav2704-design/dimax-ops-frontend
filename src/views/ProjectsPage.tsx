@@ -561,12 +561,12 @@ export default function ProjectsPage() {
   const [matrixApartmentSearch, setMatrixApartmentSearch] = useState("");
   const [matrixMarkingSearch, setMatrixMarkingSearch] = useState("");
 
-  const deepLinkProjectId = (searchParams.get("project_id") || "").trim();
+  const deepLinkProjectId = (searchParams?.get("project_id") || "").trim();
   const deepLinkFailedIds = useMemo(
-    () => parseIdsCsv(searchParams.get("failed_project_ids")),
+    () => parseIdsCsv(searchParams?.get("failed_project_ids") || null),
     [searchParams]
   );
-  const deepLinkOnlyFailed = searchParams.get("only_failed_runs") === "1";
+  const deepLinkOnlyFailed = searchParams?.get("only_failed_runs") === "1";
   const failedQueueCanPrev = failedQueueOffset > 0;
   const failedQueueCanNext =
     (failedQueueOffset + FAILED_QUEUE_PAGE_SIZE) < (failedQueue?.total || 0);

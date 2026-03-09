@@ -331,24 +331,32 @@ export default function InstallerWorkspacePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Installer Workspace</h1>
-          <p className="text-sm text-muted-foreground">
-            Assigned projects, current issues, and upcoming events.
-          </p>
-        </div>
+      <div className="page-hero">
+        <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-2xl">
+            <div className="page-eyebrow">Field Control</div>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight">Installer Workspace</h1>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground">
+              Assigned projects, current blockers and the fastest next move across the day.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="metric-chip">Priority doors</span>
+              <span className="metric-chip">Issue continuity</span>
+              <span className="metric-chip">Today schedule</span>
+            </div>
+          </div>
         <button
           type="button"
           disabled={isRefreshing}
           onClick={() => {
             void refetchWorkspace();
           }}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl border border-border bg-card/85 px-4 py-2.5 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
         >
           <RefreshCcw className="h-4 w-4" />
           {isRefreshing ? "Refreshing..." : "Refresh"}
         </button>
+      </div>
       </div>
 
       {(projectsQuery.isError || eventsQuery.isError || tasksQuery.isError) && (

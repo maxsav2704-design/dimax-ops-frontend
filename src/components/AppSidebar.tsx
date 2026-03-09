@@ -56,25 +56,35 @@ export function AppSidebar() {
   const unreadCount = unreadAlertsQuery.data || 0;
 
   return (
-    <aside className="flex flex-col w-[240px] min-h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border shrink-0">
+    <aside className="sticky top-0 flex min-h-screen w-[272px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       {/* Brand */}
-      <div className="px-5 pt-6 pb-8">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center text-accent-foreground font-semibold text-sm transition-shadow duration-300 hover:shadow-[0_0_12px_hsl(var(--accent)/0.4)]">
+      <div className="relative overflow-hidden border-b border-sidebar-border px-6 pb-8 pt-7">
+        <div className="absolute inset-x-0 top-0 h-20 bg-[radial-gradient(circle_at_top_left,hsl(var(--accent)/0.32),transparent_58%)]" />
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-accent to-[hsl(var(--accent)/0.72)] text-sm font-semibold text-accent-foreground shadow-[0_16px_34px_-18px_hsl(var(--accent)/0.8)] transition-shadow duration-300 hover:shadow-[0_20px_42px_-16px_hsl(var(--accent)/0.9)]">
             D
           </div>
           <div>
-            <h1 className="text-sm font-semibold text-sidebar-accent-foreground tracking-tight">
+            <h1 className="font-display text-base font-semibold text-sidebar-accent-foreground tracking-tight">
               DIMAX Admin
             </h1>
-            <p className="text-[11px] text-sidebar-foreground/60">Operations Suite</p>
+            <p className="text-[11px] uppercase tracking-[0.24em] text-sidebar-foreground/60">Operations Suite</p>
+          </div>
+        </div>
+        <div className="relative mt-5 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
+          <div className="text-[10px] uppercase tracking-[0.24em] text-sidebar-foreground/55">Command Layer</div>
+          <div className="mt-2 text-[13px] font-medium text-sidebar-accent-foreground">
+            Live control across projects, issues, reports and delivery lanes.
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3">
-        <ul className="space-y-0.5">
+      <nav className="flex-1 px-4 py-5">
+        <div className="mb-3 px-3 text-[10px] uppercase tracking-[0.3em] text-sidebar-foreground/45">
+          Control Surface
+        </div>
+        <ul className="space-y-1">
           {visibleNavItems.map((item) => {
             const isActive =
               item.path === "/"
@@ -85,15 +95,15 @@ export function AppSidebar() {
                 <Link
                   href={item.path}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 ease-in-out group/nav",
+                    "group/nav flex items-center gap-3 rounded-2xl px-3 py-3 text-[13px] font-medium transition-all duration-200 ease-in-out",
                     isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-ring)/0.15)]"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                      ? "bg-gradient-to-r from-sidebar-accent via-sidebar-accent to-sidebar-accent/80 text-sidebar-accent-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-ring)/0.24),0_16px_32px_-22px_hsl(var(--accent)/0.85)]"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/75 hover:text-sidebar-accent-foreground"
                   )}
                 >
                   <item.icon
                     className={cn(
-                      "w-[18px] h-[18px] shrink-0 transition-all duration-250 ease-in-out",
+                      "h-[18px] w-[18px] shrink-0 transition-all duration-250 ease-in-out",
                       isActive
                         ? "text-accent drop-shadow-[0_0_6px_hsl(var(--accent)/0.4)]"
                         : "group-hover/nav:text-accent group-hover/nav:scale-110 group-hover/nav:drop-shadow-[0_0_5px_hsl(var(--accent)/0.3)]"
@@ -119,8 +129,8 @@ export function AppSidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-5 py-5 border-t border-sidebar-border">
-        <div className="flex items-center gap-2 text-sidebar-foreground/50 group/help cursor-pointer transition-colors duration-200 hover:text-sidebar-foreground/80">
+      <div className="border-t border-sidebar-border px-6 py-5">
+        <div className="group/help flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sidebar-foreground/50 transition-colors duration-200 hover:text-sidebar-foreground/80">
           <HelpCircle className="w-4 h-4 transition-all duration-250 ease-in-out group-hover/help:text-accent group-hover/help:scale-110 group-hover/help:drop-shadow-[0_0_5px_hsl(var(--accent)/0.3)]" strokeWidth={1.5} />
           <div>
             <p className="text-[11px] font-medium">Support</p>
