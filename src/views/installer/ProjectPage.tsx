@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Wrench } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 
 type InstallerDoor = {
   id: string;
@@ -118,6 +119,7 @@ function parseDoorQuickFilter(value: string | null): DoorQuickFilter | null {
 }
 
 export default function InstallerProjectPage({ projectId }: InstallerProjectPageProps) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [selectedReasonId, setSelectedReasonId] = useState("");
   const [notInstalledComment, setNotInstalledComment] = useState("");
@@ -519,11 +521,11 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to workspace
+              {t("installerProject.backToWorkspace")}
             </Link>
-            <div className="page-eyebrow mt-4">Field execution cockpit</div>
+            <div className="page-eyebrow mt-4">{t("installerProject.eyebrow")}</div>
             <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
-              {details?.name || "Project details"}
+              {details?.name || t("installerProject.projectDetails")}
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
               {details?.address || "No address"} | Status: {details?.status || "--"}
@@ -541,15 +543,14 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
           </div>
           <div className="surface-subtle min-w-[280px] max-w-xl space-y-4 p-4 sm:p-5">
             <div className="text-[12px] leading-5 text-muted-foreground">
-              Move between the live schedule, issue triage and add-on facts without losing the
-              working door context.
+              {t("installerProject.contextCopy")}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Link
                 href={`/installer/calendar?project_id=${projectId}`}
                 className="btn-premium justify-center rounded-xl px-4 py-3 text-sm font-medium"
               >
-                Open schedule
+                {t("installerProject.openSchedule")}
               </Link>
               {details?.waze_url ? (
                 <a
@@ -558,11 +559,11 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   rel="noreferrer"
                   className="inline-flex items-center justify-center rounded-xl border border-border/70 bg-background/75 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                 >
-                  Open Waze
+                  {t("installerProject.openWaze")}
                 </a>
               ) : (
                 <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-4 py-3 text-sm text-muted-foreground">
-                  Waze route not configured
+                  {t("installerProject.noWaze")}
                 </div>
               )}
             </div>
@@ -573,7 +574,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
       {detailsQuery.isError && (
         <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span>Failed to load project details.</span>
+            <span>{t("installerProject.error")}</span>
             <button
               type="button"
               onClick={() => {
@@ -581,7 +582,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               }}
               className="inline-flex items-center rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
             >
-              Retry
+              {t("common.retry")}
             </button>
           </div>
         </div>
@@ -620,7 +621,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               <div className="mt-1 text-2xl font-semibold">{filteredDoors.length}</div>
             </div>
             <div className="surface-panel">
-              <div className="text-sm text-muted-foreground">Open issues</div>
+              <div className="text-sm text-muted-foreground">{t("installerProject.openIssues")}</div>
               <div className="mt-1 text-2xl font-semibold">{details.issues_open.length}</div>
             </div>
             <div className="surface-panel">
@@ -632,7 +633,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
           <section className="grid gap-4 lg:grid-cols-2">
             <div className="surface-panel space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold">Door filters</h2>
+                <h2 className="text-lg font-semibold">{t("installerProject.doorFilters")}</h2>
                 <button
                   type="button"
                   onClick={resetDoorFilters}
@@ -719,7 +720,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
             <div id="project-add-on-fact" className="surface-panel space-y-3">
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <Wrench className="h-5 w-5" />
-                Add-on fact
+                {t("installerProject.addonFact")}
               </h2>
               <label className="block">
                 <span className="text-xs text-muted-foreground">Add-on type</span>
@@ -774,7 +775,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
           <section id="project-open-issues" className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold">Open issues</h2>
+                <h2 className="text-lg font-semibold">{t("installerProject.openIssues")}</h2>
                 <div className="text-sm text-muted-foreground">
                   Visible issues {filteredIssues.length} / {details.issues_open.length}
                   {activeIssueFilterCount > 0 ? ` | Active filters ${activeIssueFilterCount}` : ""}
@@ -913,7 +914,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   Active filters: <span className="font-semibold">{activeDoorFilterCount}</span>
                 </div>
                 <div>
-                  Open issues: <span className="font-semibold">{details.issues_open.length}</span>
+                  {t("installerProject.openIssues")}: <span className="font-semibold">{details.issues_open.length}</span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -933,7 +934,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   href="#project-add-on-fact"
                   className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted"
                 >
-                  Add-on fact
+                  {t("installerProject.addonFact")}
                 </a>
                 <button
                   type="button"
@@ -1114,7 +1115,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
             </div>
 
             <div className="space-y-2 rounded-xl border border-border bg-card p-4">
-              <h2 className="text-lg font-semibold">Add-on facts</h2>
+              <h2 className="text-lg font-semibold">{t("installerProject.addonFacts")}</h2>
               {details.addons.facts.length === 0 && (
                 <div className="text-sm text-muted-foreground">No submitted add-on facts.</div>
               )}

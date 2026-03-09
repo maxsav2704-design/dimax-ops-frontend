@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 import { buildInstallerIssuesHref } from "@/views/installer/issue-links";
 import {
   buildScheduleCsv,
@@ -38,11 +39,7 @@ const RANGE_HOURS: Record<RangePreset, number> = {
   "30d": 24 * 30,
 };
 
-const RANGE_PRESET_BUTTONS: Array<{ value: RangePreset; label: string }> = [
-  { value: "today", label: "Today" },
-  { value: "7d", label: "Next 7 days" },
-  { value: "30d", label: "Next 30 days" },
-];
+const RANGE_PRESET_BUTTONS: RangePreset[] = ["today", "7d", "30d"];
 
 function formatDateTime(value: string): string {
   const parsed = new Date(value);
@@ -67,6 +64,12 @@ function getScheduleIssueSearchPreset(eventType: string, title: string) {
 }
 
 export default function InstallerSchedulePage() {
+  const { t } = useI18n();
+  const rangePresetLabels: Record<RangePreset, string> = {
+    today: t("common.today"),
+    "7d": t("installerSchedule.next7Days"),
+    "30d": t("installerSchedule.next30Days"),
+  };
   const [nowIso] = useState(() => new Date().toISOString());
   const [preset, setPreset] = useState<RangePreset>("7d");
   const [eventTypeFilter, setEventTypeFilter] = useState("ALL");
@@ -196,19 +199,20 @@ export default function InstallerSchedulePage() {
         <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
         <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-3xl">
-            <div className="page-eyebrow">Installer time control</div>
+            <div className="page-eyebrow">{t("installerSchedule.eyebrow")}</div>
             <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
-              My Schedule
+              {t("installerSchedule.title")}
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
-              Installer events, service pressure and project context arranged for fast daily
-              execution.
+              {t("installerSchedule.subtitle")}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="metric-chip">Events {events.length}</span>
               <span className="metric-chip">Visible {filteredEvents.length}</span>
               <span className="metric-chip">Preset {preset.toUpperCase()}</span>
-              <span className="metric-chip">{overdueOnly ? "Overdue focus" : "Mixed queue"}</span>
+              <span className="metric-chip">
+                {overdueOnly ? t("installerSchedule.overdueFocus") : t("installerSchedule.mixedQueue")}
+              </span>
             </div>
           </div>
           <div className="surface-subtle max-w-3xl space-y-4 p-4 sm:p-5">
@@ -219,20 +223,20 @@ export default function InstallerSchedulePage() {
                 className="inline-flex items-center gap-1 rounded-xl border border-border/70 bg-background/70 p-1"
               >
             {RANGE_PRESET_BUTTONS.map((item) => {
-              const active = preset === item.value;
+              const active = preset === item;
               return (
                 <button
-                  key={item.value}
+                  key={item}
                   type="button"
                   aria-pressed={active}
-                  onClick={() => setPreset(item.value)}
+                  onClick={() => setPreset(item)}
                   className={
                     active
                       ? "rounded-md bg-accent px-2.5 py-1.5 text-xs font-medium text-accent-foreground"
                       : "rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   }
                 >
-                  {item.label}
+                  {rangePresetLabels[item]}
                 </button>
               );
             })}
@@ -247,19 +251,19 @@ export default function InstallerSchedulePage() {
                     : "rounded-xl border border-border/70 bg-background/75 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 }
               >
-                Overdue only
+                {t("installerSchedule.overdueOnly")}
               </button>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Event type</span>
+            <span>{t("installerSchedule.eventType")}</span>
             <select
-              aria-label="Event type"
+              aria-label={t("installerSchedule.eventType")}
               value={eventTypeFilter}
               onChange={(event) => setEventTypeFilter(event.target.value || "ALL")}
               className="h-10 rounded-xl border border-border/70 bg-background/80 px-2 text-sm text-foreground"
             >
-              <option value="ALL">All types</option>
+              <option value="ALL">{t("installerSchedule.allTypes")}</option>
               {eventTypeOptions.map((eventType) => (
                 <option key={eventType} value={eventType}>
                   {eventType}
@@ -275,8 +279,8 @@ export default function InstallerSchedulePage() {
               onChange={(event) => setProjectFilter(event.target.value)}
               className="h-10 rounded-xl border border-border/70 bg-background/80 px-2 text-sm text-foreground"
             >
-              <option value="ALL">All projects</option>
-              <option value="NONE">No project</option>
+              <option value="ALL">{t("installerSchedule.allProjects")}</option>
+              <option value="NONE">{t("installerSchedule.noProject")}</option>
               {projectOptions.map((projectId) => (
                 <option key={projectId} value={projectId}>
                   {projectId}
@@ -292,9 +296,9 @@ export default function InstallerSchedulePage() {
               onChange={(event) => setPreset(event.target.value as RangePreset)}
               className="h-10 rounded-xl border border-border/70 bg-background/80 px-2 text-sm text-foreground"
             >
-              <option value="today">Today</option>
-              <option value="7d">Next 7 days</option>
-              <option value="30d">Next 30 days</option>
+              <option value="today">{t("common.today")}</option>
+              <option value="7d">{t("installerSchedule.next7Days")}</option>
+              <option value="30d">{t("installerSchedule.next30Days")}</option>
             </select>
               </label>
               <button
@@ -303,14 +307,14 @@ export default function InstallerSchedulePage() {
                 className="btn-premium rounded-xl px-4 py-2 text-sm font-medium"
               >
                 <RefreshCcw className="h-4 w-4" />
-                Refresh
+                {t("common.refresh")}
               </button>
               <button
                 type="button"
                 onClick={resetFilters}
                 className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-3 py-2 text-sm transition-colors hover:bg-muted"
               >
-                Reset filters
+                {t("installerSchedule.resetFilters")}
               </button>
               <button
                 type="button"
@@ -323,7 +327,7 @@ export default function InstallerSchedulePage() {
                 disabled={filteredEvents.length === 0}
                 className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-3 py-2 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Export CSV
+                {t("installerSchedule.exportCsv")}
               </button>
             </div>
           </div>
@@ -332,13 +336,13 @@ export default function InstallerSchedulePage() {
 
       {eventsQuery.isError && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
-          <span>Failed to load installer schedule.</span>
+          <span>{t("installerSchedule.error")}</span>
           <button
             type="button"
             onClick={() => void eventsQuery.refetch()}
             className="inline-flex items-center rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
           >
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       )}

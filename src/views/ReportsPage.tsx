@@ -16,6 +16,7 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { apiBaseUrl, apiFetch, getAccessToken } from "@/lib/api";
 import { useUserRole } from "@/hooks/use-user-role";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type LimitAlertItem = {
@@ -1017,6 +1018,7 @@ function SectionMessage({
 }
 
 export default function ReportsPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -1775,13 +1777,12 @@ export default function ReportsPage() {
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl">
-              <div className="page-eyebrow">Executive reporting surface</div>
+              <div className="page-eyebrow">{t("reports.eyebrow")}</div>
               <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
-                Reports
+                {t("reports.title")}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
-                Limits, delivery, queue pressure and audit visibility shaped into an operations-grade
-                decision screen.
+                {t("reports.subtitle")}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="metric-chip">Unread alerts {unreadBadge}</span>
@@ -1810,7 +1811,7 @@ export default function ReportsPage() {
                 aria-label="Preset Name"
                 value={presetName}
                 onChange={(e) => setPresetName(e.target.value)}
-                placeholder="Save preset"
+                placeholder={t("reports.savePreset")}
                 className="h-10 rounded-xl border border-border/70 bg-background/80 px-3 text-[13px]"
               />
               <button
@@ -1818,7 +1819,7 @@ export default function ReportsPage() {
                 onClick={handleSavePreset}
                 className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
               >
-                Save Preset
+                {t("reports.savePreset")}
               </button>
               <select
                 aria-label="Saved Presets"
@@ -1826,7 +1827,7 @@ export default function ReportsPage() {
                 onChange={(e) => setSelectedPresetId(e.target.value)}
                 className="h-10 rounded-xl border border-border/70 bg-background/80 px-2 text-[13px]"
               >
-                <option value="">Saved presets</option>
+                <option value="">{t("reports.savedPresets")}</option>
                 {savedPresets.map((preset) => (
                   <option key={preset.id} value={preset.id}>
                     {preset.name}
@@ -1838,14 +1839,14 @@ export default function ReportsPage() {
                 onClick={handleApplySelectedPreset}
                 className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
               >
-                Apply Preset
+                {t("reports.applyPreset")}
               </button>
               <button
                 type="button"
                 onClick={handleDeleteSelectedPreset}
                 className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
               >
-                Delete Preset
+                {t("reports.deletePreset")}
               </button>
               </div>
               <div className="flex flex-wrap items-center justify-end gap-2">

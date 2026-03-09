@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, KeyRound, LogIn, Mail } from "lucide-react";
 
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { apiBaseUrl } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 
 type LoginResponse = {
   access_token: string;
@@ -36,6 +38,7 @@ async function resolveDefaultPath(accessToken: string): Promise<string> {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [companyId, setCompanyId] = useState(
     () =>
       (typeof window !== "undefined" &&
@@ -58,15 +61,15 @@ export default function LoginPage() {
     }
     const code = new URLSearchParams(window.location.search).get("error");
     if (code === "admin_only") {
-      setAccessNotice("This panel is available only for ADMIN role.");
+      setAccessNotice(t("login.accessAdminOnly"));
       return;
     }
     if (code === "installer_only") {
-      setAccessNotice("Installer workspace is available only for INSTALLER role.");
+      setAccessNotice(t("login.accessInstallerOnly"));
       return;
     }
     setAccessNotice(null);
-  }, []);
+  }, [t]);
 
   const onSubmit = async () => {
     setLoading(true);
@@ -124,20 +127,19 @@ export default function LoginPage() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--accent)/0.16),transparent_34%),linear-gradient(135deg,hsl(var(--primary)/0.96),hsl(var(--primary)/0.88))]" />
           <div className="absolute inset-0 shell-grid opacity-15" />
           <div className="relative z-10">
-            <div className="page-eyebrow border-white/20 bg-white/10 text-white">Dimax Control Layer</div>
+            <div className="page-eyebrow border-white/20 bg-white/10 text-white">{t("login.eyebrow")}</div>
             <h1 className="mt-6 max-w-lg text-5xl font-semibold leading-[0.96] text-white">
-              Built for operators, dispatchers and installers under live pressure.
+              {t("login.title")}
             </h1>
             <p className="mt-5 max-w-xl text-[15px] leading-7 text-white/72">
-              One suite for project risk, delivery recovery, issue flow and field execution.
-              Fast enough for daily control, structured enough for operations at scale.
+              {t("login.subtitle")}
             </p>
 
             <div className="mt-10 grid gap-4 md:grid-cols-3">
               {[
-                ["Operations", "Import failures, outbox recovery, sync health"],
-                ["Reports", "Focused drilldowns tied to recovery actions"],
-                ["Installer Web", "Project, schedule and issue continuity in one flow"],
+                [t("login.feature.operations"), t("login.feature.operationsText")],
+                [t("login.feature.reports"), t("login.feature.reportsText")],
+                [t("login.feature.installer"), t("login.feature.installerText")],
               ].map(([title, text]) => (
                 <div
                   key={title}
@@ -150,36 +152,42 @@ export default function LoginPage() {
             </div>
 
             <div className="mt-10 flex flex-wrap gap-3">
-              <span className="metric-chip bg-white/10 text-white/78">Admin command center</span>
-              <span className="metric-chip bg-white/10 text-white/78">Installer workspace</span>
-              <span className="metric-chip bg-white/10 text-white/78">Recovery-ready flows</span>
+              <span className="metric-chip bg-white/10 text-white/78">{t("login.chip.adminCenter")}</span>
+              <span className="metric-chip bg-white/10 text-white/78">{t("login.chip.installerWorkspace")}</span>
+              <span className="metric-chip bg-white/10 text-white/78">{t("login.chip.recoveryReady")}</span>
             </div>
           </div>
         </section>
 
         <section className="px-6 py-8 sm:px-8 sm:py-10 lg:px-10 lg:py-12">
           <div className="mb-8 lg:hidden">
-            <div className="page-eyebrow">Dimax Ops</div>
-            <h1 className="mt-4 text-3xl font-semibold text-card-foreground">Sign in to Operations Suite</h1>
+            <div className="flex items-center justify-between gap-3">
+              <div className="page-eyebrow">Dimax Ops</div>
+              <LanguageSwitcher compact />
+            </div>
+            <h1 className="mt-4 text-3xl font-semibold text-card-foreground">{t("login.signIn")}</h1>
           </div>
 
           <div className="surface-panel animate-panel-rise p-6 sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h1 className="text-[26px] font-semibold text-card-foreground tracking-tight">DIMAX Admin</h1>
+                <h1 className="text-[26px] font-semibold text-card-foreground tracking-tight">{t("login.admin")}</h1>
                 <p className="mt-1 text-[13px] text-muted-foreground">
-                  Secure access to operations, reports and installer execution flows.
+                  {t("login.secureAccess")}
                 </p>
               </div>
-              <div className="hidden rounded-2xl bg-accent/10 px-3 py-2 text-right sm:block">
-                <div className="text-[10px] uppercase tracking-[0.24em] text-accent">Suite</div>
-                <div className="mt-1 font-display text-lg font-semibold text-foreground">24/7</div>
+              <div className="hidden items-start gap-3 sm:flex">
+                <LanguageSwitcher compact />
+                <div className="rounded-2xl bg-accent/10 px-3 py-2 text-right">
+                  <div className="text-[10px] uppercase tracking-[0.24em] text-accent">Suite</div>
+                  <div className="mt-1 font-display text-lg font-semibold text-foreground">24/7</div>
+                </div>
               </div>
             </div>
 
             <div className="mt-6 space-y-4">
           <label className="block">
-            <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">Company ID</span>
+            <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">{t("login.companyId")}</span>
             <div className="relative">
               <Building2 className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -191,7 +199,7 @@ export default function LoginPage() {
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">Email</span>
+            <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">{t("login.email")}</span>
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -204,7 +212,7 @@ export default function LoginPage() {
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">Password</span>
+            <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">{t("login.password")}</span>
             <div className="relative">
               <KeyRound className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -235,11 +243,11 @@ export default function LoginPage() {
               className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent text-[13px] font-semibold text-accent-foreground shadow-[0_22px_44px_-22px_hsl(var(--accent)/0.75)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_28px_54px_-24px_hsl(var(--accent)/0.82)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <LogIn className="h-4 w-4" />
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? t("login.signingIn") : t("login.signIn")}
             </button>
 
             <div className="mt-4 text-[11px] text-muted-foreground">
-              Use your company-scoped credentials to enter the admin or installer flow.
+              {t("login.usageHint")}
             </div>
           </div>
         </section>

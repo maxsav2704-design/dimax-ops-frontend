@@ -14,6 +14,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useUserRole } from "@/hooks/use-user-role";
 import { apiFetch } from "@/lib/api";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type IssueStatus = "OPEN" | "CLOSED";
@@ -186,6 +187,7 @@ function buildWorkflowPatch(
 
 export default function IssuesPage() {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const issueIdParam = searchParams?.get("issue_id")?.trim() || null;
   const [statusFilter, setStatusFilter] = useState<"all" | IssueStatus>("all");
@@ -388,12 +390,12 @@ export default function IssuesPage() {
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl">
-              <div className="page-eyebrow">Incident command surface</div>
+              <div className="page-eyebrow">{t("issues.eyebrow")}</div>
               <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
-                Issues
+                {t("issues.title")}
               </h1>
               <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">
-                Incident workflow, ownership and SLA due-date control across the operational field queue.
+                {t("issues.subtitle")}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="metric-chip">Open {metrics.open}</span>
@@ -425,7 +427,7 @@ export default function IssuesPage() {
                 className="btn-premium h-11 rounded-xl px-4 text-[13px] font-medium"
               >
                 <RefreshCw className="w-4 h-4" />
-                Refresh
+                {t("common.refresh")}
               </button>
             </div>
           </div>

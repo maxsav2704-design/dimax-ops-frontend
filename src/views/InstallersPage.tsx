@@ -15,6 +15,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useUserRole } from "@/hooks/use-user-role";
 import { apiFetch } from "@/lib/api";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Installer = {
@@ -264,6 +265,7 @@ function InstallerBaseForm({
 
 export default function InstallersPage() {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
@@ -487,12 +489,12 @@ export default function InstallersPage() {
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl">
-              <div className="page-eyebrow">Installer network control</div>
+              <div className="page-eyebrow">{t("installers.eyebrow")}</div>
               <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
-                Installers
+                {t("installers.title")}
               </h1>
               <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">
-                Manage installers, user links and door type rates from one premium operational surface.
+                {t("installers.subtitle")}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="metric-chip">Total {metrics.total}</span>
@@ -526,7 +528,7 @@ export default function InstallersPage() {
                 className="btn-premium h-11 rounded-xl px-4 text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Plus className="w-4 h-4" />
-                Add Installer
+                {t("installers.addInstaller")}
               </button>
             </div>
           </div>

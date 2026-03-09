@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 import { buildInstallerIssuesHref } from "@/views/installer/issue-links";
 
 type ProjectQuickFilter = "ALL" | "PROBLEM" | "ACTIVE" | "TODAY_TASKS";
@@ -69,6 +70,7 @@ function formatDate(value: string): string {
 }
 
 export default function InstallerWorkspacePage() {
+  const { t } = useI18n();
   const [nowIso] = useState(() => new Date().toISOString());
   const [projectQuickFilter, setProjectQuickFilter] = useState<ProjectQuickFilter>("ALL");
   const [isQueryInitialized, setIsQueryInitialized] = useState(false);
@@ -335,12 +337,12 @@ export default function InstallerWorkspacePage() {
         <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
         <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
-            <div className="page-eyebrow">Field Control</div>
+            <div className="page-eyebrow">{t("installerWorkspace.eyebrow")}</div>
             <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.04em]">
-              Installer Workspace
+              {t("installerWorkspace.title")}
             </h1>
             <p className="mt-3 text-sm leading-7 text-muted-foreground">
-              Assigned projects, current blockers and the fastest next move across the day.
+              {t("installerWorkspace.subtitle")}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="metric-chip">Priority doors</span>
@@ -378,7 +380,7 @@ export default function InstallerWorkspacePage() {
               className="btn-premium h-11 rounded-xl px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
             >
               <RefreshCcw className="h-4 w-4" />
-              {isRefreshing ? "Refreshing..." : "Refresh"}
+              {isRefreshing ? t("common.refreshing") : t("common.refresh")}
             </button>
           </div>
         </div>
@@ -386,7 +388,7 @@ export default function InstallerWorkspacePage() {
 
       {(projectsQuery.isError || eventsQuery.isError || tasksQuery.isError) && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
-          <span>Failed to load installer workspace. Check API availability and role mapping.</span>
+          <span>{t("installerWorkspace.error")}</span>
           <button
             type="button"
             onClick={() => {
@@ -394,7 +396,7 @@ export default function InstallerWorkspacePage() {
             }}
             className="inline-flex items-center rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
           >
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       )}
@@ -402,17 +404,17 @@ export default function InstallerWorkspacePage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
           <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
-          <div className="text-sm text-muted-foreground">Assigned projects</div>
+          <div className="text-sm text-muted-foreground">{t("installerWorkspace.assignedProjects")}</div>
           <div className="mt-1 text-2xl font-semibold">{stats.total}</div>
         </div>
         <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
           <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
-          <div className="text-sm text-muted-foreground">Problem projects</div>
+          <div className="text-sm text-muted-foreground">{t("installerWorkspace.problemProjects")}</div>
           <div className="mt-1 text-2xl font-semibold">{stats.inProblem}</div>
         </div>
         <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
           <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
-          <div className="text-sm text-muted-foreground">Completed projects</div>
+          <div className="text-sm text-muted-foreground">{t("installerWorkspace.completedProjects")}</div>
           <div className="mt-1 text-2xl font-semibold">{stats.done}</div>
         </div>
       </div>
@@ -420,8 +422,8 @@ export default function InstallerWorkspacePage() {
       <section className="space-y-3">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <div className="page-eyebrow">Execution pulse</div>
-            <h2 className="mt-2 text-lg font-semibold">Today tasks</h2>
+            <div className="page-eyebrow">{t("installerWorkspace.executionPulse")}</div>
+            <h2 className="mt-2 text-lg font-semibold">{t("installerWorkspace.todayTasks")}</h2>
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -437,7 +439,7 @@ export default function InstallerWorkspacePage() {
               href="/installer/calendar?preset=today"
               className="mt-3 inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
             >
-              Open today tasks
+              {t("installerWorkspace.openTodayTasks")}
             </Link>
           </div>
           <div
@@ -452,7 +454,7 @@ export default function InstallerWorkspacePage() {
               href="/installer/calendar?preset=7d&overdue=1"
               className="mt-3 inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
             >
-              Open overdue tasks
+              {t("installerWorkspace.openOverdueTasks")}
             </Link>
           </div>
           <div
@@ -467,7 +469,7 @@ export default function InstallerWorkspacePage() {
               href="/installer/calendar?preset=7d&project_id=none"
               className="mt-3 inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
             >
-              Open no-project tasks
+              {t("installerWorkspace.openNoProjectTasks")}
             </Link>
           </div>
         </div>
@@ -475,7 +477,7 @@ export default function InstallerWorkspacePage() {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Today priorities</h2>
+          <h2 className="text-lg font-semibold">{t("installerWorkspace.todayPriorities")}</h2>
           <Link
             href="/installer/calendar?preset=today"
             className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
@@ -524,14 +526,14 @@ export default function InstallerWorkspacePage() {
       <div className="grid gap-6 lg:grid-cols-5">
         <section aria-label="My projects list" className="space-y-3 lg:col-span-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">My projects</h2>
+            <h2 className="text-lg font-semibold">{t("installerWorkspace.myProjects")}</h2>
             <div className="flex flex-wrap gap-2">
               {(
                 [
                   ["ALL", "All"],
-                  ["PROBLEM", "Only problem"],
-                  ["ACTIVE", "Only active"],
-                  ["TODAY_TASKS", "Has tasks today"],
+                  ["PROBLEM", t("installerWorkspace.onlyProblem")],
+                  ["ACTIVE", t("installerWorkspace.onlyActive")],
+                  ["TODAY_TASKS", t("installerWorkspace.hasTasksToday")],
                 ] as Array<[ProjectQuickFilter, string]>
               ).map(([value, label]) => {
                 const active = projectQuickFilter === value;
@@ -560,12 +562,12 @@ export default function InstallerWorkspacePage() {
           )}
           {!projectsQuery.isLoading && projects.length === 0 && (
             <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-              No assigned projects yet.
+              {t("installerWorkspace.noAssignedProjects")}
             </div>
           )}
           {!projectsQuery.isLoading && projects.length > 0 && filteredProjects.length === 0 && (
             <div className="surface-panel text-sm text-muted-foreground">
-              No projects for selected filter.
+              {t("installerWorkspace.noProjectsSelectedFilter")}
             </div>
           )}
           {filteredProjects.map((project) => (
@@ -635,8 +637,8 @@ export default function InstallerWorkspacePage() {
 
         <section className="space-y-3 lg:col-span-2">
           <div>
-            <div className="page-eyebrow">Forward view</div>
-            <h2 className="mt-2 text-lg font-semibold">Next 7 days</h2>
+            <div className="page-eyebrow">{t("installerWorkspace.forwardView")}</div>
+            <h2 className="mt-2 text-lg font-semibold">{t("installerWorkspace.next7Days")}</h2>
           </div>
           {eventsQuery.isLoading && (
             <div className="surface-panel text-sm text-muted-foreground">
@@ -645,7 +647,7 @@ export default function InstallerWorkspacePage() {
           )}
           {!eventsQuery.isLoading && events.length === 0 && (
             <div className="surface-panel text-sm text-muted-foreground">
-              No events scheduled.
+              {t("installerWorkspace.noEventsScheduled")}
             </div>
           )}
           {events.map((event) => (

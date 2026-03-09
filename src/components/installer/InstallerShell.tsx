@@ -5,23 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, FolderKanban, LogOut } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  {
-    title: "Workspace",
-    href: "/installer",
-    icon: FolderKanban,
-    isActive: (path: string) =>
-      path === "/installer" || path.startsWith("/installer/projects/"),
-  },
-  {
-    title: "Schedule",
-    href: "/installer/calendar",
-    icon: CalendarDays,
-    isActive: (path: string) => path === "/installer/calendar",
-  },
-];
 
 function clearSession(): void {
   localStorage.removeItem("dimax_access_token");
@@ -33,6 +19,22 @@ function clearSession(): void {
 export function InstallerShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useI18n();
+  const navItems = [
+    {
+      title: t("installerShell.workspace"),
+      href: "/installer",
+      icon: FolderKanban,
+      isActive: (path: string) =>
+        path === "/installer" || path.startsWith("/installer/projects/"),
+    },
+    {
+      title: t("installerShell.schedule"),
+      href: "/installer/calendar",
+      icon: CalendarDays,
+      isActive: (path: string) => path === "/installer/calendar",
+    },
+  ];
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
@@ -50,11 +52,13 @@ export function InstallerShell({ children }: { children: ReactNode }) {
               </div>
               <div>
                 <div className="font-display text-base font-semibold">DIMAX Installer</div>
-                <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Web Workspace</div>
+                <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                  {t("installerShell.webWorkspace")}
+                </div>
               </div>
             </div>
             <div className="mt-5 rounded-2xl border border-border/70 bg-background/60 px-4 py-3 text-[13px] text-muted-foreground">
-              Field-first view of priorities, issues, floor context and next actions.
+              {t("installerShell.fieldView")}
             </div>
           </div>
 
@@ -80,6 +84,9 @@ export function InstallerShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="mt-auto border-t border-border/70 px-4 py-4">
+            <div className="mb-3">
+              <LanguageSwitcher compact />
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -89,7 +96,7 @@ export function InstallerShell({ children }: { children: ReactNode }) {
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background/80 px-3 py-2.5 text-sm text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-background"
             >
               <LogOut className="h-4 w-4" />
-              Sign out
+              {t("common.signOut")}
             </button>
           </div>
         </aside>
@@ -98,7 +105,7 @@ export function InstallerShell({ children }: { children: ReactNode }) {
           <header className="surface-panel px-6 py-4">
             <div className="inline-flex items-center gap-2 rounded-full bg-background/65 px-3 py-1.5 text-sm text-muted-foreground">
               <CalendarDays className="h-4 w-4" />
-              Installer-only live workspace
+              {t("installerShell.liveWorkspace")}
             </div>
           </header>
           <div className="pt-6">{children}</div>

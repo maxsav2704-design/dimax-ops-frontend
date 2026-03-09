@@ -18,25 +18,27 @@ import {
 import { apiFetch } from "@/lib/api";
 import { useUserRole } from "@/hooks/use-user-role";
 import { canAccessAdminPath } from "@/lib/admin-access";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  { title: "Dashboard", path: "/", icon: LayoutDashboard },
-  { title: "Projects", path: "/projects", icon: FolderKanban },
-  { title: "Issues", path: "/issues", icon: AlertTriangle },
-  { title: "Installers", path: "/installers", icon: Users },
-  { title: "Calendar", path: "/calendar", icon: CalendarDays },
-  { title: "Journal", path: "/journal", icon: BookOpen },
-  { title: "Door Types", path: "/door-types", icon: DoorOpen },
-  { title: "Reasons", path: "/reasons", icon: MessageSquare },
-  { title: "Reports", path: "/reports", icon: BarChart3 },
-  { title: "Operations", path: "/operations", icon: ActivitySquare },
-  { title: "Settings", path: "/settings", icon: Settings },
-];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const userRole = useUserRole();
+  const { t } = useI18n();
+  const navItems = [
+    { title: t("nav.dashboard"), path: "/", icon: LayoutDashboard },
+    { title: t("nav.projects"), path: "/projects", icon: FolderKanban },
+    { title: t("nav.issues"), path: "/issues", icon: AlertTriangle },
+    { title: t("nav.installers"), path: "/installers", icon: Users },
+    { title: t("nav.calendar"), path: "/calendar", icon: CalendarDays },
+    { title: t("nav.journal"), path: "/journal", icon: BookOpen },
+    { title: t("nav.doorTypes"), path: "/door-types", icon: DoorOpen },
+    { title: t("nav.reasons"), path: "/reasons", icon: MessageSquare },
+    { title: t("nav.reports"), path: "/reports", icon: BarChart3 },
+    { title: t("nav.operations"), path: "/operations", icon: ActivitySquare },
+    { title: t("nav.settings"), path: "/settings", icon: Settings },
+  ];
   const visibleNavItems = navItems.filter((item) => canAccessAdminPath(userRole, item.path));
   const unreadAlertsQuery = useQuery({
     queryKey: ["limit-alerts-unread"],
@@ -72,9 +74,11 @@ export function AppSidebar() {
           </div>
         </div>
         <div className="relative mt-5 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
-          <div className="text-[10px] uppercase tracking-[0.24em] text-sidebar-foreground/55">Command Layer</div>
+          <div className="text-[10px] uppercase tracking-[0.24em] text-sidebar-foreground/55">
+            {t("sidebar.commandLayer")}
+          </div>
           <div className="mt-2 text-[13px] font-medium text-sidebar-accent-foreground">
-            Live control across projects, issues, reports and delivery lanes.
+            {t("sidebar.commandText")}
           </div>
         </div>
       </div>
@@ -82,7 +86,7 @@ export function AppSidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-4 py-5">
         <div className="mb-3 px-3 text-[10px] uppercase tracking-[0.3em] text-sidebar-foreground/45">
-          Control Surface
+          {t("sidebar.controlSurface")}
         </div>
         <ul className="space-y-1">
           {visibleNavItems.map((item) => {
@@ -122,7 +126,7 @@ export function AppSidebar() {
           })}
           {visibleNavItems.length === 0 ? (
             <li className="px-3 py-2 text-[12px] text-sidebar-foreground/60">
-              No admin modules available for your role.
+              {t("sidebar.noAdminModules")}
             </li>
           ) : null}
         </ul>
@@ -133,9 +137,12 @@ export function AppSidebar() {
         <div className="group/help flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sidebar-foreground/50 transition-colors duration-200 hover:text-sidebar-foreground/80">
           <HelpCircle className="w-4 h-4 transition-all duration-250 ease-in-out group-hover/help:text-accent group-hover/help:scale-110 group-hover/help:drop-shadow-[0_0_5px_hsl(var(--accent)/0.3)]" strokeWidth={1.5} />
           <div>
-            <p className="text-[11px] font-medium">Support</p>
+            <p className="text-[11px] font-medium">{t("sidebar.support")}</p>
             <p className="text-[10px]">help@dimax.co.il</p>
           </div>
+        </div>
+        <div className="mt-3">
+          <LanguageSwitcher />
         </div>
       </div>
     </aside>

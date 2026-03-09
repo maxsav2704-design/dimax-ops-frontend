@@ -1,0 +1,624 @@
+"use client";
+
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+
+export type Locale = "en" | "ru" | "he";
+
+type Messages = Record<string, string>;
+
+const STORAGE_KEY = "dimax_locale";
+
+const messages: Record<Locale, Messages> = {
+  en: {
+    "language.english": "English",
+    "language.russian": "Russian",
+    "language.hebrew": "Hebrew",
+
+    "nav.dashboard": "Dashboard",
+    "nav.projects": "Projects",
+    "nav.issues": "Issues",
+    "nav.installers": "Installers",
+    "nav.calendar": "Calendar",
+    "nav.journal": "Journal",
+    "nav.doorTypes": "Door Types",
+    "nav.reasons": "Reasons",
+    "nav.reports": "Reports",
+    "nav.operations": "Operations",
+    "nav.settings": "Settings",
+
+    "common.refresh": "Refresh",
+    "common.refreshing": "Refreshing...",
+    "common.search": "Search",
+    "common.status": "Status",
+    "common.project": "Project",
+    "common.range": "Range",
+    "common.today": "Today",
+    "common.overdue": "Overdue",
+    "common.all": "All",
+    "common.active": "Active",
+    "common.inactive": "Inactive",
+    "common.open": "Open",
+    "common.retry": "Retry",
+    "common.resetFilters": "Reset filters",
+    "common.readOnly": "Read only",
+    "common.manage": "Manage",
+    "common.filtered": "Filtered",
+    "common.mode": "Mode",
+    "common.scope": "Scope",
+    "common.updated": "Updated",
+    "common.signOut": "Sign out",
+    "common.portfolio": "Portfolio",
+
+    "login.eyebrow": "Dimax Control Layer",
+    "login.title": "Built for operators, dispatchers and installers under live pressure.",
+    "login.subtitle":
+      "One suite for project risk, delivery recovery, issue flow and field execution. Fast enough for daily control, structured enough for operations at scale.",
+    "login.admin": "DIMAX Admin",
+    "login.secureAccess": "Secure access to operations, reports and installer execution flows.",
+    "login.companyId": "Company ID",
+    "login.email": "Email",
+    "login.password": "Password",
+    "login.signIn": "Sign In",
+    "login.signingIn": "Signing in...",
+    "login.usageHint": "Use your company-scoped credentials to enter the admin or installer flow.",
+    "login.accessAdminOnly": "This panel is available only for ADMIN role.",
+    "login.accessInstallerOnly": "Installer workspace is available only for INSTALLER role.",
+    "login.feature.operations": "Operations",
+    "login.feature.operationsText": "Import failures, outbox recovery, sync health",
+    "login.feature.reports": "Reports",
+    "login.feature.reportsText": "Focused drilldowns tied to recovery actions",
+    "login.feature.installer": "Installer Web",
+    "login.feature.installerText": "Project, schedule and issue continuity in one flow",
+    "login.chip.adminCenter": "Admin command center",
+    "login.chip.installerWorkspace": "Installer workspace",
+    "login.chip.recoveryReady": "Recovery-ready flows",
+
+    "sidebar.commandLayer": "Command Layer",
+    "sidebar.commandText": "Live control across projects, issues, reports and delivery lanes.",
+    "sidebar.controlSurface": "Control Surface",
+    "sidebar.support": "Support",
+    "sidebar.noAdminModules": "No admin modules available for your role.",
+
+    "installerShell.workspace": "Workspace",
+    "installerShell.schedule": "Schedule",
+    "installerShell.webWorkspace": "Web Workspace",
+    "installerShell.fieldView": "Field-first view of priorities, issues, floor context and next actions.",
+    "installerShell.liveWorkspace": "Installer-only live workspace",
+
+    "operations.eyebrow": "Operations Center",
+    "operations.title": "Recovery and queue visibility in one surface.",
+    "operations.subtitle":
+      "Import failures, delivery risk, webhook drift and installer sync pressure. This is the operator view that turns alerts into concrete recovery steps.",
+    "operations.onlyActionable": "Only actionable",
+    "operations.actionable": "Actionable",
+    "operations.actionableFocused": "Focused",
+    "operations.actionableMixed": "Mixed",
+    "operations.deliveryLane": "Delivery lane",
+    "operations.provider": "Provider",
+    "operations.dataFreshness": "Data Freshness",
+    "operations.actionSummary": "Action Summary",
+    "operations.deliveryDrilldown": "Delivery Drilldown",
+    "operations.error": "Failed to load operations data. Check API availability and admin permissions.",
+
+    "reports.eyebrow": "Executive reporting surface",
+    "reports.title": "Reports",
+    "reports.subtitle":
+      "Limits, delivery, queue pressure and audit visibility shaped into an operations-grade decision screen.",
+    "reports.savePreset": "Save Preset",
+    "reports.applyPreset": "Apply Preset",
+    "reports.deletePreset": "Delete Preset",
+    "reports.savedPresets": "Saved presets",
+    "reports.exportExecutiveCsv": "Export Executive CSV",
+    "reports.markAllRead": "Mark All Read",
+
+    "projects.eyebrow": "Project command surface",
+    "projects.title": "Projects",
+    "projects.subtitle":
+      "Floor matrix, import recovery, margin pressure and delivery readiness in one operator-grade workspace.",
+    "projects.projectList": "Project list",
+    "projects.portfolioNavigator": "Portfolio navigator",
+
+    "issues.eyebrow": "Incident command surface",
+    "issues.title": "Issues",
+    "issues.subtitle": "Incident workflow, ownership and SLA due-date control across the operational field queue.",
+
+    "journal.eyebrow": "Communications Center",
+    "journal.title": "Journal queue, delivery channels and resend control",
+    "journal.subtitle":
+      "Control customer communication from one place: create journal drafts, mark them ready, queue email and WhatsApp delivery, and recover failed sends from outbox.",
+
+    "installers.eyebrow": "Installer network control",
+    "installers.title": "Installers",
+    "installers.subtitle": "Manage installers, user links and door type rates from one premium operational surface.",
+    "installers.addInstaller": "Add Installer",
+
+    "installerWorkspace.eyebrow": "Field Control",
+    "installerWorkspace.title": "Installer Workspace",
+    "installerWorkspace.subtitle": "Assigned projects, current blockers and the fastest next move across the day.",
+    "installerWorkspace.todayTasks": "Today tasks",
+    "installerWorkspace.todayPriorities": "Today priorities",
+    "installerWorkspace.myProjects": "My projects",
+    "installerWorkspace.next7Days": "Next 7 days",
+    "installerWorkspace.executionPulse": "Execution pulse",
+    "installerWorkspace.forwardView": "Forward view",
+    "installerWorkspace.error": "Failed to load installer workspace. Check API availability and role mapping.",
+    "installerWorkspace.assignedProjects": "Assigned projects",
+    "installerWorkspace.problemProjects": "Problem projects",
+    "installerWorkspace.completedProjects": "Completed projects",
+    "installerWorkspace.openTodayTasks": "Open today tasks",
+    "installerWorkspace.openOverdueTasks": "Open overdue tasks",
+    "installerWorkspace.openNoProjectTasks": "Open no-project tasks",
+    "installerWorkspace.onlyProblem": "Only problem",
+    "installerWorkspace.onlyActive": "Only active",
+    "installerWorkspace.hasTasksToday": "Has tasks today",
+    "installerWorkspace.noAssignedProjects": "No assigned projects yet.",
+    "installerWorkspace.noProjectsSelectedFilter": "No projects for selected filter.",
+    "installerWorkspace.noEventsScheduled": "No events scheduled.",
+
+    "installerProject.eyebrow": "Field execution cockpit",
+    "installerProject.projectDetails": "Project details",
+    "installerProject.backToWorkspace": "Back to workspace",
+    "installerProject.openSchedule": "Open schedule",
+    "installerProject.openWaze": "Open Waze",
+    "installerProject.noWaze": "Waze route not configured",
+    "installerProject.doorFilters": "Door filters",
+    "installerProject.addonFact": "Add-on fact",
+    "installerProject.addonFacts": "Add-on facts",
+    "installerProject.openIssues": "Open issues",
+    "installerProject.error": "Failed to load project details.",
+    "installerProject.contextCopy":
+      "Move between the live schedule, issue triage and add-on facts without losing the working door context.",
+
+    "installerSchedule.eyebrow": "Installer time control",
+    "installerSchedule.title": "My Schedule",
+    "installerSchedule.subtitle": "Installer events, service pressure and project context arranged for fast daily execution.",
+    "installerSchedule.overdueOnly": "Overdue only",
+    "installerSchedule.eventType": "Event type",
+    "installerSchedule.resetFilters": "Reset filters",
+    "installerSchedule.exportCsv": "Export CSV",
+    "installerSchedule.error": "Failed to load installer schedule.",
+    "installerSchedule.allTypes": "All types",
+    "installerSchedule.allProjects": "All projects",
+    "installerSchedule.noProject": "No project",
+    "installerSchedule.next7Days": "Next 7 days",
+    "installerSchedule.next30Days": "Next 30 days",
+    "installerSchedule.mixedQueue": "Mixed queue",
+    "installerSchedule.overdueFocus": "Overdue focus",
+  },
+  ru: {
+    "language.english": "Английский",
+    "language.russian": "Русский",
+    "language.hebrew": "Иврит",
+
+    "nav.dashboard": "Дашборд",
+    "nav.projects": "Проекты",
+    "nav.issues": "Проблемы",
+    "nav.installers": "Монтажники",
+    "nav.calendar": "Календарь",
+    "nav.journal": "Журнал",
+    "nav.doorTypes": "Типы дверей",
+    "nav.reasons": "Причины",
+    "nav.reports": "Отчеты",
+    "nav.operations": "Операции",
+    "nav.settings": "Настройки",
+
+    "common.refresh": "Обновить",
+    "common.refreshing": "Обновление...",
+    "common.search": "Поиск",
+    "common.status": "Статус",
+    "common.project": "Проект",
+    "common.range": "Период",
+    "common.today": "Сегодня",
+    "common.overdue": "Просрочено",
+    "common.all": "Все",
+    "common.active": "Активные",
+    "common.inactive": "Неактивные",
+    "common.open": "Открыть",
+    "common.retry": "Повторить",
+    "common.resetFilters": "Сбросить фильтры",
+    "common.readOnly": "Только просмотр",
+    "common.manage": "Управление",
+    "common.filtered": "Отфильтровано",
+    "common.mode": "Режим",
+    "common.scope": "Срез",
+    "common.updated": "Обновлено",
+    "common.signOut": "Выйти",
+    "common.portfolio": "Портфель",
+
+    "login.eyebrow": "Контрольный слой Dimax",
+    "login.title": "Система для операторов, диспетчеров и монтажников под реальной нагрузкой.",
+    "login.subtitle":
+      "Единый контур для рисков по проектам, восстановления доставки, проблем и полевых работ. Достаточно быстрый для ежедневного контроля и достаточно структурный для масштабных операций.",
+    "login.admin": "DIMAX Admin",
+    "login.secureAccess": "Безопасный вход в операции, отчеты и сценарии работы монтажников.",
+    "login.companyId": "ID компании",
+    "login.email": "Email",
+    "login.password": "Пароль",
+    "login.signIn": "Войти",
+    "login.signingIn": "Вход...",
+    "login.usageHint": "Используйте учетные данные вашей компании для входа в админский или монтажный контур.",
+    "login.accessAdminOnly": "Эта панель доступна только для роли ADMIN.",
+    "login.accessInstallerOnly": "Рабочее место монтажника доступно только для роли INSTALLER.",
+    "login.feature.operations": "Операции",
+    "login.feature.operationsText": "Ошибки импорта, восстановление outbox, состояние синхронизации",
+    "login.feature.reports": "Отчеты",
+    "login.feature.reportsText": "Точные drilldown-срезы, связанные с recovery-действиями",
+    "login.feature.installer": "Кабинет монтажника",
+    "login.feature.installerText": "Проект, расписание и continuity по проблемам в одном потоке",
+    "login.chip.adminCenter": "Командный центр администратора",
+    "login.chip.installerWorkspace": "Рабочее место монтажника",
+    "login.chip.recoveryReady": "Recovery-ready потоки",
+
+    "sidebar.commandLayer": "Командный слой",
+    "sidebar.commandText": "Живой контроль проектов, проблем, отчетов и каналов доставки.",
+    "sidebar.controlSurface": "Панель управления",
+    "sidebar.support": "Поддержка",
+    "sidebar.noAdminModules": "Для вашей роли нет доступных админ-модулей.",
+
+    "installerShell.workspace": "Рабочее место",
+    "installerShell.schedule": "Расписание",
+    "installerShell.webWorkspace": "Web-кабинет",
+    "installerShell.fieldView": "Приоритеты, проблемы, этажи и следующие действия в одном полевом интерфейсе.",
+    "installerShell.liveWorkspace": "Живое рабочее место монтажника",
+
+    "operations.eyebrow": "Операционный центр",
+    "operations.title": "Восстановление и видимость очередей в одном экране.",
+    "operations.subtitle":
+      "Ошибки импорта, риски доставки, дрейф webhook и нагрузка по синхронизации монтажников. Это экран оператора, который превращает сигналы в конкретные recovery-действия.",
+    "operations.onlyActionable": "Только действия",
+    "operations.actionable": "Действия",
+    "operations.actionableFocused": "Фокус",
+    "operations.actionableMixed": "Смешанный",
+    "operations.deliveryLane": "Канал доставки",
+    "operations.provider": "Провайдер",
+    "operations.dataFreshness": "Свежесть данных",
+    "operations.actionSummary": "Сводка действий",
+    "operations.deliveryDrilldown": "Разбор доставки",
+    "operations.error": "Не удалось загрузить данные operations. Проверь API и права администратора.",
+
+    "reports.eyebrow": "Исполнительная аналитика",
+    "reports.title": "Отчеты",
+    "reports.subtitle":
+      "Лимиты, доставка, давление очередей и аудит, собранные в аналитический экран операционного уровня.",
+    "reports.savePreset": "Сохранить пресет",
+    "reports.applyPreset": "Применить пресет",
+    "reports.deletePreset": "Удалить пресет",
+    "reports.savedPresets": "Сохраненные пресеты",
+    "reports.exportExecutiveCsv": "Экспорт Executive CSV",
+    "reports.markAllRead": "Отметить все прочитанным",
+
+    "projects.eyebrow": "Командная поверхность проекта",
+    "projects.title": "Проекты",
+    "projects.subtitle":
+      "Матрица этажей, восстановление импортов, давление по марже и готовность доставки в одном рабочем пространстве оператора.",
+    "projects.projectList": "Список проектов",
+    "projects.portfolioNavigator": "Навигатор портфеля",
+
+    "issues.eyebrow": "Центр управления проблемами",
+    "issues.title": "Проблемы",
+    "issues.subtitle": "Workflow проблем, владельцы и контроль SLA по срокам в одном операционном потоке.",
+
+    "journal.eyebrow": "Центр коммуникаций",
+    "journal.title": "Очередь журналов, каналы доставки и контроль повторной отправки",
+    "journal.subtitle":
+      "Управляйте коммуникацией с клиентом из одного места: создавайте черновики, переводите в ready, ставьте email и WhatsApp в очередь и восстанавливайте неудачные отправки.",
+
+    "installers.eyebrow": "Контур управления монтажниками",
+    "installers.title": "Монтажники",
+    "installers.subtitle": "Управление монтажниками, привязкой пользователей и ставками по типам дверей из одной операционной поверхности.",
+    "installers.addInstaller": "Добавить монтажника",
+
+    "installerWorkspace.eyebrow": "Полевой контроль",
+    "installerWorkspace.title": "Рабочее место монтажника",
+    "installerWorkspace.subtitle": "Назначенные проекты, текущие блокеры и самый быстрый следующий шаг в течение дня.",
+    "installerWorkspace.todayTasks": "Задачи на сегодня",
+    "installerWorkspace.todayPriorities": "Приоритеты на сегодня",
+    "installerWorkspace.myProjects": "Мои проекты",
+    "installerWorkspace.next7Days": "Следующие 7 дней",
+    "installerWorkspace.executionPulse": "Пульс исполнения",
+    "installerWorkspace.forwardView": "Вид вперед",
+    "installerWorkspace.error": "Не удалось загрузить рабочее место монтажника. Проверь API и права роли.",
+    "installerWorkspace.assignedProjects": "Назначенные проекты",
+    "installerWorkspace.problemProjects": "Проблемные проекты",
+    "installerWorkspace.completedProjects": "Завершенные проекты",
+    "installerWorkspace.openTodayTasks": "Открыть задачи на сегодня",
+    "installerWorkspace.openOverdueTasks": "Открыть просроченные задачи",
+    "installerWorkspace.openNoProjectTasks": "Открыть задачи без проекта",
+    "installerWorkspace.onlyProblem": "Только проблемные",
+    "installerWorkspace.onlyActive": "Только активные",
+    "installerWorkspace.hasTasksToday": "Есть задачи сегодня",
+    "installerWorkspace.noAssignedProjects": "Пока нет назначенных проектов.",
+    "installerWorkspace.noProjectsSelectedFilter": "Нет проектов под выбранный фильтр.",
+    "installerWorkspace.noEventsScheduled": "Событий не запланировано.",
+
+    "installerProject.eyebrow": "Пульт выполнения на объекте",
+    "installerProject.projectDetails": "Детали проекта",
+    "installerProject.backToWorkspace": "Назад в рабочее место",
+    "installerProject.openSchedule": "Открыть расписание",
+    "installerProject.openWaze": "Открыть Waze",
+    "installerProject.noWaze": "Маршрут Waze не настроен",
+    "installerProject.doorFilters": "Фильтры дверей",
+    "installerProject.addonFact": "Факт по доп. работам",
+    "installerProject.addonFacts": "Факты по доп. работам",
+    "installerProject.openIssues": "Открытые проблемы",
+    "installerProject.error": "Не удалось загрузить детали проекта.",
+    "installerProject.contextCopy":
+      "Переключайтесь между расписанием, triage по проблемам и фактами доп. работ без потери рабочего контекста двери.",
+
+    "installerSchedule.eyebrow": "Контроль времени монтажника",
+    "installerSchedule.title": "Мое расписание",
+    "installerSchedule.subtitle": "События монтажника, сервисное давление и контекст проекта, собранные для быстрой ежедневной работы.",
+    "installerSchedule.overdueOnly": "Только просроченные",
+    "installerSchedule.eventType": "Тип события",
+    "installerSchedule.resetFilters": "Сбросить фильтры",
+    "installerSchedule.exportCsv": "Экспорт CSV",
+    "installerSchedule.error": "Не удалось загрузить расписание монтажника.",
+    "installerSchedule.allTypes": "Все типы",
+    "installerSchedule.allProjects": "Все проекты",
+    "installerSchedule.noProject": "Без проекта",
+    "installerSchedule.next7Days": "Следующие 7 дней",
+    "installerSchedule.next30Days": "Следующие 30 дней",
+    "installerSchedule.mixedQueue": "Смешанная очередь",
+    "installerSchedule.overdueFocus": "Фокус на просроченных",
+  },
+  he: {
+    "language.english": "אנגלית",
+    "language.russian": "רוסית",
+    "language.hebrew": "עברית",
+
+    "nav.dashboard": "דשבורד",
+    "nav.projects": "פרויקטים",
+    "nav.issues": "תקלות",
+    "nav.installers": "מתקינים",
+    "nav.calendar": "יומן",
+    "nav.journal": "יומן מסירה",
+    "nav.doorTypes": "סוגי דלתות",
+    "nav.reasons": "סיבות",
+    "nav.reports": "דוחות",
+    "nav.operations": "אופרציה",
+    "nav.settings": "הגדרות",
+
+    "common.refresh": "רענון",
+    "common.refreshing": "מרענן...",
+    "common.search": "חיפוש",
+    "common.status": "סטטוס",
+    "common.project": "פרויקט",
+    "common.range": "טווח",
+    "common.today": "היום",
+    "common.overdue": "באיחור",
+    "common.all": "הכל",
+    "common.active": "פעיל",
+    "common.inactive": "לא פעיל",
+    "common.open": "פתח",
+    "common.retry": "נסה שוב",
+    "common.resetFilters": "איפוס מסננים",
+    "common.readOnly": "קריאה בלבד",
+    "common.manage": "ניהול",
+    "common.filtered": "מסונן",
+    "common.mode": "מצב",
+    "common.scope": "טווח",
+    "common.updated": "עודכן",
+    "common.signOut": "התנתק",
+    "common.portfolio": "פורטפוליו",
+
+    "login.eyebrow": "שכבת שליטה Dimax",
+    "login.title": "נבנה למפעילים, דיספצ'רים ומתקינים תחת לחץ בזמן אמת.",
+    "login.subtitle":
+      "מערכת אחת לסיכון פרויקטים, שחזור משלוחים, זרימת תקלות ועבודת שטח. מהירה מספיק לשליטה יומית ומסודרת מספיק לאופרציה בקנה מידה גדול.",
+    "login.admin": "DIMAX Admin",
+    "login.secureAccess": "גישה מאובטחת לאופרציה, דוחות וזרימות העבודה של המתקינים.",
+    "login.companyId": "מזהה חברה",
+    "login.email": "אימייל",
+    "login.password": "סיסמה",
+    "login.signIn": "כניסה",
+    "login.signingIn": "מתחבר...",
+    "login.usageHint": "השתמשו בפרטי הגישה של החברה כדי להיכנס לזרימת הניהול או המתקין.",
+    "login.accessAdminOnly": "הפאנל הזה זמין רק לתפקיד ADMIN.",
+    "login.accessInstallerOnly": "מרחב העבודה של המתקין זמין רק לתפקיד INSTALLER.",
+    "login.feature.operations": "אופרציה",
+    "login.feature.operationsText": "כשלים בייבוא, שחזור outbox, מצב סנכרון",
+    "login.feature.reports": "דוחות",
+    "login.feature.reportsText": "drilldown מדויק המחובר לפעולות recovery",
+    "login.feature.installer": "מרחב מתקין",
+    "login.feature.installerText": "פרויקט, לוח זמנים והמשכיות תקלות בזרימה אחת",
+    "login.chip.adminCenter": "מרכז שליטה אדמיני",
+    "login.chip.installerWorkspace": "מרחב מתקין",
+    "login.chip.recoveryReady": "זרימות recovery מוכנות",
+
+    "sidebar.commandLayer": "שכבת פיקוד",
+    "sidebar.commandText": "שליטה חיה על פרויקטים, תקלות, דוחות וערוצי מסירה.",
+    "sidebar.controlSurface": "משטח שליטה",
+    "sidebar.support": "תמיכה",
+    "sidebar.noAdminModules": "אין מודולי אדמין זמינים עבור התפקיד שלך.",
+
+    "installerShell.workspace": "מרחב עבודה",
+    "installerShell.schedule": "לו\"ז",
+    "installerShell.webWorkspace": "סביבת Web",
+    "installerShell.fieldView": "תצוגת שטח עם עדיפויות, תקלות, הקשרי קומות והפעולה הבאה.",
+    "installerShell.liveWorkspace": "מרחב עבודה חי למתקין",
+
+    "operations.eyebrow": "מרכז אופרציה",
+    "operations.title": "שחזור ונראות תורים במשטח אחד.",
+    "operations.subtitle":
+      "כשלים בייבוא, סיכוני משלוח, סטיות webhook ולחץ סנכרון מתקינים. זהו מסך המפעיל שהופך התרעות לפעולות recovery ממשיות.",
+    "operations.onlyActionable": "רק פעולות",
+    "operations.actionable": "פעולות",
+    "operations.actionableFocused": "ממוקד",
+    "operations.actionableMixed": "מעורב",
+    "operations.deliveryLane": "ערוץ משלוח",
+    "operations.provider": "ספק",
+    "operations.dataFreshness": "רעננות נתונים",
+    "operations.actionSummary": "סיכום פעולות",
+    "operations.deliveryDrilldown": "פירוק משלוחים",
+    "operations.error": "לא ניתן לטעון את נתוני האופרציה. בדקו API והרשאות אדמין.",
+
+    "reports.eyebrow": "משטח דיווח ניהולי",
+    "reports.title": "דוחות",
+    "reports.subtitle":
+      "מגבלות, משלוחים, לחץ תורים ונראות audit במסך החלטה ברמת אופרציה.",
+    "reports.savePreset": "שמור פריסט",
+    "reports.applyPreset": "החל פריסט",
+    "reports.deletePreset": "מחק פריסט",
+    "reports.savedPresets": "פריסטים שמורים",
+    "reports.exportExecutiveCsv": "ייצוא Executive CSV",
+    "reports.markAllRead": "סמן הכל כנקרא",
+
+    "projects.eyebrow": "משטח שליטה לפרויקטים",
+    "projects.title": "פרויקטים",
+    "projects.subtitle":
+      "מטריצת קומות, שחזור ייבוא, לחץ מרווח ומוכנות משלוח במרחב עבודה אחד למפעיל.",
+    "projects.projectList": "רשימת פרויקטים",
+    "projects.portfolioNavigator": "ניווט פורטפוליו",
+
+    "issues.eyebrow": "מרכז שליטה לתקלות",
+    "issues.title": "תקלות",
+    "issues.subtitle": "זרימת תקלות, בעלות ושליטה על SLA במסך אופרציה אחד.",
+
+    "journal.eyebrow": "מרכז תקשורת",
+    "journal.title": "תור יומנים, ערוצי משלוח ושליטה בשליחה חוזרת",
+    "journal.subtitle":
+      "שליטה בתקשורת הלקוח ממקום אחד: יצירת טיוטות, סימון כמוכן, תזמון משלוחי email ו-WhatsApp ושחזור שליחות שנכשלו.",
+
+    "installers.eyebrow": "שליטה ברשת המתקינים",
+    "installers.title": "מתקינים",
+    "installers.subtitle": "ניהול מתקינים, קישורי משתמש ותעריפים לפי סוג דלת ממשטח אופרציה פרימיום אחד.",
+    "installers.addInstaller": "הוסף מתקין",
+
+    "installerWorkspace.eyebrow": "שליטת שטח",
+    "installerWorkspace.title": "מרחב עבודה למתקין",
+    "installerWorkspace.subtitle": "פרויקטים משויכים, חסמים נוכחיים והצעד הבא המהיר ביותר לאורך היום.",
+    "installerWorkspace.todayTasks": "משימות להיום",
+    "installerWorkspace.todayPriorities": "עדיפויות להיום",
+    "installerWorkspace.myProjects": "הפרויקטים שלי",
+    "installerWorkspace.next7Days": "7 הימים הקרובים",
+    "installerWorkspace.executionPulse": "דופק ביצוע",
+    "installerWorkspace.forwardView": "מבט קדימה",
+    "installerWorkspace.error": "לא ניתן לטעון את מרחב העבודה של המתקין. בדקו API והרשאות תפקיד.",
+    "installerWorkspace.assignedProjects": "פרויקטים משויכים",
+    "installerWorkspace.problemProjects": "פרויקטים בעייתיים",
+    "installerWorkspace.completedProjects": "פרויקטים שהושלמו",
+    "installerWorkspace.openTodayTasks": "פתח משימות להיום",
+    "installerWorkspace.openOverdueTasks": "פתח משימות באיחור",
+    "installerWorkspace.openNoProjectTasks": "פתח משימות ללא פרויקט",
+    "installerWorkspace.onlyProblem": "רק בעייתיים",
+    "installerWorkspace.onlyActive": "רק פעילים",
+    "installerWorkspace.hasTasksToday": "יש משימות היום",
+    "installerWorkspace.noAssignedProjects": "עדיין אין פרויקטים משויכים.",
+    "installerWorkspace.noProjectsSelectedFilter": "אין פרויקטים למסנן שנבחר.",
+    "installerWorkspace.noEventsScheduled": "אין אירועים מתוזמנים.",
+
+    "installerProject.eyebrow": "קוקפיט ביצוע בשטח",
+    "installerProject.projectDetails": "פרטי פרויקט",
+    "installerProject.backToWorkspace": "חזרה למרחב העבודה",
+    "installerProject.openSchedule": "פתח לו\"ז",
+    "installerProject.openWaze": "פתח Waze",
+    "installerProject.noWaze": "מסלול Waze לא הוגדר",
+    "installerProject.doorFilters": "מסנני דלתות",
+    "installerProject.addonFact": "ביצוע תוספת",
+    "installerProject.addonFacts": "ביצועי תוספות",
+    "installerProject.openIssues": "תקלות פתוחות",
+    "installerProject.error": "לא ניתן לטעון את פרטי הפרויקט.",
+    "installerProject.contextCopy":
+      "עברו בין לוח הזמנים, triage תקלות ותיעוד תוספות בלי לאבד את הקשר הדלת הפעילה.",
+
+    "installerSchedule.eyebrow": "שליטה בזמן המתקין",
+    "installerSchedule.title": "הלוח שלי",
+    "installerSchedule.subtitle": "אירועי מתקין, לחץ שירות והקשר פרויקט מסודרים לביצוע יומי מהיר.",
+    "installerSchedule.overdueOnly": "רק באיחור",
+    "installerSchedule.eventType": "סוג אירוע",
+    "installerSchedule.resetFilters": "איפוס מסננים",
+    "installerSchedule.exportCsv": "ייצוא CSV",
+    "installerSchedule.error": "לא ניתן לטעון את לוח הזמנים של המתקין.",
+    "installerSchedule.allTypes": "כל הסוגים",
+    "installerSchedule.allProjects": "כל הפרויקטים",
+    "installerSchedule.noProject": "ללא פרויקט",
+    "installerSchedule.next7Days": "7 הימים הקרובים",
+    "installerSchedule.next30Days": "30 הימים הקרובים",
+    "installerSchedule.mixedQueue": "תור מעורב",
+    "installerSchedule.overdueFocus": "פוקוס באיחור",
+  },
+};
+
+const localeMeta: Record<Locale, { label: string; dir: "ltr" | "rtl" }> = {
+  en: { label: "EN", dir: "ltr" },
+  ru: { label: "RU", dir: "ltr" },
+  he: { label: "עב", dir: "rtl" },
+};
+
+type I18nContextValue = {
+  locale: Locale;
+  setLocale: (locale: Locale) => void;
+  t: (key: string) => string;
+  dir: "ltr" | "rtl";
+};
+
+const I18nContext = createContext<I18nContextValue>({
+  locale: "en",
+  setLocale: () => {},
+  t: (key) => messages.en[key] || key,
+  dir: "ltr",
+});
+
+function isLocale(value: string | null): value is Locale {
+  return value === "en" || value === "ru" || value === "he";
+}
+
+function detectInitialLocale(): Locale {
+  if (typeof window === "undefined") {
+    return "en";
+  }
+  const stored = window.localStorage.getItem(STORAGE_KEY);
+  if (isLocale(stored)) {
+    return stored;
+  }
+  const browser = window.navigator.language.toLowerCase();
+  if (browser.startsWith("ru")) {
+    return "ru";
+  }
+  if (browser.startsWith("he") || browser.startsWith("iw")) {
+    return "he";
+  }
+  return "en";
+}
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [locale, setLocale] = useState<Locale>("en");
+
+  useEffect(() => {
+    setLocale(detectInitialLocale());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(STORAGE_KEY, locale);
+    document.documentElement.lang = locale;
+    document.documentElement.dir = localeMeta[locale].dir;
+  }, [locale]);
+
+  const value = useMemo<I18nContextValue>(
+    () => ({
+      locale,
+      setLocale,
+      dir: localeMeta[locale].dir,
+      t: (key: string) => messages[locale][key] || messages.en[key] || key,
+    }),
+    [locale]
+  );
+
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+}
+
+export function useI18n(): I18nContextValue {
+  return useContext(I18nContext);
+}
+
+export const languageOptions = (Object.keys(localeMeta) as Locale[]).map((locale) => ({
+  locale,
+  shortLabel: localeMeta[locale].label,
+  fullLabel:
+    messages[locale][
+      `language.${locale === "en" ? "english" : locale === "ru" ? "russian" : "hebrew"}`
+    ],
+}));

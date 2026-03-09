@@ -22,6 +22,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useUserRole } from "@/hooks/use-user-role";
 import { apiFetch } from "@/lib/api";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type ProjectListItem = {
@@ -284,6 +285,7 @@ function SectionMessage({
 
 export default function JournalPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const role = useUserRole();
   const canManage = canRunPrivilegedAdminActions(role);
 
@@ -816,13 +818,12 @@ export default function JournalPage() {
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="flex flex-col gap-4 border-b border-border/70 pb-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <div className="page-eyebrow">Communications Center</div>
+              <div className="page-eyebrow">{t("journal.eyebrow")}</div>
               <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-card-foreground sm:text-4xl">
-                Journal queue, delivery channels and resend control
+                {t("journal.title")}
               </h1>
               <p className="mt-3 max-w-3xl text-[14px] leading-7 text-muted-foreground">
-                Control customer communication from one place: create journal drafts, mark them
-                ready, queue email and WhatsApp delivery, and recover failed sends from outbox.
+                {t("journal.subtitle")}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="metric-chip">Journals {journalSummary.total}</span>
@@ -836,7 +837,7 @@ export default function JournalPage() {
                 className="btn-premium rounded-xl px-4 py-2 text-[12px] font-medium"
               >
                 <RefreshCw className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                Refresh
+                {t("common.refresh")}
               </button>
               <button
                 onClick={() => selectedJournalId && router.push(`/journal/${selectedJournalId}`)}

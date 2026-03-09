@@ -14,6 +14,7 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { apiFetch } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type ProjectListItem = {
@@ -493,6 +494,7 @@ function chunkIds(values: string[], size: number): string[][] {
 }
 
 export default function ProjectsPage() {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [doorTypes, setDoorTypes] = useState<DoorType[]>([]);
@@ -1575,13 +1577,12 @@ export default function ProjectsPage() {
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl">
-              <div className="page-eyebrow">Project command surface</div>
+              <div className="page-eyebrow">{t("projects.eyebrow")}</div>
               <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
-                Projects
+                {t("projects.title")}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
-                Floor matrix, import recovery, margin pressure and delivery readiness in one
-                operator-grade workspace.
+                {t("projects.subtitle")}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="metric-chip">Projects {projects.length}</span>
@@ -1623,7 +1624,7 @@ export default function ProjectsPage() {
                   className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium"
                 >
                   <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
-                  Refresh
+                  {t("common.refresh")}
                 </button>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
@@ -1674,9 +1675,9 @@ export default function ProjectsPage() {
           <section className="surface-panel xl:col-span-1">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <div className="page-eyebrow">Project list</div>
+                <div className="page-eyebrow">{t("projects.projectList")}</div>
                 <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
-                  Portfolio navigator
+                  {t("projects.portfolioNavigator")}
                 </h2>
               </div>
               <div className="text-right text-[12px] text-muted-foreground">

@@ -20,6 +20,7 @@ import {
 import { useUserRole } from "@/hooks/use-user-role";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 
 type SyncHealthSummaryResponse = {
   max_cursor: number;
@@ -382,6 +383,7 @@ function extractBatchOutboxIds(result: OperationsBatchResult | null): string[] {
 }
 
 export default function OperationsPage() {
+  const { t } = useI18n();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const userRole = useUserRole();
@@ -974,13 +976,12 @@ export default function OperationsPage() {
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl">
-              <div className="page-eyebrow">Operations Center</div>
+              <div className="page-eyebrow">{t("operations.eyebrow")}</div>
               <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl">
-                Recovery and queue visibility in one surface.
+                {t("operations.title")}
               </h1>
               <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">
-                Import failures, delivery risk, webhook drift and installer sync pressure.
-                This is the operator view that turns alerts into concrete recovery steps.
+                {t("operations.subtitle")}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="metric-chip">Actionable-only view</span>
@@ -992,26 +993,26 @@ export default function OperationsPage() {
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    Actionable
+                    {t("operations.actionable")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
-                    {onlyActionable ? "Focused" : "Mixed"}
+                    {onlyActionable ? t("operations.actionableFocused") : t("operations.actionableMixed")}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    Delivery lane
+                    {t("operations.deliveryLane")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
-                    {deliveryChannelFilter || "All"}
+                    {deliveryChannelFilter || t("common.all")}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    Provider
+                    {t("operations.provider")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
-                    {webhookProviderFilter || "All"}
+                    {webhookProviderFilter || t("common.all")}
                   </div>
                 </div>
               </div>
@@ -1032,7 +1033,7 @@ export default function OperationsPage() {
                   aria-pressed={onlyActionable}
                   className="inline-flex h-11 items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted aria-[pressed=true]:border-accent aria-[pressed=true]:bg-[hsl(var(--accent)/0.12)] aria-[pressed=true]:text-accent"
                 >
-                  Only actionable
+                  {t("operations.onlyActionable")}
                 </button>
                 <button
                   type="button"
@@ -1043,7 +1044,7 @@ export default function OperationsPage() {
                   disabled={isRefreshing}
                 >
                   <RefreshCcw className="h-4 w-4" />
-                  {isRefreshing ? "Refreshing..." : "Refresh"}
+                  {isRefreshing ? t("common.refreshing") : t("common.refresh")}
                 </button>
               </div>
             </div>
@@ -1052,7 +1053,7 @@ export default function OperationsPage() {
 
         {hasError && (
           <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
-            Failed to load operations data. Check API availability and admin permissions.
+            {t("operations.error")}
           </div>
         )}
         {actionFeedback && (
@@ -1088,7 +1089,7 @@ export default function OperationsPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Data Freshness
+                {t("operations.dataFreshness")}
               </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
                 {formatRefreshTimestamp(freshnessTimestamp)}
@@ -1123,7 +1124,7 @@ export default function OperationsPage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Action Summary
+                {t("operations.actionSummary")}
               </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
                 Highest-value actions from imports, outbox and sync in one view.
@@ -1206,7 +1207,7 @@ export default function OperationsPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Delivery Drilldown
+                {t("operations.deliveryDrilldown")}
               </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
                 Exact channel and provider lanes for delivery failures and webhook diagnostics.
