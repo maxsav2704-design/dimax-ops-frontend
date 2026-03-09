@@ -497,27 +497,27 @@ export default function InstallersPage() {
                 {t("installers.subtitle")}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="metric-chip">Total {metrics.total}</span>
-                <span className="metric-chip">Active {metrics.active}</span>
-                <span className="metric-chip">Rate controls</span>
+                <span className="metric-chip">{t("installers.total")} {metrics.total}</span>
+                <span className="metric-chip">{t("common.active")} {metrics.active}</span>
+                <span className="metric-chip">{t("installers.rateControls")}</span>
               </div>
             </div>
             <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Scope</div>
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{t("installers.scope")}</div>
                   <div className="mt-1 text-lg font-semibold text-foreground">{statusFilter}</div>
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Search</div>
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{t("installers.searchLabel")}</div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
-                    {search.trim() ? "Filtered" : "Portfolio"}
+                    {search.trim() ? t("common.filtered") : t("common.portfolio")}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Mode</div>
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{t("common.mode")}</div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
-                    {canManageInstallers ? "Manage" : "Read only"}
+                    {canManageInstallers ? t("common.manage") : t("common.readOnly")}
                   </div>
                 </div>
               </div>
@@ -555,7 +555,7 @@ export default function InstallersPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search installer..."
+              placeholder={t("installers.searchPlaceholder")}
               className="h-10 w-full rounded-xl border border-border/70 bg-background/80 pl-9 pr-3 text-[13px]"
             />
           </div>
@@ -568,7 +568,7 @@ export default function InstallersPage() {
                 : "bg-background/70 border-border/70 text-muted-foreground"
             )}
           >
-            All
+            {t("common.all")}
           </button>
           <button
             onClick={() => setStatusFilter("active")}
@@ -579,7 +579,7 @@ export default function InstallersPage() {
                 : "bg-background/70 border-border/70 text-muted-foreground"
             )}
           >
-            Active
+            {t("common.active")}
           </button>
           <button
             onClick={() => setStatusFilter("inactive")}
@@ -590,26 +590,26 @@ export default function InstallersPage() {
                 : "bg-background/70 border-border/70 text-muted-foreground"
             )}
           >
-            Inactive
+            {t("common.inactive")}
           </button>
         </div>
 
         {hasError && (
           <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>Failed to load installers data.</span>
+            <span>{t("installers.error")}</span>
           </div>
         )}
         {!canManageInstallers && (
           <div className="mb-4 rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))]">
-            Installer role has read-only access to installers and rates.
+            {t("installers.readOnlyNotice")}
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {installersQuery.isLoading && (
             <div className="surface-panel text-[13px] text-muted-foreground">
-              Loading installers...
+              {t("installers.loading")}
             </div>
           )}
           {!installersQuery.isLoading && installers.length === 0 && (
@@ -617,7 +617,7 @@ export default function InstallersPage() {
               <div className="flex items-center justify-center mb-2">
                 <UserRound className="w-5 h-5" />
               </div>
-              No installers found.
+              {t("installers.empty")}
             </div>
           )}
           {installers.map((installer) => (
@@ -637,7 +637,7 @@ export default function InstallersPage() {
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
           <div className="w-full max-w-[760px] rounded-xl border border-border bg-card p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[16px] font-semibold">Create Installer</h2>
+              <h2 className="text-[16px] font-semibold">{t("installers.createInstaller")}</h2>
               <button
                 onClick={() => setIsCreateOpen(false)}
                 className="h-8 px-3 rounded-md border border-border text-[12px]"
