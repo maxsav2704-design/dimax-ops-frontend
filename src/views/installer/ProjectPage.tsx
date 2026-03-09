@@ -528,16 +528,16 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               {details?.name || t("installerProject.projectDetails")}
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
-              {details?.address || "No address"} | Status: {details?.status || "--"}
+              {details?.address || t("installerProject.noAddress")} | {t("installerProject.statusPrefix")}: {details?.status || "--"}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className="metric-chip">Doors {details?.doors.length ?? "--"}</span>
-              <span className="metric-chip">Visible {details ? filteredDoors.length : "--"}</span>
+              <span className="metric-chip">{t("installerProject.doors")} {details?.doors.length ?? "--"}</span>
+              <span className="metric-chip">{t("installerProject.visible")} {details ? filteredDoors.length : "--"}</span>
               <span className="metric-chip">
-                Issues {details?.issues_open.length ?? "--"}
+                {t("installerProject.issues")} {details?.issues_open.length ?? "--"}
               </span>
               <span className="metric-chip">
-                Updated {details?.server_time ? formatDate(details.server_time) : "--"}
+                {t("common.updated")} {details?.server_time ? formatDate(details.server_time) : "--"}
               </span>
             </div>
           </div>
@@ -605,7 +605,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
 
       {detailsQuery.isLoading && (
         <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-          Loading project...
+          {t("installerProject.projectDetails")}...
         </div>
       )}
 
@@ -613,11 +613,11 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
         <>
           <section className="grid gap-4 md:grid-cols-4">
             <div className="surface-panel">
-              <div className="text-sm text-muted-foreground">Doors total</div>
+              <div className="text-sm text-muted-foreground">{t("installerProject.doorsTotal")}</div>
               <div className="mt-1 text-2xl font-semibold">{details.doors.length}</div>
             </div>
             <div className="surface-panel">
-              <div className="text-sm text-muted-foreground">Visible by filters</div>
+              <div className="text-sm text-muted-foreground">{t("installerProject.visibleByFilters")}</div>
               <div className="mt-1 text-2xl font-semibold">{filteredDoors.length}</div>
             </div>
             <div className="surface-panel">
@@ -625,7 +625,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               <div className="mt-1 text-2xl font-semibold">{details.issues_open.length}</div>
             </div>
             <div className="surface-panel">
-              <div className="text-sm text-muted-foreground">Last update</div>
+              <div className="text-sm text-muted-foreground">{t("installerProject.lastUpdate")}</div>
               <div className="mt-1 text-sm font-medium">{formatDate(details.server_time)}</div>
             </div>
           </section>
@@ -645,17 +645,17 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   }
                   className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Reset door filters
+                  {t("installerProject.resetDoorFilters")}
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
                 {(
                   [
-                    ["ALL", "All"],
-                    ["NOT_INSTALLED", "Not installed"],
-                    ["INSTALLED", "Installed"],
-                    ["WITH_ISSUES", "With issues"],
-                    ["LOCKED", "Locked"],
+                    ["ALL", t("common.all")],
+                    ["NOT_INSTALLED", t("installerProject.notInstalled")],
+                    ["INSTALLED", t("installerProject.installed")],
+                    ["WITH_ISSUES", t("installerProject.withIssues")],
+                    ["LOCKED", t("installerProject.locked")],
                   ] as Array<[DoorQuickFilter, string]>
                 ).map(([value, label]) => {
                   const active = doorQuickFilter === value;
@@ -677,7 +677,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 })}
               </div>
               <label className="block">
-                <span className="text-xs text-muted-foreground">Quick search</span>
+                <span className="text-xs text-muted-foreground">{t("installerProject.quickSearch")}</span>
                 <input
                   value={doorSearch}
                   onChange={(event) => setDoorSearch(event.target.value)}
@@ -686,13 +686,13 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 />
               </label>
               <label className="block">
-                <span className="text-xs text-muted-foreground">Order number</span>
+                <span className="text-xs text-muted-foreground">{t("installerProject.orderNumber")}</span>
                 <select
                   value={orderFilter}
                   onChange={(event) => setOrderFilter(event.target.value)}
                   className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
                 >
-                  <option value="ALL">All orders</option>
+                  <option value="ALL">{t("installerProject.allOrders")}</option>
                   {orderOptions.map((value) => (
                     <option key={value} value={value}>
                       {value}
@@ -701,13 +701,13 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 </select>
               </label>
               <label className="block">
-                <span className="text-xs text-muted-foreground">Location code</span>
+                <span className="text-xs text-muted-foreground">{t("installerProject.locationCode")}</span>
                 <select
                   value={locationFilter}
                   onChange={(event) => setLocationFilter(event.target.value)}
                   className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
                 >
-                  <option value="ALL">All locations</option>
+                  <option value="ALL">{t("installerProject.allLocations")}</option>
                   {locationOptions.map((value) => (
                     <option key={value} value={value}>
                       {value}
@@ -723,7 +723,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 {t("installerProject.addonFact")}
               </h2>
               <label className="block">
-                <span className="text-xs text-muted-foreground">Add-on type</span>
+                <span className="text-xs text-muted-foreground">{t("installerProject.addonType")}</span>
                 <select
                   value={activeAddonTypeId}
                   onChange={(event) => setSelectedAddonTypeId(event.target.value)}
@@ -738,7 +738,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 </select>
               </label>
               <label className="block">
-                <span className="text-xs text-muted-foreground">Qty done</span>
+                <span className="text-xs text-muted-foreground">{t("installerProject.qtyDone")}</span>
                 <input
                   value={addonQtyDone}
                   onChange={(event) => setAddonQtyDone(event.target.value)}
@@ -747,7 +747,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 />
               </label>
               <label className="block">
-                <span className="text-xs text-muted-foreground">Comment</span>
+                <span className="text-xs text-muted-foreground">{t("installerProject.comment")}</span>
                 <textarea
                   value={addonComment}
                   onChange={(event) => setAddonComment(event.target.value)}
@@ -767,7 +767,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 }}
                 className="inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Queue add-on fact
+                {t("installerProject.queueAddonFact")}
               </button>
             </div>
           </section>
@@ -777,8 +777,8 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               <div>
                 <h2 className="text-lg font-semibold">{t("installerProject.openIssues")}</h2>
                 <div className="text-sm text-muted-foreground">
-                  Visible issues {filteredIssues.length} / {details.issues_open.length}
-                  {activeIssueFilterCount > 0 ? ` | Active filters ${activeIssueFilterCount}` : ""}
+                  {t("installerProject.visibleIssues")} {filteredIssues.length} / {details.issues_open.length}
+                  {activeIssueFilterCount > 0 ? ` | ${t("installerProject.activeFilters")} ${activeIssueFilterCount}` : ""}
                 </div>
                 {issueStatusCounts.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
@@ -810,12 +810,12 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                     onClick={focusIssueDoorsList}
                     className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted"
                   >
-                    Show issue doors
+                    {t("installerProject.showIssueDoors")}
                   </button>
                   <input
                     value={issueSearch}
                     onChange={(event) => setIssueSearch(event.target.value)}
-                    placeholder="Issue, details, door"
+                    placeholder={t("installerProject.issueSearchPlaceholder")}
                     className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
                   />
                   <select
@@ -824,7 +824,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                     onChange={(event) => setIssueStatusFilter(event.target.value)}
                     className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
                   >
-                    <option value="ALL">All statuses</option>
+                    <option value="ALL">{t("installerProject.allStatuses")}</option>
                     {issueStatusOptions.map((status) => (
                       <option key={status} value={status}>
                         {status}
@@ -837,19 +837,19 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                     disabled={activeIssueFilterCount === 0}
                     className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Reset issue filters
+                    {t("installerProject.resetIssueFilters")}
                   </button>
                 </div>
               )}
             </div>
             {details.issues_open.length === 0 && (
               <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-                No open issues.
+                {t("installerProject.noOpenIssues")}
               </div>
             )}
             {details.issues_open.length > 0 && filteredIssues.length === 0 && (
               <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-                No issues match current filters.
+                {t("installerProject.noIssuesForFilters")}
               </div>
             )}
             {filteredIssues.map((issue) => {
@@ -862,7 +862,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <div className="text-sm font-medium text-amber-300">
-                      {issue.title || "Issue"}
+                      {issue.title || t("installerProject.issueFallback")}
                     </div>
                     <div className="mt-1 text-xs text-amber-100/80">
                       Door {relatedDoor?.unit_label || issue.door_id}
@@ -873,7 +873,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   </span>
                 </div>
                 <div className="mt-2 text-sm text-amber-100/80">
-                  {issue.details || "No details"}
+                  {issue.details || t("installerProject.noDetails")}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-3 text-xs">
                   {relatedDoor ? (
@@ -893,7 +893,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                       </a>
                     </>
                   ) : (
-                    <span className="text-amber-100/70">Related door missing</span>
+                    <span className="text-amber-100/70">{t("installerProject.relatedDoorMissing")}</span>
                   )}
                 </div>
               </div>
@@ -907,11 +907,11 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-4 text-sm">
                 <div>
-                  Visible doors: <span className="font-semibold">{filteredDoors.length}</span> /{" "}
+                  {t("installerProject.visibleDoors")}: <span className="font-semibold">{filteredDoors.length}</span> /{" "}
                   <span className="font-semibold">{details.doors.length}</span>
                 </div>
                 <div>
-                  Active filters: <span className="font-semibold">{activeDoorFilterCount}</span>
+                  {t("installerProject.activeFilters")}: <span className="font-semibold">{activeDoorFilterCount}</span>
                 </div>
                 <div>
                   {t("installerProject.openIssues")}: <span className="font-semibold">{details.issues_open.length}</span>
@@ -922,13 +922,13 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   href="#project-doors"
                   className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted"
                 >
-                  Doors
+                  {t("installerProject.doorsSection")}
                 </a>
                 <a
                   href="#project-open-issues"
                   className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted"
                 >
-                  Issues
+                  {t("installerProject.openIssues")}
                 </a>
                 <a
                   href="#project-add-on-fact"
@@ -942,7 +942,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   disabled={activeDoorFilterCount === 0}
                   className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Reset all door filters
+                  {t("installerProject.resetAllDoorFilters")}
                 </button>
               </div>
             </div>
@@ -950,7 +950,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               <div className="mt-3 space-y-2 border-t border-border/70 pt-3">
                 {floorJumpTargets.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-muted-foreground">Jump to floor:</span>
+                    <span className="text-muted-foreground">{t("installerProject.jumpToFloor")}:</span>
                     {floorJumpTargets.map((target) => (
                       <a
                         key={target.href}
@@ -964,7 +964,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 )}
                 {issueDoorJumpTargets.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-muted-foreground">Issue doors:</span>
+                    <span className="text-muted-foreground">{t("installerProject.issueDoors")}:</span>
                     {issueDoorJumpTargets.map((door) => (
                       <a
                         key={door.id}
@@ -978,7 +978,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 )}
                 {priorityDoors.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-muted-foreground">Priority doors:</span>
+                    <span className="text-muted-foreground">{t("installerProject.priorityDoors")}:</span>
                     {priorityDoors.map((door) => (
                       <span
                         key={door.id}
@@ -1010,10 +1010,10 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
           </section>
 
           <section id="project-doors" className="space-y-3">
-            <h2 className="text-lg font-semibold">Doors</h2>
+            <h2 className="text-lg font-semibold">{t("installerProject.doorsSection")}</h2>
             {doorsByFloor.length === 0 && (
               <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-                No doors for selected filters.
+                {t("installerProject.noDoorsForFilters")}
               </div>
             )}
             {doorsByFloor.map(([floor, doors]) => (
@@ -1022,7 +1022,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 id={`project-floor-${toAnchorId(floor)}`}
                 className="space-y-3 rounded-xl border border-border bg-card p-4"
               >
-                <div className="text-sm font-semibold">Floor: {floor}</div>
+                <div className="text-sm font-semibold">{t("installerProject.floor")}: {floor}</div>
                 <div className="space-y-2">
                   {doors.map((door) => (
                     <div
@@ -1034,8 +1034,8 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                         <div>
                           <div className="font-medium">{door.unit_label}</div>
                           <div className="mt-1 text-xs text-muted-foreground">
-                            Order {door.order_number || "-"} | Apartment{" "}
-                            {door.apartment_number || "-"} | Location{" "}
+                            {t("installerProject.orderNumber")} {door.order_number || "-"} | {t("installerProject.apartment")}{" "}
+                            {door.apartment_number || "-"} | {t("installerProject.location")}{" "}
                             {door.location_code || "-"}
                           </div>
                         </div>
@@ -1061,7 +1061,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                           value={notInstalledComment}
                           onChange={(event) => setNotInstalledComment(event.target.value)}
                           className="h-9 rounded-lg border border-border bg-background px-2 text-xs"
-                          placeholder="Comment for NOT_INSTALLED"
+                          placeholder={t("installerProject.commentForNotInstalled")}
                         />
                         <button
                           type="button"
@@ -1069,7 +1069,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                           onClick={() => installMutation.mutate(door.id)}
                           className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Installed
+                          {t("installerProject.installed")}
                         </button>
                         <button
                           type="button"
@@ -1083,7 +1083,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                           }
                           className="rounded-lg border border-border bg-muted px-3 py-2 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Not installed
+                          {t("installerProject.notInstalled")}
                         </button>
                       </div>
                     </div>
@@ -1095,9 +1095,9 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
 
           <section className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-2 rounded-xl border border-border bg-card p-4">
-              <h2 className="text-lg font-semibold">Add-on plan</h2>
+              <h2 className="text-lg font-semibold">{t("installerProject.addonPlan")}</h2>
               {details.addons.plan.length === 0 && (
-                <div className="text-sm text-muted-foreground">No add-on plans.</div>
+                <div className="text-sm text-muted-foreground">{t("installerProject.noAddonPlans")}</div>
               )}
               {details.addons.plan.map((item) => {
                 const addonName =
@@ -1107,7 +1107,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   <div key={item.addon_type_id} className="rounded-lg border border-border p-3">
                     <div className="text-sm font-medium">{addonName}</div>
                     <div className="text-xs text-muted-foreground">
-                      Planned qty: {item.qty_planned} | Installer price: {item.installer_price}
+                      {t("installerProject.plannedQty")}: {item.qty_planned} | {t("installerProject.installerPrice")}: {item.installer_price}
                     </div>
                   </div>
                 );
@@ -1117,7 +1117,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
             <div className="space-y-2 rounded-xl border border-border bg-card p-4">
               <h2 className="text-lg font-semibold">{t("installerProject.addonFacts")}</h2>
               {details.addons.facts.length === 0 && (
-                <div className="text-sm text-muted-foreground">No submitted add-on facts.</div>
+                <div className="text-sm text-muted-foreground">{t("installerProject.noAddonFacts")}</div>
               )}
               {details.addons.facts.map((fact) => {
                 const addonName =
@@ -1126,10 +1126,10 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                 return (
                   <div key={fact.id} className="rounded-lg border border-border p-3">
                     <div className="text-sm font-medium">
-                      {addonName} | Qty {fact.qty_done}
+                      {addonName} | {t("installerProject.qty")} {fact.qty_done}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {formatDate(fact.done_at)} | Source {fact.source}
+                      {formatDate(fact.done_at)} | {t("installerProject.source")} {fact.source}
                     </div>
                     {fact.comment && (
                       <div className="mt-1 text-xs text-muted-foreground">{fact.comment}</div>

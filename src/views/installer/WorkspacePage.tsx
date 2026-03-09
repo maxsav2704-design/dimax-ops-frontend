@@ -255,7 +255,7 @@ export default function InstallerWorkspacePage() {
       items.push({
         id: key,
         title: project.name,
-        meta: `Problem project${project.address ? ` | ${project.address}` : ""}`,
+        meta: `${t("installerWorkspace.problemProject")}${project.address ? ` | ${project.address}` : ""}`,
         href: `/installer/projects/${project.id}`,
         tone: "problem",
       });
@@ -345,7 +345,7 @@ export default function InstallerWorkspacePage() {
               {t("installerWorkspace.subtitle")}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className="metric-chip">Priority doors</span>
+              <span className="metric-chip">{t("installerWorkspace.priorityDoors")}</span>
               <span className="metric-chip">Issue continuity</span>
               <span className="metric-chip">Today schedule</span>
             </div>
@@ -604,13 +604,13 @@ export default function InstallerWorkspacePage() {
                   href={`/installer/calendar?preset=today&project_id=${project.id}`}
                   className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
-                  Today on project
+                  {t("installerWorkspace.todayOnProject")}
                 </Link>
                 <Link
                   href={`/installer/projects/${project.id}#project-doors`}
                   className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
-                  Priority doors
+                  {t("installerWorkspace.priorityDoors")}
                 </Link>
                 {project.status === "PROBLEM" && (
                   <Link

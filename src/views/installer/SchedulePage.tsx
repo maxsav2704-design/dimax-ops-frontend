@@ -272,9 +272,9 @@ export default function InstallerSchedulePage() {
             </select>
               </label>
               <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Project</span>
+            <span>{t("common.project")}</span>
             <select
-              aria-label="Project"
+              aria-label={t("common.project")}
               value={projectFilter}
               onChange={(event) => setProjectFilter(event.target.value)}
               className="h-10 rounded-xl border border-border/70 bg-background/80 px-2 text-sm text-foreground"
@@ -289,9 +289,9 @@ export default function InstallerSchedulePage() {
             </select>
               </label>
               <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Range</span>
+            <span>{t("installerSchedule.range")}</span>
             <select
-              aria-label="Range"
+              aria-label={t("installerSchedule.range")}
               value={preset}
               onChange={(event) => setPreset(event.target.value as RangePreset)}
               className="h-10 rounded-xl border border-border/70 bg-background/80 px-2 text-sm text-foreground"
@@ -360,13 +360,13 @@ export default function InstallerSchedulePage() {
       )}
       {!eventsQuery.isLoading && events.length > 0 && filteredEvents.length === 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-          <span>No events match current filters.</span>
+          <span>{t("installerSchedule.noEventsForFilters")}</span>
           <button
             type="button"
             onClick={resetFilters}
             className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
           >
-            Reset filters
+                {t("installerSchedule.resetFilters")}
           </button>
         </div>
       )}
@@ -386,7 +386,7 @@ export default function InstallerSchedulePage() {
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
               <span className="rounded-md border border-border px-2 py-1 text-foreground">
-                {event.project_id ? `Project ${event.project_id}` : "No project"}
+                {event.project_id ? `${t("installerSchedule.projectPrefix")} ${event.project_id}` : t("installerSchedule.noProject")}
               </span>
               {event.project_id && (
                 <>
