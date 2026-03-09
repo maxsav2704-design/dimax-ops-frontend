@@ -510,41 +510,65 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link
-            href="/installer"
-            className="mb-2 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to workspace
-          </Link>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {details?.name || "Project details"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {details?.address || "No address"} | Status: {details?.status || "--"}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/installer/calendar?project_id=${projectId}`}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted"
-          >
-            Open schedule
-          </Link>
-          {details?.waze_url ? (
-            <a
-              href={details.waze_url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted"
+      <section className="page-hero relative overflow-hidden">
+        <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
+        <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-3xl">
+            <Link
+              href="/installer"
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              Open Waze
-            </a>
-          ) : null}
+              <ArrowLeft className="h-4 w-4" />
+              Back to workspace
+            </Link>
+            <div className="page-eyebrow mt-4">Field execution cockpit</div>
+            <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
+              {details?.name || "Project details"}
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
+              {details?.address || "No address"} | Status: {details?.status || "--"}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="metric-chip">Doors {details?.doors.length ?? "--"}</span>
+              <span className="metric-chip">Visible {details ? filteredDoors.length : "--"}</span>
+              <span className="metric-chip">
+                Issues {details?.issues_open.length ?? "--"}
+              </span>
+              <span className="metric-chip">
+                Updated {details?.server_time ? formatDate(details.server_time) : "--"}
+              </span>
+            </div>
+          </div>
+          <div className="surface-subtle min-w-[280px] max-w-xl space-y-4 p-4 sm:p-5">
+            <div className="text-[12px] leading-5 text-muted-foreground">
+              Move between the live schedule, issue triage and add-on facts without losing the
+              working door context.
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Link
+                href={`/installer/calendar?project_id=${projectId}`}
+                className="btn-premium justify-center rounded-xl px-4 py-3 text-sm font-medium"
+              >
+                Open schedule
+              </Link>
+              {details?.waze_url ? (
+                <a
+                  href={details.waze_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center rounded-xl border border-border/70 bg-background/75 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                >
+                  Open Waze
+                </a>
+              ) : (
+                <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-4 py-3 text-sm text-muted-foreground">
+                  Waze route not configured
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
       {detailsQuery.isError && (
         <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
@@ -587,26 +611,26 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
       {details && (
         <>
           <section className="grid gap-4 md:grid-cols-4">
-            <div className="rounded-xl border border-border bg-card p-4">
+            <div className="surface-panel">
               <div className="text-sm text-muted-foreground">Doors total</div>
               <div className="mt-1 text-2xl font-semibold">{details.doors.length}</div>
             </div>
-            <div className="rounded-xl border border-border bg-card p-4">
+            <div className="surface-panel">
               <div className="text-sm text-muted-foreground">Visible by filters</div>
               <div className="mt-1 text-2xl font-semibold">{filteredDoors.length}</div>
             </div>
-            <div className="rounded-xl border border-border bg-card p-4">
+            <div className="surface-panel">
               <div className="text-sm text-muted-foreground">Open issues</div>
               <div className="mt-1 text-2xl font-semibold">{details.issues_open.length}</div>
             </div>
-            <div className="rounded-xl border border-border bg-card p-4">
+            <div className="surface-panel">
               <div className="text-sm text-muted-foreground">Last update</div>
               <div className="mt-1 text-sm font-medium">{formatDate(details.server_time)}</div>
             </div>
           </section>
 
           <section className="grid gap-4 lg:grid-cols-2">
-            <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+            <div className="surface-panel space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-lg font-semibold">Door filters</h2>
                 <button
@@ -692,7 +716,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               </label>
             </div>
 
-            <div id="project-add-on-fact" className="space-y-3 rounded-xl border border-border bg-card p-4">
+            <div id="project-add-on-fact" className="surface-panel space-y-3">
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <Wrench className="h-5 w-5" />
                 Add-on fact
@@ -876,7 +900,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
           </section>
 
           <section
-            className="sticky top-4 z-10 rounded-xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur"
+            className="surface-panel sticky top-4 z-10 border border-border/80 bg-background/90 p-4 shadow-[0_22px_50px_-34px_hsl(var(--foreground)/0.45)] backdrop-blur"
             aria-label="Door summary bar"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">

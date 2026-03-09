@@ -1570,32 +1570,91 @@ export default function ProjectsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 max-w-[1500px]">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">Projects</h1>
-            <p className="text-[13px] text-muted-foreground mt-0.5">
-              Floor matrix by location and door marking
-            </p>
+      <div className="max-w-[1500px] space-y-6 p-6 lg:p-8">
+        <section className="page-hero relative overflow-hidden">
+          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
+          <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="page-eyebrow">Project command surface</div>
+              <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
+                Projects
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
+                Floor matrix, import recovery, margin pressure and delivery readiness in one
+                operator-grade workspace.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">Projects {projects.length}</span>
+                <span className="metric-chip">Filtered {filteredProjects.length}</span>
+                <span className="metric-chip">
+                  Selected {bulkSelectedProjectIds.length}
+                </span>
+                {deepLinkedFailedCount > 0 && (
+                  <span className="metric-chip">Failed handoff {deepLinkedFailedCount}</span>
+                )}
+              </div>
+            </div>
+            <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                    Active scope
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-foreground">
+                    {selectedProject?.name || "Portfolio overview"}
+                  </div>
+                  <div className="mt-1 text-[12px] leading-5 text-muted-foreground">
+                    {selectedProject?.address ||
+                      "Select a project to move from queue visibility into exact financial and layout review."}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    void loadProjects();
+                    void loadFailedQueue();
+                    if (selectedProjectId) {
+                      void loadProjectDetails(selectedProjectId);
+                      void loadLayout(selectedProjectId);
+                      void loadProjectPlanFact(selectedProjectId);
+                      void loadProjectRisk(selectedProjectId);
+                      void loadImportHistory(selectedProjectId);
+                    }
+                  }}
+                  className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium"
+                >
+                  <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
+                  Refresh
+                </button>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Search
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">
+                    {search.trim() ? "Filtered" : "Global"}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Queue
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">
+                    {failedQueue?.total || 0}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Mode
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">
+                    {bulkOnlyFailedRuns ? "Retry failed" : "Reconcile all"}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={() => {
-              void loadProjects();
-              void loadFailedQueue();
-              if (selectedProjectId) {
-                void loadProjectDetails(selectedProjectId);
-                void loadLayout(selectedProjectId);
-                void loadProjectPlanFact(selectedProjectId);
-                void loadProjectRisk(selectedProjectId);
-                void loadImportHistory(selectedProjectId);
-              }
-            }}
-            className="btn-premium h-9 px-4 rounded-lg border border-border bg-card text-[13px] font-medium flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
-            Refresh
-          </button>
-        </div>
+        </section>
 
         {error && (
           <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
@@ -1611,18 +1670,30 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-          <section className="glass-card rounded-xl p-4 xl:col-span-1">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+          <section className="surface-panel xl:col-span-1">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <div className="page-eyebrow">Project list</div>
+                <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
+                  Portfolio navigator
+                </h2>
+              </div>
+              <div className="text-right text-[12px] text-muted-foreground">
+                <div>Filtered {filteredProjects.length}</div>
+                <div>Selected {bulkSelectedProjectIds.length}</div>
+              </div>
+            </div>
             <div className="relative mb-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search project..."
-                className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/40"
+                className="h-11 w-full rounded-xl border border-border/70 bg-background/80 pl-9 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/40"
               />
             </div>
-            <div className="space-y-2 mb-3">
+            <div className="surface-subtle mb-3 space-y-2 p-3">
               <div className="flex items-center justify-between gap-2">
                 <label className="inline-flex items-center gap-2 text-[12px] text-muted-foreground">
                   <input
@@ -1638,7 +1709,7 @@ export default function ProjectsPage() {
                       void handleBulkReview();
                     }}
                     disabled={bulkReviewLoading || bulkSelectedProjectIds.length === 0}
-                    className="h-8 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {bulkReviewLoading
                       ? "Reviewing..."
@@ -1649,7 +1720,7 @@ export default function ProjectsPage() {
                       void handleBulkReconcile();
                     }}
                     disabled={bulkReconcileLoading || bulkSelectedProjectIds.length === 0}
-                    className="h-8 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {bulkReconcileLoading
                       ? "Reconciling..."
@@ -1696,10 +1767,10 @@ export default function ProjectsPage() {
                         setFocusedImportRunDetails(null);
                       }}
                       className={cn(
-                        "w-full text-left rounded-lg border px-3 py-3 transition-all duration-200",
+                        "w-full rounded-xl border px-3 py-3 text-left transition-all duration-200",
                         active
-                          ? "border-accent/40 bg-[hsl(var(--accent)/0.08)]"
-                          : "border-border bg-card hover:border-accent/25 hover:bg-[hsl(var(--accent)/0.04)]"
+                          ? "border-accent/40 bg-[linear-gradient(135deg,hsl(var(--accent)/0.16),hsl(var(--accent)/0.06))] shadow-[0_18px_40px_-26px_hsl(var(--accent)/0.55)]"
+                          : "border-border/70 bg-background/75 hover:border-accent/25 hover:bg-[hsl(var(--accent)/0.04)]"
                       )}
                     >
                       <div className="text-[13px] font-semibold text-card-foreground">{project.name}</div>
@@ -1715,8 +1786,8 @@ export default function ProjectsPage() {
           <section className="xl:col-span-2 space-y-5">
             {selectedProject ? (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="glass-card rounded-xl p-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                  <div className="surface-panel">
                     <div className="text-[12px] text-muted-foreground">Project</div>
                     <div className="text-[14px] font-semibold mt-1">{selectedProject.name}</div>
                     <div className="text-[12px] text-muted-foreground mt-1">{selectedProject.address}</div>
@@ -1726,7 +1797,7 @@ export default function ProjectsPage() {
                       </div>
                     ) : null}
                   </div>
-                  <div className="glass-card rounded-xl p-4">
+                  <div className="surface-panel">
                     <div className="text-[12px] text-muted-foreground flex items-center gap-1">
                       <Building2 className="w-3.5 h-3.5" />
                       Total Doors
@@ -1735,7 +1806,7 @@ export default function ProjectsPage() {
                       {layout ? layout.total_doors : "-"}
                     </div>
                   </div>
-                  <div className="glass-card rounded-xl p-4">
+                  <div className="surface-panel">
                     <div className="text-[12px] text-muted-foreground flex items-center gap-1">
                       <Layers3 className="w-3.5 h-3.5" />
                       Layout Buckets
@@ -1744,7 +1815,7 @@ export default function ProjectsPage() {
                       {layout ? layout.buckets.length : "-"}
                     </div>
                   </div>
-                  <div className="glass-card rounded-xl p-4">
+                  <div className="surface-panel">
                     <div className="text-[12px] text-muted-foreground">Open Blockers</div>
                     <div className="text-[22px] font-semibold mt-1">
                       {loadingProjectDetails ? "-" : projectDetails?.issues_open?.length || 0}
@@ -1757,7 +1828,7 @@ export default function ProjectsPage() {
                   </div>
                 </div>
 
-                <div className="glass-card rounded-xl p-4">
+                <div className="surface-panel">
                   <div className="flex flex-col gap-2 border-b border-border/70 pb-4 md:flex-row md:items-start md:justify-between">
                     <div>
                       <h3 className="text-[15px] font-semibold">Project Financial Screen</h3>

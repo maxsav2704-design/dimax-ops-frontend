@@ -1770,27 +1770,53 @@ export default function ReportsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 max-w-[1400px] space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground tracking-tight">Reports</h1>
-            <p className="text-[13px] text-muted-foreground mt-0.5">
-              Limits, delivery, outbox queue and audit visibility
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="max-w-[1400px] space-y-6 p-6 lg:p-8">
+        <section className="page-hero relative overflow-hidden">
+          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
+          <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="page-eyebrow">Executive reporting surface</div>
+              <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
+                Reports
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
+                Limits, delivery, queue pressure and audit visibility shaped into an operations-grade
+                decision screen.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">Unread alerts {unreadBadge}</span>
+                <span className="metric-chip">
+                  Focus {activeFocus ? REPORTS_FOCUS_COPY[activeFocus].title : "Portfolio"}
+                </span>
+                <span className="metric-chip">
+                  Privileged {canRunPrivilegedActions ? "enabled" : "read only"}
+                </span>
+              </div>
+            </div>
+            <div className="surface-subtle min-w-[320px] max-w-2xl space-y-3 p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="text-[12px] leading-5 text-muted-foreground">
+                  Save or reapply exact report states before you push into operations, exports or
+                  recovery review.
+                </div>
+                <div className="inline-flex h-9 items-center gap-2 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px]">
+                  <BellRing className="h-4 w-4 text-accent" />
+                  <span className="text-muted-foreground">Unread:</span>
+                  <span className="font-semibold text-foreground">{unreadBadge}</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
               <input
                 aria-label="Preset Name"
                 value={presetName}
                 onChange={(e) => setPresetName(e.target.value)}
                 placeholder="Save preset"
-                className="h-9 rounded-lg border border-border bg-card px-3 text-[13px]"
+                className="h-10 rounded-xl border border-border/70 bg-background/80 px-3 text-[13px]"
               />
               <button
                 type="button"
                 onClick={handleSavePreset}
-                className="h-9 px-3 rounded-lg border border-border bg-card text-[13px] font-medium"
+                className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
               >
                 Save Preset
               </button>
@@ -1798,7 +1824,7 @@ export default function ReportsPage() {
                 aria-label="Saved Presets"
                 value={selectedPresetId}
                 onChange={(e) => setSelectedPresetId(e.target.value)}
-                className="h-9 rounded-lg border border-border bg-card px-2 text-[13px]"
+                className="h-10 rounded-xl border border-border/70 bg-background/80 px-2 text-[13px]"
               >
                 <option value="">Saved presets</option>
                 {savedPresets.map((preset) => (
@@ -1810,25 +1836,20 @@ export default function ReportsPage() {
               <button
                 type="button"
                 onClick={handleApplySelectedPreset}
-                className="h-9 px-3 rounded-lg border border-border bg-card text-[13px] font-medium"
+                className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
               >
                 Apply Preset
               </button>
               <button
                 type="button"
                 onClick={handleDeleteSelectedPreset}
-                className="h-9 px-3 rounded-lg border border-border bg-card text-[13px] font-medium"
+                className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
               >
                 Delete Preset
               </button>
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="h-9 rounded-lg border border-border bg-card px-3 inline-flex items-center gap-2 text-[13px]">
-              <BellRing className="w-4 h-4 text-accent" />
-              <span className="text-muted-foreground">Unread:</span>
-              <span className="font-semibold text-foreground">{unreadBadge}</span>
-            </div>
-            <button
+              </div>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
               onClick={() => {
                 void Promise.all([
                   alertsQuery.refetch(),
@@ -1855,32 +1876,33 @@ export default function ReportsPage() {
                   issueAuditQuery.refetch(),
                 ]);
               }}
-              className="btn-premium h-9 px-4 rounded-lg border border-border bg-card text-[13px] font-medium flex items-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
-              Refresh
-            </button>
-            <button
-              onClick={() => exportExecutiveMutation.mutate()}
-              disabled={!canRunPrivilegedActions || exportExecutiveMutation.isPending}
-              title={privilegedActionHint}
-              aria-label="Export Executive CSV"
-              className="h-9 px-4 rounded-lg border border-border bg-card text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              Export Executive CSV
-            </button>
-            <button
-              onClick={() => markReadMutation.mutate()}
-              disabled={!canRunPrivilegedActions || markReadMutation.isPending || unreadCount === 0}
-              title={privilegedActionHint}
-              className="h-9 px-4 rounded-lg bg-accent text-accent-foreground text-[13px] font-medium flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              <CheckCheck className="w-4 h-4" strokeWidth={1.8} />
-              Mark All Read
-            </button>
+                  className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium"
+                >
+                  <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
+                  Refresh
+                </button>
+                <button
+                  onClick={() => exportExecutiveMutation.mutate()}
+                  disabled={!canRunPrivilegedActions || exportExecutiveMutation.isPending}
+                  title={privilegedActionHint}
+                  aria-label="Export Executive CSV"
+                  className="h-10 rounded-xl border border-border/70 bg-background/70 px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Export Executive CSV
+                </button>
+                <button
+                  onClick={() => markReadMutation.mutate()}
+                  disabled={!canRunPrivilegedActions || markReadMutation.isPending || unreadCount === 0}
+                  title={privilegedActionHint}
+                  className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <CheckCheck className="w-4 h-4" strokeWidth={1.8} />
+                  Mark All Read
+                </button>
+              </div>
+            </div>
           </div>
-          </div>
-        </div>
+        </section>
 
         {alertsQuery.isError && (
           <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
@@ -1954,7 +1976,7 @@ export default function ReportsPage() {
 
         <div
           id="reports-operations-center"
-          className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-[hsl(var(--accent)/0.07)] p-5"
+          className="surface-panel relative overflow-hidden"
         >
           <div className="absolute -top-14 -right-14 h-40 w-40 rounded-full bg-[hsl(var(--accent)/0.15)] blur-3xl pointer-events-none" />
           <div className="relative z-10 space-y-4">
