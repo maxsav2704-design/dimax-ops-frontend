@@ -811,7 +811,7 @@ export default function JournalPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="motion-stagger space-y-6">
         <div className="page-hero relative overflow-hidden">
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="flex flex-col gap-4 border-b border-border/70 pb-5 lg:flex-row lg:items-start lg:justify-between">

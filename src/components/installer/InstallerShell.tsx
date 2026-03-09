@@ -94,7 +94,7 @@ export function InstallerShell({ children }: { children: ReactNode }) {
           </div>
         </aside>
 
-        <main className="flex-1">
+        <main className="motion-page flex-1">
           <header className="surface-panel px-6 py-4">
             <div className="inline-flex items-center gap-2 rounded-full bg-background/65 px-3 py-1.5 text-sm text-muted-foreground">
               <CalendarDays className="h-4 w-4" />

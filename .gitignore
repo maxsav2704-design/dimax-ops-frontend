@@ -14,6 +14,8 @@ dist-ssr
 .next
 .next-*.log
 .preview-web.*
+tmp-*.cjs
+visual-audit/
 tsconfig.tsbuildinfo
 .env.e2e.local
 

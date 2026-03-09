@@ -16,7 +16,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
       <AppSidebar />
       <main className="relative flex-1 overflow-auto">
-        <div className="relative min-h-screen">{children}</div>
+        <div className="motion-page relative min-h-screen">{children}</div>
       </main>
     </div>
   );

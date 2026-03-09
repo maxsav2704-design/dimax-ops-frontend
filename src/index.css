@@ -155,6 +155,28 @@
 }
 
 @layer utilities {
+  @keyframes motion-page-enter {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes motion-hero-settle {
+    from {
+      opacity: 0;
+      transform: translateY(18px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
   .glass-card {
     @apply border shadow-sm;
     background: linear-gradient(180deg, hsl(var(--card) / 0.94), hsl(var(--card) / 0.88));
@@ -220,6 +242,30 @@
     box-shadow:
       0 36px 100px -46px hsl(var(--primary) / 0.28),
       inset 0 1px 0 hsl(0 0% 100% / 0.55);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .motion-page {
+      animation: motion-page-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .page-hero {
+      animation: motion-hero-settle 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .motion-stagger > * {
+      opacity: 0;
+      animation: motion-page-enter 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .motion-stagger > *:nth-child(1) { animation-delay: 40ms; }
+    .motion-stagger > *:nth-child(2) { animation-delay: 90ms; }
+    .motion-stagger > *:nth-child(3) { animation-delay: 140ms; }
+    .motion-stagger > *:nth-child(4) { animation-delay: 190ms; }
+    .motion-stagger > *:nth-child(5) { animation-delay: 240ms; }
+    .motion-stagger > *:nth-child(6) { animation-delay: 290ms; }
+    .motion-stagger > *:nth-child(7) { animation-delay: 340ms; }
+    .motion-stagger > *:nth-child(8) { animation-delay: 390ms; }
   }
 
   .page-hero::after {

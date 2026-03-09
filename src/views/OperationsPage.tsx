@@ -969,7 +969,7 @@ export default function OperationsPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <div className="motion-stagger max-w-[1400px] space-y-6 p-6 lg:p-8">
         <div className="page-hero relative overflow-hidden">
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">

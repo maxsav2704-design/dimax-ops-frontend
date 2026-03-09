@@ -383,7 +383,7 @@ export default function IssuesPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-[1600px] space-y-4 p-6 lg:p-8">
+      <div className="motion-stagger max-w-[1600px] space-y-4 p-6 lg:p-8">
         <section className="page-hero relative overflow-hidden">
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
