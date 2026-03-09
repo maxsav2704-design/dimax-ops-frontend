@@ -634,41 +634,44 @@ const REPORTS_FOCUS_IDS: Record<ReportsFocus, string> = {
   issues: "reports-issues-analytics",
 };
 
-const REPORTS_FOCUS_COPY: Record<ReportsFocus, { title: string; description: string }> = {
-  operations: {
-    title: "Focused from Operations: command center",
-    description: "Operational command center and SLA blocks are in focus for queue triage.",
-  },
-  delivery: {
-    title: "Focused from Operations: delivery risk",
-    description: "Delivery and failed outbox blocks are in focus for communication incidents.",
-  },
-  issues: {
-    title: "Focused from Operations: issue pressure",
-    description: "Issues analytics is in focus for backlog and risk follow-up.",
-  },
-};
+function getReportsFocusCopy(t: (key: string) => string): Record<ReportsFocus, { title: string; description: string }> {
+  return {
+    operations: {
+      title: t("reports.operationsFocusTitle"),
+      description: t("reports.operationsFocusDescription"),
+    },
+    delivery: {
+      title: t("reports.deliveryFocusTitle"),
+      description: t("reports.deliveryFocusDescription"),
+    },
+    issues: {
+      title: t("reports.issuesFocusTitle"),
+      description: t("reports.issuesFocusDescription"),
+    },
+  };
+}
 
-const REPORTS_OPS_PRESET_COPY: Record<
-  ReportsOpsPreset,
-  { title: string; description: string; slaHistoryDays: number }
-> = {
-  "failed-imports": {
-    title: "Operations preset: failed imports",
-    description: "Short-range SLA view for import failures and queue recovery.",
-    slaHistoryDays: 7,
-  },
-  "delivery-risk": {
-    title: "Operations preset: delivery risk",
-    description: "Short-range delivery view for failed outbox and communication pressure.",
-    slaHistoryDays: 7,
-  },
-  "issue-pressure": {
-    title: "Operations preset: issue pressure",
-    description: "Two-week issue pressure view for backlog and escalation monitoring.",
-    slaHistoryDays: 14,
-  },
-};
+function getReportsOpsPresetCopy(
+  t: (key: string) => string
+): Record<ReportsOpsPreset, { title: string; description: string; slaHistoryDays: number }> {
+  return {
+    "failed-imports": {
+      title: t("reports.failedImportsPresetTitle"),
+      description: t("reports.failedImportsPresetDescription"),
+      slaHistoryDays: 7,
+    },
+    "delivery-risk": {
+      title: t("reports.deliveryRiskPresetTitle"),
+      description: t("reports.deliveryRiskPresetDescription"),
+      slaHistoryDays: 7,
+    },
+    "issue-pressure": {
+      title: t("reports.issuePressurePresetTitle"),
+      description: t("reports.issuePressurePresetDescription"),
+      slaHistoryDays: 14,
+    },
+  };
+}
 
 type ReportsScopedContext = {
   projectId: string | null;
@@ -1019,6 +1022,8 @@ function SectionMessage({
 
 export default function ReportsPage() {
   const { t } = useI18n();
+  const reportsFocusCopy = getReportsFocusCopy(t);
+  const reportsOpsPresetCopy = getReportsOpsPresetCopy(t);
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -1655,7 +1660,7 @@ export default function ReportsPage() {
     if (appliedOpsPresetRef.current === activeOpsPreset) {
       return;
     }
-    const preset = REPORTS_OPS_PRESET_COPY[activeOpsPreset];
+    const preset = reportsOpsPresetCopy[activeOpsPreset];
     appliedOpsPresetRef.current = activeOpsPreset;
     setSlaHistoryDays(preset.slaHistoryDays);
   }, [activeOpsPreset]);
@@ -1785,30 +1790,33 @@ export default function ReportsPage() {
                 {t("reports.subtitle")}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="metric-chip">Unread alerts {unreadBadge}</span>
                 <span className="metric-chip">
-                  Focus {activeFocus ? REPORTS_FOCUS_COPY[activeFocus].title : "Portfolio"}
+                  {t("reports.unreadAlerts")} {unreadBadge}
                 </span>
                 <span className="metric-chip">
-                  Privileged {canRunPrivilegedActions ? "enabled" : "read only"}
+                  {t("reports.focus")}{" "}
+                  {activeFocus ? reportsFocusCopy[activeFocus].title : t("reports.portfolio")}
+                </span>
+                <span className="metric-chip">
+                  {t("reports.privileged")}{" "}
+                  {canRunPrivilegedActions ? t("reports.enabled") : t("reports.readOnly")}
                 </span>
               </div>
             </div>
             <div className="surface-subtle min-w-[320px] max-w-2xl space-y-3 p-4 sm:p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="text-[12px] leading-5 text-muted-foreground">
-                  Save or reapply exact report states before you push into operations, exports or
-                  recovery review.
+                  {t("reports.helper")}
                 </div>
                 <div className="inline-flex h-9 items-center gap-2 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px]">
                   <BellRing className="h-4 w-4 text-accent" />
-                  <span className="text-muted-foreground">Unread:</span>
+                  <span className="text-muted-foreground">{t("reports.unread")}:</span>
                   <span className="font-semibold text-foreground">{unreadBadge}</span>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
               <input
-                aria-label="Preset Name"
+                aria-label={t("reports.presetName")}
                 value={presetName}
                 onChange={(e) => setPresetName(e.target.value)}
                 placeholder={t("reports.savePreset")}
@@ -1880,16 +1888,16 @@ export default function ReportsPage() {
                   className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium"
                 >
                   <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
-                  Refresh
+                  {t("common.refresh")}
                 </button>
                 <button
                   onClick={() => exportExecutiveMutation.mutate()}
                   disabled={!canRunPrivilegedActions || exportExecutiveMutation.isPending}
                   title={privilegedActionHint}
-                  aria-label="Export Executive CSV"
+                  aria-label={t("reports.exportExecutiveCsv")}
                   className="h-10 rounded-xl border border-border/70 bg-background/70 px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Export Executive CSV
+                  {t("reports.exportExecutiveCsv")}
                 </button>
                 <button
                   onClick={() => markReadMutation.mutate()}
@@ -1898,7 +1906,7 @@ export default function ReportsPage() {
                   className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <CheckCheck className="w-4 h-4" strokeWidth={1.8} />
-                  Mark All Read
+                  {t("reports.markAllRead")}
                 </button>
               </div>
             </div>
@@ -1911,7 +1919,7 @@ export default function ReportsPage() {
             <span>
               {alertsQuery.error instanceof Error
                 ? alertsQuery.error.message
-                : "Failed to load alerts"}
+                : t("reports.failedAlerts")}
             </span>
           </div>
         )}
@@ -1931,15 +1939,15 @@ export default function ReportsPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="font-medium text-foreground">
-                  {REPORTS_FOCUS_COPY[activeFocus].title}
+                  {reportsFocusCopy[activeFocus].title}
                 </div>
                 <div className="mt-1 text-muted-foreground">
-                  {REPORTS_FOCUS_COPY[activeFocus].description}
+                  {reportsFocusCopy[activeFocus].description}
                 </div>
                 {activeOpsPreset && (
                   <div className="mt-2 text-[12px] text-muted-foreground">
-                    {REPORTS_OPS_PRESET_COPY[activeOpsPreset].title}.{" "}
-                    {REPORTS_OPS_PRESET_COPY[activeOpsPreset].description}
+                    {reportsOpsPresetCopy[activeOpsPreset].title}.{" "}
+                    {reportsOpsPresetCopy[activeOpsPreset].description}
                   </div>
                 )}
                 {scopeSummary && (
@@ -1962,7 +1970,7 @@ export default function ReportsPage() {
                   onClick={() => router.push("/reports")}
                   className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
                 >
-                  Clear focus
+                  {t("reports.clearFocus")}
                 </button>
               </div>
             </div>
@@ -1971,7 +1979,7 @@ export default function ReportsPage() {
         {!canRunPrivilegedActions && (
           <div className="rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.1)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))] flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>Read-only mode for INSTALLER role: export/retry/mark-read actions are disabled.</span>
+            <span>{t("reports.readOnlyNotice")}</span>
           </div>
         )}
 
@@ -1984,21 +1992,21 @@ export default function ReportsPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Operations Command Center
+                  {t("reports.operationsCommandCenter")}
                 </div>
                 <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                  Real-time pressure map
+                  {t("reports.realTimePressureMap")}
                 </h2>
               </div>
               <div className="flex flex-col items-end gap-2">
                 <div className="text-right">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Generated
+                    {t("reports.generated")}
                   </div>
                   <div className="text-[12px] text-foreground">
                     {operationsCenter?.generated_at
                       ? formatDateTime(operationsCenter.generated_at)
-                      : "n/a"}
+                      : t("reports.notAvailable")}
                   </div>
                 </div>
                 <div className="flex flex-wrap justify-end gap-2">
@@ -2007,27 +2015,27 @@ export default function ReportsPage() {
                     onClick={() => router.push("/operations")}
                     className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
                   >
-                    Open Operations Center
+                    {t("reports.openOperationsCenter")}
                   </button>
                   <button
                     type="button"
                     onClick={() => router.push("/operations?actionable=1")}
                     className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
                   >
-                    Open Actionable Ops
+                    {t("reports.openActionableOps")}
                   </button>
                 </div>
               </div>
             </div>
 
             {operationsCenterQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">Loading command center...</div>
+              <div className="text-[13px] text-muted-foreground">{t("reports.loadingCommandCenter")}</div>
             ) : (
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
                   <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Imports (24h)
+                    {t("reports.imports24h")}
                   </div>
                   <div className="mt-1 text-xl font-semibold text-foreground">
                     {operationsCenter?.imports.total_runs ?? 0}
@@ -4211,10 +4219,13 @@ export default function ReportsPage() {
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <div className="rounded-lg border border-border/70 bg-background/60 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Failed outbox lane
+                  {t("reports.failedOutboxLane")}
                 </div>
                 <div className="mt-2 text-[13px] text-card-foreground">
-                  {failedItems.length} failed messages in current scope
+                  {t("reports.failedMessagesInCurrentScope").replace(
+                    "{count}",
+                    String(failedItems.length)
+                  )}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
@@ -4229,7 +4240,7 @@ export default function ReportsPage() {
                     }
                     className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
                   >
-                    Open scoped ops
+                    {t("reports.openScopedOps")}
                   </button>
                   {scopedOutboxId ? (
                     <button
@@ -4244,7 +4255,7 @@ export default function ReportsPage() {
                       }
                       className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
                     >
-                      Continue recovery
+                      {t("reports.continueRecovery")}
                     </button>
                   ) : null}
                 </div>
@@ -4252,13 +4263,13 @@ export default function ReportsPage() {
 
               <div className="rounded-lg border border-border/70 bg-background/60 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Webhook lane
+                  {t("reports.webhookLane")}
                 </div>
                 {webhookSignalsQuery.isLoading ? (
-                  <div className="mt-2 text-[13px] text-muted-foreground">Loading webhook scope...</div>
+                  <div className="mt-2 text-[13px] text-muted-foreground">{t("reports.loadingWebhookScope")}</div>
                 ) : scopedWebhookSignals.length === 0 ? (
                   <div className="mt-2 text-[13px] text-muted-foreground">
-                    No webhook signals for current scope.
+                    {t("reports.noWebhookSignalsCurrentScope")}
                   </div>
                 ) : (
                   <div className="mt-2 space-y-2">
@@ -4280,15 +4291,15 @@ export default function ReportsPage() {
 
               <div className="rounded-lg border border-border/70 bg-background/60 p-3 md:col-span-2">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Recovery trail
+                  {t("reports.recoveryTrail")}
                 </div>
                 {retryAuditsQuery.isLoading ? (
-                  <div className="mt-2 text-[13px] text-muted-foreground">Loading retry audit trail...</div>
+                  <div className="mt-2 text-[13px] text-muted-foreground">{t("reports.loadingRetryAuditTrail")}</div>
                 ) : scopedRetryAuditItems.length === 0 ? (
                   <div className="mt-2 text-[13px] text-muted-foreground">
                     {scopedOutboxId
-                      ? "No recovery actions recorded for this outbox yet."
-                      : "No delivery recovery actions recorded yet."}
+                      ? t("reports.noRecoveryActionsForOutbox")
+                      : t("reports.noDeliveryRecoveryActionsYet")}
                   </div>
                 ) : (
                   <div className="mt-2 space-y-2">
@@ -4322,7 +4333,7 @@ export default function ReportsPage() {
                             }
                             className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
                           >
-                            Open recovery lane
+                            {t("reports.openRecoveryLane")}
                           </button>
                           <button
                             onClick={() =>
@@ -4336,7 +4347,7 @@ export default function ReportsPage() {
                             }
                             className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
                           >
-                            Continue in ops
+                            {t("reports.continueInOps")}
                           </button>
                         </div>
                       </div>
@@ -4349,18 +4360,18 @@ export default function ReportsPage() {
 
           <div className="glass-card rounded-xl border border-border p-4">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
-              Catalog Audit
+              {t("reports.catalogAudit")}
             </div>
             {auditCatalogsQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">Loading...</div>
+              <div className="text-[13px] text-muted-foreground">{t("reports.loading")}</div>
             ) : (
               <div className="space-y-1 text-[13px]">
-                <div>Total changes: {auditSummary?.total ?? 0}</div>
+                <div>{t("reports.totalChanges")}: {auditSummary?.total ?? 0}</div>
                 <div className="text-muted-foreground">
-                  Entities: {compactMap(auditSummary?.by_entity)}
+                  {t("reports.entities")}: {compactMap(auditSummary?.by_entity)}
                 </div>
                 <div className="text-muted-foreground">
-                  Actions: {compactMap(auditSummary?.by_action)}
+                  {t("reports.actions")}: {compactMap(auditSummary?.by_action)}
                 </div>
               </div>
             )}
@@ -4368,18 +4379,18 @@ export default function ReportsPage() {
 
           <div className="glass-card rounded-xl border border-border p-4">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
-              Issue Audit
+              {t("reports.issueAudit")}
             </div>
             {issueAuditQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">Loading...</div>
+              <div className="text-[13px] text-muted-foreground">{t("reports.loading")}</div>
             ) : (
               <div className="space-y-1 text-[13px]">
-                <div>Total changes: {issueAuditSummary?.total ?? 0}</div>
+                <div>{t("reports.totalChanges")}: {issueAuditSummary?.total ?? 0}</div>
                 <div className="text-muted-foreground">
-                  Entities: {compactMap(issueAuditSummary?.by_entity)}
+                  {t("reports.entities")}: {compactMap(issueAuditSummary?.by_entity)}
                 </div>
                 <div className="text-muted-foreground">
-                  Actions: {compactMap(issueAuditSummary?.by_action)}
+                  {t("reports.actions")}: {compactMap(issueAuditSummary?.by_action)}
                 </div>
               </div>
             )}
@@ -4391,18 +4402,18 @@ export default function ReportsPage() {
           className="glass-card rounded-xl overflow-hidden border border-border"
         >
           <div className="px-4 py-3 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
-            Failed Outbox Queue
+            {t("reports.failedOutboxQueue")}
           </div>
           {failedOutboxQuery.isLoading && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading failed messages...
+              {t("reports.loadingFailedMessages")}
             </div>
           )}
           {!failedOutboxQuery.isLoading && failedItems.length === 0 && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
               {scopedDeliveryChannel
-                ? `No failed outbox messages for ${scopedDeliveryChannel}.`
-                : "No failed outbox messages."}
+                ? t("reports.noFailedOutboxMessagesFor").replace("{scope}", scopedDeliveryChannel)
+                : t("reports.noFailedOutboxMessages")}
             </div>
           )}
           {!failedOutboxQuery.isLoading &&

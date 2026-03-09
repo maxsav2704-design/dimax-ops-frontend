@@ -285,25 +285,25 @@ function buildDeliveryReportHref(params: {
   return `/reports?${query.toString()}`;
 }
 
-function formatRefreshTimestamp(value: number | null): string {
+function formatRefreshTimestamp(value: number | null, t: (key: string) => string): string {
   if (!value || Number.isNaN(value)) {
-    return "Waiting for first successful refresh";
+    return t("operations.waitingForRefresh");
   }
-  return `Fresh as of ${new Date(value).toLocaleTimeString()}`;
+  return `${t("operations.freshAsOf")} ${new Date(value).toLocaleTimeString()}`;
 }
 
-function describeAgeMinutes(value: number | null, now: number): string {
+function describeAgeMinutes(value: number | null, now: number, t: (key: string) => string): string {
   if (!value || Number.isNaN(value)) {
-    return "No successful snapshot yet";
+    return t("operations.noSuccessfulSnapshot");
   }
   const ageMinutes = Math.max(0, Math.floor((now - value) / 60_000));
   if (ageMinutes === 0) {
-    return "Updated less than a minute ago";
+    return t("operations.updatedLessThanMinute");
   }
   if (ageMinutes === 1) {
-    return "Updated 1 minute ago";
+    return t("operations.updatedOneMinute");
   }
-  return `Updated ${ageMinutes} minutes ago`;
+  return t("operations.updatedMinutesAgo").replace("{count}", String(ageMinutes));
 }
 
 function summarizeActions(params: {
@@ -313,46 +313,65 @@ function summarizeActions(params: {
   firstImportProjectName: string | null;
   firstOutboxRecipient: string | null;
   firstSyncInstallerId: string | null;
+  t: (key: string) => string;
 }): Array<{ label: string; value: string; href: string }> {
   const items: Array<{ label: string; value: string; href: string }> = [];
 
   if (params.actionableImports > 0) {
     items.push({
-      label: "Imports",
+      label: params.t("operations.summaryImports"),
       value:
         params.actionableImports === 1 && params.firstImportProjectName
-          ? `Retry failed import for ${params.firstImportProjectName}`
-          : `${params.actionableImports} failed imports need retry`,
+          ? params.t("operations.summaryRetryFailedImportFor").replace(
+              "{name}",
+              params.firstImportProjectName
+            )
+          : params.t("operations.summaryFailedImportsNeedRetry").replace(
+              "{count}",
+              String(params.actionableImports)
+            ),
       href: "/projects?only_failed_runs=1",
     });
   }
 
   if (params.actionableOutbox > 0) {
     items.push({
-      label: "Outbox",
+      label: params.t("operations.summaryOutbox"),
       value:
         params.actionableOutbox === 1 && params.firstOutboxRecipient
-          ? `Recover delivery for ${params.firstOutboxRecipient}`
-          : `${params.actionableOutbox} delivery failures need retry`,
+          ? params.t("operations.summaryRecoverDeliveryFor").replace(
+              "{name}",
+              params.firstOutboxRecipient
+            )
+          : params.t("operations.summaryDeliveryFailuresNeedRetry").replace(
+              "{count}",
+              String(params.actionableOutbox)
+            ),
       href: "/reports",
     });
   }
 
   if (params.actionableSync > 0) {
     items.push({
-      label: "Sync",
+      label: params.t("operations.summarySync"),
       value:
         params.actionableSync === 1 && params.firstSyncInstallerId
-          ? `Investigate installer ${params.firstSyncInstallerId}`
-          : `${params.actionableSync} installers need sync attention`,
+          ? params.t("operations.summaryInvestigateInstaller").replace(
+              "{name}",
+              params.firstSyncInstallerId
+            )
+          : params.t("operations.summaryInstallersNeedSyncAttention").replace(
+              "{count}",
+              String(params.actionableSync)
+            ),
       href: "/installers",
     });
   }
 
   if (items.length === 0) {
     items.push({
-      label: "Status",
-      value: "No active operational actions right now",
+      label: params.t("operations.summaryStatus"),
+      value: params.t("operations.summaryNoActiveActions"),
       href: "/operations",
     });
   }
@@ -626,8 +645,9 @@ export default function OperationsPage() {
           actionableFailedOutbox[0]?.channel ||
           null,
         firstSyncInstallerId: actionableSyncItems[0]?.installer_id || null,
+        t,
       }),
-    [actionableFailedImports, actionableFailedOutbox, actionableSyncItems]
+    [actionableFailedImports, actionableFailedOutbox, actionableSyncItems, t]
   );
   const failedImportProjectIds = useMemo(
     () => Array.from(new Set(visibleFailedImports.map((item) => item.project_id).filter(Boolean))),
@@ -1092,10 +1112,10 @@ export default function OperationsPage() {
                 {t("operations.dataFreshness")}
               </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                {formatRefreshTimestamp(freshnessTimestamp)}
+                {formatRefreshTimestamp(freshnessTimestamp, t)}
               </p>
               <p className="mt-1 text-[12px] text-muted-foreground">
-                {describeAgeMinutes(freshnessTimestamp, Date.now())}
+                {describeAgeMinutes(freshnessTimestamp, Date.now(), t)}
               </p>
             </div>
             <span
@@ -1110,12 +1130,12 @@ export default function OperationsPage() {
               }
             >
               {freshnessState === "fresh"
-                ? "fresh"
+                ? t("operations.fresh")
                 : freshnessState === "stale"
-                  ? "stale"
+                  ? t("operations.stale")
                   : freshnessState === "degraded"
-                    ? "degraded"
-                    : "refreshing"}
+                    ? t("operations.degraded")
+                    : t("operations.refreshing")}
             </span>
           </div>
         </section>
@@ -1127,13 +1147,13 @@ export default function OperationsPage() {
                 {t("operations.actionSummary")}
               </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                Highest-value actions from imports, outbox and sync in one view.
+                {t("operations.highValueActions")}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {onlyActionable ? (
                 <span className="rounded-md border border-accent/40 px-2 py-1 text-[11px] font-medium text-accent">
-                  actionable mode
+                  {t("operations.actionableMode")}
                 </span>
               ) : null}
               <button
@@ -1149,8 +1169,8 @@ export default function OperationsPage() {
                 className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                 >
                 {busyAction === "imports:bulk"
-                  ? "Retrying imports..."
-                  : `Retry actionable imports (${actionableFailedImports.length})`}
+                  ? t("operations.retryingImports")
+                  : `${t("operations.retryActionableImports")} (${actionableFailedImports.length})`}
               </button>
               <button
                 type="button"
@@ -1166,8 +1186,8 @@ export default function OperationsPage() {
                 className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {busyAction === "outbox:bulk"
-                  ? "Retrying deliveries..."
-                  : `Retry actionable deliveries (${actionableFailedOutbox.length})`}
+                  ? t("operations.retryingDeliveries")
+                  : `${t("operations.retryActionableDeliveries")} (${actionableFailedOutbox.length})`}
               </button>
               <button
                 type="button"
@@ -1182,8 +1202,8 @@ export default function OperationsPage() {
                 className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {busyAction === "imports:reconcile"
-                  ? "Reconciling projects..."
-                  : `Reconcile actionable projects (${actionableImportProjectIds.length})`}
+                  ? t("operations.reconcilingProjects")
+                  : `${t("operations.reconcileActionableProjects")} (${actionableImportProjectIds.length})`}
               </button>
             </div>
           </div>
@@ -1210,7 +1230,7 @@ export default function OperationsPage() {
                 {t("operations.deliveryDrilldown")}
               </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                Exact channel and provider lanes for delivery failures and webhook diagnostics.
+                {t("operations.exactLanes")}
               </p>
             </div>
             {(deliveryChannelFilter || webhookProviderFilter) && (
@@ -1227,7 +1247,7 @@ export default function OperationsPage() {
                 }}
                 className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
               >
-                Clear drilldown
+                {t("operations.clearDrilldown")}
               </button>
             )}
           </div>
@@ -1235,17 +1255,17 @@ export default function OperationsPage() {
             <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  By channel
+                  {t("operations.byChannel")}
                 </div>
                 {deliveryChannelFilter ? (
                   <span className="rounded-md border border-accent/40 px-2 py-1 text-[11px] font-medium text-accent">
-                    scoped to {deliveryChannelFilter}
+                    {t("operations.scopedTo")} {deliveryChannelFilter}
                   </span>
                 ) : null}
               </div>
               <div className="mt-3 space-y-2">
                 {deliveryChannelGroups.length === 0 ? (
-                  <div className="text-[13px] text-muted-foreground">No failed delivery lanes.</div>
+                  <div className="text-[13px] text-muted-foreground">{t("operations.noFailedDeliveryLanes")}</div>
                 ) : (
                   deliveryChannelGroups.map((group) => (
                     <div
@@ -1256,7 +1276,7 @@ export default function OperationsPage() {
                         <div>
                           <div className="font-medium text-foreground">{group.channel}</div>
                           <div className="mt-1 text-xs text-muted-foreground">
-                            {group.count} failed messages
+                            {group.count} {t("operations.failedMessages")}
                             {group.recipients[0] ? ` | ${group.recipients[0]}` : ""}
                           </div>
                         </div>
@@ -1274,7 +1294,9 @@ export default function OperationsPage() {
                           }}
                           className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
                         >
-                          {deliveryChannelFilter === group.channel ? "Show all" : `Only ${group.channel}`}
+                          {deliveryChannelFilter === group.channel
+                            ? t("operations.showAll")
+                            : `${t("operations.only")} ${group.channel}`}
                         </button>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -1286,7 +1308,7 @@ export default function OperationsPage() {
                           })}
                           className="font-medium text-accent hover:underline"
                         >
-                          Actionable lane
+                          {t("operations.actionableLane")}
                         </Link>
                         <Link
                           href={buildDeliveryReportHref({
@@ -1296,7 +1318,7 @@ export default function OperationsPage() {
                           })}
                           className="font-medium text-muted-foreground hover:text-foreground hover:underline"
                         >
-                          Exact failure
+                          {t("operations.exactFailure")}
                         </Link>
                         <button
                           type="button"
@@ -1307,7 +1329,7 @@ export default function OperationsPage() {
                           disabled={!canRunPrivilegedActions || busyAction === "outbox:bulk"}
                           className="font-medium text-accent disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Retry {group.channel}
+                          {t("operations.retryChannel")} {group.channel}
                         </button>
                       </div>
                     </div>
@@ -1319,17 +1341,17 @@ export default function OperationsPage() {
             <div className="rounded-lg border border-border/70 bg-background/70 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  By provider
+                  {t("operations.byProvider")}
                 </div>
                 {webhookProviderFilter ? (
                   <span className="rounded-md border border-accent/40 px-2 py-1 text-[11px] font-medium text-accent">
-                    scoped to {webhookProviderFilter}
+                    {t("operations.scopedTo")} {webhookProviderFilter}
                   </span>
                 ) : null}
               </div>
               <div className="mt-3 space-y-2">
                 {webhookProviderGroups.length === 0 ? (
-                  <div className="text-[13px] text-muted-foreground">No webhook provider lanes.</div>
+                  <div className="text-[13px] text-muted-foreground">{t("operations.noWebhookProviderLanes")}</div>
                 ) : (
                   webhookProviderGroups.map((group) => (
                     <div
@@ -1340,8 +1362,9 @@ export default function OperationsPage() {
                         <div>
                           <div className="font-medium text-foreground">{group.provider}</div>
                           <div className="mt-1 text-xs text-muted-foreground">
-                            {group.count} signals | duplicates {group.duplicateCount} | unmatched{" "}
-                            {group.unmatchedCount} | failed {group.providerFailedCount}
+                            {group.count} {t("operations.signals")} | {t("operations.duplicates")}{" "}
+                            {group.duplicateCount} | {t("operations.unmatched")} {group.unmatchedCount} |{" "}
+                            {t("operations.failed")} {group.providerFailedCount}
                           </div>
                         </div>
                         <button
@@ -1382,9 +1405,9 @@ export default function OperationsPage() {
                             webhookProvider: group.provider.toLowerCase(),
                           })}
                           className="font-medium text-muted-foreground hover:text-foreground hover:underline"
-                        >
-                          Delivery report
-                        </Link>
+                      >
+                      {t("operations.deliveryReport")}
+                    </Link>
                       </div>
                     </div>
                   ))
@@ -1556,7 +1579,7 @@ export default function OperationsPage() {
                         })}
                         className="font-medium text-muted-foreground hover:text-foreground hover:underline"
                       >
-                        Exact outbox
+                        {t("operations.exactOutbox")}
                       </Link>
                     ) : null}
                   </div>
@@ -1571,14 +1594,23 @@ export default function OperationsPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Last Batch Result
+                  {t("operations.lastBatchResult")}
                 </h2>
                 <p className="mt-1 text-[13px] text-muted-foreground">
                   {lastBatchResult.action === "retry"
-                    ? `Retry actionable imports over ${lastBatchResult.scope} runs`
+                    ? t("operations.retryImportsRuns").replace(
+                        "{count}",
+                        String(lastBatchResult.scope)
+                      )
                     : lastBatchResult.action === "outbox-retry"
-                      ? `Retry actionable deliveries over ${lastBatchResult.scope} messages`
-                      : `Reconcile actionable projects over ${lastBatchResult.scope} projects`}
+                      ? t("operations.retryDeliveriesMessages").replace(
+                          "{count}",
+                          String(lastBatchResult.scope)
+                        )
+                      : t("operations.reconcileProjectsScope").replace(
+                          "{count}",
+                          String(lastBatchResult.scope)
+                        )}
                 </p>
               </div>
               <div className="text-right text-[12px] text-muted-foreground">
@@ -1587,25 +1619,25 @@ export default function OperationsPage() {
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-4">
               <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Success</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("operations.success")}</div>
                 <div className="mt-1 text-lg font-semibold text-foreground">{lastBatchResult.successful}</div>
               </div>
               <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Failed</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("operations.failed")}</div>
                 <div className="mt-1 text-lg font-semibold text-foreground">{lastBatchResult.failed}</div>
               </div>
               <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Skipped</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("operations.skipped")}</div>
                 <div className="mt-1 text-lg font-semibold text-foreground">{lastBatchResult.skipped}</div>
               </div>
               <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Scope</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("operations.scope")}</div>
                 <div className="mt-1 text-lg font-semibold text-foreground">{lastBatchResult.scope}</div>
               </div>
             </div>
             <div className="mt-4 space-y-2">
               {lastBatchResult.items.length === 0 ? (
-                <div className="text-[13px] text-muted-foreground">No item details returned.</div>
+                <div className="text-[13px] text-muted-foreground">{t("operations.noItemDetails")}</div>
               ) : (
                 lastBatchResult.items.slice(0, 5).map((item) => (
                   <div
@@ -1647,14 +1679,14 @@ export default function OperationsPage() {
                 className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
               >
                 {lastBatchResult.action === "outbox-retry"
-                  ? "Review affected deliveries"
-                  : "Review affected imports"}
+                  ? t("operations.reviewAffectedDeliveries")
+                  : t("operations.reviewAffectedImports")}
               </Link>
               <Link
                 href="/operations"
                 className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
               >
-                Back to overview
+                {t("operations.backToOverview")}
               </Link>
             </div>
           </section>
@@ -1809,16 +1841,19 @@ export default function OperationsPage() {
             <div className="space-y-0">
               {outboxFailedQuery.isLoading && (
                 <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                  Loading outbox failures...
+                  {t("operations.loadingOutboxFailures")}
                 </div>
               )}
               {!outboxFailedQuery.isLoading && visibleFailedOutbox.length === 0 && (
                 <div className="px-4 py-6 text-[13px] text-muted-foreground">
                   {deliveryChannelFilter
-                    ? `No failed outbox messages for ${deliveryChannelFilter}.`
+                    ? t("operations.noFailedOutboxMessagesFor").replace(
+                        "{scope}",
+                        deliveryChannelFilter
+                      )
                     : onlyActionable
-                      ? "No actionable outbox messages."
-                      : "No failed outbox messages."}
+                      ? t("operations.noActionableOutboxMessages")
+                      : t("operations.noFailedOutboxMessages")}
                 </div>
               )}
               {visibleFailedOutbox.map((item) => (
