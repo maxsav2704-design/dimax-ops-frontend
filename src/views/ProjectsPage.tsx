@@ -974,7 +974,7 @@ export default function ProjectsPage() {
 
   const renderImportPreviewGroups = (
     diagnostics?: ImportColumnsDiagnostics | null,
-    title = "Project structure preview:"
+    title = t("projects.projectStructurePreview")
   ) => {
     const previewGroups = diagnostics?.preview_groups || [];
     if (previewGroups.length === 0) {
@@ -1599,14 +1599,14 @@ export default function ProjectsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                    Active scope
+                    {t("projects.activeScope")}
                   </div>
                   <div className="mt-2 text-sm font-semibold text-foreground">
-                    {selectedProject?.name || "Portfolio overview"}
+                    {selectedProject?.name || t("projects.portfolioOverview")}
                   </div>
                   <div className="mt-1 text-[12px] leading-5 text-muted-foreground">
                     {selectedProject?.address ||
-                      "Select a project to move from queue visibility into exact financial and layout review."}
+                      t("projects.selectProjectHint")}
                   </div>
                 </div>
                 <button
@@ -1630,15 +1630,15 @@ export default function ProjectsPage() {
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    Search
+                    {t("common.search")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
-                    {search.trim() ? "Filtered" : "Global"}
+                    {search.trim() ? t("common.filtered") : t("common.portfolio")}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    Queue
+                    {t("projects.queue")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
                     {failedQueue?.total || 0}
@@ -1646,10 +1646,10 @@ export default function ProjectsPage() {
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    Mode
+                    {t("common.mode")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
-                    {bulkOnlyFailedRuns ? "Retry failed" : "Reconcile all"}
+                    {bulkOnlyFailedRuns ? t("projects.retryFailed") : t("projects.reconcileAll")}
                   </div>
                 </div>
               </div>
@@ -1666,8 +1666,9 @@ export default function ProjectsPage() {
 
         {deepLinkedFailedCount > 0 && (
           <div className="mb-4 rounded-lg border border-[hsl(var(--accent)/0.35)] bg-[hsl(var(--accent)/0.10)] px-4 py-3 text-[13px] text-foreground">
-            Reports handoff: preselected failing projects {deepLinkedFailedCount}. Use
-            <span className="font-semibold"> Retry failed only</span> to reconcile safely.
+            {t("projects.reportsHandoff").replace("{count}", String(deepLinkedFailedCount))}{" "}
+            <span className="font-semibold"> {t("projects.retryFailedOnly")}</span>{" "}
+            {t("projects.toReconcileSafely")}
           </div>
         )}
 
@@ -1681,8 +1682,8 @@ export default function ProjectsPage() {
                 </h2>
               </div>
               <div className="text-right text-[12px] text-muted-foreground">
-                <div>Filtered {filteredProjects.length}</div>
-                <div>Selected {bulkSelectedProjectIds.length}</div>
+                <div>{t("projects.filteredCount")} {filteredProjects.length}</div>
+                <div>{t("projects.selectedCount")} {bulkSelectedProjectIds.length}</div>
               </div>
             </div>
             <div className="relative mb-3">
@@ -1690,7 +1691,7 @@ export default function ProjectsPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search project..."
+                placeholder={t("projects.searchProject")}
                 className="h-11 w-full rounded-xl border border-border/70 bg-background/80 pl-9 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/40"
               />
             </div>
@@ -1702,7 +1703,7 @@ export default function ProjectsPage() {
                     checked={allFilteredSelected}
                     onChange={(e) => toggleSelectAllFilteredProjects(e.target.checked)}
                   />
-                  Select all filtered ({filteredProjects.length})
+                  {t("projects.selectAllFiltered")} ({filteredProjects.length})
                 </label>
                 <div className="flex items-center gap-2">
                   <button
@@ -1713,8 +1714,8 @@ export default function ProjectsPage() {
                     className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {bulkReviewLoading
-                      ? "Reviewing..."
-                      : `Review Selected (${bulkSelectedProjectIds.length})`}
+                      ? t("projects.reviewing")
+                      : `${t("projects.reviewSelected")} (${bulkSelectedProjectIds.length})`}
                   </button>
                   <button
                     onClick={() => {
@@ -1724,10 +1725,10 @@ export default function ProjectsPage() {
                     className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {bulkReconcileLoading
-                      ? "Reconciling..."
+                      ? t("projects.reconciling")
                       : bulkOnlyFailedRuns
-                        ? `Retry Failed (${bulkSelectedProjectIds.length})`
-                        : `Reconcile (${bulkSelectedProjectIds.length})`}
+                        ? `${t("projects.retryFailed")} (${bulkSelectedProjectIds.length})`
+                        : `${t("projects.reconcile")} (${bulkSelectedProjectIds.length})`}
                   </button>
                 </div>
               </div>
@@ -1737,15 +1738,15 @@ export default function ProjectsPage() {
                   checked={bulkOnlyFailedRuns}
                   onChange={(e) => setBulkOnlyFailedRuns(e.target.checked)}
                 />
-                Retry failed latest runs only
+                {t("projects.retryFailedLatestOnly")}
               </label>
             </div>
             <div className="space-y-2 max-h-[75vh] overflow-auto pr-1">
               {loadingProjects && (
-                <div className="text-[13px] text-muted-foreground px-2 py-2">Loading projects...</div>
+                <div className="text-[13px] text-muted-foreground px-2 py-2">{t("projects.loadingProjects")}</div>
               )}
               {!loadingProjects && filteredProjects.length === 0 && (
-                <div className="text-[13px] text-muted-foreground px-2 py-2">No projects found.</div>
+                <div className="text-[13px] text-muted-foreground px-2 py-2">{t("projects.noProjectsFound")}</div>
               )}
               {filteredProjects.map((project) => {
                 const active = project.id === selectedProjectId;
@@ -1776,7 +1777,7 @@ export default function ProjectsPage() {
                     >
                       <div className="text-[13px] font-semibold text-card-foreground">{project.name}</div>
                       <div className="text-[12px] text-muted-foreground mt-0.5">{project.address}</div>
-                      <div className="text-[11px] text-muted-foreground mt-2">Status: {project.status}</div>
+                      <div className="text-[11px] text-muted-foreground mt-2">{t("projects.statusPrefix")}: {project.status}</div>
                     </button>
                   </div>
                 );
@@ -1789,19 +1790,19 @@ export default function ProjectsPage() {
               <>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                   <div className="surface-panel">
-                    <div className="text-[12px] text-muted-foreground">Project</div>
+                    <div className="text-[12px] text-muted-foreground">{t("projects.projectLabel")}</div>
                     <div className="text-[14px] font-semibold mt-1">{selectedProject.name}</div>
                     <div className="text-[12px] text-muted-foreground mt-1">{selectedProject.address}</div>
                     {projectDetails?.developer_company ? (
                       <div className="text-[12px] text-muted-foreground mt-2">
-                        Developer: {projectDetails.developer_company}
+                        {t("projects.developer")}: {projectDetails.developer_company}
                       </div>
                     ) : null}
                   </div>
                   <div className="surface-panel">
                     <div className="text-[12px] text-muted-foreground flex items-center gap-1">
                       <Building2 className="w-3.5 h-3.5" />
-                      Total Doors
+                      {t("projects.totalDoors")}
                     </div>
                     <div className="text-[22px] font-semibold mt-1">
                       {layout ? layout.total_doors : "-"}
@@ -1810,21 +1811,21 @@ export default function ProjectsPage() {
                   <div className="surface-panel">
                     <div className="text-[12px] text-muted-foreground flex items-center gap-1">
                       <Layers3 className="w-3.5 h-3.5" />
-                      Layout Buckets
+                      {t("projects.layoutBuckets")}
                     </div>
                     <div className="text-[22px] font-semibold mt-1">
                       {layout ? layout.buckets.length : "-"}
                     </div>
                   </div>
                   <div className="surface-panel">
-                    <div className="text-[12px] text-muted-foreground">Open Blockers</div>
+                    <div className="text-[12px] text-muted-foreground">{t("projects.openBlockers")}</div>
                     <div className="text-[22px] font-semibold mt-1">
                       {loadingProjectDetails ? "-" : projectDetails?.issues_open?.length || 0}
                     </div>
                     <div className="text-[12px] text-muted-foreground mt-1">
                       {projectDetails?.contact_name
-                        ? `Contact: ${projectDetails.contact_name}`
-                        : "No contact assigned"}
+                        ? `${t("projects.contact")}: ${projectDetails.contact_name}`
+                        : t("projects.noContactAssigned")}
                     </div>
                   </div>
                 </div>
@@ -1832,23 +1833,23 @@ export default function ProjectsPage() {
                 <div className="surface-panel">
                   <div className="flex flex-col gap-2 border-b border-border/70 pb-4 md:flex-row md:items-start md:justify-between">
                     <div>
-                      <h3 className="text-[15px] font-semibold">Project Financial Screen</h3>
+                      <h3 className="text-[15px] font-semibold">{t("projects.projectFinancialScreen")}</h3>
                       <p className="mt-1 text-[12px] text-muted-foreground">
-                        Plan vs fact, margin leakage and risk drivers for the selected project.
+                        {t("projects.projectFinancialSubtitle")}
                       </p>
                     </div>
                     <div className="text-[12px] text-muted-foreground">
                       {loadingProjectPlanFact || loadingProjectRisk
-                        ? "Refreshing financial view..."
+                        ? t("projects.refreshingFinancialView")
                         : projectRisk?.generated_at
                           ? `Updated: ${formatDateTime(projectRisk.generated_at)}`
-                          : "Financial data ready"}
+                          : t("projects.financialDataReady")}
                     </div>
                   </div>
 
                   {loadingProjectPlanFact || loadingProjectRisk ? (
                     <div className="mt-4 text-[13px] text-muted-foreground">
-                      Loading project financial screen...
+                      {t("projects.loadingFinancialScreen")}
                     </div>
                   ) : projectPlanFact && projectRisk ? (
                     <div className="mt-4 space-y-4">
@@ -2433,7 +2434,7 @@ export default function ProjectsPage() {
                 <div className="glass-card rounded-xl p-4">
                   <div className="flex items-center gap-2 text-[13px] font-semibold">
                     <Upload className="w-4 h-4" />
-                    Import Factory File
+                    {t("projects.importFactoryFile")}
                   </div>
                   <p className="text-[12px] text-muted-foreground mt-1">
                     Accepted: CSV, TSV, TXT, JSON, XML, XLSX, PDF
@@ -2445,7 +2446,7 @@ export default function ProjectsPage() {
                     <label className="h-10 rounded-lg border border-dashed border-border bg-background flex items-center px-3 text-[13px] text-muted-foreground cursor-pointer hover:border-accent/40">
                       <FileSpreadsheet className="w-4 h-4 mr-2 shrink-0" />
                       <span className="truncate">
-                        {importFile ? importFile.name : "Choose file..."}
+                        {importFile ? importFile.name : t("projects.chooseFile")}
                       </span>
                       <input
                         type="file"
@@ -2468,8 +2469,8 @@ export default function ProjectsPage() {
                     >
                       <option value="">
                         {loadingDoorTypes
-                          ? "Loading door types..."
-                          : "Auto by file code (or create missing)"}
+                          ? t("projects.loadingDoorTypes")
+                          : t("projects.autoByFileCode")}
                       </option>
                       {doorTypes.map((doorType) => (
                         <option key={doorType.id} value={doorType.id}>
@@ -2483,14 +2484,14 @@ export default function ProjectsPage() {
                         disabled={!importFile || importLoading}
                         className="h-10 rounded-lg border border-border bg-card text-card-foreground text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        {importLoading && importAction === "analyze" ? "Analyzing..." : "Analyze"}
+                        {importLoading && importAction === "analyze" ? t("projects.analyzing") : t("projects.analyze")}
                       </button>
                       <button
                         onClick={() => void handleImportAction("import")}
                         disabled={!importFile || importLoading || !analysisReady}
                         className="h-10 rounded-lg bg-accent text-accent-foreground text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        {importLoading && importAction === "import" ? "Import..." : "Import"}
+                        {importLoading && importAction === "import" ? t("projects.importing") : t("projects.import")}
                       </button>
                     </div>
                   </div>
@@ -2586,7 +2587,7 @@ export default function ProjectsPage() {
                       ) : null}
                       {importResult.diagnostics?.data_summary ? (
                         <div className="mt-2">
-                          <div className="text-muted-foreground">Import data summary:</div>
+                          <div className="text-muted-foreground">{t("projects.importDataSummary")}</div>
                           <div className="mt-1 flex flex-wrap gap-1.5">
                             {[
                               {
@@ -2669,7 +2670,7 @@ export default function ProjectsPage() {
                   <div className="mt-4 rounded-lg border border-border bg-background">
                     <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                       <div className="text-[12px] font-semibold">
-                        Import History
+                        {t("projects.importHistory")}
                         <span className="ml-2 text-muted-foreground">
                           {filteredImportHistory.length} / {importHistory.length}
                         </span>
@@ -2681,7 +2682,7 @@ export default function ProjectsPage() {
                           onChange={(e) => setImportHistoryModeFilter(e.target.value)}
                           className="h-7 rounded-md border border-border bg-background px-2 text-[11px]"
                         >
-                          <option value="all">All modes</option>
+                          <option value="all">{t("projects.allModes")}</option>
                           <option value="analyze">Analyze</option>
                           <option value="import">Import</option>
                           <option value="import_retry">Retry</option>
@@ -2692,7 +2693,7 @@ export default function ProjectsPage() {
                           onChange={(e) => setImportHistoryStatusFilter(e.target.value)}
                           className="h-7 rounded-md border border-border bg-background px-2 text-[11px]"
                         >
-                          <option value="all">All statuses</option>
+                          <option value="all">{t("projects.allStatuses")}</option>
                           <option value="ANALYZED">ANALYZED</option>
                           <option value="SUCCESS">SUCCESS</option>
                           <option value="PARTIAL">PARTIAL</option>
@@ -2707,21 +2708,21 @@ export default function ProjectsPage() {
                           }}
                           className="h-7 px-2 rounded-md border border-border bg-card text-[11px]"
                         >
-                          Refresh history
+                          {t("projects.refreshHistory")}
                         </button>
                       </div>
                     </div>
                     {loadingImportHistory ? (
                       <div className="px-3 py-3 text-[12px] text-muted-foreground">
-                        Loading import history...
+                        {t("projects.loadingImportHistory")}
                       </div>
                     ) : importHistory.length === 0 ? (
                       <div className="px-3 py-3 text-[12px] text-muted-foreground">
-                        No import runs yet.
+                        {t("projects.noImportRunsYet")}
                       </div>
                     ) : filteredImportHistory.length === 0 ? (
                       <div className="px-3 py-3 text-[12px] text-muted-foreground">
-                        No import runs for selected filters.
+                        {t("projects.noImportRunsForFilters")}
                       </div>
                     ) : (
                       <div className="overflow-auto">
@@ -2807,7 +2808,7 @@ export default function ProjectsPage() {
                   </div>
                   <div className="mt-3 rounded-lg border border-border bg-background px-3 py-3">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-[12px] font-semibold">Selected Import Run</div>
+                      <div className="text-[12px] font-semibold">{t("projects.selectedImportRun")}</div>
                       {focusedImportRunDetails ? (
                         <div className="text-[11px] text-muted-foreground">
                           {formatDateTime(focusedImportRunDetails.created_at)}
@@ -2816,11 +2817,11 @@ export default function ProjectsPage() {
                     </div>
                     {loadingImportRunDetails ? (
                       <div className="mt-2 text-[12px] text-muted-foreground">
-                        Loading import run details...
+                        {t("projects.loadingImportRunDetails")}
                       </div>
                     ) : !focusedImportRunDetails ? (
                       <div className="mt-2 text-[12px] text-muted-foreground">
-                        Select a run from history to inspect diagnostics and errors.
+                        {t("projects.selectRunHint")}
                       </div>
                     ) : (
                       <div className="mt-2 space-y-3 text-[12px]">
@@ -2961,9 +2962,9 @@ export default function ProjectsPage() {
                   <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
                     <div>
                       <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                        Door Allocation Matrix
+                        {t("projects.doorAllocationMatrix")}
                       </div>
-                      <h3 className="text-[15px] font-semibold mt-1">Project Detail Matrix</h3>
+                      <h3 className="text-[15px] font-semibold mt-1">{t("projects.projectDetailMatrix")}</h3>
                       <p className="text-[12px] text-muted-foreground mt-1">
                         Visual cut by בניין, קומה, דירה, מספר הזמנה, דגם כנף and door location.
                       </p>
@@ -3000,7 +3001,7 @@ export default function ProjectsPage() {
                       onChange={(e) => setMatrixOrderNumber(e.target.value)}
                       className="h-9 rounded-lg border border-border bg-background px-3 text-[12px]"
                     >
-                      <option value="all">All orders</option>
+                      <option value="all">{t("projects.allOrders")}</option>
                       {matrixOrderNumberOptions.map((value) => (
                         <option key={value} value={value}>
                           {value}
@@ -3093,13 +3094,13 @@ export default function ProjectsPage() {
                       className="h-9 rounded-lg border border-border bg-card text-[12px] inline-flex items-center justify-center gap-1"
                     >
                       <FilterX className="w-3.5 h-3.5" />
-                      Reset
+                      {t("projects.reset")}
                     </button>
                   </div>
 
                   {filteredMatrixRows.length === 0 ? (
                     <div className="rounded-lg border border-border bg-background px-4 py-8 text-[13px] text-muted-foreground">
-                      No doors for selected filters.
+                      {t("projects.noDoorsForFilters")}
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -3383,13 +3384,13 @@ export default function ProjectsPage() {
 
                 {loadingLayout && (
                   <div className="glass-card rounded-xl p-4 text-[13px] text-muted-foreground">
-                    Loading layout...
+                    {t("projects.loadingLayout")}
                   </div>
                 )}
 
                 {!loadingLayout && layout && floorGroups.length === 0 && (
                   <div className="glass-card rounded-xl p-4 text-[13px] text-muted-foreground">
-                    No doors in this project yet.
+                    {t("projects.noDoorsInProjectYet")}
                   </div>
                 )}
 
