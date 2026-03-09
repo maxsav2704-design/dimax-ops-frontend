@@ -13,6 +13,7 @@ dist-ssr
 *.local
 .next
 .next-*.log
+.preview-web.*
 tsconfig.tsbuildinfo
 .env.e2e.local
 
