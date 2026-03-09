@@ -2749,7 +2749,7 @@ export default function ReportsPage() {
           )}
           {projectPlanFactQuery.isLoading && projectPlanFactProjectId && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              {t("reports.projectPlanVsFact")}
+              {t("reports.loadingProjectPlanFact")}
             </div>
           )}
           {projectPlanFactQuery.isError && projectPlanFactProjectId && (
