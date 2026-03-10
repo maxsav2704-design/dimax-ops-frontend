@@ -59,5 +59,8 @@ describe("PublicLandingPage", () => {
     expect(screen.getByText("Core product architecture")).toBeInTheDocument();
     expect(screen.getByText("Projects")).toBeInTheDocument();
     expect(screen.getByText("Journal")).toBeInTheDocument();
-  });
+    expect(screen.getByText("Two real working days inside the product")).toBeInTheDocument();
+    expect(screen.getByText("Admin recovery day")).toBeInTheDocument();
+    expect(screen.getByText("Installer execution day")).toBeInTheDocument();
+  }, 10000);
 });

@@ -121,6 +121,27 @@ export default function PublicLandingPage() {
     },
   ];
 
+  const useCases = [
+    {
+      title: t("landing.useCaseAdminTitle"),
+      steps: [
+        t("landing.useCaseAdminStepOne"),
+        t("landing.useCaseAdminStepTwo"),
+        t("landing.useCaseAdminStepThree"),
+      ],
+      href: "/login?next=/operations",
+    },
+    {
+      title: t("landing.useCaseInstallerTitle"),
+      steps: [
+        t("landing.useCaseInstallerStepOne"),
+        t("landing.useCaseInstallerStepTwo"),
+        t("landing.useCaseInstallerStepThree"),
+      ],
+      href: "/login?next=/installer",
+    },
+  ];
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,hsl(var(--accent)/0.16),transparent_32%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--background)/0.96))]">
       <div className="pointer-events-none absolute inset-0 shell-grid opacity-25" />
@@ -408,6 +429,43 @@ export default function PublicLandingPage() {
                     </div>
                   );
                 })}
+              </div>
+            </article>
+          </section>
+
+          <section className="motion-page-enter mt-8">
+            <article className="surface-panel p-6">
+              <div className="page-eyebrow">{t("landing.useCasesTitle")}</div>
+              <p className="mt-3 max-w-3xl text-[14px] leading-6 text-muted-foreground">
+                {t("landing.useCasesText")}
+              </p>
+
+              <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                {useCases.map((useCase) => (
+                  <div
+                    key={useCase.title}
+                    className="rounded-[1.6rem] border border-border/70 bg-background/72 p-5"
+                  >
+                    <div className="text-xl font-semibold text-foreground">{useCase.title}</div>
+                    <div className="mt-4 grid gap-3">
+                      {useCase.steps.map((step) => (
+                        <div
+                          key={step}
+                          className="rounded-2xl border border-border/70 bg-background/78 px-4 py-4 text-[14px] leading-6 text-foreground"
+                        >
+                          {step}
+                        </div>
+                      ))}
+                    </div>
+                    <Link
+                      href={useCase.href}
+                      className="mt-5 inline-flex items-center gap-2 text-[13px] font-medium text-accent"
+                    >
+                      {t("landing.openRoute")}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                ))}
               </div>
             </article>
           </section>
