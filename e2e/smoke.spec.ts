@@ -73,6 +73,71 @@ async function createProject(request, token: string, suffix: string) {
   };
 }
 
+test.describe("Public entry smoke", () => {
+  test("welcome preserves locale into secure login routes", async ({ page }) => {
+    await page.goto("/welcome", { waitUntil: "networkidle" });
+
+    await expect(page.locator("a[href=\"/login\"]").first()).toBeVisible();
+    await expect(page.locator("a[href=\"/login?next=/installer\"]").first()).toBeVisible();
+
+    const localeButtons = page.locator("button[title]");
+    await expect(localeButtons).toHaveCount(3);
+
+    await localeButtons.nth(1).click();
+    await expect
+      .poll(async () => page.evaluate(() => window.localStorage.getItem("dimax_locale")))
+      .toBe("ru");
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.lang))
+      .toBe("ru");
+
+    await page.locator("a[href=\"/login\"]").first().click();
+    await expect(page).toHaveURL(/\/login$/);
+    await expect
+      .poll(async () => page.evaluate(() => window.localStorage.getItem("dimax_locale")))
+      .toBe("ru");
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.lang))
+      .toBe("ru");
+
+    await page.goto("/welcome", { waitUntil: "networkidle" });
+    await page.locator("button[title]").nth(2).click();
+    await expect
+      .poll(async () => page.evaluate(() => window.localStorage.getItem("dimax_locale")))
+      .toBe("he");
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.lang))
+      .toBe("he");
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.dir))
+      .toBe("rtl");
+
+    await page.locator("a[href=\"/login?next=/installer\"]").first().click();
+    await expect(page).toHaveURL(/\/login\?next=(%2Finstaller|\/installer)$/);
+    await expect
+      .poll(async () => page.evaluate(() => window.localStorage.getItem("dimax_locale")))
+      .toBe("he");
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.lang))
+      .toBe("he");
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.dir))
+      .toBe("rtl");
+
+    await page.locator('button[title="English"]:visible').first().click();
+    await expect
+      .poll(async () => page.evaluate(() => window.localStorage.getItem("dimax_locale")))
+      .toBe("en");
+    await page.reload({ waitUntil: "networkidle" });
+    await expect
+      .poll(async () => page.evaluate(() => window.localStorage.getItem("dimax_locale")))
+      .toBe("en");
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.lang))
+      .toBe("en");
+  });
+});
+
 test.describe.serial("Admin web smoke", () => {
   test("login, project import analyze, calendar create event, reports open", async ({
     page,
