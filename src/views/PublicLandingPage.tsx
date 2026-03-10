@@ -3,6 +3,8 @@ import {
   ArrowRight,
   Globe2,
   LayoutDashboard,
+  LockKeyhole,
+  Radar,
   ShieldCheck,
   Sparkles,
   Wrench,
@@ -66,6 +68,30 @@ export default function PublicLandingPage() {
     t("landing.demoStepOne"),
     t("landing.demoStepTwo"),
     t("landing.demoStepThree"),
+  ];
+
+  const trustMetrics = [
+    [t("landing.trustMetricQuality"), t("landing.trustMetricQualityValue")],
+    [t("landing.trustMetricLocales"), t("landing.trustMetricLocalesValue")],
+    [t("landing.trustMetricPreview"), t("landing.trustMetricPreviewValue")],
+  ];
+
+  const trustSignals = [
+    {
+      icon: ShieldCheck,
+      title: t("landing.signalOneTitle"),
+      text: t("landing.signalOneText"),
+    },
+    {
+      icon: Radar,
+      title: t("landing.signalTwoTitle"),
+      text: t("landing.signalTwoText"),
+    },
+    {
+      icon: LockKeyhole,
+      title: t("landing.signalThreeTitle"),
+      text: t("landing.signalThreeText"),
+    },
   ];
 
   return (
@@ -246,6 +272,86 @@ export default function PublicLandingPage() {
                     {step}
                   </div>
                 ))}
+              </div>
+            </article>
+          </section>
+
+          <section className="motion-page-enter mt-8 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+            <article className="surface-panel p-6">
+              <div className="page-eyebrow">{t("landing.trustTitle")}</div>
+              <p className="mt-3 max-w-3xl text-[14px] leading-6 text-muted-foreground">
+                {t("landing.trustText")}
+              </p>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                {trustMetrics.map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="rounded-2xl border border-border/70 bg-background/72 px-4 py-4"
+                  >
+                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                      {label}
+                    </div>
+                    <div className="mt-2 text-2xl font-semibold text-foreground">{value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 grid gap-4 xl:grid-cols-3">
+                {trustSignals.map((signal) => {
+                  const Icon = signal.icon;
+                  return (
+                    <div
+                      key={signal.title}
+                      className="rounded-[1.5rem] border border-border/70 bg-background/72 p-5"
+                    >
+                      <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-border/70 bg-background/80">
+                        <Icon className="h-5 w-5 text-accent" />
+                      </div>
+                      <div className="mt-4 text-lg font-semibold text-foreground">{signal.title}</div>
+                      <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
+                        {signal.text}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </article>
+
+            <article className="surface-panel p-6">
+              <div className="page-eyebrow">{t("landing.accessTitle")}</div>
+              <div className="mt-5 grid gap-4">
+                <div className="rounded-2xl border border-border/70 bg-background/72 p-4">
+                  <div className="text-lg font-semibold text-foreground">
+                    {t("landing.accessAdminTitle")}
+                  </div>
+                  <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
+                    {t("landing.accessAdminText")}
+                  </p>
+                  <Link
+                    href="/login?next=/operations"
+                    className="mt-4 inline-flex items-center gap-2 text-[13px] font-medium text-accent"
+                  >
+                    {t("landing.openRoute")}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+
+                <div className="rounded-2xl border border-border/70 bg-background/72 p-4">
+                  <div className="text-lg font-semibold text-foreground">
+                    {t("landing.accessInstallerTitle")}
+                  </div>
+                  <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
+                    {t("landing.accessInstallerText")}
+                  </p>
+                  <Link
+                    href="/login?next=/installer"
+                    className="mt-4 inline-flex items-center gap-2 text-[13px] font-medium text-accent"
+                  >
+                    {t("landing.openRoute")}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
               </div>
             </article>
           </section>

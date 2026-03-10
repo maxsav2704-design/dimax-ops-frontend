@@ -53,5 +53,8 @@ describe("PublicLandingPage", () => {
       "/login?next=/operations"
     );
     expect(screen.getByText("How the demo flow works")).toBeInTheDocument();
+    expect(screen.getByText("Proof that the system is operationally serious")).toBeInTheDocument();
+    expect(screen.getByText("Role-aware demo access")).toBeInTheDocument();
+    expect(screen.getByText("100%")).toBeInTheDocument();
   });
 });
