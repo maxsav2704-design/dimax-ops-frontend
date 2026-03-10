@@ -4,6 +4,10 @@ Use these routes for design review, demos and regression screenshots.
 
 ## Admin
 
+Public entry:
+
+- `/welcome`
+
 Login:
 
 - `/login`
@@ -30,16 +34,17 @@ Core field flow:
 
 Recommended visual review order:
 
-1. `Login`
-2. `Operations`
-3. `Reports`
-4. `Projects`
-5. `Issues`
-6. `Journal`
-7. `Installers`
-8. `Installer Workspace`
-9. `Installer Schedule`
-10. `Installer Project`
+1. `Welcome`
+2. `Login`
+3. `Operations`
+4. `Reports`
+5. `Projects`
+6. `Issues`
+7. `Journal`
+8. `Installers`
+9. `Installer Workspace`
+10. `Installer Schedule`
+11. `Installer Project`
 
 ## What to check
 

@@ -73,6 +73,7 @@ See `TESTING.md` for the full bootstrap and local flow.
 Design handoff and review docs:
 
 - `DESIGN_SYSTEM.md`
+- `DEMO_REVIEW_PACK.md`
 - `SCREENSHOT_ROUTES.md`
 - `PR_DESIGN_SUMMARY.md`
 
