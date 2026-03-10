@@ -142,6 +142,12 @@ export default function PublicLandingPage() {
     },
   ];
 
+  const readinessMetrics = [
+    [t("landing.readinessPreview"), t("landing.readinessPreviewValue")],
+    [t("landing.readinessI18n"), t("landing.readinessI18nValue")],
+    [t("landing.readinessRelease"), t("landing.readinessReleaseValue")],
+  ];
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,hsl(var(--accent)/0.16),transparent_32%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--background)/0.96))]">
       <div className="pointer-events-none absolute inset-0 shell-grid opacity-25" />
@@ -466,6 +472,51 @@ export default function PublicLandingPage() {
                     </Link>
                   </div>
                 ))}
+              </div>
+            </article>
+          </section>
+
+          <section className="motion-page-enter mt-8">
+            <article className="surface-panel p-6">
+              <div className="page-eyebrow">{t("landing.readinessTitle")}</div>
+              <div className="mt-3 grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+                <div>
+                  <p className="max-w-3xl text-[14px] leading-6 text-muted-foreground">
+                    {t("landing.readinessText")}
+                  </p>
+                  <p className="mt-4 text-[14px] leading-6 text-foreground">
+                    {t("landing.readinessDocs")}
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {readinessMetrics.map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-2xl border border-border/70 bg-background/72 px-4 py-4"
+                    >
+                      <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                        {label}
+                      </div>
+                      <div className="mt-2 text-lg font-semibold text-foreground">{value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  href="/login"
+                  className="btn-premium h-11 rounded-xl px-4 text-[13px] font-medium"
+                >
+                  {t("landing.readinessPrimaryCta")}
+                </Link>
+                <Link
+                  href="/login?next=/installer"
+                  className="inline-flex h-11 items-center justify-center rounded-xl border border-border/70 bg-background/70 px-4 text-[13px] font-medium text-foreground"
+                >
+                  {t("landing.readinessSecondaryCta")}
+                </Link>
               </div>
             </article>
           </section>

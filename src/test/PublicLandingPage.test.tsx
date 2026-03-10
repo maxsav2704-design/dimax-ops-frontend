@@ -62,5 +62,11 @@ describe("PublicLandingPage", () => {
     expect(screen.getByText("Two real working days inside the product")).toBeInTheDocument();
     expect(screen.getByText("Admin recovery day")).toBeInTheDocument();
     expect(screen.getByText("Installer execution day")).toBeInTheDocument();
+    expect(screen.getByText("Deployment and demo readiness")).toBeInTheDocument();
+    expect(screen.getByText("localhost:5174")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open secure demo entry" })).toHaveAttribute(
+      "href",
+      "/login"
+    );
   }, 10000);
 });
