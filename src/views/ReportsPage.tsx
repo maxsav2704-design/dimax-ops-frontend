@@ -67,7 +67,7 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
       "Where margin risk is currently concentrated across projects, orders and installers",
     "reports.loadingRiskConcentration": "Loading risk concentration...",
     "reports.failedRiskConcentration": "Failed to load risk concentration",
-    "reports.delayedProfit": "Delayed Profit",
+    "reports.delayedProfitLabel": "Delayed Profit",
     "reports.openIssueRisk": "Open issue risk {amount}",
     "reports.blockedIssueRisk": "Blocked Issue Risk",
     "reports.worstInstaller": "Worst installer {amount}",
@@ -91,6 +91,51 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.preparingPlanFactFilters": "Preparing project filters for plan vs fact.",
     "reports.loadingProjectPlanFact": "Loading project plan vs fact...",
     "reports.failedProjectPlanFact": "Failed to load project plan vs fact",
+    "reports.failedIssuesAnalytics": "Failed to load issues analytics",
+    "reports.openTotal": "Open / Total",
+    "reports.overdueRate": "Overdue Rate",
+    "reports.overdueOpen": "{count} overdue open",
+    "reports.blockedOpen": "Blocked Open",
+    "reports.backlogByWorkflow": "Backlog by Workflow",
+    "reports.backlogByPriority": "Backlog by Priority",
+    "reports.trendLastDays": "Trend (last {days} days)",
+    "reports.failedMarginLeakage": "Failed to load margin leakage",
+    "reports.openIssuesAtRisk": "Open Issues at Risk",
+    "reports.profitAtRisk": "Profit at risk {amount}",
+    "reports.blockedMarginRisk": "Blocked Margin Risk",
+    "reports.blockedProfit": "Blocked profit {amount}",
+    "reports.delayedDoors": "Delayed Doors",
+    "reports.delayedProfit": "Delayed profit {amount}",
+    "reports.addonUplift": "Add-on Uplift",
+    "reports.summary": "Summary",
+    "reports.openIssuesExposure": "Open Issues Exposure",
+    "reports.delayedNotInstalled": "Delayed Not Installed",
+    "reports.addonRealized": "Add-on Realized",
+    "reports.delayedByReason": "Delayed by Reason / Defect",
+    "reports.noDelayedReasons": "No delayed reasons.",
+    "reports.addonProfitImpact": "Add-on Profit Impact",
+    "reports.addon": "Add-on",
+    "reports.missingPlans": "Missing Plans",
+    "reports.noAddonImpactRows": "No add-on impact rows.",
+    "reports.installerProfitabilityMatrix": "Installer Profitability Matrix",
+    "reports.installerProfitabilitySubtitle":
+      "Ranking by money output, margin quality and issue pressure",
+    "reports.loadingInstallerProfitability": "Loading installer profitability matrix...",
+    "reports.projectsAddons": "Projects {projects} | Add-ons {addons}",
+    "reports.installerCrossViewTitle": "Installer x Project Cross-view",
+    "reports.installerCrossViewSubtitle":
+      "Which installer-project combinations create or destroy margin",
+    "reports.loadingInstallerCrossView": "Loading installer-project cross-view...",
+    "reports.installersKpiTitle": "Installers KPI",
+    "reports.installersKpiSubtitle": "Sorted, paginated installer performance and money metrics",
+    "reports.loadingInstallersKpi": "Loading installers KPI...",
+    "reports.rowsCount": "Rows: {count}",
+    "reports.exportInstallersCsv": "Export Installers CSV",
+    "reports.failedInstallerDetails": "Failed to load installer details",
+    "reports.exportOrdersCsv": "Export Orders CSV",
+    "reports.prev": "Prev",
+    "reports.next": "Next",
+    "reports.installerDrilldownTitle": "Installer Drill-down",
   },
   ru: {
     "reports.notAvailableShort": "н/д",
@@ -139,7 +184,7 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
       "Где сейчас сконцентрирован риск маржи по проектам, заказам и монтажникам.",
     "reports.loadingRiskConcentration": "Загружаем концентрацию риска...",
     "reports.failedRiskConcentration": "Не удалось загрузить концентрацию риска",
-    "reports.delayedProfit": "Отложенная прибыль",
+    "reports.delayedProfitLabel": "Отложенная прибыль",
     "reports.openIssueRisk": "Риск открытых проблем {amount}",
     "reports.blockedIssueRisk": "Риск заблокированных проблем",
     "reports.worstInstaller": "Худший монтажник {amount}",
@@ -163,6 +208,51 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.preparingPlanFactFilters": "Готовим фильтры проекта для блока план vs факт.",
     "reports.loadingProjectPlanFact": "Загружаем план vs факт по проекту...",
     "reports.failedProjectPlanFact": "Не удалось загрузить план vs факт по проекту",
+    "reports.failedIssuesAnalytics": "Не удалось загрузить аналитику проблем",
+    "reports.openTotal": "Открыто / всего",
+    "reports.overdueRate": "Доля просрочки",
+    "reports.overdueOpen": "Просрочено открытых: {count}",
+    "reports.blockedOpen": "Блокировано",
+    "reports.backlogByWorkflow": "Бэклог по workflow",
+    "reports.backlogByPriority": "Бэклог по приоритету",
+    "reports.trendLastDays": "Тренд за {days} дней",
+    "reports.failedMarginLeakage": "Не удалось загрузить утечку маржи",
+    "reports.openIssuesAtRisk": "Открытые проблемы в риске",
+    "reports.profitAtRisk": "Прибыль под риском {amount}",
+    "reports.blockedMarginRisk": "Риск блокированной маржи",
+    "reports.blockedProfit": "Блокированная прибыль {amount}",
+    "reports.delayedDoors": "Задержанные двери",
+    "reports.delayedProfit": "Отложенная прибыль {amount}",
+    "reports.addonUplift": "Рост за счет допов",
+    "reports.summary": "Сводка",
+    "reports.openIssuesExposure": "Экспозиция открытых проблем",
+    "reports.delayedNotInstalled": "Задержанные неустановленные",
+    "reports.addonRealized": "Реализованные допы",
+    "reports.delayedByReason": "Задержки по причине / дефекту",
+    "reports.noDelayedReasons": "Причин задержки нет.",
+    "reports.addonProfitImpact": "Влияние допов на прибыль",
+    "reports.addon": "Доп",
+    "reports.missingPlans": "Нет планов",
+    "reports.noAddonImpactRows": "Строк по влиянию допов нет.",
+    "reports.installerProfitabilityMatrix": "Матрица прибыльности монтажников",
+    "reports.installerProfitabilitySubtitle":
+      "Рейтинг по денежному результату, качеству маржи и давлению проблем",
+    "reports.loadingInstallerProfitability": "Загружаем матрицу прибыльности монтажников...",
+    "reports.projectsAddons": "Проекты {projects} | Допы {addons}",
+    "reports.installerCrossViewTitle": "Срез монтажник x проект",
+    "reports.installerCrossViewSubtitle":
+      "Какие связки монтажник-проект создают или съедают маржу",
+    "reports.loadingInstallerCrossView": "Загружаем срез монтажник x проект...",
+    "reports.installersKpiTitle": "KPI монтажников",
+    "reports.installersKpiSubtitle": "Сортируемые и постраничные метрики монтажников",
+    "reports.loadingInstallersKpi": "Загружаем KPI монтажников...",
+    "reports.rowsCount": "Строк: {count}",
+    "reports.exportInstallersCsv": "Экспорт CSV по монтажникам",
+    "reports.failedInstallerDetails": "Не удалось загрузить детали монтажника",
+    "reports.exportOrdersCsv": "Экспорт CSV по заказам",
+    "reports.prev": "Назад",
+    "reports.next": "Далее",
+    "reports.installerDrilldownTitle": "Разбор монтажника",
   },
   he: {
     "reports.notAvailableShort": "לא זמין",
@@ -211,7 +301,7 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
       "היכן סיכון המרווח מרוכז כעת בין פרויקטים, הזמנות ומתקינים.",
     "reports.loadingRiskConcentration": "טוען ריכוז סיכון...",
     "reports.failedRiskConcentration": "טעינת ריכוז הסיכון נכשלה",
-    "reports.delayedProfit": "רווח מעוכב",
+    "reports.delayedProfitLabel": "רווח מעוכב",
     "reports.openIssueRisk": "סיכון תקלות פתוחות {amount}",
     "reports.blockedIssueRisk": "סיכון תקלות חסומות",
     "reports.worstInstaller": "המתקין הגרוע ביותר {amount}",
@@ -235,6 +325,51 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.preparingPlanFactFilters": "מכין מסנני פרויקט עבור plan vs fact.",
     "reports.loadingProjectPlanFact": "טוען plan vs fact לפרויקט...",
     "reports.failedProjectPlanFact": "טעינת plan vs fact לפרויקט נכשלה",
+    "reports.failedIssuesAnalytics": "טעינת אנליטיקת התקלות נכשלה",
+    "reports.openTotal": "פתוחות / סה\"כ",
+    "reports.overdueRate": "שיעור איחור",
+    "reports.overdueOpen": "{count} פתוחות באיחור",
+    "reports.blockedOpen": "פתוחות חסומות",
+    "reports.backlogByWorkflow": "Backlog לפי workflow",
+    "reports.backlogByPriority": "Backlog לפי עדיפות",
+    "reports.trendLastDays": "מגמה ב-{days} הימים האחרונים",
+    "reports.failedMarginLeakage": "טעינת דליפת המרווח נכשלה",
+    "reports.openIssuesAtRisk": "תקלות פתוחות בסיכון",
+    "reports.profitAtRisk": "רווח בסיכון {amount}",
+    "reports.blockedMarginRisk": "סיכון מרווח חסום",
+    "reports.blockedProfit": "רווח חסום {amount}",
+    "reports.delayedDoors": "דלתות מושהות",
+    "reports.delayedProfit": "רווח מושהה {amount}",
+    "reports.addonUplift": "תרומת Add-on",
+    "reports.summary": "סיכום",
+    "reports.openIssuesExposure": "חשיפת תקלות פתוחות",
+    "reports.delayedNotInstalled": "מושהות ולא מותקנות",
+    "reports.addonRealized": "Add-on ממומש",
+    "reports.delayedByReason": "עיכוב לפי סיבה / פגם",
+    "reports.noDelayedReasons": "אין סיבות עיכוב.",
+    "reports.addonProfitImpact": "השפעת Add-on על הרווח",
+    "reports.addon": "Add-on",
+    "reports.missingPlans": "תוכניות חסרות",
+    "reports.noAddonImpactRows": "אין שורות השפעה של Add-on.",
+    "reports.installerProfitabilityMatrix": "מטריצת רווחיות מתקינים",
+    "reports.installerProfitabilitySubtitle":
+      "דירוג לפי תפוקה כספית, איכות מרווח ולחץ תקלות",
+    "reports.loadingInstallerProfitability": "טוען מטריצת רווחיות מתקינים...",
+    "reports.projectsAddons": "פרויקטים {projects} | תוספות {addons}",
+    "reports.installerCrossViewTitle": "חתך מתקין x פרויקט",
+    "reports.installerCrossViewSubtitle":
+      "אילו שילובים של מתקין-פרויקט יוצרים או שוחקים מרווח",
+    "reports.loadingInstallerCrossView": "טוען חתך מתקין x פרויקט...",
+    "reports.installersKpiTitle": "KPI למתקינים",
+    "reports.installersKpiSubtitle": "מדדי מתקינים עם מיון ודפדוף",
+    "reports.loadingInstallersKpi": "טוען KPI למתקינים...",
+    "reports.rowsCount": "שורות: {count}",
+    "reports.exportInstallersCsv": "ייצוא CSV למתקינים",
+    "reports.failedInstallerDetails": "טעינת פרטי המתקין נכשלה",
+    "reports.exportOrdersCsv": "ייצוא CSV להזמנות",
+    "reports.prev": "הקודם",
+    "reports.next": "הבא",
+    "reports.installerDrilldownTitle": "פירוט מתקין",
   },
 };
 
@@ -2596,14 +2731,14 @@ export default function ReportsPage() {
             <div className="text-[13px] text-[hsl(var(--destructive))]">
               {issuesAnalyticsQuery.error instanceof Error
                 ? issuesAnalyticsQuery.error.message
-                : "Failed to load issues analytics"}
+                : tt("reports.failedIssuesAnalytics")}
             </div>
           ) : (
             <>
               <div className="grid gap-3 md:grid-cols-5">
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Open / Total
+                    {tt("reports.openTotal")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
                     {issuesAnalytics?.summary.open_issues ?? 0} /{" "}
@@ -2612,13 +2747,16 @@ export default function ReportsPage() {
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Overdue Rate
+                    {tt("reports.overdueRate")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-[hsl(var(--destructive))]">
                     {issuesAnalytics?.summary.overdue_open_rate_pct ?? 0}%
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    {issuesAnalytics?.summary.overdue_open_issues ?? 0} overdue open
+                    {tt("reports.overdueOpen").replace(
+                      "{count}",
+                      String(issuesAnalytics?.summary.overdue_open_issues ?? 0)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
@@ -2635,7 +2773,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Blocked Open
+                    {tt("reports.blockedOpen")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-[hsl(var(--warning-foreground))]">
                     {issuesAnalytics?.summary.blocked_open_issues ?? 0}
@@ -2654,7 +2792,7 @@ export default function ReportsPage() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
-                    Backlog by Workflow
+                    {tt("reports.backlogByWorkflow")}
                   </div>
                   <div className="space-y-1 text-[12px]">
                     {Object.entries(issuesAnalytics?.summary.backlog_by_workflow || {}).map(
@@ -2669,7 +2807,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
-                    Backlog by Priority
+                    {tt("reports.backlogByPriority")}
                   </div>
                   <div className="space-y-1 text-[12px]">
                     {Object.entries(issuesAnalytics?.summary.backlog_by_priority || {}).map(
@@ -2686,7 +2824,10 @@ export default function ReportsPage() {
 
               <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3 space-y-2">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Trend (last {issuesAnalytics?.days ?? ISSUES_ANALYTICS_DAYS} days)
+                  {tt("reports.trendLastDays").replace(
+                    "{days}",
+                    String(issuesAnalytics?.days ?? ISSUES_ANALYTICS_DAYS)
+                  )}
                 </div>
                 {(issuesAnalytics?.trend || []).slice(-10).map((point) => (
                   <div
@@ -2732,53 +2873,62 @@ export default function ReportsPage() {
             <div className="text-[13px] text-[hsl(var(--destructive))]">
               {issuesAddonsImpactQuery.error instanceof Error
                 ? issuesAddonsImpactQuery.error.message
-                : "Failed to load margin leakage"}
+                : tt("reports.failedMarginLeakage")}
             </div>
           ) : (
             <>
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Open Issues at Risk
+                    {tt("reports.openIssuesAtRisk")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
                     {issuesAddonsImpact?.summary?.open_issues ?? 0}
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    Profit at risk {formatAmount(issuesAddonsImpact?.summary?.open_issue_profit_at_risk)}
+                    {tt("reports.profitAtRisk").replace(
+                      "{amount}",
+                      formatAmount(issuesAddonsImpact?.summary?.open_issue_profit_at_risk)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Blocked Margin Risk
+                    {tt("reports.blockedMarginRisk")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-[hsl(var(--destructive))]">
                     {issuesAddonsImpact?.summary?.blocked_open_issues ?? 0}
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    Blocked profit {formatAmount(issuesAddonsImpact?.summary?.blocked_issue_profit_at_risk)}
+                    {tt("reports.blockedProfit").replace(
+                      "{amount}",
+                      formatAmount(issuesAddonsImpact?.summary?.blocked_issue_profit_at_risk)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Delayed Doors
+                    {tt("reports.delayedDoors")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
                     {issuesAddonsImpact?.summary?.not_installed_doors ?? 0}
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    Delayed profit {formatAmount(issuesAddonsImpact?.summary?.delayed_profit_total)}
+                    {tt("reports.delayedProfit").replace(
+                      "{amount}",
+                      formatAmount(issuesAddonsImpact?.summary?.delayed_profit_total)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Add-on Uplift
+                    {tt("reports.addonUplift")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-[hsl(var(--success))]">
                     {formatAmount(issuesAddonsImpact?.summary?.addon_profit_total)}
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    Missing plans {issuesAddonsImpact?.summary?.missing_addon_plans_facts ?? 0}
+                    {t("reports.missingPlans")} {issuesAddonsImpact?.summary?.missing_addon_plans_facts ?? 0}
                   </div>
                 </div>
               </div>
@@ -2787,7 +2937,7 @@ export default function ReportsPage() {
                 <table className="w-full text-[12px]">
                   <thead className="bg-muted/40 text-muted-foreground">
                     <tr>
-                      <th className="text-left px-3 py-2 font-medium">Summary</th>
+                      <th className="text-left px-3 py-2 font-medium">{tt("reports.summary")}</th>
                       <th className="text-right px-3 py-2 font-medium">Revenue</th>
                       <th className="text-right px-3 py-2 font-medium">Payroll</th>
                       <th className="text-right px-3 py-2 font-medium">Profit</th>
@@ -2795,7 +2945,7 @@ export default function ReportsPage() {
                   </thead>
                   <tbody>
                     <tr className="border-t border-border/70">
-                      <td className="px-3 py-2 font-medium text-foreground">Open Issues Exposure</td>
+                      <td className="px-3 py-2 font-medium text-foreground">{tt("reports.openIssuesExposure")}</td>
                       <td className="px-3 py-2 text-right">
                         {formatAmount(issuesAddonsImpact?.summary?.open_issue_revenue_at_risk)}
                       </td>
@@ -2807,7 +2957,7 @@ export default function ReportsPage() {
                       </td>
                     </tr>
                     <tr className="border-t border-border/70">
-                      <td className="px-3 py-2 font-medium text-foreground">Delayed Not Installed</td>
+                      <td className="px-3 py-2 font-medium text-foreground">{tt("reports.delayedNotInstalled")}</td>
                       <td className="px-3 py-2 text-right">
                         {formatAmount(issuesAddonsImpact?.summary?.delayed_revenue_total)}
                       </td>
@@ -2819,7 +2969,7 @@ export default function ReportsPage() {
                       </td>
                     </tr>
                     <tr className="border-t border-border/70">
-                      <td className="px-3 py-2 font-medium text-foreground">Add-on Realized</td>
+                      <td className="px-3 py-2 font-medium text-foreground">{tt("reports.addonRealized")}</td>
                       <td className="px-3 py-2 text-right">
                         {formatAmount(issuesAddonsImpact?.summary?.addon_revenue_total)}
                       </td>
@@ -2837,7 +2987,7 @@ export default function ReportsPage() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-xl border border-border/70 bg-background/60 overflow-auto">
                   <div className="border-b border-border/70 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Delayed by Reason / Defect
+                    {tt("reports.delayedByReason")}
                   </div>
                   <table className="w-full text-[12px]">
                     <thead className="bg-muted/40 text-muted-foreground">
@@ -2852,7 +3002,7 @@ export default function ReportsPage() {
                       {(issuesAddonsImpact?.top_reasons || []).length === 0 ? (
                         <tr>
                           <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                            No delayed reasons.
+                            {tt("reports.noDelayedReasons")}
                           </td>
                         </tr>
                       ) : (
@@ -2880,22 +3030,22 @@ export default function ReportsPage() {
 
                 <div className="rounded-xl border border-border/70 bg-background/60 overflow-auto">
                   <div className="border-b border-border/70 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Add-on Profit Impact
+                    {tt("reports.addonProfitImpact")}
                   </div>
                   <table className="w-full text-[12px]">
                     <thead className="bg-muted/40 text-muted-foreground">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">Add-on</th>
+                        <th className="text-left px-3 py-2 font-medium">{tt("reports.addon")}</th>
                         <th className="text-right px-3 py-2 font-medium">Qty</th>
                         <th className="text-right px-3 py-2 font-medium">Profit</th>
-                        <th className="text-right px-3 py-2 font-medium">Missing Plans</th>
+                        <th className="text-right px-3 py-2 font-medium">{tt("reports.missingPlans")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(issuesAddonsImpact?.addon_impact || []).length === 0 ? (
                         <tr>
                           <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                            No add-on impact rows.
+                            {tt("reports.noAddonImpactRows")}
                           </td>
                         </tr>
                       ) : (
@@ -3463,7 +3613,7 @@ export default function ReportsPage() {
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="rounded-lg border border-border bg-card p-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    {tt("reports.delayedProfit")}
+                    {tt("reports.delayedProfitLabel")}
                   </div>
                   <div className="mt-2 text-[22px] font-semibold text-[hsl(var(--destructive))]">
                     {formatAmount(riskConcentration?.summary.delayed_profit_total)}
@@ -3668,10 +3818,10 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Installer Profitability Matrix
+                {tt("reports.installerProfitabilityMatrix")}
               </div>
               <div className="text-[13px] text-muted-foreground">
-                Ranking by money output, margin quality and issue pressure
+                {tt("reports.installerProfitabilitySubtitle")}
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -3704,7 +3854,7 @@ export default function ReportsPage() {
 
           {installerProfitabilityMatrixQuery.isLoading ? (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading installer profitability matrix...
+              {tt("reports.loadingInstallerProfitability")}
             </div>
           ) : installerProfitabilityMatrixQuery.isError ? (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
@@ -3745,7 +3895,9 @@ export default function ReportsPage() {
                         <td className="px-3 py-2">
                           <div className="font-medium text-foreground">{item.installer_name}</div>
                           <div className="text-[11px] text-muted-foreground">
-                            Projects {item.active_projects} | Add-ons {formatAmount(item.addons_done_qty)}
+                            {tt("reports.projectsAddons")
+                              .replace("{projects}", String(item.active_projects))
+                              .replace("{addons}", formatAmount(item.addons_done_qty))}
                           </div>
                         </td>
                         <td className="px-3 py-2">
@@ -3782,10 +3934,10 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Installer x Project Cross-view
+                {tt("reports.installerCrossViewTitle")}
               </div>
               <div className="text-[13px] text-muted-foreground">
-                Which installer-project combinations create or destroy margin
+                {tt("reports.installerCrossViewSubtitle")}
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -3818,7 +3970,7 @@ export default function ReportsPage() {
 
           {installerProjectProfitabilityQuery.isLoading ? (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading installer-project cross-view...
+              {tt("reports.loadingInstallerCrossView")}
             </div>
           ) : installerProjectProfitabilityQuery.isError ? (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
@@ -3900,10 +4052,10 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Installers KPI
+                {tt("reports.installersKpiTitle")}
               </div>
               <div className="text-[13px] text-muted-foreground">
-                Sorted, paginated installer performance and money metrics
+                {tt("reports.installersKpiSubtitle")}
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -3941,7 +4093,7 @@ export default function ReportsPage() {
                 title={privilegedActionHint}
                 className="h-9 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
               >
-                Export Installers CSV
+                {tt("reports.exportInstallersCsv")}
               </button>
             </div>
           </div>
@@ -3957,7 +4109,7 @@ export default function ReportsPage() {
 
           {installersKpiQuery.isLoading && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading installers KPI...
+              {tt("reports.loadingInstallersKpi")}
             </div>
           )}
           {installersKpiQuery.isError && (
@@ -3990,7 +4142,9 @@ export default function ReportsPage() {
               </div>
             ))}
           <div className="px-4 py-3 border-t border-border/70 flex items-center justify-between text-[12px]">
-            <div className="text-muted-foreground">Rows: {installersKpiItems.length}</div>
+            <div className="text-muted-foreground">
+              {tt("reports.rowsCount").replace("{count}", String(installersKpiItems.length))}
+            </div>
             <div className="flex items-center gap-2">
               <button
                 disabled={!installersKpiCanPrev}
@@ -3999,14 +4153,14 @@ export default function ReportsPage() {
                 }
                 className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
               >
-                Prev
+                {tt("reports.prev")}
               </button>
               <button
                 disabled={!installersKpiCanNext}
                 onClick={() => setInstallersKpiOffset((x) => x + KPI_PAGE_SIZE)}
                 className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
               >
-                Next
+                {tt("reports.next")}
               </button>
             </div>
           </div>
@@ -4016,7 +4170,7 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Installer Drill-down
+                {tt("reports.installerDrilldownTitle")}
               </div>
               <div className="text-[13px] text-muted-foreground">
                 Profitability, projects, orders and addon impact for the selected installer
@@ -4058,7 +4212,7 @@ export default function ReportsPage() {
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
               {installerDetailsQuery.error instanceof Error
                 ? installerDetailsQuery.error.message
-                : "Failed to load installer details"}
+                : tt("reports.failedInstallerDetails")}
             </div>
           )}
           {!installerDetailsQuery.isLoading &&
@@ -4275,7 +4429,7 @@ export default function ReportsPage() {
                 title={privilegedActionHint}
                 className="h-9 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
               >
-                Export Orders CSV
+                {tt("reports.exportOrdersCsv")}
               </button>
             </div>
           </div>
@@ -4341,14 +4495,14 @@ export default function ReportsPage() {
                 }
                 className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
               >
-                Prev
+                {tt("reports.prev")}
               </button>
               <button
                 disabled={!orderNumbersKpiCanNext}
                 onClick={() => setOrderNumbersKpiOffset((x) => x + KPI_PAGE_SIZE)}
                 className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
               >
-                Next
+                {tt("reports.next")}
               </button>
             </div>
           </div>
