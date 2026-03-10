@@ -2133,12 +2133,12 @@ export default function ReportsPage() {
   return (
     <DashboardLayout>
       <div className="motion-stagger max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <section className="page-hero relative overflow-hidden">
+        <section className="page-hero readability-wrap relative overflow-hidden">
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl">
+            <div className="max-w-3xl min-w-0">
               <div className="page-eyebrow">{t("reports.eyebrow")}</div>
-              <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
+              <h1 className="mt-3 max-w-2xl font-display text-3xl leading-tight tracking-[-0.04em] text-foreground sm:text-4xl">
                 {t("reports.title")}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
@@ -2158,7 +2158,7 @@ export default function ReportsPage() {
                 </span>
               </div>
             </div>
-            <div className="surface-subtle min-w-[320px] max-w-2xl space-y-3 p-4 sm:p-5">
+            <div className="surface-subtle min-w-0 max-w-2xl space-y-3 p-4 sm:p-5 xl:min-w-[320px]">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="text-[12px] leading-5 text-muted-foreground">
                   {t("reports.helper")}

@@ -1107,12 +1107,12 @@ export default function OperationsPage() {
   return (
     <DashboardLayout>
       <div className="motion-stagger max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <div className="page-hero relative overflow-hidden">
+        <div className="page-hero readability-wrap relative overflow-hidden">
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl">
+            <div className="max-w-3xl min-w-0">
               <div className="page-eyebrow">{t("operations.eyebrow")}</div>
-              <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl">
+              <h1 className="mt-4 max-w-2xl font-display text-3xl font-semibold leading-tight tracking-[-0.04em] text-foreground sm:text-4xl">
                 {t("operations.title")}
               </h1>
               <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">
@@ -1124,29 +1124,29 @@ export default function OperationsPage() {
                 <span className="metric-chip">{tt("operations.webhookDiagnostics")}</span>
               </div>
             </div>
-            <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
+            <div className="surface-subtle min-w-0 max-w-xl space-y-4 p-4 sm:p-5 xl:min-w-[320px]">
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="min-w-0 rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                     {t("operations.actionable")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">
+                  <div className="mt-1 text-lg font-semibold leading-tight text-foreground">
                     {onlyActionable ? t("operations.actionableFocused") : t("operations.actionableMixed")}
                   </div>
                 </div>
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="min-w-0 rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                     {t("operations.deliveryLane")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">
+                  <div className="mt-1 text-lg font-semibold leading-tight text-foreground">
                     {deliveryChannelFilter || t("common.all")}
                   </div>
                 </div>
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="min-w-0 rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                     {t("operations.provider")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">
+                  <div className="mt-1 text-lg font-semibold leading-tight text-foreground">
                     {webhookProviderFilter || t("common.all")}
                   </div>
                 </div>
