@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, Globe2, LayoutDashboard, ShieldCheck, Wrench } from "lucide-react";
+import {
+  ArrowRight,
+  Globe2,
+  LayoutDashboard,
+  ShieldCheck,
+  Sparkles,
+  Wrench,
+} from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n";
@@ -29,6 +36,36 @@ export default function PublicLandingPage() {
     t("landing.proofTesting"),
     t("landing.proofI18n"),
     t("landing.proofGovernance"),
+  ];
+
+  const routePreviews = [
+    {
+      title: t("landing.previewOpsTitle"),
+      text: t("landing.previewOpsText"),
+      route: t("landing.previewOpsRoute"),
+      href: "/login?next=/operations",
+      accent: "from-[hsl(var(--accent)/0.22)] via-transparent to-transparent",
+    },
+    {
+      title: t("landing.previewReportsTitle"),
+      text: t("landing.previewReportsText"),
+      route: t("landing.previewReportsRoute"),
+      href: "/login?next=/reports",
+      accent: "from-[hsl(var(--primary)/0.16)] via-transparent to-transparent",
+    },
+    {
+      title: t("landing.previewInstallerTitle"),
+      text: t("landing.previewInstallerText"),
+      route: t("landing.previewInstallerRoute"),
+      href: "/login?next=/installer",
+      accent: "from-[hsl(var(--accent)/0.14)] via-transparent to-transparent",
+    },
+  ];
+
+  const demoSteps = [
+    t("landing.demoStepOne"),
+    t("landing.demoStepTwo"),
+    t("landing.demoStepThree"),
   ];
 
   return (
@@ -150,6 +187,63 @@ export default function PublicLandingPage() {
                   >
                     <Globe2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                     <div className="text-[14px] leading-6 text-foreground">{item}</div>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </section>
+
+          <section className="motion-page-enter mt-8 grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+            <article className="surface-panel p-6">
+              <div className="page-eyebrow">{t("landing.previewTitle")}</div>
+              <div className="mt-3 max-w-2xl text-[14px] leading-6 text-muted-foreground">
+                {t("landing.previewText")}
+              </div>
+
+              <div className="mt-6 grid gap-4 xl:grid-cols-3">
+                {routePreviews.map((item) => (
+                  <div
+                    key={item.route}
+                    className="overflow-hidden rounded-[1.6rem] border border-border/70 bg-background/72"
+                  >
+                    <div className={`relative h-32 border-b border-border/60 bg-gradient-to-br ${item.accent}`}>
+                      <div className="absolute inset-0 shell-grid opacity-20" />
+                      <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/78 px-3 py-1 text-[11px] font-medium text-foreground">
+                        <Sparkles className="h-3.5 w-3.5 text-accent" />
+                        {t("landing.secureRoute")}
+                      </div>
+                      <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-border/70 bg-background/80 px-4 py-3 backdrop-blur">
+                        <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                          {t("landing.openRoute")}
+                        </div>
+                        <div className="mt-1 font-mono text-sm text-foreground">{item.route}</div>
+                      </div>
+                    </div>
+                    <div className="p-5">
+                      <div className="text-lg font-semibold text-foreground">{item.title}</div>
+                      <p className="mt-2 text-[14px] leading-6 text-muted-foreground">{item.text}</p>
+                      <Link
+                        href={item.href}
+                        className="mt-5 inline-flex items-center gap-2 text-[13px] font-medium text-accent"
+                      >
+                        {t("landing.openRoute")}
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="surface-panel p-6">
+              <div className="page-eyebrow">{t("landing.demoTitle")}</div>
+              <div className="mt-5 grid gap-3">
+                {demoSteps.map((step) => (
+                  <div
+                    key={step}
+                    className="rounded-2xl border border-border/70 bg-background/70 px-4 py-4 text-[14px] leading-6 text-foreground"
+                  >
+                    {step}
                   </div>
                 ))}
               </div>

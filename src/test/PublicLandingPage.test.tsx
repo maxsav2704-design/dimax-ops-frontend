@@ -46,5 +46,12 @@ describe("PublicLandingPage", () => {
       "href",
       "/login?next=/installer"
     );
+
+    expect(screen.getByText("See the product lanes before login")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Open route" })[0]).toHaveAttribute(
+      "href",
+      "/login?next=/operations"
+    );
+    expect(screen.getByText("How the demo flow works")).toBeInTheDocument();
   });
 });
