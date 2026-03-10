@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, KeyRound, LogIn, Mail } from "lucide-react";
 
@@ -163,7 +164,15 @@ export default function LoginPage() {
           <div className="mb-8 lg:hidden">
             <div className="flex items-center justify-between gap-3">
               <div className="page-eyebrow">Dimax Ops</div>
-              <LanguageSwitcher compact />
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/welcome"
+                  className="inline-flex h-9 items-center rounded-xl border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground"
+                >
+                  {t("landing.eyebrow")}
+                </Link>
+                <LanguageSwitcher compact />
+              </div>
             </div>
             <h1 className="mt-4 text-3xl font-semibold text-card-foreground">{t("login.signIn")}</h1>
           </div>
@@ -177,6 +186,12 @@ export default function LoginPage() {
                 </p>
               </div>
               <div className="hidden items-start gap-3 sm:flex">
+                <Link
+                  href="/welcome"
+                  className="inline-flex h-10 items-center rounded-xl border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground"
+                >
+                  {t("landing.eyebrow")}
+                </Link>
                 <LanguageSwitcher compact />
                 <div className="rounded-2xl bg-accent/10 px-3 py-2 text-right">
                   <div className="text-[10px] uppercase tracking-[0.24em] text-accent">Suite</div>
