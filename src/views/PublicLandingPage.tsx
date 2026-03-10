@@ -1,12 +1,16 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  Bug,
+  FolderKanban,
   Globe2,
   LayoutDashboard,
   LockKeyhole,
+  MessagesSquare,
   Radar,
   ShieldCheck,
   Sparkles,
+  Users2,
   Wrench,
 } from "lucide-react";
 
@@ -91,6 +95,29 @@ export default function PublicLandingPage() {
       icon: LockKeyhole,
       title: t("landing.signalThreeTitle"),
       text: t("landing.signalThreeText"),
+    },
+  ];
+
+  const architectureModules = [
+    {
+      icon: FolderKanban,
+      title: t("landing.archProjectsTitle"),
+      text: t("landing.archProjectsText"),
+    },
+    {
+      icon: Bug,
+      title: t("landing.archIssuesTitle"),
+      text: t("landing.archIssuesText"),
+    },
+    {
+      icon: MessagesSquare,
+      title: t("landing.archJournalTitle"),
+      text: t("landing.archJournalText"),
+    },
+    {
+      icon: Users2,
+      title: t("landing.archInstallersTitle"),
+      text: t("landing.archInstallersText"),
     },
   ];
 
@@ -352,6 +379,35 @@ export default function PublicLandingPage() {
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
+              </div>
+            </article>
+          </section>
+
+          <section className="motion-page-enter mt-8">
+            <article className="surface-panel p-6">
+              <div className="page-eyebrow">{t("landing.architectureTitle")}</div>
+              <p className="mt-3 max-w-3xl text-[14px] leading-6 text-muted-foreground">
+                {t("landing.architectureText")}
+              </p>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {architectureModules.map((module) => {
+                  const Icon = module.icon;
+                  return (
+                    <div
+                      key={module.title}
+                      className="rounded-[1.5rem] border border-border/70 bg-background/72 p-5"
+                    >
+                      <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-border/70 bg-background/80">
+                        <Icon className="h-5 w-5 text-accent" />
+                      </div>
+                      <div className="mt-4 text-lg font-semibold text-foreground">{module.title}</div>
+                      <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
+                        {module.text}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </article>
           </section>

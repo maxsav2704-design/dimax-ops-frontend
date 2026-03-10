@@ -56,5 +56,8 @@ describe("PublicLandingPage", () => {
     expect(screen.getByText("Proof that the system is operationally serious")).toBeInTheDocument();
     expect(screen.getByText("Role-aware demo access")).toBeInTheDocument();
     expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(screen.getByText("Core product architecture")).toBeInTheDocument();
+    expect(screen.getByText("Projects")).toBeInTheDocument();
+    expect(screen.getByText("Journal")).toBeInTheDocument();
   });
 });
