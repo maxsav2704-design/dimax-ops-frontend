@@ -68,5 +68,13 @@ describe("PublicLandingPage", () => {
       "href",
       "/login"
     );
+    expect(screen.getByText("Who this is for")).toBeInTheDocument();
+    expect(screen.getByText("Best fit")).toBeInTheDocument();
+    expect(screen.getByText("Not for")).toBeInTheDocument();
+    expect(screen.getByText("Put the product in front of people without exposing the control plane.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Enter installer flow" })).toHaveAttribute(
+      "href",
+      "/login?next=/installer"
+    );
   }, 10000);
 });

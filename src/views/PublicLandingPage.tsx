@@ -148,6 +148,14 @@ export default function PublicLandingPage() {
     [t("landing.readinessRelease"), t("landing.readinessReleaseValue")],
   ];
 
+  const fitFor = [
+    t("landing.fitForOne"),
+    t("landing.fitForTwo"),
+    t("landing.fitForThree"),
+  ];
+
+  const fitNotFor = [t("landing.fitNotOne"), t("landing.fitNotTwo")];
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,hsl(var(--accent)/0.16),transparent_32%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--background)/0.96))]">
       <div className="pointer-events-none absolute inset-0 shell-grid opacity-25" />
@@ -521,27 +529,81 @@ export default function PublicLandingPage() {
             </article>
           </section>
 
-          <section className="motion-page-enter mt-8">
-            <div className="surface-panel flex flex-col gap-5 p-6 lg:flex-row lg:items-center lg:justify-between">
-              <div className="max-w-2xl">
-                <div className="text-2xl font-semibold text-foreground">{t("landing.finalTitle")}</div>
-                <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
-                  {t("landing.finalText")}
-                </p>
+          <section className="motion-page-enter mt-8 grid gap-4 lg:grid-cols-[1fr_1fr]">
+            <article className="surface-panel p-6">
+              <div className="page-eyebrow">{t("landing.fitTitle")}</div>
+              <p className="mt-3 max-w-3xl text-[14px] leading-6 text-muted-foreground">
+                {t("landing.fitText")}
+              </p>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+                <div className="rounded-[1.5rem] border border-border/70 bg-background/72 p-5">
+                  <div className="text-lg font-semibold text-foreground">{t("landing.fitForTitle")}</div>
+                  <div className="mt-4 grid gap-3">
+                    {fitFor.map((item) => (
+                      <div
+                        key={item}
+                        className="rounded-2xl border border-border/70 bg-background/78 px-4 py-4 text-[14px] leading-6 text-foreground"
+                      >
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-border/70 bg-background/72 p-5">
+                  <div className="text-lg font-semibold text-foreground">{t("landing.fitNotTitle")}</div>
+                  <div className="mt-4 grid gap-3">
+                    {fitNotFor.map((item) => (
+                      <div
+                        key={item}
+                        className="rounded-2xl border border-border/70 bg-background/78 px-4 py-4 text-[14px] leading-6 text-muted-foreground"
+                      >
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/login"
-                  className="btn-premium h-11 rounded-xl px-4 text-[13px] font-medium"
-                >
-                  {t("landing.primaryCta")}
-                </Link>
-                <Link
-                  href="/installer"
-                  className="inline-flex h-11 items-center justify-center rounded-xl border border-border/70 bg-background/70 px-4 text-[13px] font-medium text-foreground"
-                >
-                  {t("landing.secondaryCta")}
-                </Link>
+            </article>
+          </section>
+
+          <section className="motion-page-enter mt-8">
+            <div className="surface-panel overflow-hidden p-6">
+              <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+                <div className="max-w-2xl">
+                  <div className="page-eyebrow">{t("landing.finalTitle")}</div>
+                  <div className="mt-3 text-2xl font-semibold text-foreground">
+                    {t("landing.closingTitle")}
+                  </div>
+                  <p className="mt-3 text-[14px] leading-6 text-muted-foreground">
+                    {t("landing.closingText")}
+                  </p>
+                  <p className="mt-3 text-[14px] leading-6 text-muted-foreground">
+                    {t("landing.finalText")}
+                  </p>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-border/70 bg-background/72 p-5">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {t("landing.secureRoute")}
+                  </div>
+                  <div className="mt-2 font-mono text-sm text-foreground">/login</div>
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <Link
+                      href="/login"
+                      className="btn-premium h-11 rounded-xl px-4 text-[13px] font-medium"
+                    >
+                      {t("landing.closingPrimaryCta")}
+                    </Link>
+                    <Link
+                      href="/login?next=/installer"
+                      className="inline-flex h-11 items-center justify-center rounded-xl border border-border/70 bg-background/70 px-4 text-[13px] font-medium text-foreground"
+                    >
+                      {t("landing.closingSecondaryCta")}
+                    </Link>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
