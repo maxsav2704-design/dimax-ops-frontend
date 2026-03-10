@@ -238,4 +238,26 @@ test.describe.serial("Installer web smoke", () => {
       "true"
     );
   });
+
+  test("persists installer locale across navigation and reload", async ({ page }) => {
+    await loginInstaller(page);
+
+    await page.getByRole("button", { name: "עב" }).click();
+    await expect(page.locator("html")).toHaveAttribute("lang", "he");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect
+      .poll(async () => page.evaluate(() => window.localStorage.getItem("dimax_locale")))
+      .toBe("he");
+
+    await page.goto("/installer/calendar");
+    await expect(page.locator("html")).toHaveAttribute("lang", "he");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("lang", "he");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect
+      .poll(async () => page.evaluate(() => window.localStorage.getItem("dimax_locale")))
+      .toBe("he");
+  });
 });
