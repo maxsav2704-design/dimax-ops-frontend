@@ -6,8 +6,44 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Locale } from "@/lib/i18n";
 import { buildInstallerIssuesHref } from "@/views/installer/issue-links";
+
+const workspaceOverrides: Partial<Record<Locale, Record<string, string>>> = {
+  en: {
+    "installerWorkspace.issueContinuity": "Issue continuity",
+    "installerWorkspace.todaySchedule": "Today schedule",
+    "installerWorkspace.projectsShort": "Projects",
+    "installerWorkspace.problemShort": "Problem",
+    "installerWorkspace.todayShort": "Today",
+    "installerWorkspace.withoutProject": "Without project",
+    "installerWorkspace.openTodayBoard": "Open today board",
+    "installerWorkspace.buildingTodayPriorities": "Building today priorities...",
+    "installerWorkspace.noUrgentPriorities": "No urgent priorities right now.",
+  },
+  ru: {
+    "installerWorkspace.issueContinuity": "Issue continuity",
+    "installerWorkspace.todaySchedule": "Расписание на сегодня",
+    "installerWorkspace.projectsShort": "Проекты",
+    "installerWorkspace.problemShort": "Проблемы",
+    "installerWorkspace.todayShort": "Сегодня",
+    "installerWorkspace.withoutProject": "Без проекта",
+    "installerWorkspace.openTodayBoard": "Открыть доску дня",
+    "installerWorkspace.buildingTodayPriorities": "Собираем приоритеты на сегодня...",
+    "installerWorkspace.noUrgentPriorities": "Сейчас нет срочных приоритетов.",
+  },
+  he: {
+    "installerWorkspace.issueContinuity": "רציפות תקלות",
+    "installerWorkspace.todaySchedule": "לו״ז להיום",
+    "installerWorkspace.projectsShort": "פרויקטים",
+    "installerWorkspace.problemShort": "בעיות",
+    "installerWorkspace.todayShort": "היום",
+    "installerWorkspace.withoutProject": "ללא פרויקט",
+    "installerWorkspace.openTodayBoard": "פתח לוח יום",
+    "installerWorkspace.buildingTodayPriorities": "בונה עדיפויות להיום...",
+    "installerWorkspace.noUrgentPriorities": "כרגע אין עדיפויות דחופות.",
+  },
+};
 
 type ProjectQuickFilter = "ALL" | "PROBLEM" | "ACTIVE" | "TODAY_TASKS";
 
@@ -70,7 +106,8 @@ function formatDate(value: string): string {
 }
 
 export default function InstallerWorkspacePage() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const tt = (key: string) => workspaceOverrides[locale]?.[key] ?? t(key);
   const [nowIso] = useState(() => new Date().toISOString());
   const [projectQuickFilter, setProjectQuickFilter] = useState<ProjectQuickFilter>("ALL");
   const [isQueryInitialized, setIsQueryInitialized] = useState(false);
@@ -346,30 +383,30 @@ export default function InstallerWorkspacePage() {
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="metric-chip">{t("installerWorkspace.priorityDoors")}</span>
-              <span className="metric-chip">Issue continuity</span>
-              <span className="metric-chip">Today schedule</span>
+              <span className="metric-chip">{tt("installerWorkspace.issueContinuity")}</span>
+              <span className="metric-chip">{tt("installerWorkspace.todaySchedule")}</span>
             </div>
           </div>
           <div className="surface-subtle min-w-[280px] max-w-xl space-y-4 p-4 sm:p-5">
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Projects
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {tt("installerWorkspace.projectsShort")}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">{stats.total}</div>
                 </div>
-                <div className="mt-1 text-lg font-semibold text-foreground">{stats.total}</div>
-              </div>
-              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Problem
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {tt("installerWorkspace.problemShort")}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">{stats.inProblem}</div>
                 </div>
-                <div className="mt-1 text-lg font-semibold text-foreground">{stats.inProblem}</div>
-              </div>
-              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Today
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {tt("installerWorkspace.todayShort")}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">{taskStats.today}</div>
                 </div>
-                <div className="mt-1 text-lg font-semibold text-foreground">{taskStats.today}</div>
-              </div>
             </div>
             <button
               type="button"
@@ -431,7 +468,7 @@ export default function InstallerWorkspacePage() {
             data-testid="installer-tasks-today"
             className="surface-panel"
           >
-            <div className="text-sm text-muted-foreground">Today</div>
+            <div className="text-sm text-muted-foreground">{tt("installerWorkspace.todayShort")}</div>
             <div className="mt-1 text-2xl font-semibold">
               {tasksQuery.isLoading ? "..." : taskStats.today}
             </div>
@@ -446,7 +483,7 @@ export default function InstallerWorkspacePage() {
             data-testid="installer-tasks-overdue"
             className="surface-panel"
           >
-            <div className="text-sm text-muted-foreground">Overdue</div>
+            <div className="text-sm text-muted-foreground">{t("common.overdue")}</div>
             <div className="mt-1 text-2xl font-semibold">
               {tasksQuery.isLoading ? "..." : taskStats.overdue}
             </div>
@@ -461,7 +498,7 @@ export default function InstallerWorkspacePage() {
             data-testid="installer-tasks-no-project"
             className="surface-panel"
           >
-            <div className="text-sm text-muted-foreground">Without project</div>
+            <div className="text-sm text-muted-foreground">{tt("installerWorkspace.withoutProject")}</div>
             <div className="mt-1 text-2xl font-semibold">
               {tasksQuery.isLoading ? "..." : taskStats.withoutProject}
             </div>
@@ -482,17 +519,17 @@ export default function InstallerWorkspacePage() {
             href="/installer/calendar?preset=today"
             className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
           >
-            Open today board
+            {tt("installerWorkspace.openTodayBoard")}
           </Link>
         </div>
         {tasksQuery.isLoading && (
           <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            Building today priorities...
+            {tt("installerWorkspace.buildingTodayPriorities")}
           </div>
         )}
         {!tasksQuery.isLoading && priorityItems.length === 0 && (
           <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            No urgent priorities right now.
+            {tt("installerWorkspace.noUrgentPriorities")}
           </div>
         )}
         {priorityItems.length > 0 && (

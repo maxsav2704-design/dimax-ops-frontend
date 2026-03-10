@@ -20,7 +20,121 @@ import {
 import { useUserRole } from "@/hooks/use-user-role";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Locale } from "@/lib/i18n";
+
+const operationsOverrides: Record<Locale, Record<string, string>> = {
+  en: {
+    "operations.actionableOnlyView": "Actionable-only view",
+    "operations.batchRecovery": "Batch recovery",
+    "operations.webhookDiagnostics": "Webhook diagnostics",
+    "operations.showAll": "Show all",
+    "operations.providerLane": "Provider lane",
+    "operations.deliveryRecoveryAuditTitle": "Delivery Recovery Audit",
+    "operations.deliveryRecoveryAuditSubtitle":
+      "Latest manual retries recorded for failed outbox recovery actions.",
+    "operations.openDeliveryReports": "Open delivery reports",
+    "operations.loadingDeliveryRecoveryAudit": "Loading delivery recovery audit...",
+    "operations.noDeliveryRecoveryAudit": "No delivery recovery audit entries yet.",
+    "operations.reviewDeliveryRecovery": "Review delivery recovery",
+    "operations.webhookSignalsTitle": "Webhook Signals",
+    "operations.webhookSignalsSubtitle":
+      "Delivery webhook duplicates, mismatches, and provider failures in the last {hours} hours.",
+    "operations.received": "Received",
+    "operations.duplicates": "Duplicates",
+    "operations.unmatched": "Unmatched",
+    "operations.providerFailed": "Provider failed",
+    "operations.loadingWebhookSignals": "Loading webhook signals...",
+    "operations.noWebhookSignalsScoped": "No webhook signals match current provider scope.",
+    "operations.noWebhookSignals": "No webhook signals recorded.",
+    "operations.deliveryReport": "Delivery report",
+    "operations.openImportWorkspace": "Open import workspace",
+    "operations.openOperationsReports": "Open operations reports",
+    "operations.openIssuesReports": "Open issues reports",
+    "operations.openCommunicationQueue": "Open communication queue",
+    "operations.openInstallerBoard": "Open installer board",
+    "operations.failedImportQueue": "Failed Import Queue",
+    "operations.openQueue": "Open queue",
+    "operations.loadingFailedImports": "Loading failed imports...",
+    "operations.noActionableImportRuns": "No actionable import runs.",
+    "operations.noFailedImportRuns": "No failed import runs.",
+    "operations.unknown": "unknown",
+    "operations.noReasonSupplied": "No reason supplied",
+  },
+  ru: {
+    "operations.actionableOnlyView": "Только actionable-сигналы",
+    "operations.batchRecovery": "Пакетное восстановление",
+    "operations.webhookDiagnostics": "Диагностика webhook",
+    "operations.showAll": "Показать все",
+    "operations.providerLane": "Срез провайдера",
+    "operations.deliveryRecoveryAuditTitle": "Аудит восстановления доставки",
+    "operations.deliveryRecoveryAuditSubtitle":
+      "Последние ручные повторы для восстановления неуспешных outbox-сообщений.",
+    "operations.openDeliveryReports": "Открыть отчеты по доставке",
+    "operations.loadingDeliveryRecoveryAudit": "Загружаем аудит восстановления доставки...",
+    "operations.noDeliveryRecoveryAudit": "Записей аудита восстановления доставки пока нет.",
+    "operations.reviewDeliveryRecovery": "Проверить восстановление доставки",
+    "operations.webhookSignalsTitle": "Webhook-сигналы",
+    "operations.webhookSignalsSubtitle":
+      "Дубликаты webhook, несоответствия и ошибки провайдера за последние {hours} часов.",
+    "operations.received": "Получено",
+    "operations.duplicates": "Дубликаты",
+    "operations.unmatched": "Без совпадения",
+    "operations.providerFailed": "Ошибка провайдера",
+    "operations.loadingWebhookSignals": "Загружаем webhook-сигналы...",
+    "operations.noWebhookSignalsScoped": "Для текущего провайдера сигналов webhook нет.",
+    "operations.noWebhookSignals": "Webhook-сигналы пока не зафиксированы.",
+    "operations.deliveryReport": "Отчет по доставке",
+    "operations.openImportWorkspace": "Открыть импорт",
+    "operations.openOperationsReports": "Открыть ops-отчеты",
+    "operations.openIssuesReports": "Открыть отчеты по проблемам",
+    "operations.openCommunicationQueue": "Открыть очередь коммуникаций",
+    "operations.openInstallerBoard": "Открыть доску монтажников",
+    "operations.failedImportQueue": "Очередь неуспешных импортов",
+    "operations.openQueue": "Открыть очередь",
+    "operations.loadingFailedImports": "Загружаем неуспешные импорты...",
+    "operations.noActionableImportRuns": "Actionable-импортов сейчас нет.",
+    "operations.noFailedImportRuns": "Неуспешных импортов нет.",
+    "operations.unknown": "неизвестно",
+    "operations.noReasonSupplied": "Причина не указана",
+  },
+  he: {
+    "operations.actionableOnlyView": "תצוגת actionable בלבד",
+    "operations.batchRecovery": "שחזור מרוכז",
+    "operations.webhookDiagnostics": "אבחון webhook",
+    "operations.showAll": "הצג הכל",
+    "operations.providerLane": "נתיב ספק",
+    "operations.deliveryRecoveryAuditTitle": "Audit לשחזור משלוחים",
+    "operations.deliveryRecoveryAuditSubtitle":
+      "ניסיונות שחזור ידניים אחרונים עבור פריטי outbox שנכשלו.",
+    "operations.openDeliveryReports": "פתח דוחות משלוח",
+    "operations.loadingDeliveryRecoveryAudit": "טוען audit לשחזור משלוחים...",
+    "operations.noDeliveryRecoveryAudit": "עדיין אין רשומות audit לשחזור משלוחים.",
+    "operations.reviewDeliveryRecovery": "בדוק את שחזור המשלוח",
+    "operations.webhookSignalsTitle": "אותות Webhook",
+    "operations.webhookSignalsSubtitle":
+      "כפילויות webhook, אי-התאמות וכשלי ספק ב-{hours} השעות האחרונות.",
+    "operations.received": "התקבלו",
+    "operations.duplicates": "כפילויות",
+    "operations.unmatched": "ללא התאמה",
+    "operations.providerFailed": "כשל ספק",
+    "operations.loadingWebhookSignals": "טוען אותות webhook...",
+    "operations.noWebhookSignalsScoped": "אין אותות webhook עבור ספק זה.",
+    "operations.noWebhookSignals": "עדיין לא נרשמו אותות webhook.",
+    "operations.deliveryReport": "דוח משלוח",
+    "operations.openImportWorkspace": "פתח סביבת ייבוא",
+    "operations.openOperationsReports": "פתח דוחות תפעול",
+    "operations.openIssuesReports": "פתח דוחות תקלות",
+    "operations.openCommunicationQueue": "פתח תור תקשורת",
+    "operations.openInstallerBoard": "פתח לוח מתקינים",
+    "operations.failedImportQueue": "תור ייבואים שנכשלו",
+    "operations.openQueue": "פתח תור",
+    "operations.loadingFailedImports": "טוען ייבואים שנכשלו...",
+    "operations.noActionableImportRuns": "אין כרגע ייבואים actionable.",
+    "operations.noFailedImportRuns": "אין ייבואים שנכשלו.",
+    "operations.unknown": "לא ידוע",
+    "operations.noReasonSupplied": "לא סופקה סיבה",
+  },
+};
 
 type SyncHealthSummaryResponse = {
   max_cursor: number;
@@ -402,7 +516,8 @@ function extractBatchOutboxIds(result: OperationsBatchResult | null): string[] {
 }
 
 export default function OperationsPage() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const tt = (key: string) => operationsOverrides[locale]?.[key] ?? t(key);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const userRole = useUserRole();
@@ -1004,9 +1119,9 @@ export default function OperationsPage() {
                 {t("operations.subtitle")}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="metric-chip">Actionable-only view</span>
-                <span className="metric-chip">Batch recovery</span>
-                <span className="metric-chip">Webhook diagnostics</span>
+                <span className="metric-chip">{tt("operations.actionableOnlyView")}</span>
+                <span className="metric-chip">{tt("operations.batchRecovery")}</span>
+                <span className="metric-chip">{tt("operations.webhookDiagnostics")}</span>
               </div>
             </div>
             <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
@@ -1384,7 +1499,7 @@ export default function OperationsPage() {
                           className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
                         >
                           {webhookProviderFilter === group.provider.toLowerCase()
-                            ? "Show all"
+                            ? tt("operations.showAll")
                             : `Only ${group.provider}`}
                         </button>
                       </div>
@@ -1397,7 +1512,7 @@ export default function OperationsPage() {
                           })}
                           className="font-medium text-accent hover:underline"
                         >
-                          Provider lane
+                          {tt("operations.providerLane")}
                         </Link>
                         <Link
                           href={buildDeliveryReportHref({
@@ -1421,10 +1536,10 @@ export default function OperationsPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Delivery Recovery Audit
+                {tt("operations.deliveryRecoveryAuditTitle")}
               </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                Latest manual retries recorded for failed outbox recovery actions.
+                {tt("operations.deliveryRecoveryAuditSubtitle")}
               </p>
             </div>
             <Link
@@ -1434,14 +1549,14 @@ export default function OperationsPage() {
               })}
               className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
             >
-              Open delivery reports
+              {tt("operations.openDeliveryReports")}
             </Link>
           </div>
           <div className="mt-4 space-y-2">
             {retryAuditsQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">Loading delivery recovery audit...</div>
+              <div className="text-[13px] text-muted-foreground">{tt("operations.loadingDeliveryRecoveryAudit")}</div>
             ) : retryAudits.length === 0 ? (
-              <div className="text-[13px] text-muted-foreground">No delivery recovery audit entries yet.</div>
+              <div className="text-[13px] text-muted-foreground">{tt("operations.noDeliveryRecoveryAudit")}</div>
             ) : (
               retryAudits.map((item) => (
                 <div
@@ -1452,9 +1567,9 @@ export default function OperationsPage() {
                     <div>
                       <div className="font-medium text-foreground">Outbox {item.outbox_id}</div>
                       <div className="mt-1 text-xs text-muted-foreground">
-                        {item.before_status || "unknown"} → {item.after_status || "unknown"}
+                        {item.before_status || tt("operations.unknown")} → {item.after_status || tt("operations.unknown")}
                         {item.before_delivery_status || item.after_delivery_status
-                          ? ` | delivery ${item.before_delivery_status || "unknown"} → ${item.after_delivery_status || "unknown"}`
+                          ? ` | delivery ${item.before_delivery_status || tt("operations.unknown")} → ${item.after_delivery_status || tt("operations.unknown")}`
                           : ""}
                       </div>
                     </div>
@@ -1463,7 +1578,7 @@ export default function OperationsPage() {
                     </div>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {item.reason || "No reason supplied"} | actor {item.actor_user_id}
+                    {item.reason || tt("operations.noReasonSupplied")} | actor {item.actor_user_id}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
                     <Link
@@ -1472,7 +1587,7 @@ export default function OperationsPage() {
                       })}
                       className="font-medium text-accent hover:underline"
                     >
-                      Review delivery recovery
+                      {tt("operations.reviewDeliveryRecovery")}
                     </Link>
                   </div>
                 </div>
@@ -1485,11 +1600,13 @@ export default function OperationsPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Webhook Signals
+                {tt("operations.webhookSignalsTitle")}
               </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                Delivery webhook duplicates, mismatches, and provider failures in the last{" "}
-                {webhookSummary?.window_hours ?? 24} hours.
+                {tt("operations.webhookSignalsSubtitle").replace(
+                  "{hours}",
+                  String(webhookSummary?.window_hours ?? 24)
+                )}
               </p>
             </div>
             <Link
@@ -1499,30 +1616,30 @@ export default function OperationsPage() {
               })}
               className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
             >
-              Open delivery reports
+              {tt("operations.openDeliveryReports")}
             </Link>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-4">
             <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Received</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{tt("operations.received")}</div>
               <div className="mt-1 text-lg font-semibold text-foreground">
                 {webhookSummary?.total_received ?? 0}
               </div>
             </div>
             <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duplicates</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{tt("operations.duplicates")}</div>
               <div className="mt-1 text-lg font-semibold text-foreground">
                 {webhookSummary?.duplicate_total ?? 0}
               </div>
             </div>
             <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Unmatched</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{tt("operations.unmatched")}</div>
               <div className="mt-1 text-lg font-semibold text-foreground">
                 {webhookSummary?.unmatched_total ?? 0}
               </div>
             </div>
             <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Provider failed</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{tt("operations.providerFailed")}</div>
               <div className="mt-1 text-lg font-semibold text-foreground">
                 {webhookSummary?.provider_failed_total ?? 0}
               </div>
@@ -1530,12 +1647,12 @@ export default function OperationsPage() {
           </div>
           <div className="mt-4 space-y-2">
             {webhookSignalsQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">Loading webhook signals...</div>
+              <div className="text-[13px] text-muted-foreground">{tt("operations.loadingWebhookSignals")}</div>
             ) : visibleWebhookSignals.length === 0 ? (
               <div className="text-[13px] text-muted-foreground">
                 {webhookProviderFilter
-                  ? "No webhook signals match current provider scope."
-                  : "No webhook signals recorded."}
+                  ? tt("operations.noWebhookSignalsScoped")
+                  : tt("operations.noWebhookSignals")}
               </div>
             ) : (
               visibleWebhookSignals.map((item) => (
@@ -1569,7 +1686,7 @@ export default function OperationsPage() {
                       })}
                       className="font-medium text-accent hover:underline"
                     >
-                      Delivery report
+                      {tt("operations.deliveryReport")}
                     </Link>
                     {item.outbox_id ? (
                       <Link
@@ -1697,13 +1814,13 @@ export default function OperationsPage() {
             href={failedImportsHref}
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
-            Open import workspace
+            {tt("operations.openImportWorkspace")}
           </Link>
           <Link
             href="/reports?focus=operations&ops_preset=failed-imports"
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
-            Open operations reports
+            {tt("operations.openOperationsReports")}
           </Link>
           <Link
             href={buildDeliveryReportHref({
@@ -1712,25 +1829,25 @@ export default function OperationsPage() {
             })}
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
-            Open delivery reports
+            {tt("operations.openDeliveryReports")}
           </Link>
           <Link
             href="/reports?focus=issues&ops_preset=issue-pressure"
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
-            Open issues reports
+            {tt("operations.openIssuesReports")}
           </Link>
           <Link
             href="/journal"
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
-            Open communication queue
+            {tt("operations.openCommunicationQueue")}
           </Link>
           <Link
             href="/installers"
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
-            Open installer board
+            {tt("operations.openInstallerBoard")}
           </Link>
         </div>
 
@@ -1738,24 +1855,26 @@ export default function OperationsPage() {
           <section className="rounded-xl border border-border bg-card">
             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Failed Import Queue
+                {tt("operations.failedImportQueue")}
               </h2>
               <Link
                 href={failedImportsHref}
                 className="text-[12px] font-medium text-accent hover:underline"
               >
-                Open queue
+                {tt("operations.openQueue")}
               </Link>
             </div>
             <div className="space-y-0">
               {failedImportsQuery.isLoading && (
                 <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                  Loading failed imports...
+                  {tt("operations.loadingFailedImports")}
                 </div>
               )}
               {!failedImportsQuery.isLoading && visibleFailedImports.length === 0 && (
                 <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                  {onlyActionable ? "No actionable import runs." : "No failed import runs."}
+                  {onlyActionable
+                    ? tt("operations.noActionableImportRuns")
+                    : tt("operations.noFailedImportRuns")}
                 </div>
               )}
               {visibleFailedImports.map((item) => (

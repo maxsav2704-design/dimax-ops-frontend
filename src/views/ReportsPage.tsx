@@ -16,8 +16,227 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { apiBaseUrl, apiFetch, getAccessToken } from "@/lib/api";
 import { useUserRole } from "@/hooks/use-user-role";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+
+const reportsOverrides: Record<Locale, Record<string, string>> = {
+  en: {
+    "reports.notAvailableShort": "n/a",
+    "reports.openInProjects": "Open in Projects",
+    "reports.noFailingProjectsCurrentWindow": "No failing projects in current window.",
+    "reports.healthMetricsPlaybooks": "Health metrics and action playbooks",
+    "reports.loadingSlaMetrics": "Loading SLA metrics...",
+    "reports.loadingIssuesAnalytics": "Loading issues analytics...",
+    "reports.loadingMarginLeakage": "Loading margin leakage...",
+    "reports.projectPlanVsFactTitle": "Project Plan vs Fact",
+    "reports.projectPlanVsFactSubtitle":
+      "Compare planned commercial targets against actual delivery, payroll, and margin performance.",
+    "reports.actualMissing": "Actual missing",
+    "reports.payroll": "Payroll",
+    "reports.profit": "Profit",
+    "reports.projectRiskTitle": "Project Risk Drill-down",
+    "reports.projectRiskSubtitle":
+      "Why the selected project is leaking margin: drivers, stalled reasons and risky orders",
+    "reports.loadingProjects": "Loading projects...",
+    "reports.loadingProjectRisk": "Loading project risk drill-down...",
+    "reports.failedProjectRisk": "Failed to load project risk drill-down",
+    "reports.importModes": "Import Modes",
+    "reports.analyzeRetry": "Analyze {analyze} | Retry {retry}",
+    "reports.outboxRisk": "Outbox Risk",
+    "reports.limitAlerts": "Limit Alerts",
+    "reports.warnDanger24h": "24h warn {warn} | danger {danger}",
+    "reports.topFailingProjectsTitle": "Top Failing Projects (7d import errors)",
+    "reports.failureRuns": "{count} fails",
+    "reports.openShort": "Open",
+    "reports.operationsSlaTitle": "Operations SLA",
+    "reports.projectMarginExecutiveTitle": "Project Margin Executive",
+    "reports.projectMarginExecutiveSubtitle":
+      "Top profitable and low-margin projects based on actual realized margin",
+    "reports.topMarginProjects": "Top Margin Projects",
+    "reports.loadingTopMarginProjects": "Loading top margin projects...",
+    "reports.failedTopMarginProjects": "Failed to load top margin projects",
+    "reports.noProfitableProjects": "No profitable projects yet.",
+    "reports.statusIssues": "Status {status} | Issues {issues}",
+    "reports.lowMarginRiskProjects": "Low Margin / Risk Projects",
+    "reports.loadingLowMarginProjects": "Loading low-margin projects...",
+    "reports.failedLowMarginProjects": "Failed to load low-margin projects",
+    "reports.noLowMarginProjects": "No low-margin projects.",
+    "reports.completionIssues": "Completion {completion} | Issues {issues}",
+    "reports.riskConcentrationTitle": "Risk Concentration",
+    "reports.riskConcentrationSubtitle":
+      "Where margin risk is currently concentrated across projects, orders and installers",
+    "reports.loadingRiskConcentration": "Loading risk concentration...",
+    "reports.failedRiskConcentration": "Failed to load risk concentration",
+    "reports.delayedProfit": "Delayed Profit",
+    "reports.openIssueRisk": "Open issue risk {amount}",
+    "reports.blockedIssueRisk": "Blocked Issue Risk",
+    "reports.worstInstaller": "Worst installer {amount}",
+    "reports.riskyProjectsOrders": "Risky Projects / Orders",
+    "reports.worstProject": "Worst project {amount}",
+    "reports.revenuePayrollProfit": "Revenue / Payroll / Profit",
+    "reports.projectsOrders": "Projects / Orders",
+    "reports.installedDoors": "Installed doors: {count}",
+    "reports.openIssuesMissingRates": "Open Issues / Missing Rates",
+    "reports.lastInstall": "Last install:",
+    "reports.addonsImpact": "Addons Impact",
+    "reports.addonsProfitMissingPlans": "Profit {profit} | Missing plans {count}",
+    "reports.openOperationsCenter": "Open Operations Center",
+    "reports.openActionableOps": "Open Actionable Ops",
+    "reports.loadingCommandCenter": "Loading command center...",
+    "reports.issuesAnalyticsTitle": "Issues Analytics",
+    "reports.issuesAnalyticsSubtitle": "MTTR, overdue pressure and backlog dynamics",
+    "reports.marginLeakageTitle": "Margin Leakage",
+    "reports.marginLeakageSubtitle": "Open issue exposure, stalled reasons and add-on uplift",
+    "reports.loadingProjectsForPlanFact": "Loading projects...",
+    "reports.preparingPlanFactFilters": "Preparing project filters for plan vs fact.",
+    "reports.loadingProjectPlanFact": "Loading project plan vs fact...",
+    "reports.failedProjectPlanFact": "Failed to load project plan vs fact",
+  },
+  ru: {
+    "reports.notAvailableShort": "н/д",
+    "reports.openInProjects": "Открыть в проектах",
+    "reports.noFailingProjectsCurrentWindow": "В текущем окне нет проблемных проектов.",
+    "reports.healthMetricsPlaybooks": "Метрики здоровья и сценарии действий",
+    "reports.loadingSlaMetrics": "Загружаем SLA-метрики...",
+    "reports.loadingIssuesAnalytics": "Загружаем аналитику проблем...",
+    "reports.loadingMarginLeakage": "Загружаем утечку маржи...",
+    "reports.projectPlanVsFactTitle": "План vs факт по проекту",
+    "reports.projectPlanVsFactSubtitle":
+      "Сравнение плановых коммерческих целей с фактической доставкой, payroll и маржой.",
+    "reports.actualMissing": "Фактически отсутствует",
+    "reports.payroll": "Payroll",
+    "reports.profit": "Прибыль",
+    "reports.projectRiskTitle": "Разбор рисков проекта",
+    "reports.projectRiskSubtitle":
+      "Почему выбранный проект теряет маржу: драйверы, зависшие причины и рискованные заказы.",
+    "reports.loadingProjects": "Загружаем проекты...",
+    "reports.loadingProjectRisk": "Загружаем разбор рисков проекта...",
+    "reports.failedProjectRisk": "Не удалось загрузить разбор рисков проекта",
+    "reports.importModes": "Режимы импорта",
+    "reports.analyzeRetry": "Анализ {analyze} | Повтор {retry}",
+    "reports.outboxRisk": "Риск outbox",
+    "reports.limitAlerts": "Алерты лимитов",
+    "reports.warnDanger24h": "24ч warn {warn} | danger {danger}",
+    "reports.topFailingProjectsTitle": "Проблемные проекты (ошибки импорта за 7д)",
+    "reports.failureRuns": "{count} сбоев",
+    "reports.openShort": "Открыть",
+    "reports.operationsSlaTitle": "Операционный SLA",
+    "reports.projectMarginExecutiveTitle": "Исполнительная маржа по проектам",
+    "reports.projectMarginExecutiveSubtitle":
+      "Самые прибыльные и низкомаржинальные проекты по фактической марже.",
+    "reports.topMarginProjects": "Топ по марже",
+    "reports.loadingTopMarginProjects": "Загружаем проекты с лучшей маржой...",
+    "reports.failedTopMarginProjects": "Не удалось загрузить проекты с лучшей маржой",
+    "reports.noProfitableProjects": "Прибыльных проектов пока нет.",
+    "reports.statusIssues": "Статус {status} | Проблемы {issues}",
+    "reports.lowMarginRiskProjects": "Низкая маржа / риск",
+    "reports.loadingLowMarginProjects": "Загружаем низкомаржинальные проекты...",
+    "reports.failedLowMarginProjects": "Не удалось загрузить низкомаржинальные проекты",
+    "reports.noLowMarginProjects": "Низкомаржинальных проектов нет.",
+    "reports.completionIssues": "Готовность {completion} | Проблемы {issues}",
+    "reports.riskConcentrationTitle": "Концентрация риска",
+    "reports.riskConcentrationSubtitle":
+      "Где сейчас сконцентрирован риск маржи по проектам, заказам и монтажникам.",
+    "reports.loadingRiskConcentration": "Загружаем концентрацию риска...",
+    "reports.failedRiskConcentration": "Не удалось загрузить концентрацию риска",
+    "reports.delayedProfit": "Отложенная прибыль",
+    "reports.openIssueRisk": "Риск открытых проблем {amount}",
+    "reports.blockedIssueRisk": "Риск заблокированных проблем",
+    "reports.worstInstaller": "Худший монтажник {amount}",
+    "reports.riskyProjectsOrders": "Рискованные проекты / заказы",
+    "reports.worstProject": "Худший проект {amount}",
+    "reports.revenuePayrollProfit": "Выручка / payroll / прибыль",
+    "reports.projectsOrders": "Проекты / заказы",
+    "reports.installedDoors": "Установлено дверей: {count}",
+    "reports.openIssuesMissingRates": "Открытые проблемы / отсутствующие ставки",
+    "reports.lastInstall": "Последняя установка:",
+    "reports.addonsImpact": "Влияние допов",
+    "reports.addonsProfitMissingPlans": "Прибыль {profit} | Нет планов {count}",
+    "reports.openOperationsCenter": "Открыть Operations Center",
+    "reports.openActionableOps": "Открыть actionable Ops",
+    "reports.loadingCommandCenter": "Загружаем командный центр...",
+    "reports.issuesAnalyticsTitle": "Аналитика проблем",
+    "reports.issuesAnalyticsSubtitle": "MTTR, просрочки и динамика бэклога",
+    "reports.marginLeakageTitle": "Утечка маржи",
+    "reports.marginLeakageSubtitle": "Риск по открытым проблемам, зависшим причинам и допам",
+    "reports.loadingProjectsForPlanFact": "Загружаем проекты...",
+    "reports.preparingPlanFactFilters": "Готовим фильтры проекта для блока план vs факт.",
+    "reports.loadingProjectPlanFact": "Загружаем план vs факт по проекту...",
+    "reports.failedProjectPlanFact": "Не удалось загрузить план vs факт по проекту",
+  },
+  he: {
+    "reports.notAvailableShort": "לא זמין",
+    "reports.openInProjects": "פתח בפרויקטים",
+    "reports.noFailingProjectsCurrentWindow": "אין פרויקטים כושלים בחלון הנוכחי.",
+    "reports.healthMetricsPlaybooks": "מדדי בריאות וספרי פעולה",
+    "reports.loadingSlaMetrics": "טוען מדדי SLA...",
+    "reports.loadingIssuesAnalytics": "טוען אנליטיקת תקלות...",
+    "reports.loadingMarginLeakage": "טוען דליפת מרווח...",
+    "reports.projectPlanVsFactTitle": "תכנית מול ביצוע לפרויקט",
+    "reports.projectPlanVsFactSubtitle":
+      "השוואה בין היעדים המסחריים המתוכננים לבין הביצוע בפועל במשלוחים, payroll ומרווח.",
+    "reports.actualMissing": "חסר בפועל",
+    "reports.payroll": "Payroll",
+    "reports.profit": "רווח",
+    "reports.projectRiskTitle": "פירוט סיכוני פרויקט",
+    "reports.projectRiskSubtitle":
+      "למה הפרויקט שנבחר שוחק מרווח: מניעים, סיבות תקועות והזמנות בסיכון.",
+    "reports.loadingProjects": "טוען פרויקטים...",
+    "reports.loadingProjectRisk": "טוען פירוט סיכוני פרויקט...",
+    "reports.failedProjectRisk": "טעינת פירוט סיכוני הפרויקט נכשלה",
+    "reports.importModes": "מצבי ייבוא",
+    "reports.analyzeRetry": "ניתוח {analyze} | ניסיון חוזר {retry}",
+    "reports.outboxRisk": "סיכון Outbox",
+    "reports.limitAlerts": "התראות מגבלות",
+    "reports.warnDanger24h": "24ש׳ אזהרה {warn} | סכנה {danger}",
+    "reports.topFailingProjectsTitle": "פרויקטים כושלים (שגיאות ייבוא ב-7 ימים)",
+    "reports.failureRuns": "{count} כשלים",
+    "reports.openShort": "פתח",
+    "reports.operationsSlaTitle": "SLA תפעולי",
+    "reports.projectMarginExecutiveTitle": "מרווח הנהלתי לפי פרויקט",
+    "reports.projectMarginExecutiveSubtitle":
+      "הפרויקטים הרווחיים ביותר והנמוכים ביותר לפי מרווח ממומש בפועל.",
+    "reports.topMarginProjects": "פרויקטי מרווח מובילים",
+    "reports.loadingTopMarginProjects": "טוען פרויקטים עם מרווח גבוה...",
+    "reports.failedTopMarginProjects": "טעינת פרויקטים עם מרווח גבוה נכשלה",
+    "reports.noProfitableProjects": "עדיין אין פרויקטים רווחיים.",
+    "reports.statusIssues": "סטטוס {status} | תקלות {issues}",
+    "reports.lowMarginRiskProjects": "מרווח נמוך / סיכון",
+    "reports.loadingLowMarginProjects": "טוען פרויקטים עם מרווח נמוך...",
+    "reports.failedLowMarginProjects": "טעינת פרויקטים עם מרווח נמוך נכשלה",
+    "reports.noLowMarginProjects": "אין פרויקטים עם מרווח נמוך.",
+    "reports.completionIssues": "השלמה {completion} | תקלות {issues}",
+    "reports.riskConcentrationTitle": "ריכוז סיכון",
+    "reports.riskConcentrationSubtitle":
+      "היכן סיכון המרווח מרוכז כעת בין פרויקטים, הזמנות ומתקינים.",
+    "reports.loadingRiskConcentration": "טוען ריכוז סיכון...",
+    "reports.failedRiskConcentration": "טעינת ריכוז הסיכון נכשלה",
+    "reports.delayedProfit": "רווח מעוכב",
+    "reports.openIssueRisk": "סיכון תקלות פתוחות {amount}",
+    "reports.blockedIssueRisk": "סיכון תקלות חסומות",
+    "reports.worstInstaller": "המתקין הגרוע ביותר {amount}",
+    "reports.riskyProjectsOrders": "פרויקטים / הזמנות בסיכון",
+    "reports.worstProject": "הפרויקט הגרוע ביותר {amount}",
+    "reports.revenuePayrollProfit": "הכנסה / payroll / רווח",
+    "reports.projectsOrders": "פרויקטים / הזמנות",
+    "reports.installedDoors": "דלתות מותקנות: {count}",
+    "reports.openIssuesMissingRates": "תקלות פתוחות / תעריפים חסרים",
+    "reports.lastInstall": "התקנה אחרונה:",
+    "reports.addonsImpact": "השפעת תוספות",
+    "reports.addonsProfitMissingPlans": "רווח {profit} | תוכניות חסרות {count}",
+    "reports.openOperationsCenter": "פתח את מרכז התפעול",
+    "reports.openActionableOps": "פתח actionable Ops",
+    "reports.loadingCommandCenter": "טוען את מרכז הפיקוד...",
+    "reports.issuesAnalyticsTitle": "אנליטיקת תקלות",
+    "reports.issuesAnalyticsSubtitle": "MTTR, לחץ איחורים ודינמיקת backlog",
+    "reports.marginLeakageTitle": "דליפת מרווח",
+    "reports.marginLeakageSubtitle": "חשיפת תקלות פתוחות, סיבות תקועות והתרוממות add-on",
+    "reports.loadingProjectsForPlanFact": "טוען פרויקטים...",
+    "reports.preparingPlanFactFilters": "מכין מסנני פרויקט עבור plan vs fact.",
+    "reports.loadingProjectPlanFact": "טוען plan vs fact לפרויקט...",
+    "reports.failedProjectPlanFact": "טעינת plan vs fact לפרויקט נכשלה",
+  },
+};
 
 type LimitAlertItem = {
   id: string;
@@ -1021,7 +1240,8 @@ function SectionMessage({
 }
 
 export default function ReportsPage() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const tt = (key: string) => reportsOverrides[locale]?.[key] ?? t(key);
   const reportsFocusCopy = getReportsFocusCopy(t);
   const reportsOpsPresetCopy = getReportsOpsPresetCopy(t);
   const router = useRouter();
@@ -2015,21 +2235,21 @@ export default function ReportsPage() {
                     onClick={() => router.push("/operations")}
                     className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
                   >
-                    {t("reports.openOperationsCenter")}
+                    {tt("reports.openOperationsCenter")}
                   </button>
                   <button
                     type="button"
                     onClick={() => router.push("/operations?actionable=1")}
                     className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
                   >
-                    {t("reports.openActionableOps")}
+                    {tt("reports.openActionableOps")}
                   </button>
                 </div>
               </div>
             </div>
 
             {operationsCenterQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">{t("reports.loadingCommandCenter")}</div>
+              <div className="text-[13px] text-muted-foreground">{tt("reports.loadingCommandCenter")}</div>
             ) : (
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
@@ -2050,21 +2270,22 @@ export default function ReportsPage() {
                 <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
                   <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Import Modes
+                    {tt("reports.importModes")}
                   </div>
                   <div className="mt-1 text-xl font-semibold text-foreground">
                     {operationsCenter?.imports.import_runs ?? 0}
                   </div>
                   <div className="mt-1 text-[12px] text-muted-foreground">
-                    Analyze {operationsCenter?.imports.analyze_runs ?? 0} | Retry{" "}
-                    {operationsCenter?.imports.retry_runs ?? 0}
+                    {tt("reports.analyzeRetry")
+                      .replace("{analyze}", String(operationsCenter?.imports.analyze_runs ?? 0))
+                      .replace("{retry}", String(operationsCenter?.imports.retry_runs ?? 0))}
                   </div>
                 </div>
 
                 <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
                   <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Outbox Risk
+                    {tt("reports.outboxRisk")}
                   </div>
                   <div className="mt-1 text-xl font-semibold text-foreground">
                     {operationsCenter?.outbox.failed_total ?? 0}
@@ -2077,14 +2298,15 @@ export default function ReportsPage() {
                 <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
                   <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Limit Alerts
+                    {tt("reports.limitAlerts")}
                   </div>
                   <div className="mt-1 text-xl font-semibold text-foreground">
                     {operationsCenter?.alerts.unread_count ?? unreadCount}
                   </div>
                   <div className="mt-1 text-[12px] text-muted-foreground">
-                    24h warn {operationsCenter?.alerts.warn_last_24h ?? 0} | danger{" "}
-                    {operationsCenter?.alerts.danger_last_24h ?? 0}
+                    {tt("reports.warnDanger24h")
+                      .replace("{warn}", String(operationsCenter?.alerts.warn_last_24h ?? 0))
+                      .replace("{danger}", String(operationsCenter?.alerts.danger_last_24h ?? 0))}
                   </div>
                 </div>
               </div>
@@ -2093,7 +2315,7 @@ export default function ReportsPage() {
             <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] px-4 py-4">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Top Failing Projects (7d import errors)
+                  {tt("reports.topFailingProjectsTitle")}
                 </div>
                 <button
                   onClick={() => {
@@ -2110,11 +2332,11 @@ export default function ReportsPage() {
                   disabled={topFailingProjects.length === 0}
                   className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[11px] font-medium disabled:opacity-50"
                 >
-                  Open in Projects
+                  {tt("reports.openInProjects")}
                 </button>
               </div>
               {topFailingProjects.length === 0 ? (
-                <div className="text-[12px] text-muted-foreground">No failing projects in current window.</div>
+                <div className="text-[12px] text-muted-foreground">{tt("reports.noFailingProjectsCurrentWindow")}</div>
               ) : (
                 <div className="grid gap-2">
                   {topFailingProjects.slice(0, 3).map((item) => (
@@ -2123,7 +2345,9 @@ export default function ReportsPage() {
                       className="grid grid-cols-[1fr_80px_170px_74px] items-center gap-2 rounded-xl border border-border/70 bg-background/55 px-3 py-2 text-[12px]"
                     >
                       <div className="font-medium text-foreground truncate">{item.project_name}</div>
-                      <div className="text-muted-foreground text-right">{item.failure_runs} fails</div>
+                      <div className="text-muted-foreground text-right">
+                        {tt("reports.failureRuns").replace("{count}", String(item.failure_runs))}
+                      </div>
                       <div className="text-muted-foreground text-right">{formatDateTime(item.last_run_at)}</div>
                       <button
                         onClick={() =>
@@ -2137,7 +2361,7 @@ export default function ReportsPage() {
                         }
                         className="h-7 rounded-lg border border-border/70 bg-background/70 px-2 text-[11px] font-medium"
                       >
-                        Open
+                        {tt("reports.openShort")}
                       </button>
                     </div>
                   ))}
@@ -2151,10 +2375,10 @@ export default function ReportsPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                Operations SLA
+                {tt("reports.operationsSlaTitle")}
               </div>
               <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                Health metrics and action playbooks
+                {tt("reports.healthMetricsPlaybooks")}
               </h2>
             </div>
             <span
@@ -2164,12 +2388,12 @@ export default function ReportsPage() {
                   "text-muted-foreground bg-muted/40 border-border"
               )}
             >
-              {operationsSla?.overall_status || "n/a"}
+              {operationsSla?.overall_status || tt("reports.notAvailableShort")}
             </span>
           </div>
 
           {operationsSlaQuery.isLoading ? (
-            <div className="text-[13px] text-muted-foreground">Loading SLA metrics...</div>
+            <div className="text-[13px] text-muted-foreground">{tt("reports.loadingSlaMetrics")}</div>
           ) : operationsSlaQuery.isError ? (
             <div className="text-[13px] text-[hsl(var(--destructive))]">
               {operationsSlaQuery.error instanceof Error
@@ -2282,7 +2506,7 @@ export default function ReportsPage() {
                     <div className="grid gap-2 md:grid-cols-4 text-[12px]">
                       <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
                         <div className="text-muted-foreground">Current</div>
-                        <div className="font-semibold">{slaHistorySummary?.current_status || "n/a"}</div>
+                        <div className="font-semibold">{slaHistorySummary?.current_status || tt("reports.notAvailableShort")}</div>
                       </div>
                       <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
                         <div className="text-muted-foreground">Status Days</div>
@@ -2353,21 +2577,21 @@ export default function ReportsPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                Issues Analytics
+                {tt("reports.issuesAnalyticsTitle")}
               </div>
               <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                MTTR, overdue pressure and backlog dynamics
+                {tt("reports.issuesAnalyticsSubtitle")}
               </h2>
             </div>
             <div className="text-right text-[11px] text-muted-foreground">
               {issuesAnalytics?.generated_at
                 ? formatDateTime(issuesAnalytics.generated_at)
-                : "n/a"}
+                : tt("reports.notAvailableShort")}
             </div>
           </div>
 
           {issuesAnalyticsQuery.isLoading ? (
-            <div className="text-[13px] text-muted-foreground">Loading issues analytics...</div>
+            <div className="text-[13px] text-muted-foreground">{tt("reports.loadingIssuesAnalytics")}</div>
           ) : issuesAnalyticsQuery.isError ? (
             <div className="text-[13px] text-[hsl(var(--destructive))]">
               {issuesAnalyticsQuery.error instanceof Error
@@ -2489,21 +2713,21 @@ export default function ReportsPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                Margin Leakage
+                {tt("reports.marginLeakageTitle")}
               </div>
               <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                Open issue exposure, stalled reasons and add-on uplift
+                {tt("reports.marginLeakageSubtitle")}
               </h2>
             </div>
             <div className="text-right text-[11px] text-muted-foreground">
               {issuesAddonsImpact?.generated_at
                 ? formatDateTime(issuesAddonsImpact.generated_at)
-                : "n/a"}
+                : tt("reports.notAvailableShort")}
             </div>
           </div>
 
           {issuesAddonsImpactQuery.isLoading ? (
-            <div className="text-[13px] text-muted-foreground">Loading margin leakage...</div>
+            <div className="text-[13px] text-muted-foreground">{tt("reports.loadingMarginLeakage")}</div>
           ) : issuesAddonsImpactQuery.isError ? (
             <div className="text-[13px] text-[hsl(var(--destructive))]">
               {issuesAddonsImpactQuery.error instanceof Error
@@ -2705,9 +2929,9 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Project Plan vs Fact
+                {tt("reports.projectPlanVsFactTitle")}
               </div>
-              <div className="text-[13px] text-muted-foreground">{t("reports.projectPlanVsFactSubtitle")}</div>
+              <div className="text-[13px] text-muted-foreground">{tt("reports.projectPlanVsFactSubtitle")}</div>
             </div>
             <select
               aria-label="Project Plan Fact Filter"
@@ -2728,7 +2952,7 @@ export default function ReportsPage() {
 
           {projectsQuery.isLoading && !projectPlanFactProjectId && (
             <div className="px-4 py-6">
-              <SectionMessage title={t("reports.loadingProjectsForPlanFact")} detail={t("reports.preparingPlanFactFilters")} />
+              <SectionMessage title={tt("reports.loadingProjectsForPlanFact")} detail={tt("reports.preparingPlanFactFilters")} />
             </div>
           )}
           {!projectsQuery.isLoading && projectOptions.length === 0 && (
@@ -2749,14 +2973,14 @@ export default function ReportsPage() {
           )}
           {projectPlanFactQuery.isLoading && projectPlanFactProjectId && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              {t("reports.loadingProjectPlanFact")}
+              {tt("reports.loadingProjectPlanFact")}
             </div>
           )}
           {projectPlanFactQuery.isError && projectPlanFactProjectId && (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
               {projectPlanFactQuery.error instanceof Error
                 ? projectPlanFactQuery.error.message
-                : t("reports.failedProjectPlanFact")}
+                : tt("reports.failedProjectPlanFact")}
             </div>
           )}
           {!projectPlanFactQuery.isLoading &&
@@ -2794,7 +3018,7 @@ export default function ReportsPage() {
                       {projectPlanFact.missing_planned_rates_doors}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      Actual missing: {projectPlanFact.missing_actual_rates_doors}
+                      {tt("reports.actualMissing")}: {projectPlanFact.missing_actual_rates_doors}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
@@ -2835,7 +3059,7 @@ export default function ReportsPage() {
                         </td>
                       </tr>
                       <tr className="border-t border-border/70">
-                        <td className="px-3 py-2 font-medium text-foreground">Payroll</td>
+                        <td className="px-3 py-2 font-medium text-foreground">{tt("reports.payroll")}</td>
                         <td className="px-3 py-2 text-right">
                           {formatAmount(projectPlanFact.planned_payroll_total)}
                         </td>
@@ -2869,10 +3093,10 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Project Risk Drill-down
+                {tt("reports.projectRiskTitle")}
               </div>
               <div className="text-[13px] text-muted-foreground">
-                Why the selected project is leaking margin: drivers, stalled reasons and risky orders
+                {tt("reports.projectRiskSubtitle")}
               </div>
             </div>
             <select
@@ -2882,7 +3106,7 @@ export default function ReportsPage() {
               className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
             >
               <option value="">
-                {projectsQuery.isLoading ? "Loading projects..." : "Select project"}
+                {projectsQuery.isLoading ? tt("reports.loadingProjects") : t("reports.selectProject")}
               </option>
               {projectOptions.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -2894,14 +3118,14 @@ export default function ReportsPage() {
 
           {projectRiskDrilldownQuery.isLoading && projectRiskProjectId && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading project risk drill-down...
+              {tt("reports.loadingProjectRisk")}
             </div>
           )}
           {projectRiskDrilldownQuery.isError && projectRiskProjectId && (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
               {projectRiskDrilldownQuery.error instanceof Error
                 ? projectRiskDrilldownQuery.error.message
-                : "Failed to load project risk drill-down"}
+                : tt("reports.failedProjectRisk")}
             </div>
           )}
           {!projectsQuery.isLoading && projectOptions.length > 0 && !projectRiskProjectId && (
@@ -3079,27 +3303,27 @@ export default function ReportsPage() {
         <div id="reports-installers-kpi" className="glass-card rounded-xl overflow-hidden border border-border">
           <div className="px-4 py-3 border-b border-border bg-muted/30">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              Project Margin Executive
+              {tt("reports.projectMarginExecutiveTitle")}
             </div>
             <div className="text-[13px] text-muted-foreground">
-              Top profitable and low-margin projects based on actual realized margin
+              {tt("reports.projectMarginExecutiveSubtitle")}
             </div>
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 p-4">
             <div className="overflow-auto rounded-lg border border-border">
               <div className="px-3 py-2 border-b border-border bg-muted/30 text-[12px] font-medium">
-                Top Margin Projects
+                {tt("reports.topMarginProjects")}
               </div>
               {topProjectsMarginQuery.isLoading ? (
                 <div className="px-3 py-4 text-[13px] text-muted-foreground">
-                  Loading top margin projects...
+                  {tt("reports.loadingTopMarginProjects")}
                 </div>
               ) : topProjectsMarginQuery.isError ? (
                 <div className="px-3 py-4 text-[13px] text-[hsl(var(--destructive))]">
                   {topProjectsMarginQuery.error instanceof Error
                     ? topProjectsMarginQuery.error.message
-                    : "Failed to load top margin projects"}
+                    : tt("reports.failedTopMarginProjects")}
                 </div>
               ) : (
                 <table className="w-full text-[12px]">
@@ -3115,7 +3339,7 @@ export default function ReportsPage() {
                     {topProjectsMargin.length === 0 ? (
                       <tr>
                         <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                          No profitable projects yet.
+                          {tt("reports.noProfitableProjects")}
                         </td>
                       </tr>
                     ) : (
@@ -3124,7 +3348,9 @@ export default function ReportsPage() {
                           <td className="px-3 py-2">
                             <div className="font-medium text-foreground">{item.project_name}</div>
                             <div className="text-[11px] text-muted-foreground">
-                              Status {item.project_status} | Issues {item.open_issues}
+                              {tt("reports.statusIssues")
+                                .replace("{status}", item.project_status)
+                                .replace("{issues}", String(item.open_issues))}
                             </div>
                           </td>
                           <td className="px-3 py-2 text-right">
@@ -3146,17 +3372,17 @@ export default function ReportsPage() {
 
             <div className="overflow-auto rounded-lg border border-border">
               <div className="px-3 py-2 border-b border-border bg-muted/30 text-[12px] font-medium">
-                Low Margin / Risk Projects
+                {tt("reports.lowMarginRiskProjects")}
               </div>
               {riskProjectsMarginQuery.isLoading ? (
                 <div className="px-3 py-4 text-[13px] text-muted-foreground">
-                  Loading low-margin projects...
+                  {tt("reports.loadingLowMarginProjects")}
                 </div>
               ) : riskProjectsMarginQuery.isError ? (
                 <div className="px-3 py-4 text-[13px] text-[hsl(var(--destructive))]">
                   {riskProjectsMarginQuery.error instanceof Error
                     ? riskProjectsMarginQuery.error.message
-                    : "Failed to load low-margin projects"}
+                    : tt("reports.failedLowMarginProjects")}
                 </div>
               ) : (
                 <table className="w-full text-[12px]">
@@ -3172,7 +3398,7 @@ export default function ReportsPage() {
                     {riskProjectsMargin.length === 0 ? (
                       <tr>
                         <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                          No low-margin projects.
+                          {tt("reports.noLowMarginProjects")}
                         </td>
                       </tr>
                     ) : (
@@ -3181,7 +3407,9 @@ export default function ReportsPage() {
                           <td className="px-3 py-2">
                             <div className="font-medium text-foreground">{item.project_name}</div>
                             <div className="text-[11px] text-muted-foreground">
-                              Completion {formatPercent(item.completion_pct)} | Issues {item.open_issues}
+                              {tt("reports.completionIssues")
+                                .replace("{completion}", formatPercent(item.completion_pct))
+                                .replace("{issues}", String(item.open_issues))}
                             </div>
                           </td>
                           <td className="px-3 py-2 text-right">
@@ -3207,64 +3435,73 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Risk Concentration
+                {tt("reports.riskConcentrationTitle")}
               </div>
               <div className="text-[13px] text-muted-foreground">
-                Where margin risk is currently concentrated across projects, orders and installers
+                {tt("reports.riskConcentrationSubtitle")}
               </div>
             </div>
             <div className="text-right text-[11px] text-muted-foreground">
               {riskConcentration?.generated_at
                 ? formatDateTime(riskConcentration.generated_at)
-                : "n/a"}
+                : tt("reports.notAvailableShort")}
             </div>
           </div>
 
           {riskConcentrationQuery.isLoading ? (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading risk concentration...
+              {tt("reports.loadingRiskConcentration")}
             </div>
           ) : riskConcentrationQuery.isError ? (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
               {riskConcentrationQuery.error instanceof Error
                 ? riskConcentrationQuery.error.message
-                : "Failed to load risk concentration"}
+                : tt("reports.failedRiskConcentration")}
             </div>
           ) : (
             <div className="p-4 space-y-4">
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="rounded-lg border border-border bg-card p-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Delayed Profit
+                    {tt("reports.delayedProfit")}
                   </div>
                   <div className="mt-2 text-[22px] font-semibold text-[hsl(var(--destructive))]">
                     {formatAmount(riskConcentration?.summary.delayed_profit_total)}
                   </div>
                   <div className="mt-1 text-[12px] text-muted-foreground">
-                    Open issue risk {formatAmount(riskConcentration?.summary.open_issue_profit_at_risk)}
+                    {tt("reports.openIssueRisk").replace(
+                      "{amount}",
+                      formatAmount(riskConcentration?.summary.open_issue_profit_at_risk)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Blocked Issue Risk
+                    {tt("reports.blockedIssueRisk")}
                   </div>
                   <div className="mt-2 text-[22px] font-semibold text-[hsl(var(--warning-foreground))]">
                     {formatAmount(riskConcentration?.summary.blocked_issue_profit_at_risk)}
                   </div>
                   <div className="mt-1 text-[12px] text-muted-foreground">
-                    Worst installer {formatAmount(riskConcentration?.summary.worst_installer_profit_total)}
+                    {tt("reports.worstInstaller").replace(
+                      "{amount}",
+                      formatAmount(riskConcentration?.summary.worst_installer_profit_total)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Risky Projects / Orders
+                    {tt("reports.riskyProjectsOrders")}
                   </div>
                   <div className="mt-2 text-[22px] font-semibold text-foreground">
                     {riskConcentration?.summary.risky_projects ?? 0} /{" "}
                     {riskConcentration?.summary.risky_orders ?? 0}
                   </div>
                   <div className="mt-1 text-[12px] text-muted-foreground">
-                    Worst project {formatAmount(riskConcentration?.summary.worst_project_profit_total)}
+                    {tt("reports.worstProject").replace(
+                      "{amount}",
+                      formatAmount(riskConcentration?.summary.worst_project_profit_total)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-3">
@@ -3831,7 +4068,7 @@ export default function ReportsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Revenue / Payroll / Profit
+                      {tt("reports.revenuePayrollProfit")}
                     </div>
                     <div className="mt-2 text-[18px] font-semibold text-foreground">
                       {formatAmount(installerDetails.revenue_total)}
@@ -3843,39 +4080,43 @@ export default function ReportsPage() {
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Projects / Orders
+                      {tt("reports.projectsOrders")}
                     </div>
                     <div className="mt-2 text-[18px] font-semibold text-foreground">
                       {installerDetails.active_projects} / {installerDetails.order_numbers}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      Installed doors: {installerDetails.installed_doors}
+                      {tt("reports.installedDoors").replace(
+                        "{count}",
+                        String(installerDetails.installed_doors)
+                      )}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Open Issues / Missing Rates
+                      {tt("reports.openIssuesMissingRates")}
                     </div>
                     <div className="mt-2 text-[18px] font-semibold text-foreground">
                       {installerDetails.open_issues} / {installerDetails.missing_rates_installed_doors}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      Last install:{" "}
+                      {tt("reports.lastInstall")}{" "}
                       {installerDetails.last_installed_at
                         ? formatDateTime(installerDetails.last_installed_at)
-                        : "n/a"}
+                        : tt("reports.notAvailableShort")}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Addons Impact
+                      {tt("reports.addonsImpact")}
                     </div>
                     <div className="mt-2 text-[18px] font-semibold text-foreground">
                       Qty {formatAmount(installerDetails.addons_done_qty)}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      Profit {formatAmount(installerDetails.addon_profit_total)} | Missing plans{" "}
-                      {installerDetails.missing_addon_plans_facts}
+                      {tt("reports.addonsProfitMissingPlans")
+                        .replace("{profit}", formatAmount(installerDetails.addon_profit_total))
+                        .replace("{count}", String(installerDetails.missing_addon_plans_facts))}
                     </div>
                   </div>
                 </div>
@@ -3983,7 +4224,7 @@ export default function ReportsPage() {
                 className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
               >
                 <option value="">
-                  {projectsQuery.isLoading ? "Loading projects..." : "All projects"}
+                  {projectsQuery.isLoading ? tt("reports.loadingProjects") : t("common.all")}
                 </option>
                 {projectOptions.map((project) => (
                   <option key={project.id} value={project.id}>

@@ -6,13 +6,37 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Locale } from "@/lib/i18n";
 import { buildInstallerIssuesHref } from "@/views/installer/issue-links";
 import {
   buildScheduleCsv,
   downloadScheduleCsv,
   scheduleExportFilename,
 } from "@/views/installer/schedule-export";
+
+const scheduleOverrides: Partial<Record<Locale, Record<string, string>>> = {
+  en: {
+    "installerSchedule.eventsMetric": "Events {count}",
+    "installerSchedule.visibleMetric": "Visible {count}",
+    "installerSchedule.presetMetric": "Preset {preset}",
+    "installerSchedule.loading": "Loading schedule...",
+    "installerSchedule.emptySelectedRange": "No events in selected range.",
+  },
+  ru: {
+    "installerSchedule.eventsMetric": "События {count}",
+    "installerSchedule.visibleMetric": "Видно {count}",
+    "installerSchedule.presetMetric": "Пресет {preset}",
+    "installerSchedule.loading": "Загрузка расписания...",
+    "installerSchedule.emptySelectedRange": "В выбранном диапазоне событий нет.",
+  },
+  he: {
+    "installerSchedule.eventsMetric": "אירועים {count}",
+    "installerSchedule.visibleMetric": "מוצגים {count}",
+    "installerSchedule.presetMetric": "Preset {preset}",
+    "installerSchedule.loading": "טוען לוח זמנים...",
+    "installerSchedule.emptySelectedRange": "אין אירועים בטווח שנבחר.",
+  },
+};
 
 type CalendarEvent = {
   id: string;
@@ -64,7 +88,8 @@ function getScheduleIssueSearchPreset(eventType: string, title: string) {
 }
 
 export default function InstallerSchedulePage() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const tt = (key: string) => scheduleOverrides[locale]?.[key] ?? t(key);
   const rangePresetLabels: Record<RangePreset, string> = {
     today: t("common.today"),
     "7d": t("installerSchedule.next7Days"),
@@ -207,9 +232,9 @@ export default function InstallerSchedulePage() {
               {t("installerSchedule.subtitle")}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className="metric-chip">Events {events.length}</span>
-              <span className="metric-chip">Visible {filteredEvents.length}</span>
-              <span className="metric-chip">Preset {preset.toUpperCase()}</span>
+              <span className="metric-chip">{tt("installerSchedule.eventsMetric").replace("{count}", String(events.length))}</span>
+              <span className="metric-chip">{tt("installerSchedule.visibleMetric").replace("{count}", String(filteredEvents.length))}</span>
+              <span className="metric-chip">{tt("installerSchedule.presetMetric").replace("{preset}", preset.toUpperCase())}</span>
               <span className="metric-chip">
                 {overdueOnly ? t("installerSchedule.overdueFocus") : t("installerSchedule.mixedQueue")}
               </span>
@@ -349,13 +374,13 @@ export default function InstallerSchedulePage() {
 
       {eventsQuery.isLoading && (
         <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-          Loading schedule...
+          {tt("installerSchedule.loading")}
         </div>
       )}
 
       {!eventsQuery.isLoading && events.length === 0 && (
         <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-          No events in selected range.
+          {tt("installerSchedule.emptySelectedRange")}
         </div>
       )}
       {!eventsQuery.isLoading && events.length > 0 && filteredEvents.length === 0 && (
