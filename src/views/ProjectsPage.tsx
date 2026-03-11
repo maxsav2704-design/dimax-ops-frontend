@@ -14,8 +14,43 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { apiFetch } from "@/lib/api";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+
+const projectsOverrides: Partial<Record<Locale, Record<string, string>>> = {
+  he: {
+    "projects.activeScope": "הקשר פעיל",
+    "projects.portfolioOverview": "מבט על הפורטפוליו",
+    "projects.selectProjectHint": "בחר פרויקט כדי לעדכן יבוא, רווחיות וסיכונים.",
+    "projects.queue": "תור",
+    "projects.retryFailed": "נסה שוב כושלים",
+    "projects.reconcileAll": "התאמה מלאה",
+    "projects.reportsHandoff": "זוהו {count} פרויקטים מהדו\"ח עם יבואים כושלים.",
+    "projects.retryFailedOnly": "נסה שוב רק את הכושלים",
+    "projects.toReconcileSafely": "ואז בצע התאמה בצורה בטוחה.",
+    "projects.projectList": "רשימת פרויקטים",
+    "projects.portfolioNavigator": "ניווט פורטפוליו",
+    "projects.filteredCount": "מסוננים:",
+    "projects.selectedCount": "נבחרו:",
+    "projects.searchProject": "חיפוש לפי שם או כתובת",
+    "projects.selectAllFiltered": "בחר את כל המסוננים",
+    "projects.reviewing": "בודק...",
+    "projects.reviewSelected": "בדוק נבחרים",
+    "projects.reconciling": "מבצע התאמה...",
+    "projects.reconcile": "התאם",
+    "projects.retryFailedLatestOnly": "רק הרצות אחרונות שנכשלו",
+    "projects.loadingProjects": "טוען פרויקטים...",
+    "projects.noProjectsFound": "לא נמצאו פרויקטים.",
+    "projects.failedImportsQueue": "תור יבואים כושלים",
+    "projects.refreshQueue": "רענן תור",
+    "projects.retryingProgress": "מנסה שוב {processed} מתוך {total}",
+    "projects.retrySelected": "נסה שוב נבחרים ({count})",
+    "projects.progress": "התקדמות",
+    "projects.lastRetryBatch": "ניסיון אחרון: {success} הצליחו, {failed} נכשלו, {skipped} דולגו",
+    "projects.loadingFailedQueue": "טוען תור יבואים כושלים...",
+    "projects.noFailedQueue": "אין כרגע יבואים כושלים.",
+  },
+};
 
 type ProjectListItem = {
   id: string;
@@ -494,7 +529,8 @@ function chunkIds(values: string[], size: number): string[][] {
 }
 
 export default function ProjectsPage() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const tt = (key: string) => projectsOverrides[locale]?.[key] ?? t(key);
   const searchParams = useSearchParams();
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [doorTypes, setDoorTypes] = useState<DoorType[]>([]);
@@ -1577,21 +1613,21 @@ export default function ProjectsPage() {
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl">
-              <div className="page-eyebrow">{t("projects.eyebrow")}</div>
+              <div className="page-eyebrow">{tt("projects.eyebrow")}</div>
               <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
-                {t("projects.title")}
+                {tt("projects.title")}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
-                {t("projects.subtitle")}
+                {tt("projects.subtitle")}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="metric-chip">{t("projects.projectsCount")} {projects.length}</span>
-                <span className="metric-chip">{t("projects.filteredLabel")} {filteredProjects.length}</span>
+                <span className="metric-chip">{tt("projects.projectsCount")} {projects.length}</span>
+                <span className="metric-chip">{tt("projects.filteredLabel")} {filteredProjects.length}</span>
                 <span className="metric-chip">
-                  {t("projects.selectedLabel")} {bulkSelectedProjectIds.length}
+                  {tt("projects.selectedLabel")} {bulkSelectedProjectIds.length}
                 </span>
                 {deepLinkedFailedCount > 0 && (
-                  <span className="metric-chip">{t("projects.failedHandoff")} {deepLinkedFailedCount}</span>
+                  <span className="metric-chip">{tt("projects.failedHandoff")} {deepLinkedFailedCount}</span>
                 )}
               </div>
             </div>
@@ -1599,14 +1635,14 @@ export default function ProjectsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {t("projects.activeScope")}
+                    {tt("projects.activeScope")}
                   </div>
                   <div className="mt-2 text-sm font-semibold text-foreground">
-                    {selectedProject?.name || t("projects.portfolioOverview")}
+                    {selectedProject?.name || tt("projects.portfolioOverview")}
                   </div>
                   <div className="mt-1 text-[12px] leading-5 text-muted-foreground">
                     {selectedProject?.address ||
-                      t("projects.selectProjectHint")}
+                      tt("projects.selectProjectHint")}
                   </div>
                 </div>
                 <button
@@ -1630,15 +1666,15 @@ export default function ProjectsPage() {
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {t("common.search")}
+                    {tt("common.search")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
-                    {search.trim() ? t("common.filtered") : t("common.portfolio")}
+                    {search.trim() ? tt("common.filtered") : tt("common.portfolio")}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {t("projects.queue")}
+                    {tt("projects.queue")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
                     {failedQueue?.total || 0}
@@ -1646,10 +1682,10 @@ export default function ProjectsPage() {
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {t("common.mode")}
+                    {tt("common.mode")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
-                    {bulkOnlyFailedRuns ? t("projects.retryFailed") : t("projects.reconcileAll")}
+                    {bulkOnlyFailedRuns ? tt("projects.retryFailed") : tt("projects.reconcileAll")}
                   </div>
                 </div>
               </div>
@@ -1666,9 +1702,9 @@ export default function ProjectsPage() {
 
         {deepLinkedFailedCount > 0 && (
           <div className="mb-4 rounded-lg border border-[hsl(var(--accent)/0.35)] bg-[hsl(var(--accent)/0.10)] px-4 py-3 text-[13px] text-foreground">
-            {t("projects.reportsHandoff").replace("{count}", String(deepLinkedFailedCount))}{" "}
-            <span className="font-semibold"> {t("projects.retryFailedOnly")}</span>{" "}
-            {t("projects.toReconcileSafely")}
+            {tt("projects.reportsHandoff").replace("{count}", String(deepLinkedFailedCount))}{" "}
+            <span className="font-semibold"> {tt("projects.retryFailedOnly")}</span>{" "}
+            {tt("projects.toReconcileSafely")}
           </div>
         )}
 
@@ -1676,14 +1712,14 @@ export default function ProjectsPage() {
           <section className="surface-panel xl:col-span-1">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <div className="page-eyebrow">{t("projects.projectList")}</div>
+                <div className="page-eyebrow">{tt("projects.projectList")}</div>
                 <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
-                  {t("projects.portfolioNavigator")}
+                  {tt("projects.portfolioNavigator")}
                 </h2>
               </div>
               <div className="text-right text-[12px] text-muted-foreground">
-                <div>{t("projects.filteredCount")} {filteredProjects.length}</div>
-                <div>{t("projects.selectedCount")} {bulkSelectedProjectIds.length}</div>
+                <div>{tt("projects.filteredCount")} {filteredProjects.length}</div>
+                <div>{tt("projects.selectedCount")} {bulkSelectedProjectIds.length}</div>
               </div>
             </div>
             <div className="relative mb-3">
@@ -1691,7 +1727,7 @@ export default function ProjectsPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("projects.searchProject")}
+                placeholder={tt("projects.searchProject")}
                 className="h-11 w-full rounded-xl border border-border/70 bg-background/80 pl-9 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/40"
               />
             </div>
@@ -1703,7 +1739,7 @@ export default function ProjectsPage() {
                     checked={allFilteredSelected}
                     onChange={(e) => toggleSelectAllFilteredProjects(e.target.checked)}
                   />
-                  {t("projects.selectAllFiltered")} ({filteredProjects.length})
+                  {tt("projects.selectAllFiltered")} ({filteredProjects.length})
                 </label>
                 <div className="flex items-center gap-2">
                   <button
@@ -1714,8 +1750,8 @@ export default function ProjectsPage() {
                     className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {bulkReviewLoading
-                      ? t("projects.reviewing")
-                      : `${t("projects.reviewSelected")} (${bulkSelectedProjectIds.length})`}
+                      ? tt("projects.reviewing")
+                      : `${tt("projects.reviewSelected")} (${bulkSelectedProjectIds.length})`}
                   </button>
                   <button
                     onClick={() => {
@@ -1725,10 +1761,10 @@ export default function ProjectsPage() {
                     className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {bulkReconcileLoading
-                      ? t("projects.reconciling")
+                      ? tt("projects.reconciling")
                       : bulkOnlyFailedRuns
-                        ? `${t("projects.retryFailed")} (${bulkSelectedProjectIds.length})`
-                        : `${t("projects.reconcile")} (${bulkSelectedProjectIds.length})`}
+                        ? `${tt("projects.retryFailed")} (${bulkSelectedProjectIds.length})`
+                        : `${tt("projects.reconcile")} (${bulkSelectedProjectIds.length})`}
                   </button>
                 </div>
               </div>
@@ -1738,15 +1774,15 @@ export default function ProjectsPage() {
                   checked={bulkOnlyFailedRuns}
                   onChange={(e) => setBulkOnlyFailedRuns(e.target.checked)}
                 />
-                {t("projects.retryFailedLatestOnly")}
+                {tt("projects.retryFailedLatestOnly")}
               </label>
             </div>
             <div className="space-y-2 max-h-[75vh] overflow-auto pr-1">
               {loadingProjects && (
-                <div className="text-[13px] text-muted-foreground px-2 py-2">{t("projects.loadingProjects")}</div>
+                <div className="text-[13px] text-muted-foreground px-2 py-2">{tt("projects.loadingProjects")}</div>
               )}
               {!loadingProjects && filteredProjects.length === 0 && (
-                <div className="text-[13px] text-muted-foreground px-2 py-2">{t("projects.noProjectsFound")}</div>
+                <div className="text-[13px] text-muted-foreground px-2 py-2">{tt("projects.noProjectsFound")}</div>
               )}
               {filteredProjects.map((project) => {
                 const active = project.id === selectedProjectId;
@@ -2241,7 +2277,7 @@ export default function ProjectsPage() {
 
                 <div className="glass-card rounded-xl p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <h3 className="text-[14px] font-semibold">{t("projects.failedImportsQueue")}</h3>
+                      <h3 className="text-[14px] font-semibold">{tt("projects.failedImportsQueue")}</h3>
                     <div className="text-[12px] text-muted-foreground">
                       {t("projects.selectedLabel")}: {selectedFailedRunIds.length}
                     </div>
@@ -2274,7 +2310,7 @@ export default function ProjectsPage() {
                       }}
                       className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
                     >
-                      {t("projects.refreshQueue")}
+                        {tt("projects.refreshQueue")}
                     </button>
                     <button
                       onClick={() => {
@@ -2286,19 +2322,19 @@ export default function ProjectsPage() {
                       className="h-8 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {retryFailedProgress?.active
-                        ? t("projects.retryingProgress")
-                            .replace("{processed}", String(retryFailedProgress.processed))
-                            .replace("{total}", String(retryFailedProgress.total))
-                        : t("projects.retrySelected").replace("{count}", String(selectedFailedRunIds.length))}
+                          ? tt("projects.retryingProgress")
+                              .replace("{processed}", String(retryFailedProgress.processed))
+                              .replace("{total}", String(retryFailedProgress.total))
+                          : tt("projects.retrySelected").replace("{count}", String(selectedFailedRunIds.length))}
                     </button>
                   </div>
 
                   {retryFailedProgress && (
                     <div className="mb-3 rounded-md border border-border bg-background px-3 py-2">
-                      <div className="text-[12px] text-muted-foreground mb-1">
-                        {t("projects.progress")}: {retryFailedProgress.processed}/{retryFailedProgress.total} |
-                        {" "}{t("projects.successCount")} {retryFailedProgress.successful} | {t("projects.failedCount")} {retryFailedProgress.failed}
-                        {" "} | {t("projects.skippedCount")} {retryFailedProgress.skipped}
+                        <div className="text-[12px] text-muted-foreground mb-1">
+                         {tt("projects.progress")}: {retryFailedProgress.processed}/{retryFailedProgress.total} |
+                         {" "}{tt("projects.successCount")} {retryFailedProgress.successful} | {tt("projects.failedCount")} {retryFailedProgress.failed}
+                         {" "} | {tt("projects.skippedCount")} {retryFailedProgress.skipped}
                       </div>
                       <div className="h-1.5 rounded bg-muted overflow-hidden">
                         <div
@@ -2320,10 +2356,10 @@ export default function ProjectsPage() {
 
                   {retryFailedSummary && (
                     <div className="mb-3 rounded-md border border-border bg-background px-3 py-2 text-[12px] text-muted-foreground">
-                      {t("projects.lastRetryBatch")
-                        .replace("{success}", String(retryFailedSummary.successful_runs))
-                        .replace("{failed}", String(retryFailedSummary.failed_runs))
-                        .replace("{skipped}", String(retryFailedSummary.skipped_runs))}
+                        {tt("projects.lastRetryBatch")
+                          .replace("{success}", String(retryFailedSummary.successful_runs))
+                          .replace("{failed}", String(retryFailedSummary.failed_runs))
+                          .replace("{skipped}", String(retryFailedSummary.skipped_runs))}
                     </div>
                   )}
 
@@ -2352,13 +2388,13 @@ export default function ProjectsPage() {
                         {loadingFailedQueue ? (
                           <tr>
                             <td className="px-2 py-3 text-muted-foreground" colSpan={7}>
-                              {t("projects.loadingFailedQueue")}
+                               {tt("projects.loadingFailedQueue")}
                             </td>
                           </tr>
                         ) : (failedQueue?.items || []).length === 0 ? (
                           <tr>
                             <td className="px-2 py-3 text-muted-foreground" colSpan={7}>
-                              {t("projects.noFailedQueue")}
+                               {tt("projects.noFailedQueue")}
                             </td>
                           </tr>
                         ) : (
