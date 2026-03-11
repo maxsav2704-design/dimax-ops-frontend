@@ -41,14 +41,57 @@ jobs:
 
     env:
       CI: "true"
-      E2E_COMPANY_ID: ${{ secrets.E2E_COMPANY_ID }}
-      E2E_INSTALLER_EMAIL: ${{ secrets.E2E_INSTALLER_EMAIL }}
-      E2E_INSTALLER_PASSWORD: ${{ secrets.E2E_INSTALLER_PASSWORD }}
-      NEXT_PUBLIC_API_BASE_URL: ${{ secrets.E2E_API_BASE_URL }}
+      E2E_INSTALLER_EMAIL: installer1@dimax.dev
+      E2E_INSTALLER_PASSWORD: installer12345
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8001
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Checkout backend
+        uses: actions/checkout@v4
+        with:
+          repository: maxsav2704-design/dimax-ops-backend
+          path: backend-ci
+
+      - name: Prepare backend env
+        working-directory: backend-ci
+        run: |
+          cp .env.example .env
+          python3 - <<'PY'
+          from pathlib import Path
+          env_path = Path(".env")
+          content = env_path.read_text(encoding="utf-8")
+          content = content.replace(
+              "CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173",
+              "CORS_ALLOW_ORIGINS=http://localhost:4173,http://127.0.0.1:4173,http://localhost:5173,http://127.0.0.1:5173",
+          )
+          env_path.write_text(content, encoding="utf-8")
+          PY
+
+      - name: Start backend stack
+        working-directory: backend-ci
+        run: docker compose up -d db minio api
+
+      - name: Wait for backend health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8001/health >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend health check timed out"
+          exit 1
+
+      - name: Seed backend demo data
+        id: seed
+        working-directory: backend-ci
+        run: |
+          seed_json=$(docker compose exec -T -e APP_ENV=dev api python -m app.scripts.seed_dev --emit-json)
+          company_id=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["company_id"])' "$seed_json")
+          echo "E2E_COMPANY_ID=$company_id" >> "$GITHUB_ENV"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -56,7 +99,7 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Validate required secrets
+      - name: Validate local e2e env
         run: |
           test -n "$E2E_COMPANY_ID" || (echo "Missing secret: E2E_COMPANY_ID" && exit 1)
           test -n "$E2E_INSTALLER_EMAIL" || (echo "Missing secret: E2E_INSTALLER_EMAIL" && exit 1)
@@ -89,6 +132,16 @@ jobs:
           name: installer-playwright-test-results
           path: test-results
           if-no-files-found: ignore
+
+      - name: Dump backend logs on failure
+        if: failure()
+        working-directory: backend-ci
+        run: docker compose logs --no-color api
+
+      - name: Stop backend stack
+        if: always()
+        working-directory: backend-ci
+        run: docker compose down -v
 
   quality-gate:
     name: quality-gate

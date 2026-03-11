@@ -6,7 +6,44 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
+import { useI18n, type Locale } from "@/lib/i18n";
 import { buildInstallerIssuesHref } from "@/views/installer/issue-links";
+
+const workspaceOverrides: Partial<Record<Locale, Record<string, string>>> = {
+  en: {
+    "installerWorkspace.issueContinuity": "Issue continuity",
+    "installerWorkspace.todaySchedule": "Today schedule",
+    "installerWorkspace.projectsShort": "Projects",
+    "installerWorkspace.problemShort": "Problem",
+    "installerWorkspace.todayShort": "Today",
+    "installerWorkspace.withoutProject": "Without project",
+    "installerWorkspace.openTodayBoard": "Open today board",
+    "installerWorkspace.buildingTodayPriorities": "Building today priorities...",
+    "installerWorkspace.noUrgentPriorities": "No urgent priorities right now.",
+  },
+  ru: {
+    "installerWorkspace.issueContinuity": "Issue continuity",
+    "installerWorkspace.todaySchedule": "Расписание на сегодня",
+    "installerWorkspace.projectsShort": "Проекты",
+    "installerWorkspace.problemShort": "Проблемы",
+    "installerWorkspace.todayShort": "Сегодня",
+    "installerWorkspace.withoutProject": "Без проекта",
+    "installerWorkspace.openTodayBoard": "Открыть доску дня",
+    "installerWorkspace.buildingTodayPriorities": "Собираем приоритеты на сегодня...",
+    "installerWorkspace.noUrgentPriorities": "Сейчас нет срочных приоритетов.",
+  },
+  he: {
+    "installerWorkspace.issueContinuity": "רציפות תקלות",
+    "installerWorkspace.todaySchedule": "לו״ז להיום",
+    "installerWorkspace.projectsShort": "פרויקטים",
+    "installerWorkspace.problemShort": "בעיות",
+    "installerWorkspace.todayShort": "היום",
+    "installerWorkspace.withoutProject": "ללא פרויקט",
+    "installerWorkspace.openTodayBoard": "פתח לוח יום",
+    "installerWorkspace.buildingTodayPriorities": "בונה עדיפויות להיום...",
+    "installerWorkspace.noUrgentPriorities": "כרגע אין עדיפויות דחופות.",
+  },
+};
 
 type ProjectQuickFilter = "ALL" | "PROBLEM" | "ACTIVE" | "TODAY_TASKS";
 
@@ -69,6 +106,8 @@ function formatDate(value: string): string {
 }
 
 export default function InstallerWorkspacePage() {
+  const { locale, t } = useI18n();
+  const tt = (key: string) => workspaceOverrides[locale]?.[key] ?? t(key);
   const [nowIso] = useState(() => new Date().toISOString());
   const [projectQuickFilter, setProjectQuickFilter] = useState<ProjectQuickFilter>("ALL");
   const [isQueryInitialized, setIsQueryInitialized] = useState(false);
@@ -253,7 +292,7 @@ export default function InstallerWorkspacePage() {
       items.push({
         id: key,
         title: project.name,
-        meta: `Problem project${project.address ? ` | ${project.address}` : ""}`,
+        meta: `${t("installerWorkspace.problemProject")}${project.address ? ` | ${project.address}` : ""}`,
         href: `/installer/projects/${project.id}`,
         tone: "problem",
       });
@@ -330,30 +369,63 @@ export default function InstallerWorkspacePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Installer Workspace</h1>
-          <p className="text-sm text-muted-foreground">
-            Assigned projects, current issues, and upcoming events.
-          </p>
+    <div className="motion-stagger space-y-6">
+      <div className="page-hero relative overflow-hidden">
+        <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
+        <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-2xl">
+            <div className="page-eyebrow">{t("installerWorkspace.eyebrow")}</div>
+            <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.04em]">
+              {t("installerWorkspace.title")}
+            </h1>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground">
+              {t("installerWorkspace.subtitle")}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="metric-chip">{t("installerWorkspace.priorityDoors")}</span>
+              <span className="metric-chip">{tt("installerWorkspace.issueContinuity")}</span>
+              <span className="metric-chip">{tt("installerWorkspace.todaySchedule")}</span>
+            </div>
+          </div>
+          <div className="surface-subtle min-w-[280px] max-w-xl space-y-4 p-4 sm:p-5">
+            <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {tt("installerWorkspace.projectsShort")}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">{stats.total}</div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {tt("installerWorkspace.problemShort")}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">{stats.inProblem}</div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {tt("installerWorkspace.todayShort")}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">{taskStats.today}</div>
+                </div>
+            </div>
+            <button
+              type="button"
+              disabled={isRefreshing}
+              onClick={() => {
+                void refetchWorkspace();
+              }}
+              className="btn-premium h-11 rounded-xl px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCcw className="h-4 w-4" />
+              {isRefreshing ? t("common.refreshing") : t("common.refresh")}
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          disabled={isRefreshing}
-          onClick={() => {
-            void refetchWorkspace();
-          }}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <RefreshCcw className="h-4 w-4" />
-          {isRefreshing ? "Refreshing..." : "Refresh"}
-        </button>
       </div>
 
       {(projectsQuery.isError || eventsQuery.isError || tasksQuery.isError) && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
-          <span>Failed to load installer workspace. Check API availability and role mapping.</span>
+          <span>{t("installerWorkspace.error")}</span>
           <button
             type="button"
             onClick={() => {
@@ -361,34 +433,42 @@ export default function InstallerWorkspacePage() {
             }}
             className="inline-flex items-center rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
           >
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="text-sm text-muted-foreground">Assigned projects</div>
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
+          <div className="text-sm text-muted-foreground">{t("installerWorkspace.assignedProjects")}</div>
           <div className="mt-1 text-2xl font-semibold">{stats.total}</div>
         </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="text-sm text-muted-foreground">Problem projects</div>
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
+          <div className="text-sm text-muted-foreground">{t("installerWorkspace.problemProjects")}</div>
           <div className="mt-1 text-2xl font-semibold">{stats.inProblem}</div>
         </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="text-sm text-muted-foreground">Completed projects</div>
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
+          <div className="text-sm text-muted-foreground">{t("installerWorkspace.completedProjects")}</div>
           <div className="mt-1 text-2xl font-semibold">{stats.done}</div>
         </div>
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Today tasks</h2>
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <div className="page-eyebrow">{t("installerWorkspace.executionPulse")}</div>
+            <h2 className="mt-2 text-lg font-semibold">{t("installerWorkspace.todayTasks")}</h2>
+          </div>
+        </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <div
             data-testid="installer-tasks-today"
-            className="rounded-xl border border-border bg-card p-4"
+            className="surface-panel"
           >
-            <div className="text-sm text-muted-foreground">Today</div>
+            <div className="text-sm text-muted-foreground">{tt("installerWorkspace.todayShort")}</div>
             <div className="mt-1 text-2xl font-semibold">
               {tasksQuery.isLoading ? "..." : taskStats.today}
             </div>
@@ -396,14 +476,14 @@ export default function InstallerWorkspacePage() {
               href="/installer/calendar?preset=today"
               className="mt-3 inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
             >
-              Open today tasks
+              {t("installerWorkspace.openTodayTasks")}
             </Link>
           </div>
           <div
             data-testid="installer-tasks-overdue"
-            className="rounded-xl border border-border bg-card p-4"
+            className="surface-panel"
           >
-            <div className="text-sm text-muted-foreground">Overdue</div>
+            <div className="text-sm text-muted-foreground">{t("common.overdue")}</div>
             <div className="mt-1 text-2xl font-semibold">
               {tasksQuery.isLoading ? "..." : taskStats.overdue}
             </div>
@@ -411,14 +491,14 @@ export default function InstallerWorkspacePage() {
               href="/installer/calendar?preset=7d&overdue=1"
               className="mt-3 inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
             >
-              Open overdue tasks
+              {t("installerWorkspace.openOverdueTasks")}
             </Link>
           </div>
           <div
             data-testid="installer-tasks-no-project"
-            className="rounded-xl border border-border bg-card p-4"
+            className="surface-panel"
           >
-            <div className="text-sm text-muted-foreground">Without project</div>
+            <div className="text-sm text-muted-foreground">{tt("installerWorkspace.withoutProject")}</div>
             <div className="mt-1 text-2xl font-semibold">
               {tasksQuery.isLoading ? "..." : taskStats.withoutProject}
             </div>
@@ -426,7 +506,7 @@ export default function InstallerWorkspacePage() {
               href="/installer/calendar?preset=7d&project_id=none"
               className="mt-3 inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
             >
-              Open no-project tasks
+              {t("installerWorkspace.openNoProjectTasks")}
             </Link>
           </div>
         </div>
@@ -434,39 +514,39 @@ export default function InstallerWorkspacePage() {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Today priorities</h2>
+          <h2 className="text-lg font-semibold">{t("installerWorkspace.todayPriorities")}</h2>
           <Link
             href="/installer/calendar?preset=today"
-            className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+            className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
           >
-            Open today board
+            {tt("installerWorkspace.openTodayBoard")}
           </Link>
         </div>
         {tasksQuery.isLoading && (
           <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            Building today priorities...
+            {tt("installerWorkspace.buildingTodayPriorities")}
           </div>
         )}
         {!tasksQuery.isLoading && priorityItems.length === 0 && (
           <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            No urgent priorities right now.
+            {tt("installerWorkspace.noUrgentPriorities")}
           </div>
         )}
         {priorityItems.length > 0 && (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {priorityItems.map((item) => (
-              <div
-                key={item.id}
-                className={
-                  item.tone === "problem"
-                    ? "rounded-xl border border-amber-500/40 bg-amber-500/10 p-4"
-                    : item.tone === "overdue"
-                      ? "rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] p-4"
-                      : "rounded-xl border border-border bg-card p-4"
-                }
-              >
-                <div className="text-sm font-semibold">{item.title}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{item.meta}</div>
+            <div
+              key={item.id}
+              className={
+                item.tone === "problem"
+                  ? "relative overflow-hidden rounded-2xl border border-amber-500/40 bg-[linear-gradient(180deg,hsl(38_100%_60%/0.16),hsl(38_100%_60%/0.08))] p-4"
+                  : item.tone === "overdue"
+                    ? "relative overflow-hidden rounded-2xl border border-[hsl(var(--destructive)/0.35)] bg-[linear-gradient(180deg,hsl(var(--destructive)/0.16),hsl(var(--destructive)/0.08))] p-4"
+                    : "surface-panel"
+              }
+            >
+              <div className="text-sm font-semibold">{item.title}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{item.meta}</div>
                 <Link
                   href={item.href}
                   aria-label={`Open priority ${item.title}`}
@@ -483,14 +563,14 @@ export default function InstallerWorkspacePage() {
       <div className="grid gap-6 lg:grid-cols-5">
         <section aria-label="My projects list" className="space-y-3 lg:col-span-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">My projects</h2>
+            <h2 className="text-lg font-semibold">{t("installerWorkspace.myProjects")}</h2>
             <div className="flex flex-wrap gap-2">
               {(
                 [
                   ["ALL", "All"],
-                  ["PROBLEM", "Only problem"],
-                  ["ACTIVE", "Only active"],
-                  ["TODAY_TASKS", "Has tasks today"],
+                  ["PROBLEM", t("installerWorkspace.onlyProblem")],
+                  ["ACTIVE", t("installerWorkspace.onlyActive")],
+                  ["TODAY_TASKS", t("installerWorkspace.hasTasksToday")],
                 ] as Array<[ProjectQuickFilter, string]>
               ).map(([value, label]) => {
                 const active = projectQuickFilter === value;
@@ -519,19 +599,20 @@ export default function InstallerWorkspacePage() {
           )}
           {!projectsQuery.isLoading && projects.length === 0 && (
             <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-              No assigned projects yet.
+              {t("installerWorkspace.noAssignedProjects")}
             </div>
           )}
           {!projectsQuery.isLoading && projects.length > 0 && filteredProjects.length === 0 && (
-            <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-              No projects for selected filter.
+            <div className="surface-panel text-sm text-muted-foreground">
+              {t("installerWorkspace.noProjectsSelectedFilter")}
             </div>
           )}
           {filteredProjects.map((project) => (
             <div
               key={project.id}
-              className="rounded-xl border border-border bg-card p-4 transition-colors hover:bg-muted/40"
+              className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.06))] p-4 transition-colors hover:bg-[linear-gradient(180deg,hsl(var(--background)/0.94),hsl(var(--accent)/0.1))]"
             >
+              <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.6),transparent)]" />
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-medium">{project.name}</div>
@@ -539,39 +620,39 @@ export default function InstallerWorkspacePage() {
                     {project.address || "No address"}
                   </div>
                 </div>
-                <span className="rounded-md border border-border px-2 py-1 text-xs">
+                <span className="rounded-lg border border-border/70 bg-background/70 px-2.5 py-1 text-xs">
                   {project.status}
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link
                   href={`/installer/projects/${project.id}`}
-                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                  className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
                   Open project
                 </Link>
                 <Link
                   href={`/installer/calendar?project_id=${project.id}`}
-                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                  className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
                   Open schedule
                 </Link>
                 <Link
                   href={`/installer/calendar?preset=today&project_id=${project.id}`}
-                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                  className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
-                  Today on project
+                  {t("installerWorkspace.todayOnProject")}
                 </Link>
                 <Link
                   href={`/installer/projects/${project.id}#project-doors`}
-                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                  className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
-                  Priority doors
+                  {t("installerWorkspace.priorityDoors")}
                 </Link>
                 {project.status === "PROBLEM" && (
                   <Link
                     href={buildInstallerIssuesHref(project.id, { issueStatus: "BLOCKED" })}
-                    className="inline-flex items-center rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs transition-colors hover:bg-amber-500/20"
+                    className="inline-flex items-center rounded-xl border border-amber-500/40 bg-amber-500/12 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-amber-500/20"
                   >
                     Open issues
                   </Link>
@@ -581,7 +662,7 @@ export default function InstallerWorkspacePage() {
                     href={project.waze_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                    className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                   >
                     Open Waze
                   </a>
@@ -592,19 +673,26 @@ export default function InstallerWorkspacePage() {
         </section>
 
         <section className="space-y-3 lg:col-span-2">
-          <h2 className="text-lg font-semibold">Next 7 days</h2>
+          <div>
+            <div className="page-eyebrow">{t("installerWorkspace.forwardView")}</div>
+            <h2 className="mt-2 text-lg font-semibold">{t("installerWorkspace.next7Days")}</h2>
+          </div>
           {eventsQuery.isLoading && (
-            <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+            <div className="surface-panel text-sm text-muted-foreground">
               Loading events...
             </div>
           )}
           {!eventsQuery.isLoading && events.length === 0 && (
-            <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-              No events scheduled.
+            <div className="surface-panel text-sm text-muted-foreground">
+              {t("installerWorkspace.noEventsScheduled")}
             </div>
           )}
           {events.map((event) => (
-            <div key={event.id} className="rounded-xl border border-border bg-card p-4">
+            <div
+              key={event.id}
+              className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.06))] p-4"
+            >
+              <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.6),transparent)]" />
               <div className="font-medium">{event.title}</div>
               <div className="mt-1 text-xs text-muted-foreground">{event.event_type}</div>
               <div className="mt-2 text-sm text-muted-foreground">{formatDate(event.starts_at)}</div>

@@ -15,6 +15,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useUserRole } from "@/hooks/use-user-role";
 import { apiFetch } from "@/lib/api";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Installer = {
@@ -264,6 +265,7 @@ function InstallerBaseForm({
 
 export default function InstallersPage() {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
@@ -482,109 +484,140 @@ export default function InstallersPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 max-w-[1500px]">
-        <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground tracking-tight">Installers</h1>
-            <p className="text-[13px] text-muted-foreground mt-0.5">
-              Manage installers, user links, and door type rates
-            </p>
+      <div className="motion-stagger max-w-[1500px] space-y-6 p-6 lg:p-8">
+        <section className="page-hero relative overflow-hidden">
+          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
+          <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="page-eyebrow">{t("installers.eyebrow")}</div>
+              <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
+                {t("installers.title")}
+              </h1>
+              <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">
+                {t("installers.subtitle")}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">{t("installers.total")} {metrics.total}</span>
+                <span className="metric-chip">{t("common.active")} {metrics.active}</span>
+                <span className="metric-chip">{t("installers.rateControls")}</span>
+              </div>
+            </div>
+            <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{t("installers.scope")}</div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">{statusFilter}</div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{t("installers.searchLabel")}</div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">
+                    {search.trim() ? t("common.filtered") : t("common.portfolio")}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{t("common.mode")}</div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">
+                    {canManageInstallers ? t("common.manage") : t("common.readOnly")}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={onOpenCreate}
+                disabled={!canManageInstallers}
+                title={privilegedActionHint}
+                className="btn-premium h-11 rounded-xl px-4 text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <Plus className="w-4 h-4" />
+                {t("installers.addInstaller")}
+              </button>
+            </div>
           </div>
-          <button
-            onClick={onOpenCreate}
-            disabled={!canManageInstallers}
-            title={privilegedActionHint}
-            className="h-9 px-4 rounded-lg bg-accent text-accent-foreground text-[13px] font-medium flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <Plus className="w-4 h-4" />
-            Add Installer
-          </button>
-        </div>
+        </section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          <div className="glass-card rounded-xl p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
             <p className="text-[12px] text-muted-foreground">Total</p>
             <p className="text-[24px] font-semibold">{metrics.total}</p>
           </div>
-          <div className="glass-card rounded-xl p-4">
+          <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--success)/0.10))] p-4">
             <p className="text-[12px] text-muted-foreground">Active</p>
             <p className="text-[24px] font-semibold text-[hsl(var(--success))]">{metrics.active}</p>
           </div>
-          <div className="glass-card rounded-xl p-4">
+          <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--muted)/0.18))] p-4">
             <p className="text-[12px] text-muted-foreground">Inactive</p>
             <p className="text-[24px] font-semibold text-muted-foreground">{metrics.inactive}</p>
           </div>
         </div>
 
-        <div className="glass-card rounded-xl p-4 mb-4 flex flex-wrap items-center gap-2">
+        <div className="surface-panel flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[240px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search installer..."
-              className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-[13px]"
+              placeholder={t("installers.searchPlaceholder")}
+              className="h-10 w-full rounded-xl border border-border/70 bg-background/80 pl-9 pr-3 text-[13px]"
             />
           </div>
           <button
             onClick={() => setStatusFilter("all")}
             className={cn(
-              "h-9 px-3 rounded-md border text-[12px]",
+              "h-9 rounded-xl border px-3 text-[12px] font-medium",
               statusFilter === "all"
                 ? "bg-accent text-accent-foreground border-accent"
-                : "bg-card border-border text-muted-foreground"
+                : "bg-background/70 border-border/70 text-muted-foreground"
             )}
           >
-            All
+            {t("common.all")}
           </button>
           <button
             onClick={() => setStatusFilter("active")}
             className={cn(
-              "h-9 px-3 rounded-md border text-[12px]",
+              "h-9 rounded-xl border px-3 text-[12px] font-medium",
               statusFilter === "active"
                 ? "bg-accent text-accent-foreground border-accent"
-                : "bg-card border-border text-muted-foreground"
+                : "bg-background/70 border-border/70 text-muted-foreground"
             )}
           >
-            Active
+            {t("common.active")}
           </button>
           <button
             onClick={() => setStatusFilter("inactive")}
             className={cn(
-              "h-9 px-3 rounded-md border text-[12px]",
+              "h-9 rounded-xl border px-3 text-[12px] font-medium",
               statusFilter === "inactive"
                 ? "bg-accent text-accent-foreground border-accent"
-                : "bg-card border-border text-muted-foreground"
+                : "bg-background/70 border-border/70 text-muted-foreground"
             )}
           >
-            Inactive
+            {t("common.inactive")}
           </button>
         </div>
 
         {hasError && (
           <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>Failed to load installers data.</span>
+            <span>{t("installers.error")}</span>
           </div>
         )}
         {!canManageInstallers && (
           <div className="mb-4 rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))]">
-            Installer role has read-only access to installers and rates.
+            {t("installers.readOnlyNotice")}
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {installersQuery.isLoading && (
-            <div className="glass-card rounded-xl p-5 text-[13px] text-muted-foreground">
-              Loading installers...
+            <div className="surface-panel text-[13px] text-muted-foreground">
+              {t("installers.loading")}
             </div>
           )}
           {!installersQuery.isLoading && installers.length === 0 && (
-            <div className="glass-card rounded-xl p-6 text-[13px] text-muted-foreground col-span-full text-center">
+            <div className="surface-panel col-span-full p-6 text-center text-[13px] text-muted-foreground">
               <div className="flex items-center justify-center mb-2">
                 <UserRound className="w-5 h-5" />
               </div>
-              No installers found.
+              {t("installers.empty")}
             </div>
           )}
           {installers.map((installer) => (
@@ -604,7 +637,7 @@ export default function InstallersPage() {
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
           <div className="w-full max-w-[760px] rounded-xl border border-border bg-card p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[16px] font-semibold">Create Installer</h2>
+              <h2 className="text-[16px] font-semibold">{t("installers.createInstaller")}</h2>
               <button
                 onClick={() => setIsCreateOpen(false)}
                 className="h-8 px-3 rounded-md border border-border text-[12px]"

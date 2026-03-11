@@ -20,6 +20,121 @@ import {
 import { useUserRole } from "@/hooks/use-user-role";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
+import { useI18n, type Locale } from "@/lib/i18n";
+
+const operationsOverrides: Record<Locale, Record<string, string>> = {
+  en: {
+    "operations.actionableOnlyView": "Actionable-only view",
+    "operations.batchRecovery": "Batch recovery",
+    "operations.webhookDiagnostics": "Webhook diagnostics",
+    "operations.showAll": "Show all",
+    "operations.providerLane": "Provider lane",
+    "operations.deliveryRecoveryAuditTitle": "Delivery Recovery Audit",
+    "operations.deliveryRecoveryAuditSubtitle":
+      "Latest manual retries recorded for failed outbox recovery actions.",
+    "operations.openDeliveryReports": "Open delivery reports",
+    "operations.loadingDeliveryRecoveryAudit": "Loading delivery recovery audit...",
+    "operations.noDeliveryRecoveryAudit": "No delivery recovery audit entries yet.",
+    "operations.reviewDeliveryRecovery": "Review delivery recovery",
+    "operations.webhookSignalsTitle": "Webhook Signals",
+    "operations.webhookSignalsSubtitle":
+      "Delivery webhook duplicates, mismatches, and provider failures in the last {hours} hours.",
+    "operations.received": "Received",
+    "operations.duplicates": "Duplicates",
+    "operations.unmatched": "Unmatched",
+    "operations.providerFailed": "Provider failed",
+    "operations.loadingWebhookSignals": "Loading webhook signals...",
+    "operations.noWebhookSignalsScoped": "No webhook signals match current provider scope.",
+    "operations.noWebhookSignals": "No webhook signals recorded.",
+    "operations.deliveryReport": "Delivery report",
+    "operations.openImportWorkspace": "Open import workspace",
+    "operations.openOperationsReports": "Open operations reports",
+    "operations.openIssuesReports": "Open issues reports",
+    "operations.openCommunicationQueue": "Open communication queue",
+    "operations.openInstallerBoard": "Open installer board",
+    "operations.failedImportQueue": "Failed Import Queue",
+    "operations.openQueue": "Open queue",
+    "operations.loadingFailedImports": "Loading failed imports...",
+    "operations.noActionableImportRuns": "No actionable import runs.",
+    "operations.noFailedImportRuns": "No failed import runs.",
+    "operations.unknown": "unknown",
+    "operations.noReasonSupplied": "No reason supplied",
+  },
+  ru: {
+    "operations.actionableOnlyView": "Только actionable-сигналы",
+    "operations.batchRecovery": "Пакетное восстановление",
+    "operations.webhookDiagnostics": "Диагностика webhook",
+    "operations.showAll": "Показать все",
+    "operations.providerLane": "Срез провайдера",
+    "operations.deliveryRecoveryAuditTitle": "Аудит восстановления доставки",
+    "operations.deliveryRecoveryAuditSubtitle":
+      "Последние ручные повторы для восстановления неуспешных outbox-сообщений.",
+    "operations.openDeliveryReports": "Открыть отчеты по доставке",
+    "operations.loadingDeliveryRecoveryAudit": "Загружаем аудит восстановления доставки...",
+    "operations.noDeliveryRecoveryAudit": "Записей аудита восстановления доставки пока нет.",
+    "operations.reviewDeliveryRecovery": "Проверить восстановление доставки",
+    "operations.webhookSignalsTitle": "Webhook-сигналы",
+    "operations.webhookSignalsSubtitle":
+      "Дубликаты webhook, несоответствия и ошибки провайдера за последние {hours} часов.",
+    "operations.received": "Получено",
+    "operations.duplicates": "Дубликаты",
+    "operations.unmatched": "Без совпадения",
+    "operations.providerFailed": "Ошибка провайдера",
+    "operations.loadingWebhookSignals": "Загружаем webhook-сигналы...",
+    "operations.noWebhookSignalsScoped": "Для текущего провайдера сигналов webhook нет.",
+    "operations.noWebhookSignals": "Webhook-сигналы пока не зафиксированы.",
+    "operations.deliveryReport": "Отчет по доставке",
+    "operations.openImportWorkspace": "Открыть импорт",
+    "operations.openOperationsReports": "Открыть ops-отчеты",
+    "operations.openIssuesReports": "Открыть отчеты по проблемам",
+    "operations.openCommunicationQueue": "Открыть очередь коммуникаций",
+    "operations.openInstallerBoard": "Открыть доску монтажников",
+    "operations.failedImportQueue": "Очередь неуспешных импортов",
+    "operations.openQueue": "Открыть очередь",
+    "operations.loadingFailedImports": "Загружаем неуспешные импорты...",
+    "operations.noActionableImportRuns": "Actionable-импортов сейчас нет.",
+    "operations.noFailedImportRuns": "Неуспешных импортов нет.",
+    "operations.unknown": "неизвестно",
+    "operations.noReasonSupplied": "Причина не указана",
+  },
+  he: {
+    "operations.actionableOnlyView": "תצוגת actionable בלבד",
+    "operations.batchRecovery": "שחזור מרוכז",
+    "operations.webhookDiagnostics": "אבחון webhook",
+    "operations.showAll": "הצג הכל",
+    "operations.providerLane": "נתיב ספק",
+    "operations.deliveryRecoveryAuditTitle": "Audit לשחזור משלוחים",
+    "operations.deliveryRecoveryAuditSubtitle":
+      "ניסיונות שחזור ידניים אחרונים עבור פריטי outbox שנכשלו.",
+    "operations.openDeliveryReports": "פתח דוחות משלוח",
+    "operations.loadingDeliveryRecoveryAudit": "טוען audit לשחזור משלוחים...",
+    "operations.noDeliveryRecoveryAudit": "עדיין אין רשומות audit לשחזור משלוחים.",
+    "operations.reviewDeliveryRecovery": "בדוק את שחזור המשלוח",
+    "operations.webhookSignalsTitle": "אותות Webhook",
+    "operations.webhookSignalsSubtitle":
+      "כפילויות webhook, אי-התאמות וכשלי ספק ב-{hours} השעות האחרונות.",
+    "operations.received": "התקבלו",
+    "operations.duplicates": "כפילויות",
+    "operations.unmatched": "ללא התאמה",
+    "operations.providerFailed": "כשל ספק",
+    "operations.loadingWebhookSignals": "טוען אותות webhook...",
+    "operations.noWebhookSignalsScoped": "אין אותות webhook עבור ספק זה.",
+    "operations.noWebhookSignals": "עדיין לא נרשמו אותות webhook.",
+    "operations.deliveryReport": "דוח משלוח",
+    "operations.openImportWorkspace": "פתח סביבת ייבוא",
+    "operations.openOperationsReports": "פתח דוחות תפעול",
+    "operations.openIssuesReports": "פתח דוחות תקלות",
+    "operations.openCommunicationQueue": "פתח תור תקשורת",
+    "operations.openInstallerBoard": "פתח לוח מתקינים",
+    "operations.failedImportQueue": "תור ייבואים שנכשלו",
+    "operations.openQueue": "פתח תור",
+    "operations.loadingFailedImports": "טוען ייבואים שנכשלו...",
+    "operations.noActionableImportRuns": "אין כרגע ייבואים actionable.",
+    "operations.noFailedImportRuns": "אין ייבואים שנכשלו.",
+    "operations.unknown": "לא ידוע",
+    "operations.noReasonSupplied": "לא סופקה סיבה",
+  },
+};
 
 type SyncHealthSummaryResponse = {
   max_cursor: number;
@@ -284,25 +399,25 @@ function buildDeliveryReportHref(params: {
   return `/reports?${query.toString()}`;
 }
 
-function formatRefreshTimestamp(value: number | null): string {
+function formatRefreshTimestamp(value: number | null, t: (key: string) => string): string {
   if (!value || Number.isNaN(value)) {
-    return "Waiting for first successful refresh";
+    return t("operations.waitingForRefresh");
   }
-  return `Fresh as of ${new Date(value).toLocaleTimeString()}`;
+  return `${t("operations.freshAsOf")} ${new Date(value).toLocaleTimeString()}`;
 }
 
-function describeAgeMinutes(value: number | null, now: number): string {
+function describeAgeMinutes(value: number | null, now: number, t: (key: string) => string): string {
   if (!value || Number.isNaN(value)) {
-    return "No successful snapshot yet";
+    return t("operations.noSuccessfulSnapshot");
   }
   const ageMinutes = Math.max(0, Math.floor((now - value) / 60_000));
   if (ageMinutes === 0) {
-    return "Updated less than a minute ago";
+    return t("operations.updatedLessThanMinute");
   }
   if (ageMinutes === 1) {
-    return "Updated 1 minute ago";
+    return t("operations.updatedOneMinute");
   }
-  return `Updated ${ageMinutes} minutes ago`;
+  return t("operations.updatedMinutesAgo").replace("{count}", String(ageMinutes));
 }
 
 function summarizeActions(params: {
@@ -312,46 +427,65 @@ function summarizeActions(params: {
   firstImportProjectName: string | null;
   firstOutboxRecipient: string | null;
   firstSyncInstallerId: string | null;
+  t: (key: string) => string;
 }): Array<{ label: string; value: string; href: string }> {
   const items: Array<{ label: string; value: string; href: string }> = [];
 
   if (params.actionableImports > 0) {
     items.push({
-      label: "Imports",
+      label: params.t("operations.summaryImports"),
       value:
         params.actionableImports === 1 && params.firstImportProjectName
-          ? `Retry failed import for ${params.firstImportProjectName}`
-          : `${params.actionableImports} failed imports need retry`,
+          ? params.t("operations.summaryRetryFailedImportFor").replace(
+              "{name}",
+              params.firstImportProjectName
+            )
+          : params.t("operations.summaryFailedImportsNeedRetry").replace(
+              "{count}",
+              String(params.actionableImports)
+            ),
       href: "/projects?only_failed_runs=1",
     });
   }
 
   if (params.actionableOutbox > 0) {
     items.push({
-      label: "Outbox",
+      label: params.t("operations.summaryOutbox"),
       value:
         params.actionableOutbox === 1 && params.firstOutboxRecipient
-          ? `Recover delivery for ${params.firstOutboxRecipient}`
-          : `${params.actionableOutbox} delivery failures need retry`,
+          ? params.t("operations.summaryRecoverDeliveryFor").replace(
+              "{name}",
+              params.firstOutboxRecipient
+            )
+          : params.t("operations.summaryDeliveryFailuresNeedRetry").replace(
+              "{count}",
+              String(params.actionableOutbox)
+            ),
       href: "/reports",
     });
   }
 
   if (params.actionableSync > 0) {
     items.push({
-      label: "Sync",
+      label: params.t("operations.summarySync"),
       value:
         params.actionableSync === 1 && params.firstSyncInstallerId
-          ? `Investigate installer ${params.firstSyncInstallerId}`
-          : `${params.actionableSync} installers need sync attention`,
+          ? params.t("operations.summaryInvestigateInstaller").replace(
+              "{name}",
+              params.firstSyncInstallerId
+            )
+          : params.t("operations.summaryInstallersNeedSyncAttention").replace(
+              "{count}",
+              String(params.actionableSync)
+            ),
       href: "/installers",
     });
   }
 
   if (items.length === 0) {
     items.push({
-      label: "Status",
-      value: "No active operational actions right now",
+      label: params.t("operations.summaryStatus"),
+      value: params.t("operations.summaryNoActiveActions"),
       href: "/operations",
     });
   }
@@ -382,17 +516,19 @@ function extractBatchOutboxIds(result: OperationsBatchResult | null): string[] {
 }
 
 export default function OperationsPage() {
+  const { locale, t } = useI18n();
+  const tt = (key: string) => operationsOverrides[locale]?.[key] ?? t(key);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const userRole = useUserRole();
   const canRunPrivilegedActions = canRunPrivilegedAdminActions(userRole);
   const [busyAction, setBusyAction] = useState("");
-  const [onlyActionable, setOnlyActionable] = useState(searchParams.get("actionable") === "1");
+  const [onlyActionable, setOnlyActionable] = useState(searchParams?.get("actionable") === "1");
   const [deliveryChannelFilter, setDeliveryChannelFilter] = useState(
-    searchParams.get("delivery_channel")?.trim().toUpperCase() || ""
+    searchParams?.get("delivery_channel")?.trim().toUpperCase() || ""
   );
   const [webhookProviderFilter, setWebhookProviderFilter] = useState(
-    searchParams.get("webhook_provider")?.trim().toLowerCase() || ""
+    searchParams?.get("webhook_provider")?.trim().toLowerCase() || ""
   );
   const [pendingBatchAction, setPendingBatchAction] = useState<
     "retry" | "reconcile" | "outbox-retry" | null
@@ -624,8 +760,9 @@ export default function OperationsPage() {
           actionableFailedOutbox[0]?.channel ||
           null,
         firstSyncInstallerId: actionableSyncItems[0]?.installer_id || null,
+        t,
       }),
-    [actionableFailedImports, actionableFailedOutbox, actionableSyncItems]
+    [actionableFailedImports, actionableFailedOutbox, actionableSyncItems, t]
   );
   const failedImportProjectIds = useMemo(
     () => Array.from(new Set(visibleFailedImports.map((item) => item.project_id).filter(Boolean))),
@@ -949,7 +1086,7 @@ export default function OperationsPage() {
     nextDeliveryChannel?: string;
     nextWebhookProvider?: string;
   }) {
-    const nextParams = new URLSearchParams(searchParams.toString());
+    const nextParams = new URLSearchParams(searchParams?.toString() || "");
     nextParams.delete("actionable");
     nextParams.delete("delivery_channel");
     nextParams.delete("webhook_provider");
@@ -969,52 +1106,89 @@ export default function OperationsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 max-w-[1400px] space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              Operations Center
-            </h1>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
-              Import failures, outbox delivery problems, and installer sync health.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                setOnlyActionable((value) => {
-                  const nextValue = !value;
-                  syncUrlState({
-                    nextOnlyActionable: nextValue,
-                    nextDeliveryChannel: deliveryChannelFilter,
-                    nextWebhookProvider: webhookProviderFilter,
-                  });
-                  return nextValue;
-                })
-              }
-              aria-pressed={onlyActionable}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted aria-[pressed=true]:border-accent aria-[pressed=true]:text-accent"
-            >
-              Only actionable
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                void refetchAll();
-              }}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isRefreshing}
-            >
-              <RefreshCcw className="h-4 w-4" />
-              {isRefreshing ? "Refreshing..." : "Refresh"}
-            </button>
+      <div className="motion-stagger max-w-[1400px] space-y-6 p-6 lg:p-8">
+        <div className="page-hero readability-wrap relative overflow-hidden">
+          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
+          <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl min-w-0">
+              <div className="page-eyebrow">{t("operations.eyebrow")}</div>
+              <h1 className="mt-4 max-w-2xl font-display text-3xl font-semibold leading-tight tracking-[-0.04em] text-foreground sm:text-4xl">
+                {t("operations.title")}
+              </h1>
+              <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">
+                {t("operations.subtitle")}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">{tt("operations.actionableOnlyView")}</span>
+                <span className="metric-chip">{tt("operations.batchRecovery")}</span>
+                <span className="metric-chip">{tt("operations.webhookDiagnostics")}</span>
+              </div>
+            </div>
+            <div className="surface-subtle min-w-0 max-w-xl space-y-4 p-4 sm:p-5 xl:min-w-[320px]">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="min-w-0 rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {t("operations.actionable")}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold leading-tight text-foreground">
+                    {onlyActionable ? t("operations.actionableFocused") : t("operations.actionableMixed")}
+                  </div>
+                </div>
+                <div className="min-w-0 rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {t("operations.deliveryLane")}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold leading-tight text-foreground">
+                    {deliveryChannelFilter || t("common.all")}
+                  </div>
+                </div>
+                <div className="min-w-0 rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {t("operations.provider")}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold leading-tight text-foreground">
+                    {webhookProviderFilter || t("common.all")}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOnlyActionable((value) => {
+                      const nextValue = !value;
+                      syncUrlState({
+                        nextOnlyActionable: nextValue,
+                        nextDeliveryChannel: deliveryChannelFilter,
+                        nextWebhookProvider: webhookProviderFilter,
+                      });
+                      return nextValue;
+                    })
+                  }
+                  aria-pressed={onlyActionable}
+                  className="inline-flex h-11 items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted aria-[pressed=true]:border-accent aria-[pressed=true]:bg-[hsl(var(--accent)/0.12)] aria-[pressed=true]:text-accent"
+                >
+                  {t("operations.onlyActionable")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void refetchAll();
+                  }}
+                  className="btn-premium h-11 rounded-xl px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isRefreshing}
+                >
+                  <RefreshCcw className="h-4 w-4" />
+                  {isRefreshing ? t("common.refreshing") : t("common.refresh")}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
         {hasError && (
           <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
-            Failed to load operations data. Check API availability and admin permissions.
+            {t("operations.error")}
           </div>
         )}
         {actionFeedback && (
@@ -1031,7 +1205,11 @@ export default function OperationsPage() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {cards.map((card) => (
-            <div key={card.label} className="rounded-xl border border-border bg-card p-4">
+            <div
+              key={card.label}
+              className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4"
+            >
+              <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm text-muted-foreground">{card.label}</div>
                 <card.icon className="h-4 w-4 text-muted-foreground" />
@@ -1042,17 +1220,17 @@ export default function OperationsPage() {
           ))}
         </div>
 
-        <section className="rounded-xl border border-border bg-card p-4">
+        <section className="surface-panel">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Data Freshness
+                {t("operations.dataFreshness")}
               </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                {formatRefreshTimestamp(freshnessTimestamp)}
+                {formatRefreshTimestamp(freshnessTimestamp, t)}
               </p>
               <p className="mt-1 text-[12px] text-muted-foreground">
-                {describeAgeMinutes(freshnessTimestamp, Date.now())}
+                {describeAgeMinutes(freshnessTimestamp, Date.now(), t)}
               </p>
             </div>
             <span
@@ -1067,30 +1245,30 @@ export default function OperationsPage() {
               }
             >
               {freshnessState === "fresh"
-                ? "fresh"
+                ? t("operations.fresh")
                 : freshnessState === "stale"
-                  ? "stale"
+                  ? t("operations.stale")
                   : freshnessState === "degraded"
-                    ? "degraded"
-                    : "refreshing"}
+                    ? t("operations.degraded")
+                    : t("operations.refreshing")}
             </span>
           </div>
         </section>
 
-        <section className="rounded-xl border border-border bg-card p-4">
+        <section className="surface-panel">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Action Summary
+                {t("operations.actionSummary")}
               </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                Highest-value actions from imports, outbox and sync in one view.
+                {t("operations.highValueActions")}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {onlyActionable ? (
                 <span className="rounded-md border border-accent/40 px-2 py-1 text-[11px] font-medium text-accent">
-                  actionable mode
+                  {t("operations.actionableMode")}
                 </span>
               ) : null}
               <button
@@ -1103,11 +1281,11 @@ export default function OperationsPage() {
                   actionableFailedImports.length === 0 ||
                   busyAction === "imports:bulk"
                 }
-                className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                 >
                 {busyAction === "imports:bulk"
-                  ? "Retrying imports..."
-                  : `Retry actionable imports (${actionableFailedImports.length})`}
+                  ? t("operations.retryingImports")
+                  : `${t("operations.retryActionableImports")} (${actionableFailedImports.length})`}
               </button>
               <button
                 type="button"
@@ -1120,11 +1298,11 @@ export default function OperationsPage() {
                   actionableFailedOutbox.length === 0 ||
                   busyAction === "outbox:bulk"
                 }
-                className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {busyAction === "outbox:bulk"
-                  ? "Retrying deliveries..."
-                  : `Retry actionable deliveries (${actionableFailedOutbox.length})`}
+                  ? t("operations.retryingDeliveries")
+                  : `${t("operations.retryActionableDeliveries")} (${actionableFailedOutbox.length})`}
               </button>
               <button
                 type="button"
@@ -1136,11 +1314,11 @@ export default function OperationsPage() {
                   actionableImportProjectIds.length === 0 ||
                   busyAction === "imports:reconcile"
                 }
-                className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {busyAction === "imports:reconcile"
-                  ? "Reconciling projects..."
-                  : `Reconcile actionable projects (${actionableImportProjectIds.length})`}
+                  ? t("operations.reconcilingProjects")
+                  : `${t("operations.reconcileActionableProjects")} (${actionableImportProjectIds.length})`}
               </button>
             </div>
           </div>
@@ -1149,7 +1327,7 @@ export default function OperationsPage() {
               <Link
                 key={`${item.label}-${item.href}`}
                 href={item.href}
-                className="rounded-lg border border-border/70 bg-background/70 px-4 py-3 transition-colors hover:bg-muted"
+                className="rounded-xl border border-border/70 bg-background/70 px-4 py-3 transition-colors hover:bg-muted"
               >
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   {item.label}
@@ -1160,14 +1338,14 @@ export default function OperationsPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-border bg-card p-4">
+        <section className="surface-panel">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Delivery Drilldown
+                {t("operations.deliveryDrilldown")}
               </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                Exact channel and provider lanes for delivery failures and webhook diagnostics.
+                {t("operations.exactLanes")}
               </p>
             </div>
             {(deliveryChannelFilter || webhookProviderFilter) && (
@@ -1184,36 +1362,36 @@ export default function OperationsPage() {
                 }}
                 className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
               >
-                Clear drilldown
+                {t("operations.clearDrilldown")}
               </button>
             )}
           </div>
           <div className="mt-4 grid gap-4 xl:grid-cols-2">
-            <div className="rounded-lg border border-border/70 bg-background/70 p-4">
+            <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  By channel
+                  {t("operations.byChannel")}
                 </div>
                 {deliveryChannelFilter ? (
                   <span className="rounded-md border border-accent/40 px-2 py-1 text-[11px] font-medium text-accent">
-                    scoped to {deliveryChannelFilter}
+                    {t("operations.scopedTo")} {deliveryChannelFilter}
                   </span>
                 ) : null}
               </div>
               <div className="mt-3 space-y-2">
                 {deliveryChannelGroups.length === 0 ? (
-                  <div className="text-[13px] text-muted-foreground">No failed delivery lanes.</div>
+                  <div className="text-[13px] text-muted-foreground">{t("operations.noFailedDeliveryLanes")}</div>
                 ) : (
                   deliveryChannelGroups.map((group) => (
                     <div
                       key={group.channel}
-                      className="rounded-lg border border-border/70 bg-card px-4 py-3 text-[13px]"
+                      className="rounded-xl border border-border/70 bg-background/60 px-4 py-3 text-[13px]"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <div className="font-medium text-foreground">{group.channel}</div>
                           <div className="mt-1 text-xs text-muted-foreground">
-                            {group.count} failed messages
+                            {group.count} {t("operations.failedMessages")}
                             {group.recipients[0] ? ` | ${group.recipients[0]}` : ""}
                           </div>
                         </div>
@@ -1231,7 +1409,9 @@ export default function OperationsPage() {
                           }}
                           className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
                         >
-                          {deliveryChannelFilter === group.channel ? "Show all" : `Only ${group.channel}`}
+                          {deliveryChannelFilter === group.channel
+                            ? t("operations.showAll")
+                            : `${t("operations.only")} ${group.channel}`}
                         </button>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -1243,7 +1423,7 @@ export default function OperationsPage() {
                           })}
                           className="font-medium text-accent hover:underline"
                         >
-                          Actionable lane
+                          {t("operations.actionableLane")}
                         </Link>
                         <Link
                           href={buildDeliveryReportHref({
@@ -1253,7 +1433,7 @@ export default function OperationsPage() {
                           })}
                           className="font-medium text-muted-foreground hover:text-foreground hover:underline"
                         >
-                          Exact failure
+                          {t("operations.exactFailure")}
                         </Link>
                         <button
                           type="button"
@@ -1264,7 +1444,7 @@ export default function OperationsPage() {
                           disabled={!canRunPrivilegedActions || busyAction === "outbox:bulk"}
                           className="font-medium text-accent disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Retry {group.channel}
+                          {t("operations.retryChannel")} {group.channel}
                         </button>
                       </div>
                     </div>
@@ -1276,17 +1456,17 @@ export default function OperationsPage() {
             <div className="rounded-lg border border-border/70 bg-background/70 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  By provider
+                  {t("operations.byProvider")}
                 </div>
                 {webhookProviderFilter ? (
                   <span className="rounded-md border border-accent/40 px-2 py-1 text-[11px] font-medium text-accent">
-                    scoped to {webhookProviderFilter}
+                    {t("operations.scopedTo")} {webhookProviderFilter}
                   </span>
                 ) : null}
               </div>
               <div className="mt-3 space-y-2">
                 {webhookProviderGroups.length === 0 ? (
-                  <div className="text-[13px] text-muted-foreground">No webhook provider lanes.</div>
+                  <div className="text-[13px] text-muted-foreground">{t("operations.noWebhookProviderLanes")}</div>
                 ) : (
                   webhookProviderGroups.map((group) => (
                     <div
@@ -1297,8 +1477,9 @@ export default function OperationsPage() {
                         <div>
                           <div className="font-medium text-foreground">{group.provider}</div>
                           <div className="mt-1 text-xs text-muted-foreground">
-                            {group.count} signals | duplicates {group.duplicateCount} | unmatched{" "}
-                            {group.unmatchedCount} | failed {group.providerFailedCount}
+                            {group.count} {t("operations.signals")} | {t("operations.duplicates")}{" "}
+                            {group.duplicateCount} | {t("operations.unmatched")} {group.unmatchedCount} |{" "}
+                            {t("operations.failed")} {group.providerFailedCount}
                           </div>
                         </div>
                         <button
@@ -1318,7 +1499,7 @@ export default function OperationsPage() {
                           className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
                         >
                           {webhookProviderFilter === group.provider.toLowerCase()
-                            ? "Show all"
+                            ? tt("operations.showAll")
                             : `Only ${group.provider}`}
                         </button>
                       </div>
@@ -1331,7 +1512,7 @@ export default function OperationsPage() {
                           })}
                           className="font-medium text-accent hover:underline"
                         >
-                          Provider lane
+                          {tt("operations.providerLane")}
                         </Link>
                         <Link
                           href={buildDeliveryReportHref({
@@ -1339,9 +1520,9 @@ export default function OperationsPage() {
                             webhookProvider: group.provider.toLowerCase(),
                           })}
                           className="font-medium text-muted-foreground hover:text-foreground hover:underline"
-                        >
-                          Delivery report
-                        </Link>
+                      >
+                      {t("operations.deliveryReport")}
+                    </Link>
                       </div>
                     </div>
                   ))
@@ -1355,10 +1536,10 @@ export default function OperationsPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Delivery Recovery Audit
+                {tt("operations.deliveryRecoveryAuditTitle")}
               </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                Latest manual retries recorded for failed outbox recovery actions.
+                {tt("operations.deliveryRecoveryAuditSubtitle")}
               </p>
             </div>
             <Link
@@ -1368,14 +1549,14 @@ export default function OperationsPage() {
               })}
               className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
             >
-              Open delivery reports
+              {tt("operations.openDeliveryReports")}
             </Link>
           </div>
           <div className="mt-4 space-y-2">
             {retryAuditsQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">Loading delivery recovery audit...</div>
+              <div className="text-[13px] text-muted-foreground">{tt("operations.loadingDeliveryRecoveryAudit")}</div>
             ) : retryAudits.length === 0 ? (
-              <div className="text-[13px] text-muted-foreground">No delivery recovery audit entries yet.</div>
+              <div className="text-[13px] text-muted-foreground">{tt("operations.noDeliveryRecoveryAudit")}</div>
             ) : (
               retryAudits.map((item) => (
                 <div
@@ -1386,9 +1567,9 @@ export default function OperationsPage() {
                     <div>
                       <div className="font-medium text-foreground">Outbox {item.outbox_id}</div>
                       <div className="mt-1 text-xs text-muted-foreground">
-                        {item.before_status || "unknown"} → {item.after_status || "unknown"}
+                        {item.before_status || tt("operations.unknown")} → {item.after_status || tt("operations.unknown")}
                         {item.before_delivery_status || item.after_delivery_status
-                          ? ` | delivery ${item.before_delivery_status || "unknown"} → ${item.after_delivery_status || "unknown"}`
+                          ? ` | delivery ${item.before_delivery_status || tt("operations.unknown")} → ${item.after_delivery_status || tt("operations.unknown")}`
                           : ""}
                       </div>
                     </div>
@@ -1397,7 +1578,7 @@ export default function OperationsPage() {
                     </div>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {item.reason || "No reason supplied"} | actor {item.actor_user_id}
+                    {item.reason || tt("operations.noReasonSupplied")} | actor {item.actor_user_id}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
                     <Link
@@ -1406,7 +1587,7 @@ export default function OperationsPage() {
                       })}
                       className="font-medium text-accent hover:underline"
                     >
-                      Review delivery recovery
+                      {tt("operations.reviewDeliveryRecovery")}
                     </Link>
                   </div>
                 </div>
@@ -1419,11 +1600,13 @@ export default function OperationsPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Webhook Signals
+                {tt("operations.webhookSignalsTitle")}
               </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                Delivery webhook duplicates, mismatches, and provider failures in the last{" "}
-                {webhookSummary?.window_hours ?? 24} hours.
+                {tt("operations.webhookSignalsSubtitle").replace(
+                  "{hours}",
+                  String(webhookSummary?.window_hours ?? 24)
+                )}
               </p>
             </div>
             <Link
@@ -1433,30 +1616,30 @@ export default function OperationsPage() {
               })}
               className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
             >
-              Open delivery reports
+              {tt("operations.openDeliveryReports")}
             </Link>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-4">
             <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Received</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{tt("operations.received")}</div>
               <div className="mt-1 text-lg font-semibold text-foreground">
                 {webhookSummary?.total_received ?? 0}
               </div>
             </div>
             <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duplicates</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{tt("operations.duplicates")}</div>
               <div className="mt-1 text-lg font-semibold text-foreground">
                 {webhookSummary?.duplicate_total ?? 0}
               </div>
             </div>
             <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Unmatched</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{tt("operations.unmatched")}</div>
               <div className="mt-1 text-lg font-semibold text-foreground">
                 {webhookSummary?.unmatched_total ?? 0}
               </div>
             </div>
             <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Provider failed</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{tt("operations.providerFailed")}</div>
               <div className="mt-1 text-lg font-semibold text-foreground">
                 {webhookSummary?.provider_failed_total ?? 0}
               </div>
@@ -1464,12 +1647,12 @@ export default function OperationsPage() {
           </div>
           <div className="mt-4 space-y-2">
             {webhookSignalsQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">Loading webhook signals...</div>
+              <div className="text-[13px] text-muted-foreground">{tt("operations.loadingWebhookSignals")}</div>
             ) : visibleWebhookSignals.length === 0 ? (
               <div className="text-[13px] text-muted-foreground">
                 {webhookProviderFilter
-                  ? "No webhook signals match current provider scope."
-                  : "No webhook signals recorded."}
+                  ? tt("operations.noWebhookSignalsScoped")
+                  : tt("operations.noWebhookSignals")}
               </div>
             ) : (
               visibleWebhookSignals.map((item) => (
@@ -1503,7 +1686,7 @@ export default function OperationsPage() {
                       })}
                       className="font-medium text-accent hover:underline"
                     >
-                      Delivery report
+                      {tt("operations.deliveryReport")}
                     </Link>
                     {item.outbox_id ? (
                       <Link
@@ -1513,7 +1696,7 @@ export default function OperationsPage() {
                         })}
                         className="font-medium text-muted-foreground hover:text-foreground hover:underline"
                       >
-                        Exact outbox
+                        {t("operations.exactOutbox")}
                       </Link>
                     ) : null}
                   </div>
@@ -1528,14 +1711,23 @@ export default function OperationsPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Last Batch Result
+                  {t("operations.lastBatchResult")}
                 </h2>
                 <p className="mt-1 text-[13px] text-muted-foreground">
                   {lastBatchResult.action === "retry"
-                    ? `Retry actionable imports over ${lastBatchResult.scope} runs`
+                    ? t("operations.retryImportsRuns").replace(
+                        "{count}",
+                        String(lastBatchResult.scope)
+                      )
                     : lastBatchResult.action === "outbox-retry"
-                      ? `Retry actionable deliveries over ${lastBatchResult.scope} messages`
-                      : `Reconcile actionable projects over ${lastBatchResult.scope} projects`}
+                      ? t("operations.retryDeliveriesMessages").replace(
+                          "{count}",
+                          String(lastBatchResult.scope)
+                        )
+                      : t("operations.reconcileProjectsScope").replace(
+                          "{count}",
+                          String(lastBatchResult.scope)
+                        )}
                 </p>
               </div>
               <div className="text-right text-[12px] text-muted-foreground">
@@ -1544,25 +1736,25 @@ export default function OperationsPage() {
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-4">
               <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Success</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("operations.success")}</div>
                 <div className="mt-1 text-lg font-semibold text-foreground">{lastBatchResult.successful}</div>
               </div>
               <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Failed</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("operations.failed")}</div>
                 <div className="mt-1 text-lg font-semibold text-foreground">{lastBatchResult.failed}</div>
               </div>
               <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Skipped</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("operations.skipped")}</div>
                 <div className="mt-1 text-lg font-semibold text-foreground">{lastBatchResult.skipped}</div>
               </div>
               <div className="rounded-lg border border-border/70 bg-background/70 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Scope</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("operations.scope")}</div>
                 <div className="mt-1 text-lg font-semibold text-foreground">{lastBatchResult.scope}</div>
               </div>
             </div>
             <div className="mt-4 space-y-2">
               {lastBatchResult.items.length === 0 ? (
-                <div className="text-[13px] text-muted-foreground">No item details returned.</div>
+                <div className="text-[13px] text-muted-foreground">{t("operations.noItemDetails")}</div>
               ) : (
                 lastBatchResult.items.slice(0, 5).map((item) => (
                   <div
@@ -1604,14 +1796,14 @@ export default function OperationsPage() {
                 className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
               >
                 {lastBatchResult.action === "outbox-retry"
-                  ? "Review affected deliveries"
-                  : "Review affected imports"}
+                  ? t("operations.reviewAffectedDeliveries")
+                  : t("operations.reviewAffectedImports")}
               </Link>
               <Link
                 href="/operations"
                 className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted"
               >
-                Back to overview
+                {t("operations.backToOverview")}
               </Link>
             </div>
           </section>
@@ -1622,13 +1814,13 @@ export default function OperationsPage() {
             href={failedImportsHref}
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
-            Open import workspace
+            {tt("operations.openImportWorkspace")}
           </Link>
           <Link
             href="/reports?focus=operations&ops_preset=failed-imports"
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
-            Open operations reports
+            {tt("operations.openOperationsReports")}
           </Link>
           <Link
             href={buildDeliveryReportHref({
@@ -1637,25 +1829,25 @@ export default function OperationsPage() {
             })}
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
-            Open delivery reports
+            {tt("operations.openDeliveryReports")}
           </Link>
           <Link
             href="/reports?focus=issues&ops_preset=issue-pressure"
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
-            Open issues reports
+            {tt("operations.openIssuesReports")}
           </Link>
           <Link
             href="/journal"
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
-            Open communication queue
+            {tt("operations.openCommunicationQueue")}
           </Link>
           <Link
             href="/installers"
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted"
           >
-            Open installer board
+            {tt("operations.openInstallerBoard")}
           </Link>
         </div>
 
@@ -1663,24 +1855,26 @@ export default function OperationsPage() {
           <section className="rounded-xl border border-border bg-card">
             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Failed Import Queue
+                {tt("operations.failedImportQueue")}
               </h2>
               <Link
                 href={failedImportsHref}
                 className="text-[12px] font-medium text-accent hover:underline"
               >
-                Open queue
+                {tt("operations.openQueue")}
               </Link>
             </div>
             <div className="space-y-0">
               {failedImportsQuery.isLoading && (
                 <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                  Loading failed imports...
+                  {tt("operations.loadingFailedImports")}
                 </div>
               )}
               {!failedImportsQuery.isLoading && visibleFailedImports.length === 0 && (
                 <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                  {onlyActionable ? "No actionable import runs." : "No failed import runs."}
+                  {onlyActionable
+                    ? tt("operations.noActionableImportRuns")
+                    : tt("operations.noFailedImportRuns")}
                 </div>
               )}
               {visibleFailedImports.map((item) => (
@@ -1766,16 +1960,19 @@ export default function OperationsPage() {
             <div className="space-y-0">
               {outboxFailedQuery.isLoading && (
                 <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                  Loading outbox failures...
+                  {t("operations.loadingOutboxFailures")}
                 </div>
               )}
               {!outboxFailedQuery.isLoading && visibleFailedOutbox.length === 0 && (
                 <div className="px-4 py-6 text-[13px] text-muted-foreground">
                   {deliveryChannelFilter
-                    ? `No failed outbox messages for ${deliveryChannelFilter}.`
+                    ? t("operations.noFailedOutboxMessagesFor").replace(
+                        "{scope}",
+                        deliveryChannelFilter
+                      )
                     : onlyActionable
-                      ? "No actionable outbox messages."
-                      : "No failed outbox messages."}
+                      ? t("operations.noActionableOutboxMessages")
+                      : t("operations.noFailedOutboxMessages")}
                 </div>
               )}
               {visibleFailedOutbox.map((item) => (

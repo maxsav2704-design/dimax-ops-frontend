@@ -16,7 +16,362 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { apiBaseUrl, apiFetch, getAccessToken } from "@/lib/api";
 import { useUserRole } from "@/hooks/use-user-role";
+import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+
+const reportsOverrides: Record<Locale, Record<string, string>> = {
+  en: {
+    "reports.notAvailableShort": "n/a",
+    "reports.openInProjects": "Open in Projects",
+    "reports.noFailingProjectsCurrentWindow": "No failing projects in current window.",
+    "reports.healthMetricsPlaybooks": "Health metrics and action playbooks",
+    "reports.loadingSlaMetrics": "Loading SLA metrics...",
+    "reports.loadingIssuesAnalytics": "Loading issues analytics...",
+    "reports.loadingMarginLeakage": "Loading margin leakage...",
+    "reports.projectPlanVsFactTitle": "Project Plan vs Fact",
+    "reports.projectPlanVsFactSubtitle":
+      "Compare planned commercial targets against actual delivery, payroll, and margin performance.",
+    "reports.actualMissing": "Actual missing",
+    "reports.payroll": "Payroll",
+    "reports.profit": "Profit",
+    "reports.projectRiskTitle": "Project Risk Drill-down",
+    "reports.projectRiskSubtitle":
+      "Why the selected project is leaking margin: drivers, stalled reasons and risky orders",
+    "reports.loadingProjects": "Loading projects...",
+    "reports.loadingProjectRisk": "Loading project risk drill-down...",
+    "reports.failedProjectRisk": "Failed to load project risk drill-down",
+    "reports.importModes": "Import Modes",
+    "reports.analyzeRetry": "Analyze {analyze} | Retry {retry}",
+    "reports.outboxRisk": "Outbox Risk",
+    "reports.limitAlerts": "Limit Alerts",
+    "reports.warnDanger24h": "24h warn {warn} | danger {danger}",
+    "reports.topFailingProjectsTitle": "Top Failing Projects (7d import errors)",
+    "reports.failureRuns": "{count} fails",
+    "reports.openShort": "Open",
+    "reports.operationsSlaTitle": "Operations SLA",
+    "reports.projectMarginExecutiveTitle": "Project Margin Executive",
+    "reports.projectMarginExecutiveSubtitle":
+      "Top profitable and low-margin projects based on actual realized margin",
+    "reports.topMarginProjects": "Top Margin Projects",
+    "reports.loadingTopMarginProjects": "Loading top margin projects...",
+    "reports.failedTopMarginProjects": "Failed to load top margin projects",
+    "reports.noProfitableProjects": "No profitable projects yet.",
+    "reports.statusIssues": "Status {status} | Issues {issues}",
+    "reports.lowMarginRiskProjects": "Low Margin / Risk Projects",
+    "reports.loadingLowMarginProjects": "Loading low-margin projects...",
+    "reports.failedLowMarginProjects": "Failed to load low-margin projects",
+    "reports.noLowMarginProjects": "No low-margin projects.",
+    "reports.completionIssues": "Completion {completion} | Issues {issues}",
+    "reports.riskConcentrationTitle": "Risk Concentration",
+    "reports.riskConcentrationSubtitle":
+      "Where margin risk is currently concentrated across projects, orders and installers",
+    "reports.loadingRiskConcentration": "Loading risk concentration...",
+    "reports.failedRiskConcentration": "Failed to load risk concentration",
+    "reports.delayedProfitLabel": "Delayed Profit",
+    "reports.openIssueRisk": "Open issue risk {amount}",
+    "reports.blockedIssueRisk": "Blocked Issue Risk",
+    "reports.worstInstaller": "Worst installer {amount}",
+    "reports.riskyProjectsOrders": "Risky Projects / Orders",
+    "reports.worstProject": "Worst project {amount}",
+    "reports.revenuePayrollProfit": "Revenue / Payroll / Profit",
+    "reports.projectsOrders": "Projects / Orders",
+    "reports.installedDoors": "Installed doors: {count}",
+    "reports.openIssuesMissingRates": "Open Issues / Missing Rates",
+    "reports.lastInstall": "Last install:",
+    "reports.addonsImpact": "Addons Impact",
+    "reports.addonsProfitMissingPlans": "Profit {profit} | Missing plans {count}",
+    "reports.openOperationsCenter": "Open Operations Center",
+    "reports.openActionableOps": "Open Actionable Ops",
+    "reports.loadingCommandCenter": "Loading command center...",
+    "reports.issuesAnalyticsTitle": "Issues Analytics",
+    "reports.issuesAnalyticsSubtitle": "MTTR, overdue pressure and backlog dynamics",
+    "reports.marginLeakageTitle": "Margin Leakage",
+    "reports.marginLeakageSubtitle": "Open issue exposure, stalled reasons and add-on uplift",
+    "reports.loadingProjectsForPlanFact": "Loading projects...",
+    "reports.preparingPlanFactFilters": "Preparing project filters for plan vs fact.",
+    "reports.loadingProjectPlanFact": "Loading project plan vs fact...",
+    "reports.failedProjectPlanFact": "Failed to load project plan vs fact",
+    "reports.failedIssuesAnalytics": "Failed to load issues analytics",
+    "reports.openTotal": "Open / Total",
+    "reports.overdueRate": "Overdue Rate",
+    "reports.overdueOpen": "{count} overdue open",
+    "reports.blockedOpen": "Blocked Open",
+    "reports.backlogByWorkflow": "Backlog by Workflow",
+    "reports.backlogByPriority": "Backlog by Priority",
+    "reports.trendLastDays": "Trend (last {days} days)",
+    "reports.failedMarginLeakage": "Failed to load margin leakage",
+    "reports.openIssuesAtRisk": "Open Issues at Risk",
+    "reports.profitAtRisk": "Profit at risk {amount}",
+    "reports.blockedMarginRisk": "Blocked Margin Risk",
+    "reports.blockedProfit": "Blocked profit {amount}",
+    "reports.delayedDoors": "Delayed Doors",
+    "reports.delayedProfit": "Delayed profit {amount}",
+    "reports.addonUplift": "Add-on Uplift",
+    "reports.summary": "Summary",
+    "reports.openIssuesExposure": "Open Issues Exposure",
+    "reports.delayedNotInstalled": "Delayed Not Installed",
+    "reports.addonRealized": "Add-on Realized",
+    "reports.delayedByReason": "Delayed by Reason / Defect",
+    "reports.noDelayedReasons": "No delayed reasons.",
+    "reports.addonProfitImpact": "Add-on Profit Impact",
+    "reports.addon": "Add-on",
+    "reports.missingPlans": "Missing Plans",
+    "reports.noAddonImpactRows": "No add-on impact rows.",
+    "reports.installerProfitabilityMatrix": "Installer Profitability Matrix",
+    "reports.installerProfitabilitySubtitle":
+      "Ranking by money output, margin quality and issue pressure",
+    "reports.loadingInstallerProfitability": "Loading installer profitability matrix...",
+    "reports.projectsAddons": "Projects {projects} | Add-ons {addons}",
+    "reports.installerCrossViewTitle": "Installer x Project Cross-view",
+    "reports.installerCrossViewSubtitle":
+      "Which installer-project combinations create or destroy margin",
+    "reports.loadingInstallerCrossView": "Loading installer-project cross-view...",
+    "reports.installersKpiTitle": "Installers KPI",
+    "reports.installersKpiSubtitle": "Sorted, paginated installer performance and money metrics",
+    "reports.loadingInstallersKpi": "Loading installers KPI...",
+    "reports.rowsCount": "Rows: {count}",
+    "reports.exportInstallersCsv": "Export Installers CSV",
+    "reports.failedInstallerDetails": "Failed to load installer details",
+    "reports.exportOrdersCsv": "Export Orders CSV",
+    "reports.prev": "Prev",
+    "reports.next": "Next",
+    "reports.installerDrilldownTitle": "Installer Drill-down",
+  },
+  ru: {
+    "reports.notAvailableShort": "н/д",
+    "reports.openInProjects": "Открыть в проектах",
+    "reports.noFailingProjectsCurrentWindow": "В текущем окне нет проблемных проектов.",
+    "reports.healthMetricsPlaybooks": "Метрики здоровья и сценарии действий",
+    "reports.loadingSlaMetrics": "Загружаем SLA-метрики...",
+    "reports.loadingIssuesAnalytics": "Загружаем аналитику проблем...",
+    "reports.loadingMarginLeakage": "Загружаем утечку маржи...",
+    "reports.projectPlanVsFactTitle": "План vs факт по проекту",
+    "reports.projectPlanVsFactSubtitle":
+      "Сравнение плановых коммерческих целей с фактической доставкой, payroll и маржой.",
+    "reports.actualMissing": "Фактически отсутствует",
+    "reports.payroll": "Payroll",
+    "reports.profit": "Прибыль",
+    "reports.projectRiskTitle": "Разбор рисков проекта",
+    "reports.projectRiskSubtitle":
+      "Почему выбранный проект теряет маржу: драйверы, зависшие причины и рискованные заказы.",
+    "reports.loadingProjects": "Загружаем проекты...",
+    "reports.loadingProjectRisk": "Загружаем разбор рисков проекта...",
+    "reports.failedProjectRisk": "Не удалось загрузить разбор рисков проекта",
+    "reports.importModes": "Режимы импорта",
+    "reports.analyzeRetry": "Анализ {analyze} | Повтор {retry}",
+    "reports.outboxRisk": "Риск outbox",
+    "reports.limitAlerts": "Алерты лимитов",
+    "reports.warnDanger24h": "24ч warn {warn} | danger {danger}",
+    "reports.topFailingProjectsTitle": "Проблемные проекты (ошибки импорта за 7д)",
+    "reports.failureRuns": "{count} сбоев",
+    "reports.openShort": "Открыть",
+    "reports.operationsSlaTitle": "Операционный SLA",
+    "reports.projectMarginExecutiveTitle": "Исполнительная маржа по проектам",
+    "reports.projectMarginExecutiveSubtitle":
+      "Самые прибыльные и низкомаржинальные проекты по фактической марже.",
+    "reports.topMarginProjects": "Топ по марже",
+    "reports.loadingTopMarginProjects": "Загружаем проекты с лучшей маржой...",
+    "reports.failedTopMarginProjects": "Не удалось загрузить проекты с лучшей маржой",
+    "reports.noProfitableProjects": "Прибыльных проектов пока нет.",
+    "reports.statusIssues": "Статус {status} | Проблемы {issues}",
+    "reports.lowMarginRiskProjects": "Низкая маржа / риск",
+    "reports.loadingLowMarginProjects": "Загружаем низкомаржинальные проекты...",
+    "reports.failedLowMarginProjects": "Не удалось загрузить низкомаржинальные проекты",
+    "reports.noLowMarginProjects": "Низкомаржинальных проектов нет.",
+    "reports.completionIssues": "Готовность {completion} | Проблемы {issues}",
+    "reports.riskConcentrationTitle": "Концентрация риска",
+    "reports.riskConcentrationSubtitle":
+      "Где сейчас сконцентрирован риск маржи по проектам, заказам и монтажникам.",
+    "reports.loadingRiskConcentration": "Загружаем концентрацию риска...",
+    "reports.failedRiskConcentration": "Не удалось загрузить концентрацию риска",
+    "reports.delayedProfitLabel": "Отложенная прибыль",
+    "reports.openIssueRisk": "Риск открытых проблем {amount}",
+    "reports.blockedIssueRisk": "Риск заблокированных проблем",
+    "reports.worstInstaller": "Худший монтажник {amount}",
+    "reports.riskyProjectsOrders": "Рискованные проекты / заказы",
+    "reports.worstProject": "Худший проект {amount}",
+    "reports.revenuePayrollProfit": "Выручка / payroll / прибыль",
+    "reports.projectsOrders": "Проекты / заказы",
+    "reports.installedDoors": "Установлено дверей: {count}",
+    "reports.openIssuesMissingRates": "Открытые проблемы / отсутствующие ставки",
+    "reports.lastInstall": "Последняя установка:",
+    "reports.addonsImpact": "Влияние допов",
+    "reports.addonsProfitMissingPlans": "Прибыль {profit} | Нет планов {count}",
+    "reports.openOperationsCenter": "Открыть Operations Center",
+    "reports.openActionableOps": "Открыть actionable Ops",
+    "reports.loadingCommandCenter": "Загружаем командный центр...",
+    "reports.issuesAnalyticsTitle": "Аналитика проблем",
+    "reports.issuesAnalyticsSubtitle": "MTTR, просрочки и динамика бэклога",
+    "reports.marginLeakageTitle": "Утечка маржи",
+    "reports.marginLeakageSubtitle": "Риск по открытым проблемам, зависшим причинам и допам",
+    "reports.loadingProjectsForPlanFact": "Загружаем проекты...",
+    "reports.preparingPlanFactFilters": "Готовим фильтры проекта для блока план vs факт.",
+    "reports.loadingProjectPlanFact": "Загружаем план vs факт по проекту...",
+    "reports.failedProjectPlanFact": "Не удалось загрузить план vs факт по проекту",
+    "reports.failedIssuesAnalytics": "Не удалось загрузить аналитику проблем",
+    "reports.openTotal": "Открыто / всего",
+    "reports.overdueRate": "Доля просрочки",
+    "reports.overdueOpen": "Просрочено открытых: {count}",
+    "reports.blockedOpen": "Блокировано",
+    "reports.backlogByWorkflow": "Бэклог по workflow",
+    "reports.backlogByPriority": "Бэклог по приоритету",
+    "reports.trendLastDays": "Тренд за {days} дней",
+    "reports.failedMarginLeakage": "Не удалось загрузить утечку маржи",
+    "reports.openIssuesAtRisk": "Открытые проблемы в риске",
+    "reports.profitAtRisk": "Прибыль под риском {amount}",
+    "reports.blockedMarginRisk": "Риск блокированной маржи",
+    "reports.blockedProfit": "Блокированная прибыль {amount}",
+    "reports.delayedDoors": "Задержанные двери",
+    "reports.delayedProfit": "Отложенная прибыль {amount}",
+    "reports.addonUplift": "Рост за счет допов",
+    "reports.summary": "Сводка",
+    "reports.openIssuesExposure": "Экспозиция открытых проблем",
+    "reports.delayedNotInstalled": "Задержанные неустановленные",
+    "reports.addonRealized": "Реализованные допы",
+    "reports.delayedByReason": "Задержки по причине / дефекту",
+    "reports.noDelayedReasons": "Причин задержки нет.",
+    "reports.addonProfitImpact": "Влияние допов на прибыль",
+    "reports.addon": "Доп",
+    "reports.missingPlans": "Нет планов",
+    "reports.noAddonImpactRows": "Строк по влиянию допов нет.",
+    "reports.installerProfitabilityMatrix": "Матрица прибыльности монтажников",
+    "reports.installerProfitabilitySubtitle":
+      "Рейтинг по денежному результату, качеству маржи и давлению проблем",
+    "reports.loadingInstallerProfitability": "Загружаем матрицу прибыльности монтажников...",
+    "reports.projectsAddons": "Проекты {projects} | Допы {addons}",
+    "reports.installerCrossViewTitle": "Срез монтажник x проект",
+    "reports.installerCrossViewSubtitle":
+      "Какие связки монтажник-проект создают или съедают маржу",
+    "reports.loadingInstallerCrossView": "Загружаем срез монтажник x проект...",
+    "reports.installersKpiTitle": "KPI монтажников",
+    "reports.installersKpiSubtitle": "Сортируемые и постраничные метрики монтажников",
+    "reports.loadingInstallersKpi": "Загружаем KPI монтажников...",
+    "reports.rowsCount": "Строк: {count}",
+    "reports.exportInstallersCsv": "Экспорт CSV по монтажникам",
+    "reports.failedInstallerDetails": "Не удалось загрузить детали монтажника",
+    "reports.exportOrdersCsv": "Экспорт CSV по заказам",
+    "reports.prev": "Назад",
+    "reports.next": "Далее",
+    "reports.installerDrilldownTitle": "Разбор монтажника",
+  },
+  he: {
+    "reports.notAvailableShort": "לא זמין",
+    "reports.openInProjects": "פתח בפרויקטים",
+    "reports.noFailingProjectsCurrentWindow": "אין פרויקטים כושלים בחלון הנוכחי.",
+    "reports.healthMetricsPlaybooks": "מדדי בריאות וספרי פעולה",
+    "reports.loadingSlaMetrics": "טוען מדדי SLA...",
+    "reports.loadingIssuesAnalytics": "טוען אנליטיקת תקלות...",
+    "reports.loadingMarginLeakage": "טוען דליפת מרווח...",
+    "reports.projectPlanVsFactTitle": "תכנית מול ביצוע לפרויקט",
+    "reports.projectPlanVsFactSubtitle":
+      "השוואה בין היעדים המסחריים המתוכננים לבין הביצוע בפועל במשלוחים, payroll ומרווח.",
+    "reports.actualMissing": "חסר בפועל",
+    "reports.payroll": "Payroll",
+    "reports.profit": "רווח",
+    "reports.projectRiskTitle": "פירוט סיכוני פרויקט",
+    "reports.projectRiskSubtitle":
+      "למה הפרויקט שנבחר שוחק מרווח: מניעים, סיבות תקועות והזמנות בסיכון.",
+    "reports.loadingProjects": "טוען פרויקטים...",
+    "reports.loadingProjectRisk": "טוען פירוט סיכוני פרויקט...",
+    "reports.failedProjectRisk": "טעינת פירוט סיכוני הפרויקט נכשלה",
+    "reports.importModes": "מצבי ייבוא",
+    "reports.analyzeRetry": "ניתוח {analyze} | ניסיון חוזר {retry}",
+    "reports.outboxRisk": "סיכון Outbox",
+    "reports.limitAlerts": "התראות מגבלות",
+    "reports.warnDanger24h": "24ש׳ אזהרה {warn} | סכנה {danger}",
+    "reports.topFailingProjectsTitle": "פרויקטים כושלים (שגיאות ייבוא ב-7 ימים)",
+    "reports.failureRuns": "{count} כשלים",
+    "reports.openShort": "פתח",
+    "reports.operationsSlaTitle": "SLA תפעולי",
+    "reports.projectMarginExecutiveTitle": "מרווח הנהלתי לפי פרויקט",
+    "reports.projectMarginExecutiveSubtitle":
+      "הפרויקטים הרווחיים ביותר והנמוכים ביותר לפי מרווח ממומש בפועל.",
+    "reports.topMarginProjects": "פרויקטי מרווח מובילים",
+    "reports.loadingTopMarginProjects": "טוען פרויקטים עם מרווח גבוה...",
+    "reports.failedTopMarginProjects": "טעינת פרויקטים עם מרווח גבוה נכשלה",
+    "reports.noProfitableProjects": "עדיין אין פרויקטים רווחיים.",
+    "reports.statusIssues": "סטטוס {status} | תקלות {issues}",
+    "reports.lowMarginRiskProjects": "מרווח נמוך / סיכון",
+    "reports.loadingLowMarginProjects": "טוען פרויקטים עם מרווח נמוך...",
+    "reports.failedLowMarginProjects": "טעינת פרויקטים עם מרווח נמוך נכשלה",
+    "reports.noLowMarginProjects": "אין פרויקטים עם מרווח נמוך.",
+    "reports.completionIssues": "השלמה {completion} | תקלות {issues}",
+    "reports.riskConcentrationTitle": "ריכוז סיכון",
+    "reports.riskConcentrationSubtitle":
+      "היכן סיכון המרווח מרוכז כעת בין פרויקטים, הזמנות ומתקינים.",
+    "reports.loadingRiskConcentration": "טוען ריכוז סיכון...",
+    "reports.failedRiskConcentration": "טעינת ריכוז הסיכון נכשלה",
+    "reports.delayedProfitLabel": "רווח מעוכב",
+    "reports.openIssueRisk": "סיכון תקלות פתוחות {amount}",
+    "reports.blockedIssueRisk": "סיכון תקלות חסומות",
+    "reports.worstInstaller": "המתקין הגרוע ביותר {amount}",
+    "reports.riskyProjectsOrders": "פרויקטים / הזמנות בסיכון",
+    "reports.worstProject": "הפרויקט הגרוע ביותר {amount}",
+    "reports.revenuePayrollProfit": "הכנסה / payroll / רווח",
+    "reports.projectsOrders": "פרויקטים / הזמנות",
+    "reports.installedDoors": "דלתות מותקנות: {count}",
+    "reports.openIssuesMissingRates": "תקלות פתוחות / תעריפים חסרים",
+    "reports.lastInstall": "התקנה אחרונה:",
+    "reports.addonsImpact": "השפעת תוספות",
+    "reports.addonsProfitMissingPlans": "רווח {profit} | תוכניות חסרות {count}",
+    "reports.openOperationsCenter": "פתח את מרכז התפעול",
+    "reports.openActionableOps": "פתח actionable Ops",
+    "reports.loadingCommandCenter": "טוען את מרכז הפיקוד...",
+    "reports.issuesAnalyticsTitle": "אנליטיקת תקלות",
+    "reports.issuesAnalyticsSubtitle": "MTTR, לחץ איחורים ודינמיקת backlog",
+    "reports.marginLeakageTitle": "דליפת מרווח",
+    "reports.marginLeakageSubtitle": "חשיפת תקלות פתוחות, סיבות תקועות והתרוממות add-on",
+    "reports.loadingProjectsForPlanFact": "טוען פרויקטים...",
+    "reports.preparingPlanFactFilters": "מכין מסנני פרויקט עבור plan vs fact.",
+    "reports.loadingProjectPlanFact": "טוען plan vs fact לפרויקט...",
+    "reports.failedProjectPlanFact": "טעינת plan vs fact לפרויקט נכשלה",
+    "reports.failedIssuesAnalytics": "טעינת אנליטיקת התקלות נכשלה",
+    "reports.openTotal": "פתוחות / סה\"כ",
+    "reports.overdueRate": "שיעור איחור",
+    "reports.overdueOpen": "{count} פתוחות באיחור",
+    "reports.blockedOpen": "פתוחות חסומות",
+    "reports.backlogByWorkflow": "Backlog לפי workflow",
+    "reports.backlogByPriority": "Backlog לפי עדיפות",
+    "reports.trendLastDays": "מגמה ב-{days} הימים האחרונים",
+    "reports.failedMarginLeakage": "טעינת דליפת המרווח נכשלה",
+    "reports.openIssuesAtRisk": "תקלות פתוחות בסיכון",
+    "reports.profitAtRisk": "רווח בסיכון {amount}",
+    "reports.blockedMarginRisk": "סיכון מרווח חסום",
+    "reports.blockedProfit": "רווח חסום {amount}",
+    "reports.delayedDoors": "דלתות מושהות",
+    "reports.delayedProfit": "רווח מושהה {amount}",
+    "reports.addonUplift": "תרומת Add-on",
+    "reports.summary": "סיכום",
+    "reports.openIssuesExposure": "חשיפת תקלות פתוחות",
+    "reports.delayedNotInstalled": "מושהות ולא מותקנות",
+    "reports.addonRealized": "Add-on ממומש",
+    "reports.delayedByReason": "עיכוב לפי סיבה / פגם",
+    "reports.noDelayedReasons": "אין סיבות עיכוב.",
+    "reports.addonProfitImpact": "השפעת Add-on על הרווח",
+    "reports.addon": "Add-on",
+    "reports.missingPlans": "תוכניות חסרות",
+    "reports.noAddonImpactRows": "אין שורות השפעה של Add-on.",
+    "reports.installerProfitabilityMatrix": "מטריצת רווחיות מתקינים",
+    "reports.installerProfitabilitySubtitle":
+      "דירוג לפי תפוקה כספית, איכות מרווח ולחץ תקלות",
+    "reports.loadingInstallerProfitability": "טוען מטריצת רווחיות מתקינים...",
+    "reports.projectsAddons": "פרויקטים {projects} | תוספות {addons}",
+    "reports.installerCrossViewTitle": "חתך מתקין x פרויקט",
+    "reports.installerCrossViewSubtitle":
+      "אילו שילובים של מתקין-פרויקט יוצרים או שוחקים מרווח",
+    "reports.loadingInstallerCrossView": "טוען חתך מתקין x פרויקט...",
+    "reports.installersKpiTitle": "KPI למתקינים",
+    "reports.installersKpiSubtitle": "מדדי מתקינים עם מיון ודפדוף",
+    "reports.loadingInstallersKpi": "טוען KPI למתקינים...",
+    "reports.rowsCount": "שורות: {count}",
+    "reports.exportInstallersCsv": "ייצוא CSV למתקינים",
+    "reports.failedInstallerDetails": "טעינת פרטי המתקין נכשלה",
+    "reports.exportOrdersCsv": "ייצוא CSV להזמנות",
+    "reports.prev": "הקודם",
+    "reports.next": "הבא",
+    "reports.installerDrilldownTitle": "פירוט מתקין",
+  },
+};
 
 type LimitAlertItem = {
   id: string;
@@ -633,41 +988,44 @@ const REPORTS_FOCUS_IDS: Record<ReportsFocus, string> = {
   issues: "reports-issues-analytics",
 };
 
-const REPORTS_FOCUS_COPY: Record<ReportsFocus, { title: string; description: string }> = {
-  operations: {
-    title: "Focused from Operations: command center",
-    description: "Operational command center and SLA blocks are in focus for queue triage.",
-  },
-  delivery: {
-    title: "Focused from Operations: delivery risk",
-    description: "Delivery and failed outbox blocks are in focus for communication incidents.",
-  },
-  issues: {
-    title: "Focused from Operations: issue pressure",
-    description: "Issues analytics is in focus for backlog and risk follow-up.",
-  },
-};
+function getReportsFocusCopy(t: (key: string) => string): Record<ReportsFocus, { title: string; description: string }> {
+  return {
+    operations: {
+      title: t("reports.operationsFocusTitle"),
+      description: t("reports.operationsFocusDescription"),
+    },
+    delivery: {
+      title: t("reports.deliveryFocusTitle"),
+      description: t("reports.deliveryFocusDescription"),
+    },
+    issues: {
+      title: t("reports.issuesFocusTitle"),
+      description: t("reports.issuesFocusDescription"),
+    },
+  };
+}
 
-const REPORTS_OPS_PRESET_COPY: Record<
-  ReportsOpsPreset,
-  { title: string; description: string; slaHistoryDays: number }
-> = {
-  "failed-imports": {
-    title: "Operations preset: failed imports",
-    description: "Short-range SLA view for import failures and queue recovery.",
-    slaHistoryDays: 7,
-  },
-  "delivery-risk": {
-    title: "Operations preset: delivery risk",
-    description: "Short-range delivery view for failed outbox and communication pressure.",
-    slaHistoryDays: 7,
-  },
-  "issue-pressure": {
-    title: "Operations preset: issue pressure",
-    description: "Two-week issue pressure view for backlog and escalation monitoring.",
-    slaHistoryDays: 14,
-  },
-};
+function getReportsOpsPresetCopy(
+  t: (key: string) => string
+): Record<ReportsOpsPreset, { title: string; description: string; slaHistoryDays: number }> {
+  return {
+    "failed-imports": {
+      title: t("reports.failedImportsPresetTitle"),
+      description: t("reports.failedImportsPresetDescription"),
+      slaHistoryDays: 7,
+    },
+    "delivery-risk": {
+      title: t("reports.deliveryRiskPresetTitle"),
+      description: t("reports.deliveryRiskPresetDescription"),
+      slaHistoryDays: 7,
+    },
+    "issue-pressure": {
+      title: t("reports.issuePressurePresetTitle"),
+      description: t("reports.issuePressurePresetDescription"),
+      slaHistoryDays: 14,
+    },
+  };
+}
 
 type ReportsScopedContext = {
   projectId: string | null;
@@ -1017,6 +1375,10 @@ function SectionMessage({
 }
 
 export default function ReportsPage() {
+  const { locale, t } = useI18n();
+  const tt = (key: string) => reportsOverrides[locale]?.[key] ?? t(key);
+  const reportsFocusCopy = getReportsFocusCopy(t);
+  const reportsOpsPresetCopy = getReportsOpsPresetCopy(t);
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -1024,7 +1386,7 @@ export default function ReportsPage() {
   const canRunPrivilegedActions = userRole !== "INSTALLER";
   const privilegedActionHint = canRunPrivilegedActions
     ? undefined
-    : "Installer role is read-only in reports";
+    : t("reports.installerReadOnlyHint");
   const [offset, setOffset] = useState(0);
   const [auditOffset, setAuditOffset] = useState(0);
   const [auditEntityType, setAuditEntityType] = useState("");
@@ -1059,13 +1421,13 @@ export default function ReportsPage() {
   const [savedPresets, setSavedPresets] = useState<ReportsPreset[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState("");
   const [presetNotice, setPresetNotice] = useState<string | null>(null);
-  const activeFocus = parseReportsFocus(searchParams.get("focus"));
-  const activeOpsPreset = parseReportsOpsPreset(searchParams.get("ops_preset"));
-  const scopedProjectId = searchParams.get("project_id");
-  const scopedOutboxId = searchParams.get("outbox_id");
-  const scopedInstallerId = searchParams.get("installer_id");
-  const scopedDeliveryChannel = searchParams.get("delivery_channel")?.trim().toUpperCase() || null;
-  const scopedWebhookProvider = searchParams.get("webhook_provider")?.trim().toLowerCase() || null;
+  const activeFocus = parseReportsFocus(searchParams?.get("focus") || null);
+  const activeOpsPreset = parseReportsOpsPreset(searchParams?.get("ops_preset") || null);
+  const scopedProjectId = searchParams?.get("project_id") || null;
+  const scopedOutboxId = searchParams?.get("outbox_id") || null;
+  const scopedInstallerId = searchParams?.get("installer_id") || null;
+  const scopedDeliveryChannel = searchParams?.get("delivery_channel")?.trim().toUpperCase() || null;
+  const scopedWebhookProvider = searchParams?.get("webhook_provider")?.trim().toLowerCase() || null;
   const appliedOpsPresetRef = useRef<ReportsOpsPreset | null>(null);
   const appliedProjectScopeRef = useRef<string | null>(null);
   const appliedInstallerScopeRef = useRef<string | null>(null);
@@ -1520,25 +1882,25 @@ export default function ReportsPage() {
     : "/projects?only_failed_runs=1";
   const focusFollowupActions = activeFocus === "operations"
     ? [
-        { label: "Open Actionable Ops", href: "/operations?actionable=1" },
-        { label: "Open Failed Projects", href: focusedFailedProjectsHref },
+        { label: t("reports.openActionableOps"), href: "/operations?actionable=1" },
+        { label: t("reports.openFailedProjects"), href: focusedFailedProjectsHref },
       ]
     : activeFocus === "delivery"
       ? [
           {
-            label: "Open Actionable Ops",
+            label: t("reports.openActionableOps"),
             href: buildOperationsHref({
               actionable: true,
               deliveryChannel: scopedDeliveryChannel || undefined,
               webhookProvider: scopedWebhookProvider || undefined,
             }),
           },
-          { label: "Open Journal Queue", href: "/journal" },
+          { label: t("reports.openJournalQueue"), href: "/journal" },
         ]
       : activeFocus === "issues"
         ? [
-            { label: "Open Actionable Ops", href: "/operations?actionable=1" },
-            { label: "Open Issues Board", href: "/issues" },
+            { label: t("reports.openActionableOps"), href: "/operations?actionable=1" },
+            { label: t("reports.openIssuesBoard"), href: "/issues" },
           ]
         : [];
   const scopedContext: ReportsScopedContext = {
@@ -1550,15 +1912,15 @@ export default function ReportsPage() {
   };
   const focusTargetId = getReportsFocusTargetId(activeFocus, scopedContext);
   const scopeSummary = scopedProjectId
-    ? `Scoped project: ${scopedProjectId}`
+    ? t("reports.scopedProject").replace("{id}", scopedProjectId)
     : scopedOutboxId
-      ? `Scoped outbox message: ${scopedOutboxId}`
+      ? t("reports.scopedOutbox").replace("{id}", scopedOutboxId)
       : scopedDeliveryChannel
-        ? `Scoped delivery channel: ${scopedDeliveryChannel}`
+        ? t("reports.scopedDeliveryChannel").replace("{id}", scopedDeliveryChannel)
         : scopedWebhookProvider
-          ? `Scoped webhook provider: ${scopedWebhookProvider}`
+          ? t("reports.scopedWebhookProvider").replace("{id}", scopedWebhookProvider)
       : scopedInstallerId
-        ? `Scoped installer: ${scopedInstallerId}`
+        ? t("reports.scopedInstaller").replace("{id}", scopedInstallerId)
         : null;
 
   useEffect(() => {
@@ -1605,20 +1967,20 @@ export default function ReportsPage() {
 
   const exportErrorMessage =
     (exportAuditMutation.isError &&
-      errorMessageFromUnknown(exportAuditMutation.error, "Catalog audit export failed")) ||
+      errorMessageFromUnknown(exportAuditMutation.error, t("reports.catalogAuditExportFailed"))) ||
     (exportIssueAuditMutation.isError &&
-      errorMessageFromUnknown(exportIssueAuditMutation.error, "Issue audit export failed")) ||
+      errorMessageFromUnknown(exportIssueAuditMutation.error, t("reports.issueAuditExportFailed"))) ||
     (exportInstallersKpiMutation.isError &&
-      errorMessageFromUnknown(exportInstallersKpiMutation.error, "Installers KPI export failed")) ||
+      errorMessageFromUnknown(exportInstallersKpiMutation.error, t("reports.installersKpiExportFailed"))) ||
     (exportOrderNumbersKpiMutation.isError &&
       errorMessageFromUnknown(
         exportOrderNumbersKpiMutation.error,
-        "Order numbers KPI export failed"
+        t("reports.orderNumbersKpiExportFailed")
       )) ||
     (exportExecutiveMutation.isError &&
       errorMessageFromUnknown(
         exportExecutiveMutation.error,
-        "Executive reports export failed"
+        t("reports.executiveExportFailed")
       )) ||
     null;
 
@@ -1653,7 +2015,7 @@ export default function ReportsPage() {
     if (appliedOpsPresetRef.current === activeOpsPreset) {
       return;
     }
-    const preset = REPORTS_OPS_PRESET_COPY[activeOpsPreset];
+    const preset = reportsOpsPresetCopy[activeOpsPreset];
     appliedOpsPresetRef.current = activeOpsPreset;
     setSlaHistoryDays(preset.slaHistoryDays);
   }, [activeOpsPreset]);
@@ -1712,13 +2074,13 @@ export default function ReportsPage() {
     setProjectRiskProjectId(preset.projectRiskProjectId);
     setInstallersKpiOffset(0);
     setOrderNumbersKpiOffset(0);
-    setPresetNotice(`Preset loaded: ${preset.name}`);
+    setPresetNotice(t("reports.presetLoaded").replace("{name}", preset.name));
   }
 
   function handleSavePreset(): void {
     const normalizedName = presetName.trim();
     if (!normalizedName) {
-      setPresetNotice("Preset name is required");
+      setPresetNotice(t("reports.presetNameRequired"));
       return;
     }
     const preset: ReportsPreset = {
@@ -1744,13 +2106,13 @@ export default function ReportsPage() {
     setSavedPresets(next);
     setSelectedPresetId(preset.id);
     setPresetName("");
-    setPresetNotice(`Preset saved: ${preset.name}`);
+    setPresetNotice(t("reports.presetSaved").replace("{name}", preset.name));
   }
 
   function handleApplySelectedPreset(): void {
     const preset = savedPresets.find((item) => item.id === selectedPresetId);
     if (!preset) {
-      setPresetNotice("Select a preset first");
+      setPresetNotice(t("reports.selectPresetFirst"));
       return;
     }
     applyPreset(preset);
@@ -1758,49 +2120,77 @@ export default function ReportsPage() {
 
   function handleDeleteSelectedPreset(): void {
     if (!selectedPresetId) {
-      setPresetNotice("Select a preset first");
+      setPresetNotice(t("reports.selectPresetFirst"));
       return;
     }
     const next = savedPresets.filter((item) => item.id !== selectedPresetId);
     writeReportsPresets(next);
     setSavedPresets(next);
     setSelectedPresetId("");
-    setPresetNotice("Preset deleted");
+    setPresetNotice(t("reports.presetDeleted"));
   }
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 max-w-[1400px] space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground tracking-tight">Reports</h1>
-            <p className="text-[13px] text-muted-foreground mt-0.5">
-              Limits, delivery, outbox queue and audit visibility
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="motion-stagger max-w-[1400px] space-y-6 p-6 lg:p-8">
+        <section className="page-hero readability-wrap relative overflow-hidden">
+          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
+          <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl min-w-0">
+              <div className="page-eyebrow">{t("reports.eyebrow")}</div>
+              <h1 className="mt-3 max-w-2xl font-display text-3xl leading-tight tracking-[-0.04em] text-foreground sm:text-4xl">
+                {t("reports.title")}
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
+                {t("reports.subtitle")}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">
+                  {t("reports.unreadAlerts")} {unreadBadge}
+                </span>
+                <span className="metric-chip">
+                  {t("reports.focus")}{" "}
+                  {activeFocus ? reportsFocusCopy[activeFocus].title : t("reports.portfolio")}
+                </span>
+                <span className="metric-chip">
+                  {t("reports.privileged")}{" "}
+                  {canRunPrivilegedActions ? t("reports.enabled") : t("reports.readOnly")}
+                </span>
+              </div>
+            </div>
+            <div className="surface-subtle min-w-0 max-w-2xl space-y-3 p-4 sm:p-5 xl:min-w-[320px]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="text-[12px] leading-5 text-muted-foreground">
+                  {t("reports.helper")}
+                </div>
+                <div className="inline-flex h-9 items-center gap-2 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px]">
+                  <BellRing className="h-4 w-4 text-accent" />
+                  <span className="text-muted-foreground">{t("reports.unread")}:</span>
+                  <span className="font-semibold text-foreground">{unreadBadge}</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
               <input
-                aria-label="Preset Name"
+                aria-label={t("reports.presetName")}
                 value={presetName}
                 onChange={(e) => setPresetName(e.target.value)}
-                placeholder="Save preset"
-                className="h-9 rounded-lg border border-border bg-card px-3 text-[13px]"
+                placeholder={t("reports.savePreset")}
+                className="h-10 rounded-xl border border-border/70 bg-background/80 px-3 text-[13px]"
               />
               <button
                 type="button"
                 onClick={handleSavePreset}
-                className="h-9 px-3 rounded-lg border border-border bg-card text-[13px] font-medium"
+                className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
               >
-                Save Preset
+                {t("reports.savePreset")}
               </button>
               <select
                 aria-label="Saved Presets"
                 value={selectedPresetId}
                 onChange={(e) => setSelectedPresetId(e.target.value)}
-                className="h-9 rounded-lg border border-border bg-card px-2 text-[13px]"
+                className="h-10 rounded-xl border border-border/70 bg-background/80 px-2 text-[13px]"
               >
-                <option value="">Saved presets</option>
+                <option value="">{t("reports.savedPresets")}</option>
                 {savedPresets.map((preset) => (
                   <option key={preset.id} value={preset.id}>
                     {preset.name}
@@ -1810,25 +2200,20 @@ export default function ReportsPage() {
               <button
                 type="button"
                 onClick={handleApplySelectedPreset}
-                className="h-9 px-3 rounded-lg border border-border bg-card text-[13px] font-medium"
+                className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
               >
-                Apply Preset
+                {t("reports.applyPreset")}
               </button>
               <button
                 type="button"
                 onClick={handleDeleteSelectedPreset}
-                className="h-9 px-3 rounded-lg border border-border bg-card text-[13px] font-medium"
+                className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
               >
-                Delete Preset
+                {t("reports.deletePreset")}
               </button>
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="h-9 rounded-lg border border-border bg-card px-3 inline-flex items-center gap-2 text-[13px]">
-              <BellRing className="w-4 h-4 text-accent" />
-              <span className="text-muted-foreground">Unread:</span>
-              <span className="font-semibold text-foreground">{unreadBadge}</span>
-            </div>
-            <button
+              </div>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
               onClick={() => {
                 void Promise.all([
                   alertsQuery.refetch(),
@@ -1855,32 +2240,33 @@ export default function ReportsPage() {
                   issueAuditQuery.refetch(),
                 ]);
               }}
-              className="btn-premium h-9 px-4 rounded-lg border border-border bg-card text-[13px] font-medium flex items-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
-              Refresh
-            </button>
-            <button
-              onClick={() => exportExecutiveMutation.mutate()}
-              disabled={!canRunPrivilegedActions || exportExecutiveMutation.isPending}
-              title={privilegedActionHint}
-              aria-label="Export Executive CSV"
-              className="h-9 px-4 rounded-lg border border-border bg-card text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              Export Executive CSV
-            </button>
-            <button
-              onClick={() => markReadMutation.mutate()}
-              disabled={!canRunPrivilegedActions || markReadMutation.isPending || unreadCount === 0}
-              title={privilegedActionHint}
-              className="h-9 px-4 rounded-lg bg-accent text-accent-foreground text-[13px] font-medium flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              <CheckCheck className="w-4 h-4" strokeWidth={1.8} />
-              Mark All Read
-            </button>
+                  className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium"
+                >
+                  <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
+                  {t("common.refresh")}
+                </button>
+                <button
+                  onClick={() => exportExecutiveMutation.mutate()}
+                  disabled={!canRunPrivilegedActions || exportExecutiveMutation.isPending}
+                  title={privilegedActionHint}
+                  aria-label={t("reports.exportExecutiveCsv")}
+                  className="h-10 rounded-xl border border-border/70 bg-background/70 px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {t("reports.exportExecutiveCsv")}
+                </button>
+                <button
+                  onClick={() => markReadMutation.mutate()}
+                  disabled={!canRunPrivilegedActions || markReadMutation.isPending || unreadCount === 0}
+                  title={privilegedActionHint}
+                  className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <CheckCheck className="w-4 h-4" strokeWidth={1.8} />
+                  {t("reports.markAllRead")}
+                </button>
+              </div>
+            </div>
           </div>
-          </div>
-        </div>
+        </section>
 
         {alertsQuery.isError && (
           <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
@@ -1888,7 +2274,7 @@ export default function ReportsPage() {
             <span>
               {alertsQuery.error instanceof Error
                 ? alertsQuery.error.message
-                : "Failed to load alerts"}
+                : t("reports.failedAlerts")}
             </span>
           </div>
         )}
@@ -1908,15 +2294,15 @@ export default function ReportsPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="font-medium text-foreground">
-                  {REPORTS_FOCUS_COPY[activeFocus].title}
+                  {reportsFocusCopy[activeFocus].title}
                 </div>
                 <div className="mt-1 text-muted-foreground">
-                  {REPORTS_FOCUS_COPY[activeFocus].description}
+                  {reportsFocusCopy[activeFocus].description}
                 </div>
                 {activeOpsPreset && (
                   <div className="mt-2 text-[12px] text-muted-foreground">
-                    {REPORTS_OPS_PRESET_COPY[activeOpsPreset].title}.{" "}
-                    {REPORTS_OPS_PRESET_COPY[activeOpsPreset].description}
+                    {reportsOpsPresetCopy[activeOpsPreset].title}.{" "}
+                    {reportsOpsPresetCopy[activeOpsPreset].description}
                   </div>
                 )}
                 {scopeSummary && (
@@ -1939,7 +2325,7 @@ export default function ReportsPage() {
                   onClick={() => router.push("/reports")}
                   className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
                 >
-                  Clear focus
+                  {t("reports.clearFocus")}
                 </button>
               </div>
             </div>
@@ -1948,34 +2334,34 @@ export default function ReportsPage() {
         {!canRunPrivilegedActions && (
           <div className="rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.1)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))] flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>Read-only mode for INSTALLER role: export/retry/mark-read actions are disabled.</span>
+            <span>{t("reports.readOnlyNotice")}</span>
           </div>
         )}
 
         <div
           id="reports-operations-center"
-          className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-[hsl(var(--accent)/0.07)] p-5"
+          className="surface-panel relative overflow-hidden"
         >
           <div className="absolute -top-14 -right-14 h-40 w-40 rounded-full bg-[hsl(var(--accent)/0.15)] blur-3xl pointer-events-none" />
           <div className="relative z-10 space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Operations Command Center
+                  {t("reports.operationsCommandCenter")}
                 </div>
                 <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                  Real-time pressure map
+                  {t("reports.realTimePressureMap")}
                 </h2>
               </div>
               <div className="flex flex-col items-end gap-2">
                 <div className="text-right">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Generated
+                    {t("reports.generated")}
                   </div>
                   <div className="text-[12px] text-foreground">
                     {operationsCenter?.generated_at
                       ? formatDateTime(operationsCenter.generated_at)
-                      : "n/a"}
+                      : t("reports.notAvailable")}
                   </div>
                 </div>
                 <div className="flex flex-wrap justify-end gap-2">
@@ -1984,26 +2370,27 @@ export default function ReportsPage() {
                     onClick={() => router.push("/operations")}
                     className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
                   >
-                    Open Operations Center
+                    {tt("reports.openOperationsCenter")}
                   </button>
                   <button
                     type="button"
                     onClick={() => router.push("/operations?actionable=1")}
                     className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
                   >
-                    Open Actionable Ops
+                    {tt("reports.openActionableOps")}
                   </button>
                 </div>
               </div>
             </div>
 
             {operationsCenterQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">Loading command center...</div>
+              <div className="text-[13px] text-muted-foreground">{tt("reports.loadingCommandCenter")}</div>
             ) : (
               <div className="grid gap-3 md:grid-cols-4">
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+                <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
+                  <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Imports (24h)
+                    {t("reports.imports24h")}
                   </div>
                   <div className="mt-1 text-xl font-semibold text-foreground">
                     {operationsCenter?.imports.total_runs ?? 0}
@@ -2015,22 +2402,25 @@ export default function ReportsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+                <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
+                  <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Import Modes
+                    {tt("reports.importModes")}
                   </div>
                   <div className="mt-1 text-xl font-semibold text-foreground">
                     {operationsCenter?.imports.import_runs ?? 0}
                   </div>
                   <div className="mt-1 text-[12px] text-muted-foreground">
-                    Analyze {operationsCenter?.imports.analyze_runs ?? 0} | Retry{" "}
-                    {operationsCenter?.imports.retry_runs ?? 0}
+                    {tt("reports.analyzeRetry")
+                      .replace("{analyze}", String(operationsCenter?.imports.analyze_runs ?? 0))
+                      .replace("{retry}", String(operationsCenter?.imports.retry_runs ?? 0))}
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+                <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
+                  <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Outbox Risk
+                    {tt("reports.outboxRisk")}
                   </div>
                   <div className="mt-1 text-xl font-semibold text-foreground">
                     {operationsCenter?.outbox.failed_total ?? 0}
@@ -2040,25 +2430,27 @@ export default function ReportsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+                <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
+                  <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Limit Alerts
+                    {tt("reports.limitAlerts")}
                   </div>
                   <div className="mt-1 text-xl font-semibold text-foreground">
                     {operationsCenter?.alerts.unread_count ?? unreadCount}
                   </div>
                   <div className="mt-1 text-[12px] text-muted-foreground">
-                    24h warn {operationsCenter?.alerts.warn_last_24h ?? 0} | danger{" "}
-                    {operationsCenter?.alerts.danger_last_24h ?? 0}
+                    {tt("reports.warnDanger24h")
+                      .replace("{warn}", String(operationsCenter?.alerts.warn_last_24h ?? 0))
+                      .replace("{danger}", String(operationsCenter?.alerts.danger_last_24h ?? 0))}
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+            <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] px-4 py-4">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Top Failing Projects (7d import errors)
+                  {tt("reports.topFailingProjectsTitle")}
                 </div>
                 <button
                   onClick={() => {
@@ -2073,22 +2465,24 @@ export default function ReportsPage() {
                     );
                   }}
                   disabled={topFailingProjects.length === 0}
-                  className="h-7 px-2 rounded-md border border-border bg-card text-[11px] disabled:opacity-50"
+                  className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[11px] font-medium disabled:opacity-50"
                 >
-                  Open in Projects
+                  {tt("reports.openInProjects")}
                 </button>
               </div>
               {topFailingProjects.length === 0 ? (
-                <div className="text-[12px] text-muted-foreground">No failing projects in current window.</div>
+                <div className="text-[12px] text-muted-foreground">{tt("reports.noFailingProjectsCurrentWindow")}</div>
               ) : (
                 <div className="grid gap-2">
                   {topFailingProjects.slice(0, 3).map((item) => (
                     <div
                       key={`${item.project_id}-${item.last_run_at}`}
-                      className="grid grid-cols-[1fr_80px_170px_74px] gap-2 text-[12px] items-center"
+                      className="grid grid-cols-[1fr_80px_170px_74px] items-center gap-2 rounded-xl border border-border/70 bg-background/55 px-3 py-2 text-[12px]"
                     >
                       <div className="font-medium text-foreground truncate">{item.project_name}</div>
-                      <div className="text-muted-foreground text-right">{item.failure_runs} fails</div>
+                      <div className="text-muted-foreground text-right">
+                        {tt("reports.failureRuns").replace("{count}", String(item.failure_runs))}
+                      </div>
                       <div className="text-muted-foreground text-right">{formatDateTime(item.last_run_at)}</div>
                       <button
                         onClick={() =>
@@ -2100,9 +2494,9 @@ export default function ReportsPage() {
                             )}&only_failed_runs=1`
                           )
                         }
-                        className="h-7 px-2 rounded-md border border-border bg-card text-[11px]"
+                        className="h-7 rounded-lg border border-border/70 bg-background/70 px-2 text-[11px] font-medium"
                       >
-                        Open
+                        {tt("reports.openShort")}
                       </button>
                     </div>
                   ))}
@@ -2112,17 +2506,14 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div
-          id="reports-operations-sla"
-          className="glass-card rounded-2xl border border-border p-5 space-y-4"
-        >
+        <div id="reports-operations-sla" className="surface-panel space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                Operations SLA
+                {tt("reports.operationsSlaTitle")}
               </div>
               <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                Health metrics and action playbooks
+                {tt("reports.healthMetricsPlaybooks")}
               </h2>
             </div>
             <span
@@ -2132,12 +2523,12 @@ export default function ReportsPage() {
                   "text-muted-foreground bg-muted/40 border-border"
               )}
             >
-              {operationsSla?.overall_status || "n/a"}
+              {operationsSla?.overall_status || tt("reports.notAvailableShort")}
             </span>
           </div>
 
           {operationsSlaQuery.isLoading ? (
-            <div className="text-[13px] text-muted-foreground">Loading SLA metrics...</div>
+            <div className="text-[13px] text-muted-foreground">{tt("reports.loadingSlaMetrics")}</div>
           ) : operationsSlaQuery.isError ? (
             <div className="text-[13px] text-[hsl(var(--destructive))]">
               {operationsSlaQuery.error instanceof Error
@@ -2150,8 +2541,9 @@ export default function ReportsPage() {
                 {slaMetrics.map((metric) => (
                   <div
                     key={metric.code}
-                    className="rounded-xl border border-border/70 bg-background/60 px-3 py-3"
+                    className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4"
                   >
+                    <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                       {metric.title}
                     </div>
@@ -2180,14 +2572,14 @@ export default function ReportsPage() {
                 ))}
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3 space-y-2">
+              <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] px-4 py-4 space-y-3">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   Action Playbooks
                 </div>
                 {slaPlaybooks.map((playbook) => (
                   <div
                     key={playbook.code}
-                    className="grid grid-cols-[1fr_120px] gap-2 items-center text-[12px]"
+                    className="grid grid-cols-[1fr_120px] items-center gap-2 rounded-xl border border-border/70 bg-background/55 px-3 py-2.5 text-[12px]"
                   >
                     <div>
                       <div className="font-medium text-foreground">
@@ -2206,7 +2598,7 @@ export default function ReportsPage() {
                     </div>
                     <button
                       onClick={() => router.push(playbook.action_url)}
-                      className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
+                      className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium"
                     >
                       Open Playbook
                     </button>
@@ -2214,12 +2606,12 @@ export default function ReportsPage() {
                 ))}
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3 space-y-2">
+              <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] px-4 py-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     SLA Trend (last {slaHistoryDays} days)
                   </div>
-                  <div className="inline-flex items-center rounded-md border border-border bg-card p-0.5">
+                  <div className="inline-flex items-center rounded-lg border border-border/70 bg-background/70 p-0.5">
                     {SLA_HISTORY_DAYS_OPTIONS.map((option) => (
                       <button
                         key={option}
@@ -2247,24 +2639,24 @@ export default function ReportsPage() {
                 ) : (
                   <>
                     <div className="grid gap-2 md:grid-cols-4 text-[12px]">
-                      <div className="rounded-md border border-border px-2 py-1.5">
+                      <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
                         <div className="text-muted-foreground">Current</div>
-                        <div className="font-semibold">{slaHistorySummary?.current_status || "n/a"}</div>
+                        <div className="font-semibold">{slaHistorySummary?.current_status || tt("reports.notAvailableShort")}</div>
                       </div>
-                      <div className="rounded-md border border-border px-2 py-1.5">
+                      <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
                         <div className="text-muted-foreground">Status Days</div>
                         <div className="font-semibold">
                           OK {slaHistorySummary?.ok_days || 0} | WARN {slaHistorySummary?.warn_days || 0} | DANGER{" "}
                           {slaHistorySummary?.danger_days || 0}
                         </div>
                       </div>
-                      <div className="rounded-md border border-border px-2 py-1.5">
+                      <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
                         <div className="text-muted-foreground">Delta Import % (d-1)</div>
                         <div className="font-semibold">
                           {slaHistorySummary?.delta_import_failure_rate_pct ?? 0}
                         </div>
                       </div>
-                      <div className="rounded-md border border-border px-2 py-1.5">
+                      <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
                         <div className="text-muted-foreground">Delta Outbox % (d-1)</div>
                         <div className="font-semibold">
                           {slaHistorySummary?.delta_outbox_failed_rate_pct ?? 0}
@@ -2320,33 +2712,33 @@ export default function ReportsPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                Issues Analytics
+                {tt("reports.issuesAnalyticsTitle")}
               </div>
               <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                MTTR, overdue pressure and backlog dynamics
+                {tt("reports.issuesAnalyticsSubtitle")}
               </h2>
             </div>
             <div className="text-right text-[11px] text-muted-foreground">
               {issuesAnalytics?.generated_at
                 ? formatDateTime(issuesAnalytics.generated_at)
-                : "n/a"}
+                : tt("reports.notAvailableShort")}
             </div>
           </div>
 
           {issuesAnalyticsQuery.isLoading ? (
-            <div className="text-[13px] text-muted-foreground">Loading issues analytics...</div>
+            <div className="text-[13px] text-muted-foreground">{tt("reports.loadingIssuesAnalytics")}</div>
           ) : issuesAnalyticsQuery.isError ? (
             <div className="text-[13px] text-[hsl(var(--destructive))]">
               {issuesAnalyticsQuery.error instanceof Error
                 ? issuesAnalyticsQuery.error.message
-                : "Failed to load issues analytics"}
+                : tt("reports.failedIssuesAnalytics")}
             </div>
           ) : (
             <>
               <div className="grid gap-3 md:grid-cols-5">
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Open / Total
+                    {tt("reports.openTotal")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
                     {issuesAnalytics?.summary.open_issues ?? 0} /{" "}
@@ -2355,13 +2747,16 @@ export default function ReportsPage() {
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Overdue Rate
+                    {tt("reports.overdueRate")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-[hsl(var(--destructive))]">
                     {issuesAnalytics?.summary.overdue_open_rate_pct ?? 0}%
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    {issuesAnalytics?.summary.overdue_open_issues ?? 0} overdue open
+                    {tt("reports.overdueOpen").replace(
+                      "{count}",
+                      String(issuesAnalytics?.summary.overdue_open_issues ?? 0)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
@@ -2378,7 +2773,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Blocked Open
+                    {tt("reports.blockedOpen")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-[hsl(var(--warning-foreground))]">
                     {issuesAnalytics?.summary.blocked_open_issues ?? 0}
@@ -2397,7 +2792,7 @@ export default function ReportsPage() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
-                    Backlog by Workflow
+                    {tt("reports.backlogByWorkflow")}
                   </div>
                   <div className="space-y-1 text-[12px]">
                     {Object.entries(issuesAnalytics?.summary.backlog_by_workflow || {}).map(
@@ -2412,7 +2807,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
-                    Backlog by Priority
+                    {tt("reports.backlogByPriority")}
                   </div>
                   <div className="space-y-1 text-[12px]">
                     {Object.entries(issuesAnalytics?.summary.backlog_by_priority || {}).map(
@@ -2429,7 +2824,10 @@ export default function ReportsPage() {
 
               <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3 space-y-2">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Trend (last {issuesAnalytics?.days ?? ISSUES_ANALYTICS_DAYS} days)
+                  {tt("reports.trendLastDays").replace(
+                    "{days}",
+                    String(issuesAnalytics?.days ?? ISSUES_ANALYTICS_DAYS)
+                  )}
                 </div>
                 {(issuesAnalytics?.trend || []).slice(-10).map((point) => (
                   <div
@@ -2456,72 +2854,81 @@ export default function ReportsPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                Margin Leakage
+                {tt("reports.marginLeakageTitle")}
               </div>
               <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                Open issue exposure, stalled reasons and add-on uplift
+                {tt("reports.marginLeakageSubtitle")}
               </h2>
             </div>
             <div className="text-right text-[11px] text-muted-foreground">
               {issuesAddonsImpact?.generated_at
                 ? formatDateTime(issuesAddonsImpact.generated_at)
-                : "n/a"}
+                : tt("reports.notAvailableShort")}
             </div>
           </div>
 
           {issuesAddonsImpactQuery.isLoading ? (
-            <div className="text-[13px] text-muted-foreground">Loading margin leakage...</div>
+            <div className="text-[13px] text-muted-foreground">{tt("reports.loadingMarginLeakage")}</div>
           ) : issuesAddonsImpactQuery.isError ? (
             <div className="text-[13px] text-[hsl(var(--destructive))]">
               {issuesAddonsImpactQuery.error instanceof Error
                 ? issuesAddonsImpactQuery.error.message
-                : "Failed to load margin leakage"}
+                : tt("reports.failedMarginLeakage")}
             </div>
           ) : (
             <>
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Open Issues at Risk
+                    {tt("reports.openIssuesAtRisk")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
                     {issuesAddonsImpact?.summary?.open_issues ?? 0}
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    Profit at risk {formatAmount(issuesAddonsImpact?.summary?.open_issue_profit_at_risk)}
+                    {tt("reports.profitAtRisk").replace(
+                      "{amount}",
+                      formatAmount(issuesAddonsImpact?.summary?.open_issue_profit_at_risk)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Blocked Margin Risk
+                    {tt("reports.blockedMarginRisk")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-[hsl(var(--destructive))]">
                     {issuesAddonsImpact?.summary?.blocked_open_issues ?? 0}
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    Blocked profit {formatAmount(issuesAddonsImpact?.summary?.blocked_issue_profit_at_risk)}
+                    {tt("reports.blockedProfit").replace(
+                      "{amount}",
+                      formatAmount(issuesAddonsImpact?.summary?.blocked_issue_profit_at_risk)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Delayed Doors
+                    {tt("reports.delayedDoors")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
                     {issuesAddonsImpact?.summary?.not_installed_doors ?? 0}
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    Delayed profit {formatAmount(issuesAddonsImpact?.summary?.delayed_profit_total)}
+                    {tt("reports.delayedProfit").replace(
+                      "{amount}",
+                      formatAmount(issuesAddonsImpact?.summary?.delayed_profit_total)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Add-on Uplift
+                    {tt("reports.addonUplift")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-[hsl(var(--success))]">
                     {formatAmount(issuesAddonsImpact?.summary?.addon_profit_total)}
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    Missing plans {issuesAddonsImpact?.summary?.missing_addon_plans_facts ?? 0}
+                    {t("reports.missingPlans")} {issuesAddonsImpact?.summary?.missing_addon_plans_facts ?? 0}
                   </div>
                 </div>
               </div>
@@ -2530,7 +2937,7 @@ export default function ReportsPage() {
                 <table className="w-full text-[12px]">
                   <thead className="bg-muted/40 text-muted-foreground">
                     <tr>
-                      <th className="text-left px-3 py-2 font-medium">Summary</th>
+                      <th className="text-left px-3 py-2 font-medium">{tt("reports.summary")}</th>
                       <th className="text-right px-3 py-2 font-medium">Revenue</th>
                       <th className="text-right px-3 py-2 font-medium">Payroll</th>
                       <th className="text-right px-3 py-2 font-medium">Profit</th>
@@ -2538,7 +2945,7 @@ export default function ReportsPage() {
                   </thead>
                   <tbody>
                     <tr className="border-t border-border/70">
-                      <td className="px-3 py-2 font-medium text-foreground">Open Issues Exposure</td>
+                      <td className="px-3 py-2 font-medium text-foreground">{tt("reports.openIssuesExposure")}</td>
                       <td className="px-3 py-2 text-right">
                         {formatAmount(issuesAddonsImpact?.summary?.open_issue_revenue_at_risk)}
                       </td>
@@ -2550,7 +2957,7 @@ export default function ReportsPage() {
                       </td>
                     </tr>
                     <tr className="border-t border-border/70">
-                      <td className="px-3 py-2 font-medium text-foreground">Delayed Not Installed</td>
+                      <td className="px-3 py-2 font-medium text-foreground">{tt("reports.delayedNotInstalled")}</td>
                       <td className="px-3 py-2 text-right">
                         {formatAmount(issuesAddonsImpact?.summary?.delayed_revenue_total)}
                       </td>
@@ -2562,7 +2969,7 @@ export default function ReportsPage() {
                       </td>
                     </tr>
                     <tr className="border-t border-border/70">
-                      <td className="px-3 py-2 font-medium text-foreground">Add-on Realized</td>
+                      <td className="px-3 py-2 font-medium text-foreground">{tt("reports.addonRealized")}</td>
                       <td className="px-3 py-2 text-right">
                         {formatAmount(issuesAddonsImpact?.summary?.addon_revenue_total)}
                       </td>
@@ -2580,7 +2987,7 @@ export default function ReportsPage() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-xl border border-border/70 bg-background/60 overflow-auto">
                   <div className="border-b border-border/70 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Delayed by Reason / Defect
+                    {tt("reports.delayedByReason")}
                   </div>
                   <table className="w-full text-[12px]">
                     <thead className="bg-muted/40 text-muted-foreground">
@@ -2595,7 +3002,7 @@ export default function ReportsPage() {
                       {(issuesAddonsImpact?.top_reasons || []).length === 0 ? (
                         <tr>
                           <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                            No delayed reasons.
+                            {tt("reports.noDelayedReasons")}
                           </td>
                         </tr>
                       ) : (
@@ -2623,22 +3030,22 @@ export default function ReportsPage() {
 
                 <div className="rounded-xl border border-border/70 bg-background/60 overflow-auto">
                   <div className="border-b border-border/70 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Add-on Profit Impact
+                    {tt("reports.addonProfitImpact")}
                   </div>
                   <table className="w-full text-[12px]">
                     <thead className="bg-muted/40 text-muted-foreground">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">Add-on</th>
+                        <th className="text-left px-3 py-2 font-medium">{tt("reports.addon")}</th>
                         <th className="text-right px-3 py-2 font-medium">Qty</th>
                         <th className="text-right px-3 py-2 font-medium">Profit</th>
-                        <th className="text-right px-3 py-2 font-medium">Missing Plans</th>
+                        <th className="text-right px-3 py-2 font-medium">{tt("reports.missingPlans")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(issuesAddonsImpact?.addon_impact || []).length === 0 ? (
                         <tr>
                           <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                            No add-on impact rows.
+                            {tt("reports.noAddonImpactRows")}
                           </td>
                         </tr>
                       ) : (
@@ -2672,11 +3079,9 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Project Plan vs Fact
+                {tt("reports.projectPlanVsFactTitle")}
               </div>
-              <div className="text-[13px] text-muted-foreground">
-                Financial execution and delivery gap on the selected project
-              </div>
+              <div className="text-[13px] text-muted-foreground">{tt("reports.projectPlanVsFactSubtitle")}</div>
             </div>
             <select
               aria-label="Project Plan Fact Filter"
@@ -2685,7 +3090,7 @@ export default function ReportsPage() {
               className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
             >
               <option value="">
-                {projectsQuery.isLoading ? "Loading projects..." : "Select project"}
+                {projectsQuery.isLoading ? t("reports.loadingProjects") : t("reports.selectProject")}
               </option>
               {projectOptions.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -2697,35 +3102,35 @@ export default function ReportsPage() {
 
           {projectsQuery.isLoading && !projectPlanFactProjectId && (
             <div className="px-4 py-6">
-              <SectionMessage title="Loading projects" detail="Preparing project plan vs fact filters." />
+              <SectionMessage title={tt("reports.loadingProjectsForPlanFact")} detail={tt("reports.preparingPlanFactFilters")} />
             </div>
           )}
           {!projectsQuery.isLoading && projectOptions.length === 0 && (
             <div className="px-4 py-6">
               <SectionMessage
-                title="No projects for plan vs fact"
-                detail="Import a factory file into Projects first, then this block will compute plan, fact and profit gap."
+                title={t("reports.noProjectsForPlanFact")}
+                detail={t("reports.importFactoryFileFirst")}
               />
             </div>
           )}
           {!projectsQuery.isLoading && projectOptions.length > 0 && !projectPlanFactProjectId && (
             <div className="px-4 py-6">
               <SectionMessage
-                title="Select a project"
-                detail="Choose a project to calculate planned revenue, actual payroll and realized profit."
+                title={t("reports.selectProject")}
+                detail={t("reports.selectProjectPlanFact")}
               />
             </div>
           )}
           {projectPlanFactQuery.isLoading && projectPlanFactProjectId && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading project plan vs fact...
+              {tt("reports.loadingProjectPlanFact")}
             </div>
           )}
           {projectPlanFactQuery.isError && projectPlanFactProjectId && (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
               {projectPlanFactQuery.error instanceof Error
                 ? projectPlanFactQuery.error.message
-                : "Failed to load project plan vs fact"}
+                : tt("reports.failedProjectPlanFact")}
             </div>
           )}
           {!projectPlanFactQuery.isLoading &&
@@ -2735,47 +3140,47 @@ export default function ReportsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Completion
+                      {t("projects.completion")}
                     </div>
                     <div className="mt-2 text-[22px] font-semibold text-foreground">
                       {formatPercent(projectPlanFact.completion_pct)}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      {projectPlanFact.installed_doors} / {projectPlanFact.total_doors} doors installed
+                      {projectPlanFact.installed_doors} / {projectPlanFact.total_doors} {t("reports.doors").toLowerCase()} installed
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Open Issues
+                      {t("reports.openIssuesExposure")}
                     </div>
                     <div className="mt-2 text-[22px] font-semibold text-foreground">
                       {projectPlanFact.open_issues}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      {projectPlanFact.not_installed_doors} doors still pending
+                      {projectPlanFact.not_installed_doors} {t("reports.doors").toLowerCase()} still pending
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Missing Rates
+                      {t("projects.missingRates")}
                     </div>
                     <div className="mt-2 text-[22px] font-semibold text-foreground">
                       {projectPlanFact.missing_planned_rates_doors}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      Actual missing: {projectPlanFact.missing_actual_rates_doors}
+                      {tt("reports.actualMissing")}: {projectPlanFact.missing_actual_rates_doors}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Addons Qty
+                      {t("projects.addons")}
                     </div>
                     <div className="mt-2 text-[22px] font-semibold text-foreground">
                       {formatAmount(projectPlanFact.actual_addons_qty)} /{" "}
                       {formatAmount(projectPlanFact.planned_addons_qty)}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      Missing addon plans: {projectPlanFact.missing_addon_plans_facts}
+                      {t("reports.missingPlans")}: {projectPlanFact.missing_addon_plans_facts}
                     </div>
                   </div>
                 </div>
@@ -2784,15 +3189,15 @@ export default function ReportsPage() {
                   <table className="w-full text-[13px]">
                     <thead className="bg-muted/40 text-muted-foreground">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">Metric</th>
-                        <th className="text-right px-3 py-2 font-medium">Plan</th>
-                        <th className="text-right px-3 py-2 font-medium">Fact</th>
-                        <th className="text-right px-3 py-2 font-medium">Gap</th>
+                        <th className="text-left px-3 py-2 font-medium">{t("reports.metric")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{t("reports.plan")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{t("reports.fact")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{t("reports.gap")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr className="border-t border-border/70">
-                        <td className="px-3 py-2 font-medium text-foreground">Revenue</td>
+                        <td className="px-3 py-2 font-medium text-foreground">{t("reports.revenue")}</td>
                         <td className="px-3 py-2 text-right">
                           {formatAmount(projectPlanFact.planned_revenue_total)}
                         </td>
@@ -2804,7 +3209,7 @@ export default function ReportsPage() {
                         </td>
                       </tr>
                       <tr className="border-t border-border/70">
-                        <td className="px-3 py-2 font-medium text-foreground">Payroll</td>
+                        <td className="px-3 py-2 font-medium text-foreground">{tt("reports.payroll")}</td>
                         <td className="px-3 py-2 text-right">
                           {formatAmount(projectPlanFact.planned_payroll_total)}
                         </td>
@@ -2838,10 +3243,10 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Project Risk Drill-down
+                {tt("reports.projectRiskTitle")}
               </div>
               <div className="text-[13px] text-muted-foreground">
-                Why the selected project is leaking margin: drivers, stalled reasons and risky orders
+                {tt("reports.projectRiskSubtitle")}
               </div>
             </div>
             <select
@@ -2851,7 +3256,7 @@ export default function ReportsPage() {
               className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
             >
               <option value="">
-                {projectsQuery.isLoading ? "Loading projects..." : "Select project"}
+                {projectsQuery.isLoading ? tt("reports.loadingProjects") : t("reports.selectProject")}
               </option>
               {projectOptions.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -2863,14 +3268,14 @@ export default function ReportsPage() {
 
           {projectRiskDrilldownQuery.isLoading && projectRiskProjectId && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading project risk drill-down...
+              {tt("reports.loadingProjectRisk")}
             </div>
           )}
           {projectRiskDrilldownQuery.isError && projectRiskProjectId && (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
               {projectRiskDrilldownQuery.error instanceof Error
                 ? projectRiskDrilldownQuery.error.message
-                : "Failed to load project risk drill-down"}
+                : tt("reports.failedProjectRisk")}
             </div>
           )}
           {!projectsQuery.isLoading && projectOptions.length > 0 && !projectRiskProjectId && (
@@ -3048,27 +3453,27 @@ export default function ReportsPage() {
         <div id="reports-installers-kpi" className="glass-card rounded-xl overflow-hidden border border-border">
           <div className="px-4 py-3 border-b border-border bg-muted/30">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              Project Margin Executive
+              {tt("reports.projectMarginExecutiveTitle")}
             </div>
             <div className="text-[13px] text-muted-foreground">
-              Top profitable and low-margin projects based on actual realized margin
+              {tt("reports.projectMarginExecutiveSubtitle")}
             </div>
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 p-4">
             <div className="overflow-auto rounded-lg border border-border">
               <div className="px-3 py-2 border-b border-border bg-muted/30 text-[12px] font-medium">
-                Top Margin Projects
+                {tt("reports.topMarginProjects")}
               </div>
               {topProjectsMarginQuery.isLoading ? (
                 <div className="px-3 py-4 text-[13px] text-muted-foreground">
-                  Loading top margin projects...
+                  {tt("reports.loadingTopMarginProjects")}
                 </div>
               ) : topProjectsMarginQuery.isError ? (
                 <div className="px-3 py-4 text-[13px] text-[hsl(var(--destructive))]">
                   {topProjectsMarginQuery.error instanceof Error
                     ? topProjectsMarginQuery.error.message
-                    : "Failed to load top margin projects"}
+                    : tt("reports.failedTopMarginProjects")}
                 </div>
               ) : (
                 <table className="w-full text-[12px]">
@@ -3084,7 +3489,7 @@ export default function ReportsPage() {
                     {topProjectsMargin.length === 0 ? (
                       <tr>
                         <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                          No profitable projects yet.
+                          {tt("reports.noProfitableProjects")}
                         </td>
                       </tr>
                     ) : (
@@ -3093,7 +3498,9 @@ export default function ReportsPage() {
                           <td className="px-3 py-2">
                             <div className="font-medium text-foreground">{item.project_name}</div>
                             <div className="text-[11px] text-muted-foreground">
-                              Status {item.project_status} | Issues {item.open_issues}
+                              {tt("reports.statusIssues")
+                                .replace("{status}", item.project_status)
+                                .replace("{issues}", String(item.open_issues))}
                             </div>
                           </td>
                           <td className="px-3 py-2 text-right">
@@ -3115,17 +3522,17 @@ export default function ReportsPage() {
 
             <div className="overflow-auto rounded-lg border border-border">
               <div className="px-3 py-2 border-b border-border bg-muted/30 text-[12px] font-medium">
-                Low Margin / Risk Projects
+                {tt("reports.lowMarginRiskProjects")}
               </div>
               {riskProjectsMarginQuery.isLoading ? (
                 <div className="px-3 py-4 text-[13px] text-muted-foreground">
-                  Loading low-margin projects...
+                  {tt("reports.loadingLowMarginProjects")}
                 </div>
               ) : riskProjectsMarginQuery.isError ? (
                 <div className="px-3 py-4 text-[13px] text-[hsl(var(--destructive))]">
                   {riskProjectsMarginQuery.error instanceof Error
                     ? riskProjectsMarginQuery.error.message
-                    : "Failed to load low-margin projects"}
+                    : tt("reports.failedLowMarginProjects")}
                 </div>
               ) : (
                 <table className="w-full text-[12px]">
@@ -3141,7 +3548,7 @@ export default function ReportsPage() {
                     {riskProjectsMargin.length === 0 ? (
                       <tr>
                         <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                          No low-margin projects.
+                          {tt("reports.noLowMarginProjects")}
                         </td>
                       </tr>
                     ) : (
@@ -3150,7 +3557,9 @@ export default function ReportsPage() {
                           <td className="px-3 py-2">
                             <div className="font-medium text-foreground">{item.project_name}</div>
                             <div className="text-[11px] text-muted-foreground">
-                              Completion {formatPercent(item.completion_pct)} | Issues {item.open_issues}
+                              {tt("reports.completionIssues")
+                                .replace("{completion}", formatPercent(item.completion_pct))
+                                .replace("{issues}", String(item.open_issues))}
                             </div>
                           </td>
                           <td className="px-3 py-2 text-right">
@@ -3176,64 +3585,73 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Risk Concentration
+                {tt("reports.riskConcentrationTitle")}
               </div>
               <div className="text-[13px] text-muted-foreground">
-                Where margin risk is currently concentrated across projects, orders and installers
+                {tt("reports.riskConcentrationSubtitle")}
               </div>
             </div>
             <div className="text-right text-[11px] text-muted-foreground">
               {riskConcentration?.generated_at
                 ? formatDateTime(riskConcentration.generated_at)
-                : "n/a"}
+                : tt("reports.notAvailableShort")}
             </div>
           </div>
 
           {riskConcentrationQuery.isLoading ? (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading risk concentration...
+              {tt("reports.loadingRiskConcentration")}
             </div>
           ) : riskConcentrationQuery.isError ? (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
               {riskConcentrationQuery.error instanceof Error
                 ? riskConcentrationQuery.error.message
-                : "Failed to load risk concentration"}
+                : tt("reports.failedRiskConcentration")}
             </div>
           ) : (
             <div className="p-4 space-y-4">
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="rounded-lg border border-border bg-card p-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Delayed Profit
+                    {tt("reports.delayedProfitLabel")}
                   </div>
                   <div className="mt-2 text-[22px] font-semibold text-[hsl(var(--destructive))]">
                     {formatAmount(riskConcentration?.summary.delayed_profit_total)}
                   </div>
                   <div className="mt-1 text-[12px] text-muted-foreground">
-                    Open issue risk {formatAmount(riskConcentration?.summary.open_issue_profit_at_risk)}
+                    {tt("reports.openIssueRisk").replace(
+                      "{amount}",
+                      formatAmount(riskConcentration?.summary.open_issue_profit_at_risk)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Blocked Issue Risk
+                    {tt("reports.blockedIssueRisk")}
                   </div>
                   <div className="mt-2 text-[22px] font-semibold text-[hsl(var(--warning-foreground))]">
                     {formatAmount(riskConcentration?.summary.blocked_issue_profit_at_risk)}
                   </div>
                   <div className="mt-1 text-[12px] text-muted-foreground">
-                    Worst installer {formatAmount(riskConcentration?.summary.worst_installer_profit_total)}
+                    {tt("reports.worstInstaller").replace(
+                      "{amount}",
+                      formatAmount(riskConcentration?.summary.worst_installer_profit_total)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-3">
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Risky Projects / Orders
+                    {tt("reports.riskyProjectsOrders")}
                   </div>
                   <div className="mt-2 text-[22px] font-semibold text-foreground">
                     {riskConcentration?.summary.risky_projects ?? 0} /{" "}
                     {riskConcentration?.summary.risky_orders ?? 0}
                   </div>
                   <div className="mt-1 text-[12px] text-muted-foreground">
-                    Worst project {formatAmount(riskConcentration?.summary.worst_project_profit_total)}
+                    {tt("reports.worstProject").replace(
+                      "{amount}",
+                      formatAmount(riskConcentration?.summary.worst_project_profit_total)
+                    )}
                   </div>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-3">
@@ -3400,10 +3818,10 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Installer Profitability Matrix
+                {tt("reports.installerProfitabilityMatrix")}
               </div>
               <div className="text-[13px] text-muted-foreground">
-                Ranking by money output, margin quality and issue pressure
+                {tt("reports.installerProfitabilitySubtitle")}
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -3436,7 +3854,7 @@ export default function ReportsPage() {
 
           {installerProfitabilityMatrixQuery.isLoading ? (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading installer profitability matrix...
+              {tt("reports.loadingInstallerProfitability")}
             </div>
           ) : installerProfitabilityMatrixQuery.isError ? (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
@@ -3477,7 +3895,9 @@ export default function ReportsPage() {
                         <td className="px-3 py-2">
                           <div className="font-medium text-foreground">{item.installer_name}</div>
                           <div className="text-[11px] text-muted-foreground">
-                            Projects {item.active_projects} | Add-ons {formatAmount(item.addons_done_qty)}
+                            {tt("reports.projectsAddons")
+                              .replace("{projects}", String(item.active_projects))
+                              .replace("{addons}", formatAmount(item.addons_done_qty))}
                           </div>
                         </td>
                         <td className="px-3 py-2">
@@ -3514,10 +3934,10 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Installer x Project Cross-view
+                {tt("reports.installerCrossViewTitle")}
               </div>
               <div className="text-[13px] text-muted-foreground">
-                Which installer-project combinations create or destroy margin
+                {tt("reports.installerCrossViewSubtitle")}
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -3550,7 +3970,7 @@ export default function ReportsPage() {
 
           {installerProjectProfitabilityQuery.isLoading ? (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading installer-project cross-view...
+              {tt("reports.loadingInstallerCrossView")}
             </div>
           ) : installerProjectProfitabilityQuery.isError ? (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
@@ -3632,10 +4052,10 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Installers KPI
+                {tt("reports.installersKpiTitle")}
               </div>
               <div className="text-[13px] text-muted-foreground">
-                Sorted, paginated installer performance and money metrics
+                {tt("reports.installersKpiSubtitle")}
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -3673,7 +4093,7 @@ export default function ReportsPage() {
                 title={privilegedActionHint}
                 className="h-9 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
               >
-                Export Installers CSV
+                {tt("reports.exportInstallersCsv")}
               </button>
             </div>
           </div>
@@ -3689,7 +4109,7 @@ export default function ReportsPage() {
 
           {installersKpiQuery.isLoading && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading installers KPI...
+              {tt("reports.loadingInstallersKpi")}
             </div>
           )}
           {installersKpiQuery.isError && (
@@ -3722,7 +4142,9 @@ export default function ReportsPage() {
               </div>
             ))}
           <div className="px-4 py-3 border-t border-border/70 flex items-center justify-between text-[12px]">
-            <div className="text-muted-foreground">Rows: {installersKpiItems.length}</div>
+            <div className="text-muted-foreground">
+              {tt("reports.rowsCount").replace("{count}", String(installersKpiItems.length))}
+            </div>
             <div className="flex items-center gap-2">
               <button
                 disabled={!installersKpiCanPrev}
@@ -3731,14 +4153,14 @@ export default function ReportsPage() {
                 }
                 className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
               >
-                Prev
+                {tt("reports.prev")}
               </button>
               <button
                 disabled={!installersKpiCanNext}
                 onClick={() => setInstallersKpiOffset((x) => x + KPI_PAGE_SIZE)}
                 className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
               >
-                Next
+                {tt("reports.next")}
               </button>
             </div>
           </div>
@@ -3748,7 +4170,7 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Installer Drill-down
+                {tt("reports.installerDrilldownTitle")}
               </div>
               <div className="text-[13px] text-muted-foreground">
                 Profitability, projects, orders and addon impact for the selected installer
@@ -3790,7 +4212,7 @@ export default function ReportsPage() {
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
               {installerDetailsQuery.error instanceof Error
                 ? installerDetailsQuery.error.message
-                : "Failed to load installer details"}
+                : tt("reports.failedInstallerDetails")}
             </div>
           )}
           {!installerDetailsQuery.isLoading &&
@@ -3800,7 +4222,7 @@ export default function ReportsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Revenue / Payroll / Profit
+                      {tt("reports.revenuePayrollProfit")}
                     </div>
                     <div className="mt-2 text-[18px] font-semibold text-foreground">
                       {formatAmount(installerDetails.revenue_total)}
@@ -3812,39 +4234,43 @@ export default function ReportsPage() {
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Projects / Orders
+                      {tt("reports.projectsOrders")}
                     </div>
                     <div className="mt-2 text-[18px] font-semibold text-foreground">
                       {installerDetails.active_projects} / {installerDetails.order_numbers}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      Installed doors: {installerDetails.installed_doors}
+                      {tt("reports.installedDoors").replace(
+                        "{count}",
+                        String(installerDetails.installed_doors)
+                      )}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Open Issues / Missing Rates
+                      {tt("reports.openIssuesMissingRates")}
                     </div>
                     <div className="mt-2 text-[18px] font-semibold text-foreground">
                       {installerDetails.open_issues} / {installerDetails.missing_rates_installed_doors}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      Last install:{" "}
+                      {tt("reports.lastInstall")}{" "}
                       {installerDetails.last_installed_at
                         ? formatDateTime(installerDetails.last_installed_at)
-                        : "n/a"}
+                        : tt("reports.notAvailableShort")}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Addons Impact
+                      {tt("reports.addonsImpact")}
                     </div>
                     <div className="mt-2 text-[18px] font-semibold text-foreground">
                       Qty {formatAmount(installerDetails.addons_done_qty)}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      Profit {formatAmount(installerDetails.addon_profit_total)} | Missing plans{" "}
-                      {installerDetails.missing_addon_plans_facts}
+                      {tt("reports.addonsProfitMissingPlans")
+                        .replace("{profit}", formatAmount(installerDetails.addon_profit_total))
+                        .replace("{count}", String(installerDetails.missing_addon_plans_facts))}
                     </div>
                   </div>
                 </div>
@@ -3952,7 +4378,7 @@ export default function ReportsPage() {
                 className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
               >
                 <option value="">
-                  {projectsQuery.isLoading ? "Loading projects..." : "All projects"}
+                  {projectsQuery.isLoading ? tt("reports.loadingProjects") : t("common.all")}
                 </option>
                 {projectOptions.map((project) => (
                   <option key={project.id} value={project.id}>
@@ -4003,7 +4429,7 @@ export default function ReportsPage() {
                 title={privilegedActionHint}
                 className="h-9 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
               >
-                Export Orders CSV
+                {tt("reports.exportOrdersCsv")}
               </button>
             </div>
           </div>
@@ -4069,14 +4495,14 @@ export default function ReportsPage() {
                 }
                 className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
               >
-                Prev
+                {tt("reports.prev")}
               </button>
               <button
                 disabled={!orderNumbersKpiCanNext}
                 onClick={() => setOrderNumbersKpiOffset((x) => x + KPI_PAGE_SIZE)}
                 className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
               >
-                Next
+                {tt("reports.next")}
               </button>
             </div>
           </div>
@@ -4186,10 +4612,13 @@ export default function ReportsPage() {
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <div className="rounded-lg border border-border/70 bg-background/60 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Failed outbox lane
+                  {t("reports.failedOutboxLane")}
                 </div>
                 <div className="mt-2 text-[13px] text-card-foreground">
-                  {failedItems.length} failed messages in current scope
+                  {t("reports.failedMessagesInCurrentScope").replace(
+                    "{count}",
+                    String(failedItems.length)
+                  )}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
@@ -4204,7 +4633,7 @@ export default function ReportsPage() {
                     }
                     className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
                   >
-                    Open scoped ops
+                    {t("reports.openScopedOps")}
                   </button>
                   {scopedOutboxId ? (
                     <button
@@ -4219,7 +4648,7 @@ export default function ReportsPage() {
                       }
                       className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
                     >
-                      Continue recovery
+                      {t("reports.continueRecovery")}
                     </button>
                   ) : null}
                 </div>
@@ -4227,13 +4656,13 @@ export default function ReportsPage() {
 
               <div className="rounded-lg border border-border/70 bg-background/60 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Webhook lane
+                  {t("reports.webhookLane")}
                 </div>
                 {webhookSignalsQuery.isLoading ? (
-                  <div className="mt-2 text-[13px] text-muted-foreground">Loading webhook scope...</div>
+                  <div className="mt-2 text-[13px] text-muted-foreground">{t("reports.loadingWebhookScope")}</div>
                 ) : scopedWebhookSignals.length === 0 ? (
                   <div className="mt-2 text-[13px] text-muted-foreground">
-                    No webhook signals for current scope.
+                    {t("reports.noWebhookSignalsCurrentScope")}
                   </div>
                 ) : (
                   <div className="mt-2 space-y-2">
@@ -4255,15 +4684,15 @@ export default function ReportsPage() {
 
               <div className="rounded-lg border border-border/70 bg-background/60 p-3 md:col-span-2">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Recovery trail
+                  {t("reports.recoveryTrail")}
                 </div>
                 {retryAuditsQuery.isLoading ? (
-                  <div className="mt-2 text-[13px] text-muted-foreground">Loading retry audit trail...</div>
+                  <div className="mt-2 text-[13px] text-muted-foreground">{t("reports.loadingRetryAuditTrail")}</div>
                 ) : scopedRetryAuditItems.length === 0 ? (
                   <div className="mt-2 text-[13px] text-muted-foreground">
                     {scopedOutboxId
-                      ? "No recovery actions recorded for this outbox yet."
-                      : "No delivery recovery actions recorded yet."}
+                      ? t("reports.noRecoveryActionsForOutbox")
+                      : t("reports.noDeliveryRecoveryActionsYet")}
                   </div>
                 ) : (
                   <div className="mt-2 space-y-2">
@@ -4297,7 +4726,7 @@ export default function ReportsPage() {
                             }
                             className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
                           >
-                            Open recovery lane
+                            {t("reports.openRecoveryLane")}
                           </button>
                           <button
                             onClick={() =>
@@ -4311,7 +4740,7 @@ export default function ReportsPage() {
                             }
                             className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
                           >
-                            Continue in ops
+                            {t("reports.continueInOps")}
                           </button>
                         </div>
                       </div>
@@ -4324,18 +4753,18 @@ export default function ReportsPage() {
 
           <div className="glass-card rounded-xl border border-border p-4">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
-              Catalog Audit
+              {t("reports.catalogAudit")}
             </div>
             {auditCatalogsQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">Loading...</div>
+              <div className="text-[13px] text-muted-foreground">{t("reports.loading")}</div>
             ) : (
               <div className="space-y-1 text-[13px]">
-                <div>Total changes: {auditSummary?.total ?? 0}</div>
+                <div>{t("reports.totalChanges")}: {auditSummary?.total ?? 0}</div>
                 <div className="text-muted-foreground">
-                  Entities: {compactMap(auditSummary?.by_entity)}
+                  {t("reports.entities")}: {compactMap(auditSummary?.by_entity)}
                 </div>
                 <div className="text-muted-foreground">
-                  Actions: {compactMap(auditSummary?.by_action)}
+                  {t("reports.actions")}: {compactMap(auditSummary?.by_action)}
                 </div>
               </div>
             )}
@@ -4343,18 +4772,18 @@ export default function ReportsPage() {
 
           <div className="glass-card rounded-xl border border-border p-4">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
-              Issue Audit
+              {t("reports.issueAudit")}
             </div>
             {issueAuditQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">Loading...</div>
+              <div className="text-[13px] text-muted-foreground">{t("reports.loading")}</div>
             ) : (
               <div className="space-y-1 text-[13px]">
-                <div>Total changes: {issueAuditSummary?.total ?? 0}</div>
+                <div>{t("reports.totalChanges")}: {issueAuditSummary?.total ?? 0}</div>
                 <div className="text-muted-foreground">
-                  Entities: {compactMap(issueAuditSummary?.by_entity)}
+                  {t("reports.entities")}: {compactMap(issueAuditSummary?.by_entity)}
                 </div>
                 <div className="text-muted-foreground">
-                  Actions: {compactMap(issueAuditSummary?.by_action)}
+                  {t("reports.actions")}: {compactMap(issueAuditSummary?.by_action)}
                 </div>
               </div>
             )}
@@ -4366,18 +4795,18 @@ export default function ReportsPage() {
           className="glass-card rounded-xl overflow-hidden border border-border"
         >
           <div className="px-4 py-3 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
-            Failed Outbox Queue
+            {t("reports.failedOutboxQueue")}
           </div>
           {failedOutboxQuery.isLoading && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading failed messages...
+              {t("reports.loadingFailedMessages")}
             </div>
           )}
           {!failedOutboxQuery.isLoading && failedItems.length === 0 && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
               {scopedDeliveryChannel
-                ? `No failed outbox messages for ${scopedDeliveryChannel}.`
-                : "No failed outbox messages."}
+                ? t("reports.noFailedOutboxMessagesFor").replace("{scope}", scopedDeliveryChannel)
+                : t("reports.noFailedOutboxMessages")}
             </div>
           )}
           {!failedOutboxQuery.isLoading &&

@@ -14,7 +14,43 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { apiFetch } from "@/lib/api";
+import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+
+const projectsOverrides: Partial<Record<Locale, Record<string, string>>> = {
+  he: {
+    "projects.activeScope": "הקשר פעיל",
+    "projects.portfolioOverview": "מבט על הפורטפוליו",
+    "projects.selectProjectHint": "בחר פרויקט כדי לעדכן יבוא, רווחיות וסיכונים.",
+    "projects.queue": "תור",
+    "projects.retryFailed": "נסה שוב כושלים",
+    "projects.reconcileAll": "התאמה מלאה",
+    "projects.reportsHandoff": "זוהו {count} פרויקטים מהדו\"ח עם יבואים כושלים.",
+    "projects.retryFailedOnly": "נסה שוב רק את הכושלים",
+    "projects.toReconcileSafely": "ואז בצע התאמה בצורה בטוחה.",
+    "projects.projectList": "רשימת פרויקטים",
+    "projects.portfolioNavigator": "ניווט פורטפוליו",
+    "projects.filteredCount": "מסוננים:",
+    "projects.selectedCount": "נבחרו:",
+    "projects.searchProject": "חיפוש לפי שם או כתובת",
+    "projects.selectAllFiltered": "בחר את כל המסוננים",
+    "projects.reviewing": "בודק...",
+    "projects.reviewSelected": "בדוק נבחרים",
+    "projects.reconciling": "מבצע התאמה...",
+    "projects.reconcile": "התאם",
+    "projects.retryFailedLatestOnly": "רק הרצות אחרונות שנכשלו",
+    "projects.loadingProjects": "טוען פרויקטים...",
+    "projects.noProjectsFound": "לא נמצאו פרויקטים.",
+    "projects.failedImportsQueue": "תור יבואים כושלים",
+    "projects.refreshQueue": "רענן תור",
+    "projects.retryingProgress": "מנסה שוב {processed} מתוך {total}",
+    "projects.retrySelected": "נסה שוב נבחרים ({count})",
+    "projects.progress": "התקדמות",
+    "projects.lastRetryBatch": "ניסיון אחרון: {success} הצליחו, {failed} נכשלו, {skipped} דולגו",
+    "projects.loadingFailedQueue": "טוען תור יבואים כושלים...",
+    "projects.noFailedQueue": "אין כרגע יבואים כושלים.",
+  },
+};
 
 type ProjectListItem = {
   id: string;
@@ -493,6 +529,8 @@ function chunkIds(values: string[], size: number): string[][] {
 }
 
 export default function ProjectsPage() {
+  const { locale, t } = useI18n();
+  const tt = (key: string) => projectsOverrides[locale]?.[key] ?? t(key);
   const searchParams = useSearchParams();
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [doorTypes, setDoorTypes] = useState<DoorType[]>([]);
@@ -561,12 +599,12 @@ export default function ProjectsPage() {
   const [matrixApartmentSearch, setMatrixApartmentSearch] = useState("");
   const [matrixMarkingSearch, setMatrixMarkingSearch] = useState("");
 
-  const deepLinkProjectId = (searchParams.get("project_id") || "").trim();
+  const deepLinkProjectId = (searchParams?.get("project_id") || "").trim();
   const deepLinkFailedIds = useMemo(
-    () => parseIdsCsv(searchParams.get("failed_project_ids")),
+    () => parseIdsCsv(searchParams?.get("failed_project_ids") || null),
     [searchParams]
   );
-  const deepLinkOnlyFailed = searchParams.get("only_failed_runs") === "1";
+  const deepLinkOnlyFailed = searchParams?.get("only_failed_runs") === "1";
   const failedQueueCanPrev = failedQueueOffset > 0;
   const failedQueueCanNext =
     (failedQueueOffset + FAILED_QUEUE_PAGE_SIZE) < (failedQueue?.total || 0);
@@ -972,7 +1010,7 @@ export default function ProjectsPage() {
 
   const renderImportPreviewGroups = (
     diagnostics?: ImportColumnsDiagnostics | null,
-    title = "Project structure preview:"
+    title = t("projects.projectStructurePreview")
   ) => {
     const previewGroups = diagnostics?.preview_groups || [];
     if (previewGroups.length === 0) {
@@ -1037,7 +1075,7 @@ export default function ProjectsPage() {
         setSelectedProjectId(null);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load projects");
+      setError(e instanceof Error ? e.message : t("projects.failedLoadProjects"));
     } finally {
       setLoadingProjects(false);
     }
@@ -1051,7 +1089,7 @@ export default function ProjectsPage() {
       setDoorTypes(response || []);
     } catch (e) {
       setDoorTypes([]);
-      setError(e instanceof Error ? e.message : "Failed to load door types");
+      setError(e instanceof Error ? e.message : t("projects.failedLoadDoorTypes"));
     } finally {
       setLoadingDoorTypes(false);
     }
@@ -1102,7 +1140,7 @@ export default function ProjectsPage() {
       setLayout(response);
     } catch (e) {
       setLayout(null);
-      setError(e instanceof Error ? e.message : "Failed to load layout");
+      setError(e instanceof Error ? e.message : t("projects.failedLoadLayout"));
     } finally {
       setLoadingLayout(false);
     }
@@ -1336,7 +1374,7 @@ export default function ProjectsPage() {
       }
       await loadImportHistory(selectedProjectId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to import file");
+      setError(e instanceof Error ? e.message : t("projects.failedImportFile"));
     } finally {
       setImportLoading(false);
       setImportAction(null);
@@ -1363,7 +1401,7 @@ export default function ProjectsPage() {
       await loadProjectRisk(targetProjectId);
       await loadImportHistory(targetProjectId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to retry import run");
+      setError(e instanceof Error ? e.message : t("projects.failedRetryImportRun"));
     } finally {
       setRetryingRunId(null);
     }
@@ -1423,7 +1461,7 @@ export default function ProjectsPage() {
         await loadImportHistory(selectedProjectId);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to reconcile selected projects");
+      setError(e instanceof Error ? e.message : t("projects.failedReconcileProjects"));
     } finally {
       setBulkReconcileLoading(false);
     }
@@ -1448,7 +1486,7 @@ export default function ProjectsPage() {
       );
       setBulkReviewResult(response);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to review selected projects");
+      setError(e instanceof Error ? e.message : t("projects.failedReviewProjects"));
     } finally {
       setBulkReviewLoading(false);
     }
@@ -1543,7 +1581,7 @@ export default function ProjectsPage() {
         await loadImportHistory(selectedProjectId);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to retry failed queue runs");
+      setError(e instanceof Error ? e.message : t("projects.failedRetryQueueRuns"));
     } finally {
       setRetryFailedProgress((prev) =>
         prev
@@ -1570,32 +1608,90 @@ export default function ProjectsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 max-w-[1500px]">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">Projects</h1>
-            <p className="text-[13px] text-muted-foreground mt-0.5">
-              Floor matrix by location and door marking
-            </p>
+      <div className="motion-stagger max-w-[1500px] space-y-6 p-6 lg:p-8">
+        <section className="page-hero relative overflow-hidden">
+          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
+          <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="page-eyebrow">{tt("projects.eyebrow")}</div>
+              <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
+                {tt("projects.title")}
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
+                {tt("projects.subtitle")}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">{tt("projects.projectsCount")} {projects.length}</span>
+                <span className="metric-chip">{tt("projects.filteredLabel")} {filteredProjects.length}</span>
+                <span className="metric-chip">
+                  {tt("projects.selectedLabel")} {bulkSelectedProjectIds.length}
+                </span>
+                {deepLinkedFailedCount > 0 && (
+                  <span className="metric-chip">{tt("projects.failedHandoff")} {deepLinkedFailedCount}</span>
+                )}
+              </div>
+            </div>
+            <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                    {tt("projects.activeScope")}
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-foreground">
+                    {selectedProject?.name || tt("projects.portfolioOverview")}
+                  </div>
+                  <div className="mt-1 text-[12px] leading-5 text-muted-foreground">
+                    {selectedProject?.address ||
+                      tt("projects.selectProjectHint")}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    void loadProjects();
+                    void loadFailedQueue();
+                    if (selectedProjectId) {
+                      void loadProjectDetails(selectedProjectId);
+                      void loadLayout(selectedProjectId);
+                      void loadProjectPlanFact(selectedProjectId);
+                      void loadProjectRisk(selectedProjectId);
+                      void loadImportHistory(selectedProjectId);
+                    }
+                  }}
+                  className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium"
+                >
+                  <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
+                  {t("common.refresh")}
+                </button>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {tt("common.search")}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">
+                    {search.trim() ? tt("common.filtered") : tt("common.portfolio")}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {tt("projects.queue")}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">
+                    {failedQueue?.total || 0}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {tt("common.mode")}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">
+                    {bulkOnlyFailedRuns ? tt("projects.retryFailed") : tt("projects.reconcileAll")}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={() => {
-              void loadProjects();
-              void loadFailedQueue();
-              if (selectedProjectId) {
-                void loadProjectDetails(selectedProjectId);
-                void loadLayout(selectedProjectId);
-                void loadProjectPlanFact(selectedProjectId);
-                void loadProjectRisk(selectedProjectId);
-                void loadImportHistory(selectedProjectId);
-              }
-            }}
-            className="btn-premium h-9 px-4 rounded-lg border border-border bg-card text-[13px] font-medium flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
-            Refresh
-          </button>
-        </div>
+        </section>
 
         {error && (
           <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
@@ -1606,23 +1702,36 @@ export default function ProjectsPage() {
 
         {deepLinkedFailedCount > 0 && (
           <div className="mb-4 rounded-lg border border-[hsl(var(--accent)/0.35)] bg-[hsl(var(--accent)/0.10)] px-4 py-3 text-[13px] text-foreground">
-            Reports handoff: preselected failing projects {deepLinkedFailedCount}. Use
-            <span className="font-semibold"> Retry failed only</span> to reconcile safely.
+            {tt("projects.reportsHandoff").replace("{count}", String(deepLinkedFailedCount))}{" "}
+            <span className="font-semibold"> {tt("projects.retryFailedOnly")}</span>{" "}
+            {tt("projects.toReconcileSafely")}
           </div>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-          <section className="glass-card rounded-xl p-4 xl:col-span-1">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+          <section className="surface-panel xl:col-span-1">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <div className="page-eyebrow">{tt("projects.projectList")}</div>
+                <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
+                  {tt("projects.portfolioNavigator")}
+                </h2>
+              </div>
+              <div className="text-right text-[12px] text-muted-foreground">
+                <div>{tt("projects.filteredCount")} {filteredProjects.length}</div>
+                <div>{tt("projects.selectedCount")} {bulkSelectedProjectIds.length}</div>
+              </div>
+            </div>
             <div className="relative mb-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search project..."
-                className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/40"
+                placeholder={tt("projects.searchProject")}
+                className="h-11 w-full rounded-xl border border-border/70 bg-background/80 pl-9 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/40"
               />
             </div>
-            <div className="space-y-2 mb-3">
+            <div className="surface-subtle mb-3 space-y-2 p-3">
               <div className="flex items-center justify-between gap-2">
                 <label className="inline-flex items-center gap-2 text-[12px] text-muted-foreground">
                   <input
@@ -1630,7 +1739,7 @@ export default function ProjectsPage() {
                     checked={allFilteredSelected}
                     onChange={(e) => toggleSelectAllFilteredProjects(e.target.checked)}
                   />
-                  Select all filtered ({filteredProjects.length})
+                  {tt("projects.selectAllFiltered")} ({filteredProjects.length})
                 </label>
                 <div className="flex items-center gap-2">
                   <button
@@ -1638,24 +1747,24 @@ export default function ProjectsPage() {
                       void handleBulkReview();
                     }}
                     disabled={bulkReviewLoading || bulkSelectedProjectIds.length === 0}
-                    className="h-8 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {bulkReviewLoading
-                      ? "Reviewing..."
-                      : `Review Selected (${bulkSelectedProjectIds.length})`}
+                      ? tt("projects.reviewing")
+                      : `${tt("projects.reviewSelected")} (${bulkSelectedProjectIds.length})`}
                   </button>
                   <button
                     onClick={() => {
                       void handleBulkReconcile();
                     }}
                     disabled={bulkReconcileLoading || bulkSelectedProjectIds.length === 0}
-                    className="h-8 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {bulkReconcileLoading
-                      ? "Reconciling..."
+                      ? tt("projects.reconciling")
                       : bulkOnlyFailedRuns
-                        ? `Retry Failed (${bulkSelectedProjectIds.length})`
-                        : `Reconcile (${bulkSelectedProjectIds.length})`}
+                        ? `${tt("projects.retryFailed")} (${bulkSelectedProjectIds.length})`
+                        : `${tt("projects.reconcile")} (${bulkSelectedProjectIds.length})`}
                   </button>
                 </div>
               </div>
@@ -1665,15 +1774,15 @@ export default function ProjectsPage() {
                   checked={bulkOnlyFailedRuns}
                   onChange={(e) => setBulkOnlyFailedRuns(e.target.checked)}
                 />
-                Retry failed latest runs only
+                {tt("projects.retryFailedLatestOnly")}
               </label>
             </div>
             <div className="space-y-2 max-h-[75vh] overflow-auto pr-1">
               {loadingProjects && (
-                <div className="text-[13px] text-muted-foreground px-2 py-2">Loading projects...</div>
+                <div className="text-[13px] text-muted-foreground px-2 py-2">{tt("projects.loadingProjects")}</div>
               )}
               {!loadingProjects && filteredProjects.length === 0 && (
-                <div className="text-[13px] text-muted-foreground px-2 py-2">No projects found.</div>
+                <div className="text-[13px] text-muted-foreground px-2 py-2">{tt("projects.noProjectsFound")}</div>
               )}
               {filteredProjects.map((project) => {
                 const active = project.id === selectedProjectId;
@@ -1696,15 +1805,15 @@ export default function ProjectsPage() {
                         setFocusedImportRunDetails(null);
                       }}
                       className={cn(
-                        "w-full text-left rounded-lg border px-3 py-3 transition-all duration-200",
+                        "w-full rounded-xl border px-3 py-3 text-left transition-all duration-200",
                         active
-                          ? "border-accent/40 bg-[hsl(var(--accent)/0.08)]"
-                          : "border-border bg-card hover:border-accent/25 hover:bg-[hsl(var(--accent)/0.04)]"
+                          ? "border-accent/40 bg-[linear-gradient(135deg,hsl(var(--accent)/0.16),hsl(var(--accent)/0.06))] shadow-[0_18px_40px_-26px_hsl(var(--accent)/0.55)]"
+                          : "border-border/70 bg-background/75 hover:border-accent/25 hover:bg-[hsl(var(--accent)/0.04)]"
                       )}
                     >
                       <div className="text-[13px] font-semibold text-card-foreground">{project.name}</div>
                       <div className="text-[12px] text-muted-foreground mt-0.5">{project.address}</div>
-                      <div className="text-[11px] text-muted-foreground mt-2">Status: {project.status}</div>
+                      <div className="text-[11px] text-muted-foreground mt-2">{t("projects.statusPrefix")}: {project.status}</div>
                     </button>
                   </div>
                 );
@@ -1715,73 +1824,74 @@ export default function ProjectsPage() {
           <section className="xl:col-span-2 space-y-5">
             {selectedProject ? (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="glass-card rounded-xl p-4">
-                    <div className="text-[12px] text-muted-foreground">Project</div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                  <div className="surface-panel">
+                    <div className="text-[12px] text-muted-foreground">{t("projects.projectLabel")}</div>
                     <div className="text-[14px] font-semibold mt-1">{selectedProject.name}</div>
                     <div className="text-[12px] text-muted-foreground mt-1">{selectedProject.address}</div>
                     {projectDetails?.developer_company ? (
                       <div className="text-[12px] text-muted-foreground mt-2">
-                        Developer: {projectDetails.developer_company}
+                        {t("projects.developer")}: {projectDetails.developer_company}
                       </div>
                     ) : null}
                   </div>
-                  <div className="glass-card rounded-xl p-4">
+                  <div className="surface-panel">
                     <div className="text-[12px] text-muted-foreground flex items-center gap-1">
                       <Building2 className="w-3.5 h-3.5" />
-                      Total Doors
+                      {t("projects.totalDoors")}
                     </div>
                     <div className="text-[22px] font-semibold mt-1">
                       {layout ? layout.total_doors : "-"}
                     </div>
                   </div>
-                  <div className="glass-card rounded-xl p-4">
+                  <div className="surface-panel">
                     <div className="text-[12px] text-muted-foreground flex items-center gap-1">
                       <Layers3 className="w-3.5 h-3.5" />
-                      Layout Buckets
+                      {t("projects.layoutBuckets")}
                     </div>
                     <div className="text-[22px] font-semibold mt-1">
                       {layout ? layout.buckets.length : "-"}
                     </div>
                   </div>
-                  <div className="glass-card rounded-xl p-4">
-                    <div className="text-[12px] text-muted-foreground">Open Blockers</div>
+                  <div className="surface-panel">
+                    <div className="text-[12px] text-muted-foreground">{t("projects.openBlockers")}</div>
                     <div className="text-[22px] font-semibold mt-1">
                       {loadingProjectDetails ? "-" : projectDetails?.issues_open?.length || 0}
                     </div>
                     <div className="text-[12px] text-muted-foreground mt-1">
                       {projectDetails?.contact_name
-                        ? `Contact: ${projectDetails.contact_name}`
-                        : "No contact assigned"}
+                        ? `${t("projects.contact")}: ${projectDetails.contact_name}`
+                        : t("projects.noContactAssigned")}
                     </div>
                   </div>
                 </div>
 
-                <div className="glass-card rounded-xl p-4">
+                <div className="surface-panel">
                   <div className="flex flex-col gap-2 border-b border-border/70 pb-4 md:flex-row md:items-start md:justify-between">
                     <div>
-                      <h3 className="text-[15px] font-semibold">Project Financial Screen</h3>
+                      <h3 className="text-[15px] font-semibold">{t("projects.projectFinancialScreen")}</h3>
                       <p className="mt-1 text-[12px] text-muted-foreground">
-                        Plan vs fact, margin leakage and risk drivers for the selected project.
+                        {t("projects.projectFinancialSubtitle")}
                       </p>
                     </div>
                     <div className="text-[12px] text-muted-foreground">
                       {loadingProjectPlanFact || loadingProjectRisk
-                        ? "Refreshing financial view..."
+                        ? t("projects.refreshingFinancialView")
                         : projectRisk?.generated_at
                           ? `Updated: ${formatDateTime(projectRisk.generated_at)}`
-                          : "Financial data ready"}
+                          : t("projects.financialDataReady")}
                     </div>
                   </div>
 
                   {loadingProjectPlanFact || loadingProjectRisk ? (
                     <div className="mt-4 text-[13px] text-muted-foreground">
-                      Loading project financial screen...
+                      {t("projects.loadingFinancialScreen")}
                     </div>
                   ) : projectPlanFact && projectRisk ? (
                     <div className="mt-4 space-y-4">
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
-                        <div className="rounded-xl border border-border bg-card/60 p-3">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                             Completion
                           </div>
@@ -1792,7 +1902,8 @@ export default function ProjectsPage() {
                             Installed: {projectPlanFact.installed_doors}/{projectPlanFact.total_doors}
                           </div>
                         </div>
-                        <div className="rounded-xl border border-border bg-card/60 p-3">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                             Actual Margin
                           </div>
@@ -1803,7 +1914,8 @@ export default function ProjectsPage() {
                             Profit: {formatMoney(projectRisk.summary.actual_profit_total)}
                           </div>
                         </div>
-                        <div className="rounded-xl border border-border bg-card/60 p-3">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                             Revenue Gap
                           </div>
@@ -1814,7 +1926,8 @@ export default function ProjectsPage() {
                             Delayed: {formatMoney(projectRisk.summary.delayed_revenue_total)}
                           </div>
                         </div>
-                        <div className="rounded-xl border border-border bg-card/60 p-3">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                             Profit Gap
                           </div>
@@ -1825,7 +1938,8 @@ export default function ProjectsPage() {
                             Risk: {formatMoney(projectRisk.summary.blocked_issue_profit_at_risk)}
                           </div>
                         </div>
-                        <div className="rounded-xl border border-border bg-card/60 p-3">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                             Open Issues
                           </div>
@@ -1836,7 +1950,8 @@ export default function ProjectsPage() {
                             Blocked: {projectRisk.summary.blocked_open_issues}
                           </div>
                         </div>
-                        <div className="rounded-xl border border-border bg-card/60 p-3">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                             Data Risk
                           </div>
@@ -1850,45 +1965,47 @@ export default function ProjectsPage() {
                       </div>
 
                       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.25fr_0.95fr]">
-                        <div className="rounded-xl border border-border bg-background/40 p-4">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-5">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--foreground)/0.14),transparent)]" />
                           <div className="mb-3 flex items-center justify-between">
-                            <h4 className="text-[14px] font-semibold">Plan vs Fact Ledger</h4>
+                            <h4 className="text-[14px] font-semibold">{t("projects.planVsFactLedger")}</h4>
                             <span className="text-[11px] text-muted-foreground">
-                              Add-ons planned/fact: {projectPlanFact.planned_addons_qty}/
-                              {projectPlanFact.actual_addons_qty}
+                              {t("projects.addonsPlannedFact")
+                                .replace("{planned}", String(projectPlanFact.planned_addons_qty))
+                                .replace("{actual}", String(projectPlanFact.actual_addons_qty))}
                             </span>
                           </div>
-                          <div className="overflow-auto rounded-lg border border-border">
+                          <div className="overflow-auto rounded-xl border border-border/70 bg-background/70">
                             <table className="w-full text-[12px]">
-                              <thead className="bg-muted/40 text-muted-foreground">
+                              <thead className="bg-[linear-gradient(180deg,hsl(var(--muted)/0.65),hsl(var(--muted)/0.35))] text-muted-foreground">
                                 <tr>
-                                  <th className="px-3 py-2 text-left font-medium">Metric</th>
-                                  <th className="px-3 py-2 text-left font-medium">Plan</th>
-                                  <th className="px-3 py-2 text-left font-medium">Fact</th>
-                                  <th className="px-3 py-2 text-left font-medium">Gap</th>
+                                  <th className="px-3 py-2 text-left font-medium">{t("projects.metric")}</th>
+                                  <th className="px-3 py-2 text-left font-medium">{t("projects.plan")}</th>
+                                  <th className="px-3 py-2 text-left font-medium">{t("projects.fact")}</th>
+                                  <th className="px-3 py-2 text-left font-medium">{t("projects.gap")}</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                <tr className="border-t border-border/70">
-                                  <td className="px-3 py-2 font-medium">Revenue</td>
+                                <tr className="border-t border-border/70 bg-background/30">
+                                  <td className="px-3 py-2 font-medium">{t("projects.revenue")}</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.planned_revenue_total)}</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.actual_revenue_total)}</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.revenue_gap_total)}</td>
                                 </tr>
                                 <tr className="border-t border-border/70">
-                                  <td className="px-3 py-2 font-medium">Payroll</td>
+                                  <td className="px-3 py-2 font-medium">{t("projects.payroll")}</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.planned_payroll_total)}</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.actual_payroll_total)}</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.payroll_gap_total)}</td>
                                 </tr>
-                                <tr className="border-t border-border/70">
-                                  <td className="px-3 py-2 font-medium">Profit</td>
+                                <tr className="border-t border-border/70 bg-background/30">
+                                  <td className="px-3 py-2 font-medium">{t("projects.profit")}</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.planned_profit_total)}</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.actual_profit_total)}</td>
                                   <td className="px-3 py-2">{formatMoney(projectPlanFact.profit_gap_total)}</td>
                                 </tr>
                                 <tr className="border-t border-border/70">
-                                  <td className="px-3 py-2 font-medium">Add-ons</td>
+                                  <td className="px-3 py-2 font-medium">{t("projects.addons")}</td>
                                   <td className="px-3 py-2">{projectPlanFact.planned_addons_qty}</td>
                                   <td className="px-3 py-2">{projectPlanFact.actual_addons_qty}</td>
                                   <td className="px-3 py-2">
@@ -1900,14 +2017,15 @@ export default function ProjectsPage() {
                           </div>
                         </div>
 
-                        <div className="rounded-xl border border-border bg-background/40 p-4">
-                          <h4 className="text-[14px] font-semibold">Risk Drivers</h4>
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-5">
+                          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--destructive)/0.35),transparent)]" />
+                          <h4 className="text-[14px] font-semibold">{t("projects.riskDrivers")}</h4>
                           <div className="mt-3 space-y-2">
                             {projectRisk.drivers.length > 0 ? (
                               projectRisk.drivers.map((driver) => (
                                 <div
                                   key={driver.code}
-                                  className="flex items-center justify-between rounded-lg border border-border bg-card/60 px-3 py-2"
+                                  className="flex items-center justify-between rounded-xl border border-border/70 bg-background/70 px-3 py-2.5"
                                 >
                                   <div>
                                     <div className="text-[12px] font-medium">{driver.label}</div>
@@ -1930,7 +2048,7 @@ export default function ProjectsPage() {
                               ))
                             ) : (
                               <div className="text-[12px] text-muted-foreground">
-                                No financial risk drivers returned for this project.
+                                {t("projects.noRiskDrivers")}
                               </div>
                             )}
                           </div>
@@ -1938,16 +2056,16 @@ export default function ProjectsPage() {
                       </div>
 
                       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                        <div className="rounded-xl border border-border bg-background/40 p-4">
-                          <h4 className="text-[14px] font-semibold">Top Delay Reasons</h4>
-                          <div className="mt-3 overflow-auto rounded-lg border border-border">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-5">
+                          <h4 className="text-[14px] font-semibold">{t("projects.topDelayReasons")}</h4>
+                          <div className="mt-3 overflow-auto rounded-xl border border-border/70 bg-background/70">
                             <table className="w-full text-[12px]">
-                              <thead className="bg-muted/40 text-muted-foreground">
+                              <thead className="bg-[linear-gradient(180deg,hsl(var(--muted)/0.65),hsl(var(--muted)/0.35))] text-muted-foreground">
                                 <tr>
-                                  <th className="px-3 py-2 text-left font-medium">Reason</th>
-                                  <th className="px-3 py-2 text-left font-medium">Doors</th>
-                                  <th className="px-3 py-2 text-left font-medium">Revenue</th>
-                                  <th className="px-3 py-2 text-left font-medium">Profit</th>
+                                  <th className="px-3 py-2 text-left font-medium">{t("projects.reason")}</th>
+                                  <th className="px-3 py-2 text-left font-medium">{t("projects.doors")}</th>
+                                  <th className="px-3 py-2 text-left font-medium">{t("projects.revenue")}</th>
+                                  <th className="px-3 py-2 text-left font-medium">{t("projects.profit")}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1966,7 +2084,7 @@ export default function ProjectsPage() {
                                 ) : (
                                   <tr className="border-t border-border/70">
                                     <td className="px-3 py-2 text-muted-foreground" colSpan={4}>
-                                      No delay reasons recorded.
+                                      {t("projects.noDelayReasons")}
                                     </td>
                                   </tr>
                                 )}
@@ -1975,16 +2093,16 @@ export default function ProjectsPage() {
                           </div>
                         </div>
 
-                        <div className="rounded-xl border border-border bg-background/40 p-4">
-                          <h4 className="text-[14px] font-semibold">Orders at Risk</h4>
-                          <div className="mt-3 overflow-auto rounded-lg border border-border">
+                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-5">
+                          <h4 className="text-[14px] font-semibold">{t("projects.ordersAtRisk")}</h4>
+                          <div className="mt-3 overflow-auto rounded-xl border border-border/70 bg-background/70">
                             <table className="w-full text-[12px]">
-                              <thead className="bg-muted/40 text-muted-foreground">
+                              <thead className="bg-[linear-gradient(180deg,hsl(var(--muted)/0.65),hsl(var(--muted)/0.35))] text-muted-foreground">
                                 <tr>
-                                  <th className="px-3 py-2 text-left font-medium">Order</th>
-                                  <th className="px-3 py-2 text-left font-medium">Completion</th>
-                                  <th className="px-3 py-2 text-left font-medium">Issues</th>
-                                  <th className="px-3 py-2 text-left font-medium">Gap</th>
+                                  <th className="px-3 py-2 text-left font-medium">{t("projects.orderNumber")}</th>
+                                  <th className="px-3 py-2 text-left font-medium">{t("projects.completion")}</th>
+                                  <th className="px-3 py-2 text-left font-medium">{t("projects.issues")}</th>
+                                  <th className="px-3 py-2 text-left font-medium">{t("projects.gap")}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -2000,7 +2118,7 @@ export default function ProjectsPage() {
                                 ) : (
                                   <tr className="border-t border-border/70">
                                     <td className="px-3 py-2 text-muted-foreground" colSpan={4}>
-                                      No risky orders identified.
+                                      {t("projects.noRiskyOrders")}
                                     </td>
                                   </tr>
                                 )}
@@ -2012,30 +2130,30 @@ export default function ProjectsPage() {
                     </div>
                   ) : (
                     <div className="mt-4 text-[13px] text-muted-foreground">
-                      Financial screen is not available for the selected project yet.
+                      {t("projects.financialUnavailable")}
                     </div>
                   )}
                 </div>
 
                 {bulkReconcileResult && (
-                  <div className="glass-card rounded-xl p-4">
+                  <div className="surface-panel">
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                      <h3 className="text-[14px] font-semibold">Bulk Reconcile Result</h3>
+                      <h3 className="text-[14px] font-semibold">{t("projects.bulkReconcileResult")}</h3>
                       <div className="text-[12px] text-muted-foreground">
-                        Success: {bulkReconcileResult.successful_projects} | Failed:{" "}
-                        {bulkReconcileResult.failed_projects} | Skipped:{" "}
+                        {t("projects.successCount")}: {bulkReconcileResult.successful_projects} | {t("projects.failedCount")}:{" "}
+                        {bulkReconcileResult.failed_projects} | {t("projects.skippedCount")}:{" "}
                         {bulkReconcileResult.skipped_projects}
                       </div>
                     </div>
-                    <div className="overflow-auto rounded-lg border border-border">
+                    <div className="overflow-auto rounded-xl border border-border/70 bg-background/70">
                       <table className="w-full text-[12px]">
                         <thead className="bg-muted/40 text-muted-foreground">
                           <tr>
-                            <th className="text-left px-2 py-2 font-medium">Project</th>
-                            <th className="text-left px-2 py-2 font-medium">Status</th>
-                            <th className="text-left px-2 py-2 font-medium">Imported</th>
-                            <th className="text-left px-2 py-2 font-medium">Skipped</th>
-                            <th className="text-left px-2 py-2 font-medium">Error</th>
+                            <th className="text-left px-2 py-2 font-medium">{t("common.project")}</th>
+                            <th className="text-left px-2 py-2 font-medium">{t("common.status")}</th>
+                            <th className="text-left px-2 py-2 font-medium">{t("projects.imported")}</th>
+                            <th className="text-left px-2 py-2 font-medium">{t("projects.skippedCount")}</th>
+                            <th className="text-left px-2 py-2 font-medium">{t("projects.errorLabel")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2061,26 +2179,26 @@ export default function ProjectsPage() {
                 )}
 
                 {bulkReviewResult && (
-                  <div className="glass-card rounded-xl p-4">
+                  <div className="surface-panel">
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                      <h3 className="text-[14px] font-semibold">Bulk Import Review</h3>
+                      <h3 className="text-[14px] font-semibold">{t("projects.bulkImportReview")}</h3>
                       <div className="text-[12px] text-muted-foreground">
-                        Reviewable: {bulkReviewResult.reviewable_projects} | Failed/Partial:{" "}
-                        {bulkReviewResult.failed_or_partial_projects} | Skipped:{" "}
+                        {t("projects.reviewable")}: {bulkReviewResult.reviewable_projects} | {t("projects.failedPartial")}:{" "}
+                        {bulkReviewResult.failed_or_partial_projects} | {t("projects.skippedCount")}:{" "}
                         {bulkReviewResult.skipped_projects}
                       </div>
                     </div>
-                    <div className="overflow-auto rounded-lg border border-border">
+                    <div className="overflow-auto rounded-xl border border-border/70 bg-background/70">
                       <table className="w-full text-[12px]">
                         <thead className="bg-muted/40 text-muted-foreground">
                           <tr>
-                            <th className="text-left px-2 py-2 font-medium">Project</th>
-                            <th className="text-left px-2 py-2 font-medium">Status</th>
-                            <th className="text-left px-2 py-2 font-medium">Mode</th>
-                            <th className="text-left px-2 py-2 font-medium">Rows</th>
-                            <th className="text-left px-2 py-2 font-medium">File</th>
-                            <th className="text-left px-2 py-2 font-medium">Error</th>
-                            <th className="text-left px-2 py-2 font-medium">Actions</th>
+                            <th className="text-left px-2 py-2 font-medium">{t("common.project")}</th>
+                            <th className="text-left px-2 py-2 font-medium">{t("common.status")}</th>
+                            <th className="text-left px-2 py-2 font-medium">{t("common.mode")}</th>
+                            <th className="text-left px-2 py-2 font-medium">{t("projects.rows")}</th>
+                            <th className="text-left px-2 py-2 font-medium">{t("projects.file")}</th>
+                            <th className="text-left px-2 py-2 font-medium">{t("projects.errorLabel")}</th>
+                            <th className="text-left px-2 py-2 font-medium">{t("projects.actions")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2130,7 +2248,7 @@ export default function ProjectsPage() {
                                       onClick={() => openImportRun(item.project_id, item.source_run_id!)}
                                       className="h-7 px-2 rounded-md border border-border bg-card text-[11px]"
                                     >
-                                      Open run
+                                      {t("projects.openRun")}
                                     </button>
                                   ) : null}
                                   {item.retry_available && item.source_run_id ? (
@@ -2144,7 +2262,7 @@ export default function ProjectsPage() {
                                       }}
                                       className="h-7 px-2 rounded-md border border-border bg-card text-[11px]"
                                     >
-                                      Retry now
+                                      {t("projects.retryNow")}
                                     </button>
                                   ) : null}
                                 </div>
@@ -2159,9 +2277,9 @@ export default function ProjectsPage() {
 
                 <div className="glass-card rounded-xl p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <h3 className="text-[14px] font-semibold">Failed Imports Queue</h3>
+                      <h3 className="text-[14px] font-semibold">{tt("projects.failedImportsQueue")}</h3>
                     <div className="text-[12px] text-muted-foreground">
-                      Selected: {selectedFailedRunIds.length}
+                      {t("projects.selectedLabel")}: {selectedFailedRunIds.length}
                     </div>
                   </div>
 
@@ -2175,16 +2293,16 @@ export default function ProjectsPage() {
                           setFailedQueueOffset(0);
                         }}
                       />
-                      Only selected project
+                      {t("projects.onlySelectedProject")}
                     </label>
                     <select
                       value={String(retryFailedBatchSize)}
                       onChange={(e) => setRetryFailedBatchSize(Number(e.target.value))}
                       className="h-8 rounded-md border border-border bg-background px-2 text-[12px]"
                     >
-                      <option value="5">Batch 5</option>
-                      <option value="10">Batch 10</option>
-                      <option value="20">Batch 20</option>
+                      <option value="5">{t("projects.batch").replace("{count}", "5")}</option>
+                      <option value="10">{t("projects.batch").replace("{count}", "10")}</option>
+                      <option value="20">{t("projects.batch").replace("{count}", "20")}</option>
                     </select>
                     <button
                       onClick={() => {
@@ -2192,7 +2310,7 @@ export default function ProjectsPage() {
                       }}
                       className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
                     >
-                      Refresh queue
+                        {tt("projects.refreshQueue")}
                     </button>
                     <button
                       onClick={() => {
@@ -2204,17 +2322,19 @@ export default function ProjectsPage() {
                       className="h-8 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {retryFailedProgress?.active
-                        ? `Retrying ${retryFailedProgress.processed}/${retryFailedProgress.total}`
-                        : `Retry Selected (${selectedFailedRunIds.length})`}
+                          ? tt("projects.retryingProgress")
+                              .replace("{processed}", String(retryFailedProgress.processed))
+                              .replace("{total}", String(retryFailedProgress.total))
+                          : tt("projects.retrySelected").replace("{count}", String(selectedFailedRunIds.length))}
                     </button>
                   </div>
 
                   {retryFailedProgress && (
                     <div className="mb-3 rounded-md border border-border bg-background px-3 py-2">
-                      <div className="text-[12px] text-muted-foreground mb-1">
-                        Progress: {retryFailedProgress.processed}/{retryFailedProgress.total} |
-                        Success {retryFailedProgress.successful} | Failed {retryFailedProgress.failed}
-                        {" "} | Skipped {retryFailedProgress.skipped}
+                        <div className="text-[12px] text-muted-foreground mb-1">
+                         {tt("projects.progress")}: {retryFailedProgress.processed}/{retryFailedProgress.total} |
+                         {" "}{tt("projects.successCount")} {retryFailedProgress.successful} | {tt("projects.failedCount")} {retryFailedProgress.failed}
+                         {" "} | {tt("projects.skippedCount")} {retryFailedProgress.skipped}
                       </div>
                       <div className="h-1.5 rounded bg-muted overflow-hidden">
                         <div
@@ -2236,8 +2356,10 @@ export default function ProjectsPage() {
 
                   {retryFailedSummary && (
                     <div className="mb-3 rounded-md border border-border bg-background px-3 py-2 text-[12px] text-muted-foreground">
-                      Last retry batch: success {retryFailedSummary.successful_runs} | failed{" "}
-                      {retryFailedSummary.failed_runs} | skipped {retryFailedSummary.skipped_runs}
+                        {tt("projects.lastRetryBatch")
+                          .replace("{success}", String(retryFailedSummary.successful_runs))
+                          .replace("{failed}", String(retryFailedSummary.failed_runs))
+                          .replace("{skipped}", String(retryFailedSummary.skipped_runs))}
                     </div>
                   )}
 
@@ -2254,25 +2376,25 @@ export default function ProjectsPage() {
                               }
                             />
                           </th>
-                          <th className="text-left px-2 py-2 font-medium">Time</th>
-                          <th className="text-left px-2 py-2 font-medium">Project</th>
-                          <th className="text-left px-2 py-2 font-medium">Status</th>
-                          <th className="text-left px-2 py-2 font-medium">Errors</th>
-                          <th className="text-left px-2 py-2 font-medium">File</th>
-                          <th className="text-left px-2 py-2 font-medium">Action</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("projects.time")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("common.project")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("common.status")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("projects.errors")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("projects.file")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("projects.action")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {loadingFailedQueue ? (
                           <tr>
                             <td className="px-2 py-3 text-muted-foreground" colSpan={7}>
-                              Loading failed queue...
+                               {tt("projects.loadingFailedQueue")}
                             </td>
                           </tr>
                         ) : (failedQueue?.items || []).length === 0 ? (
                           <tr>
                             <td className="px-2 py-3 text-muted-foreground" colSpan={7}>
-                              No failed import runs in queue.
+                               {tt("projects.noFailedQueue")}
                             </td>
                           </tr>
                         ) : (
@@ -2318,7 +2440,7 @@ export default function ProjectsPage() {
                                   onClick={() => openImportRun(item.project_id, item.run_id)}
                                   className="h-7 px-2 rounded-md border border-border bg-card text-[11px]"
                                 >
-                                  Open run
+                                  {t("projects.openRun")}
                                 </button>
                               </td>
                             </tr>
@@ -2329,7 +2451,7 @@ export default function ProjectsPage() {
                   </div>
                   <div className="mt-2 flex items-center justify-between text-[12px] text-muted-foreground">
                     <div>
-                      Total queue: {failedQueue?.total || 0}
+                      {t("projects.totalQueue")}: {failedQueue?.total || 0}
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -2337,14 +2459,14 @@ export default function ProjectsPage() {
                         disabled={!failedQueueCanPrev}
                         className="h-7 px-2 rounded-md border border-border bg-card disabled:opacity-50"
                       >
-                        Prev
+                        {t("projects.prev")}
                       </button>
                       <button
                         onClick={() => setFailedQueueOffset((x) => x + FAILED_QUEUE_PAGE_SIZE)}
                         disabled={!failedQueueCanNext}
                         className="h-7 px-2 rounded-md border border-border bg-card disabled:opacity-50"
                       >
-                        Next
+                        {t("projects.next")}
                       </button>
                     </div>
                   </div>
@@ -2353,10 +2475,10 @@ export default function ProjectsPage() {
                 <div className="glass-card rounded-xl p-4">
                   <div className="flex items-center gap-2 text-[13px] font-semibold">
                     <Upload className="w-4 h-4" />
-                    Import Factory File
+                    {t("projects.importFactoryFile")}
                   </div>
                   <p className="text-[12px] text-muted-foreground mt-1">
-                    Accepted: CSV, TSV, TXT, JSON, XML, XLSX, PDF
+                    {t("projects.acceptedFormats")}
                   </p>
                   <p className="text-[12px] text-muted-foreground mt-1">
                     Priority columns: מספר הזמנה, בניין, קומה, דירה, דגם כנף
@@ -2365,7 +2487,7 @@ export default function ProjectsPage() {
                     <label className="h-10 rounded-lg border border-dashed border-border bg-background flex items-center px-3 text-[13px] text-muted-foreground cursor-pointer hover:border-accent/40">
                       <FileSpreadsheet className="w-4 h-4 mr-2 shrink-0" />
                       <span className="truncate">
-                        {importFile ? importFile.name : "Choose file..."}
+                        {importFile ? importFile.name : t("projects.chooseFile")}
                       </span>
                       <input
                         type="file"
@@ -2388,8 +2510,8 @@ export default function ProjectsPage() {
                     >
                       <option value="">
                         {loadingDoorTypes
-                          ? "Loading door types..."
-                          : "Auto by file code (or create missing)"}
+                          ? t("projects.loadingDoorTypes")
+                          : t("projects.autoByFileCode")}
                       </option>
                       {doorTypes.map((doorType) => (
                         <option key={doorType.id} value={doorType.id}>
@@ -2403,14 +2525,14 @@ export default function ProjectsPage() {
                         disabled={!importFile || importLoading}
                         className="h-10 rounded-lg border border-border bg-card text-card-foreground text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        {importLoading && importAction === "analyze" ? "Analyzing..." : "Analyze"}
+                        {importLoading && importAction === "analyze" ? t("projects.analyzing") : t("projects.analyze")}
                       </button>
                       <button
                         onClick={() => void handleImportAction("import")}
                         disabled={!importFile || importLoading || !analysisReady}
                         className="h-10 rounded-lg bg-accent text-accent-foreground text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        {importLoading && importAction === "import" ? "Import..." : "Import"}
+                        {importLoading && importAction === "import" ? t("projects.importing") : t("projects.import")}
                       </button>
                     </div>
                   </div>
@@ -2424,10 +2546,10 @@ export default function ProjectsPage() {
                       className="h-9 rounded-lg border border-border bg-background px-3 text-[12px] text-foreground"
                     >
                       {loadingMappingProfiles ? (
-                        <option value="auto_v1">Mapping profile: loading...</option>
+                        <option value="auto_v1">{t("projects.mappingProfileLoading")}</option>
                       ) : null}
                       {!loadingMappingProfiles && mappingProfiles.length === 0 ? (
-                        <option value="auto_v1">Mapping profile: auto_v1</option>
+                        <option value="auto_v1">{t("projects.mappingProfileAuto")}</option>
                       ) : null}
                       {mappingProfiles.map((profile) => (
                         <option key={profile.code} value={profile.code}>
@@ -2443,11 +2565,11 @@ export default function ProjectsPage() {
                       }}
                       className="h-9 rounded-lg border border-border bg-background px-3 text-[12px] text-foreground"
                     >
-                      <option value="">Delimiter: auto</option>
-                      <option value=",">Delimiter: comma (,)</option>
-                      <option value=";">Delimiter: semicolon (;)</option>
-                      <option value="|">Delimiter: pipe (|)</option>
-                      <option value={"\t"}>Delimiter: tab</option>
+                      <option value="">{t("projects.delimiterAuto")}</option>
+                      <option value=",">{t("projects.delimiterComma")}</option>
+                      <option value=";">{t("projects.delimiterSemicolon")}</option>
+                      <option value="|">{t("projects.delimiterPipe")}</option>
+                      <option value={"\t"}>{t("projects.delimiterTab")}</option>
                     </select>
                     <label className="h-9 rounded-lg border border-border bg-background px-3 text-[12px] text-foreground inline-flex items-center gap-2">
                       <input
@@ -2458,7 +2580,7 @@ export default function ProjectsPage() {
                           setAnalysisReady(false);
                         }}
                       />
-                      Create missing door types from file codes
+                      {t("projects.createMissingDoorTypes")}
                     </label>
                   </div>
 
@@ -2466,79 +2588,88 @@ export default function ProjectsPage() {
                     <div className="mt-3 rounded-lg border border-border bg-background px-3 py-2 text-[12px]">
                       <div className="flex items-center gap-1.5 text-[hsl(var(--success))]">
                         <CheckCircle2 className="w-4 h-4" />
-                        Parsed: {importResult.parsed_rows}, Prepared: {importResult.prepared_rows},
-                        Imported: {importResult.imported}, Skipped: {importResult.skipped}
+                        {t("projects.parsedPreparedImportedSkipped")
+                          .replace("{parsed}", String(importResult.parsed_rows))
+                          .replace("{prepared}", String(importResult.prepared_rows))
+                          .replace("{imported}", String(importResult.imported))
+                          .replace("{skipped}", String(importResult.skipped))}
                       </div>
                       {typeof importResult.would_import === "number" &&
                       typeof importResult.would_skip === "number" ? (
                         <div className="mt-1 text-muted-foreground">
-                          {importResult.mode === "analyze" ? "Preflight" : "Result"}:
-                          {" "}would import {importResult.would_import}, would skip {importResult.would_skip}
+                          {t("projects.preflightResult")
+                            .replace("{mode}", importResult.mode === "analyze" ? t("projects.preflight") : t("projects.result"))
+                            .replace("{wouldImport}", String(importResult.would_import))
+                            .replace("{wouldSkip}", String(importResult.would_skip))}
                         </div>
                       ) : null}
                       {importResult.mode === "analyze" ? (
                         <div className="mt-1 text-muted-foreground">
-                          Analyze completed. Click Import to apply changes.
+                          {t("projects.analyzeCompleted")}
                         </div>
                       ) : null}
                       {importResult.idempotency_hit ? (
                         <div className="mt-1 text-muted-foreground">
-                          Idempotency hit: identical import request was already processed.
+                          {t("projects.idempotencyHit")}
                         </div>
                       ) : null}
                       {importResult.diagnostics?.mapping_profile ? (
                         <div className="mt-1 text-muted-foreground">
-                          Mapping profile: {importResult.diagnostics.mapping_profile}
+                          {t("projects.mappingProfileValue").replace("{value}", importResult.diagnostics.mapping_profile)}
                         </div>
                       ) : null}
                       {importResult.diagnostics?.strict_required_fields !== undefined &&
                       importResult.diagnostics?.strict_required_fields !== null ? (
                         <div className="mt-1 text-muted-foreground">
-                          Strict required fields:{" "}
-                          {importResult.diagnostics.strict_required_fields ? "on" : "off"}
+                          {t("projects.strictRequiredFields").replace(
+                            "{value}",
+                            importResult.diagnostics.strict_required_fields ? t("projects.on") : t("projects.off")
+                          )}
                         </div>
                       ) : null}
                       {importResult.diagnostics?.missing_required_fields?.length ? (
                         <div className="mt-1 text-[hsl(var(--destructive))]">
-                          Missing required fields:{" "}
-                          {importResult.diagnostics.missing_required_fields.join(", ")}
+                          {t("projects.missingRequiredFields").replace(
+                            "{fields}",
+                            importResult.diagnostics.missing_required_fields.join(", ")
+                          )}
                         </div>
                       ) : null}
                       {importResult.diagnostics?.data_summary ? (
                         <div className="mt-2">
-                          <div className="text-muted-foreground">Import data summary:</div>
+                          <div className="text-muted-foreground">{t("projects.importDataSummary")}</div>
                           <div className="mt-1 flex flex-wrap gap-1.5">
                             {[
                               {
-                                label: "Orders",
+                                label: t("projects.orders"),
                                 value: importResult.diagnostics.data_summary.unique_order_numbers,
                               },
                               {
-                                label: "Houses",
+                                label: t("projects.houses"),
                                 value: importResult.diagnostics.data_summary.unique_houses,
                               },
                               {
-                                label: "Floors",
+                                label: t("projects.floors"),
                                 value: importResult.diagnostics.data_summary.unique_floors,
                               },
                               {
-                                label: "Apartments",
+                                label: t("projects.apartments"),
                                 value: importResult.diagnostics.data_summary.unique_apartments,
                               },
                               {
-                                label: "Locations",
+                                label: t("projects.locations"),
                                 value: importResult.diagnostics.data_summary.unique_locations,
                               },
                               {
-                                label: "Markings",
+                                label: t("projects.markings"),
                                 value: importResult.diagnostics.data_summary.unique_markings,
                               },
                               {
-                                label: "Row errors",
+                                label: t("projects.rowErrors"),
                                 value: importResult.diagnostics.data_summary.rows_with_errors,
                               },
                               {
-                                label: "Duplicate rows",
+                                label: t("projects.duplicateRows"),
                                 value: importResult.diagnostics.data_summary.duplicate_rows_skipped,
                               },
                             ].map((item) => (
@@ -2555,7 +2686,7 @@ export default function ProjectsPage() {
                       {renderImportPreviewGroups(importResult.diagnostics)}
                       {importResult.diagnostics?.required_fields?.length ? (
                         <div className="mt-2">
-                          <div className="text-muted-foreground">Required columns status:</div>
+                          <div className="text-muted-foreground">{t("projects.requiredColumnsStatus")}</div>
                           <div className="mt-1 flex flex-wrap gap-1.5">
                             {importResult.diagnostics.required_fields.map((field) => (
                               <span
@@ -2569,10 +2700,10 @@ export default function ProjectsPage() {
                                 title={
                                   field.matched_columns.length > 0
                                     ? `Matched: ${field.matched_columns.join(", ")}`
-                                    : "Not detected"
+                                    : t("projects.notDetected")
                                 }
                               >
-                                {field.display_name}: {field.found ? "found" : "missing"}
+                                {field.display_name}: {field.found ? t("projects.found") : t("projects.missing")}
                               </span>
                             ))}
                           </div>
@@ -2580,7 +2711,10 @@ export default function ProjectsPage() {
                       ) : null}
                       {importResult.errors.length > 0 && (
                         <div className="mt-2 text-[hsl(var(--destructive))]">
-                          Errors: {importResult.errors.slice(0, 5).map((e) => `#${e.row} ${e.message}`).join(" | ")}
+                          {t("projects.errorsPreviewInline").replace(
+                            "{value}",
+                            importResult.errors.slice(0, 5).map((e) => `#${e.row} ${e.message}`).join(" | ")
+                          )}
                         </div>
                       )}
                     </div>
@@ -2589,7 +2723,7 @@ export default function ProjectsPage() {
                   <div className="mt-4 rounded-lg border border-border bg-background">
                     <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                       <div className="text-[12px] font-semibold">
-                        Import History
+                        {t("projects.importHistory")}
                         <span className="ml-2 text-muted-foreground">
                           {filteredImportHistory.length} / {importHistory.length}
                         </span>
@@ -2601,10 +2735,10 @@ export default function ProjectsPage() {
                           onChange={(e) => setImportHistoryModeFilter(e.target.value)}
                           className="h-7 rounded-md border border-border bg-background px-2 text-[11px]"
                         >
-                          <option value="all">All modes</option>
-                          <option value="analyze">Analyze</option>
-                          <option value="import">Import</option>
-                          <option value="import_retry">Retry</option>
+                          <option value="all">{t("projects.allModes")}</option>
+                          <option value="analyze">{t("projects.analyze")}</option>
+                          <option value="import">{t("projects.import")}</option>
+                          <option value="import_retry">{t("projects.retry")}</option>
                         </select>
                         <select
                           aria-label="Import history status"
@@ -2612,7 +2746,7 @@ export default function ProjectsPage() {
                           onChange={(e) => setImportHistoryStatusFilter(e.target.value)}
                           className="h-7 rounded-md border border-border bg-background px-2 text-[11px]"
                         >
-                          <option value="all">All statuses</option>
+                          <option value="all">{t("projects.allStatuses")}</option>
                           <option value="ANALYZED">ANALYZED</option>
                           <option value="SUCCESS">SUCCESS</option>
                           <option value="PARTIAL">PARTIAL</option>
@@ -2627,34 +2761,34 @@ export default function ProjectsPage() {
                           }}
                           className="h-7 px-2 rounded-md border border-border bg-card text-[11px]"
                         >
-                          Refresh history
+                          {t("projects.refreshHistory")}
                         </button>
                       </div>
                     </div>
                     {loadingImportHistory ? (
                       <div className="px-3 py-3 text-[12px] text-muted-foreground">
-                        Loading import history...
+                        {t("projects.loadingImportHistory")}
                       </div>
                     ) : importHistory.length === 0 ? (
                       <div className="px-3 py-3 text-[12px] text-muted-foreground">
-                        No import runs yet.
+                        {t("projects.noImportRunsYet")}
                       </div>
                     ) : filteredImportHistory.length === 0 ? (
                       <div className="px-3 py-3 text-[12px] text-muted-foreground">
-                        No import runs for selected filters.
+                        {t("projects.noImportRunsForFilters")}
                       </div>
                     ) : (
                       <div className="overflow-auto">
                         <table className="w-full text-[11px]">
                           <thead className="bg-muted/40 text-muted-foreground">
                             <tr>
-                              <th className="text-left px-2 py-1.5 font-medium">Time</th>
-                              <th className="text-left px-2 py-1.5 font-medium">Mode</th>
-                              <th className="text-left px-2 py-1.5 font-medium">Status</th>
-                              <th className="text-left px-2 py-1.5 font-medium">Rows</th>
-                              <th className="text-left px-2 py-1.5 font-medium">Result</th>
-                              <th className="text-left px-2 py-1.5 font-medium">File</th>
-                              <th className="text-left px-2 py-1.5 font-medium">Actions</th>
+                              <th className="text-left px-2 py-1.5 font-medium">{t("projects.time")}</th>
+                              <th className="text-left px-2 py-1.5 font-medium">{t("projects.modeLabel")}</th>
+                              <th className="text-left px-2 py-1.5 font-medium">{t("common.status")}</th>
+                              <th className="text-left px-2 py-1.5 font-medium">{t("projects.rows")}</th>
+                              <th className="text-left px-2 py-1.5 font-medium">{t("projects.result")}</th>
+                              <th className="text-left px-2 py-1.5 font-medium">{t("projects.file")}</th>
+                              <th className="text-left px-2 py-1.5 font-medium">{t("projects.actions")}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2689,8 +2823,15 @@ export default function ProjectsPage() {
                                   {run.parsed_rows} / {run.prepared_rows}
                                 </td>
                                 <td className="px-2 py-1.5">
-                                  +{run.imported} / -{run.skipped}
-                                  {run.errors_count > 0 ? ` / err ${run.errors_count}` : ""}
+                                  {t("projects.resultSummary")
+                                    .replace("{imported}", String(run.imported))
+                                    .replace("{skipped}", String(run.skipped))
+                                    .replace(
+                                      "{errors}",
+                                      run.errors_count > 0
+                                        ? t("projects.errCount").replace("{count}", String(run.errors_count))
+                                        : ""
+                                    )}
                                 </td>
                                 <td className="px-2 py-1.5 max-w-[220px] truncate" title={run.source_filename || "-"}>
                                   {run.source_filename || "-"}
@@ -2703,7 +2844,7 @@ export default function ProjectsPage() {
                                       }}
                                       className="h-7 px-2 rounded-md border border-border bg-card text-[11px]"
                                     >
-                                      View
+                                      {t("projects.view")}
                                     </button>
                                     {run.retry_available ? (
                                       <button
@@ -2713,7 +2854,7 @@ export default function ProjectsPage() {
                                         disabled={retryingRunId === run.id}
                                         className="h-7 px-2 rounded-md border border-border bg-card text-[11px] disabled:opacity-50"
                                       >
-                                        {retryingRunId === run.id ? "Retry..." : "Retry"}
+                                        {retryingRunId === run.id ? `${t("projects.retry")}...` : t("projects.retry")}
                                       </button>
                                     ) : null}
                                   </div>
@@ -2727,7 +2868,7 @@ export default function ProjectsPage() {
                   </div>
                   <div className="mt-3 rounded-lg border border-border bg-background px-3 py-3">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-[12px] font-semibold">Selected Import Run</div>
+                      <div className="text-[12px] font-semibold">{t("projects.selectedImportRun")}</div>
                       {focusedImportRunDetails ? (
                         <div className="text-[11px] text-muted-foreground">
                           {formatDateTime(focusedImportRunDetails.created_at)}
@@ -2736,88 +2877,102 @@ export default function ProjectsPage() {
                     </div>
                     {loadingImportRunDetails ? (
                       <div className="mt-2 text-[12px] text-muted-foreground">
-                        Loading import run details...
+                        {t("projects.loadingImportRunDetails")}
                       </div>
                     ) : !focusedImportRunDetails ? (
                       <div className="mt-2 text-[12px] text-muted-foreground">
-                        Select a run from history to inspect diagnostics and errors.
+                        {t("projects.selectRunHint")}
                       </div>
                     ) : (
                       <div className="mt-2 space-y-3 text-[12px]">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                           <div className="rounded-md border border-border bg-muted/30 px-2 py-2">
-                            <div className="text-muted-foreground">Mode</div>
+                            <div className="text-muted-foreground">{t("projects.modeLabel")}</div>
                             <div className="font-medium mt-0.5">{focusedImportRunDetails.mode}</div>
                           </div>
                           <div className="rounded-md border border-border bg-muted/30 px-2 py-2">
-                            <div className="text-muted-foreground">Status</div>
+                            <div className="text-muted-foreground">{t("common.status")}</div>
                             <div className="font-medium mt-0.5">{focusedImportRunDetails.status}</div>
                           </div>
                           <div className="rounded-md border border-border bg-muted/30 px-2 py-2">
-                            <div className="text-muted-foreground">File</div>
+                            <div className="text-muted-foreground">{t("projects.file")}</div>
                             <div className="font-medium mt-0.5 truncate" title={focusedImportRunDetails.source_filename || "-"}>
                               {focusedImportRunDetails.source_filename || "-"}
                             </div>
                           </div>
                           <div className="rounded-md border border-border bg-muted/30 px-2 py-2">
-                            <div className="text-muted-foreground">Profile</div>
+                            <div className="text-muted-foreground">{t("projects.profile")}</div>
                             <div className="font-medium mt-0.5">
                               {focusedImportRunDetails.mapping_profile || "-"}
                             </div>
                           </div>
                         </div>
                         <div className="text-muted-foreground">
-                          Parsed {focusedImportRunDetails.parsed_rows}, prepared{" "}
-                          {focusedImportRunDetails.prepared_rows}, imported{" "}
-                          {focusedImportRunDetails.imported}, skipped {focusedImportRunDetails.skipped}
-                          {typeof focusedImportRunDetails.would_import === "number" &&
-                          typeof focusedImportRunDetails.would_skip === "number"
-                            ? `, would import ${focusedImportRunDetails.would_import}, would skip ${focusedImportRunDetails.would_skip}`
-                            : ""}
-                          {focusedImportRunDetails.idempotency_hit ? ", idempotency hit" : ""}
+                          {t("projects.parsedSummary")
+                            .replace("{parsed}", String(focusedImportRunDetails.parsed_rows))
+                            .replace("{prepared}", String(focusedImportRunDetails.prepared_rows))
+                            .replace("{imported}", String(focusedImportRunDetails.imported))
+                            .replace("{skipped}", String(focusedImportRunDetails.skipped))
+                            .replace(
+                              "{wouldPart}",
+                              typeof focusedImportRunDetails.would_import === "number" &&
+                              typeof focusedImportRunDetails.would_skip === "number"
+                                ? t("projects.wouldImportSkip")
+                                    .replace("{wouldImport}", String(focusedImportRunDetails.would_import))
+                                    .replace("{wouldSkip}", String(focusedImportRunDetails.would_skip))
+                                : ""
+                            )
+                            .replace(
+                              "{idempotencyPart}",
+                              focusedImportRunDetails.idempotency_hit ? t("projects.idempotencyPart") : ""
+                            )}
                         </div>
                         {focusedImportRunDetails.diagnostics?.strict_required_fields !== undefined &&
                         focusedImportRunDetails.diagnostics?.strict_required_fields !== null ? (
                           <div className="text-muted-foreground">
-                            Strict required fields:{" "}
-                            {focusedImportRunDetails.diagnostics.strict_required_fields
-                              ? "on"
-                              : "off"}
+                            {t("projects.strictRequiredFields").replace(
+                              "{value}",
+                              focusedImportRunDetails.diagnostics.strict_required_fields
+                                ? t("projects.on")
+                                : t("projects.off")
+                            )}
                           </div>
                         ) : null}
                         {focusedImportRunDetails.diagnostics?.missing_required_fields?.length ? (
                           <div className="text-[hsl(var(--destructive))]">
-                            Missing required fields:{" "}
-                            {focusedImportRunDetails.diagnostics.missing_required_fields.join(", ")}
+                            {t("projects.missingRequiredFields").replace(
+                              "{fields}",
+                              focusedImportRunDetails.diagnostics.missing_required_fields.join(", ")
+                            )}
                           </div>
                         ) : null}
                         {focusedImportRunDetails.diagnostics?.data_summary ? (
                           <div>
-                            <div className="text-muted-foreground">Run data summary:</div>
+                            <div className="text-muted-foreground">{t("projects.runDataSummary")}</div>
                             <div className="mt-1 flex flex-wrap gap-1.5">
                               {[
                                 {
-                                  label: "Orders",
+                                  label: t("projects.orders"),
                                   value: focusedImportRunDetails.diagnostics.data_summary.unique_order_numbers,
                                 },
                                 {
-                                  label: "Houses",
+                                  label: t("projects.houses"),
                                   value: focusedImportRunDetails.diagnostics.data_summary.unique_houses,
                                 },
                                 {
-                                  label: "Floors",
+                                  label: t("projects.floors"),
                                   value: focusedImportRunDetails.diagnostics.data_summary.unique_floors,
                                 },
                                 {
-                                  label: "Apartments",
+                                  label: t("projects.apartments"),
                                   value: focusedImportRunDetails.diagnostics.data_summary.unique_apartments,
                                 },
                                 {
-                                  label: "Locations",
+                                  label: t("projects.locations"),
                                   value: focusedImportRunDetails.diagnostics.data_summary.unique_locations,
                                 },
                                 {
-                                  label: "Markings",
+                                  label: t("projects.markings"),
                                   value: focusedImportRunDetails.diagnostics.data_summary.unique_markings,
                                 },
                               ].map((item) => (
@@ -2833,11 +2988,11 @@ export default function ProjectsPage() {
                         ) : null}
                         {renderImportPreviewGroups(
                           focusedImportRunDetails.diagnostics,
-                          "Run structure preview:"
+                          t("projects.runStructurePreview")
                         )}
                         {focusedImportRunDetails.diagnostics?.required_fields?.length ? (
                           <div>
-                            <div className="text-muted-foreground">Required columns:</div>
+                            <div className="text-muted-foreground">{t("projects.requiredColumns")}</div>
                             <div className="mt-1 flex flex-wrap gap-1.5">
                               {focusedImportRunDetails.diagnostics.required_fields.map((field) => (
                                 <span
@@ -2849,7 +3004,7 @@ export default function ProjectsPage() {
                                       : "border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.10)] text-[hsl(var(--destructive))]"
                                   )}
                                 >
-                                  {field.display_name}: {field.found ? "found" : "missing"}
+                                  {field.display_name}: {field.found ? t("projects.found") : t("projects.missing")}
                                 </span>
                               ))}
                             </div>
@@ -2857,20 +3012,22 @@ export default function ProjectsPage() {
                         ) : null}
                         {focusedImportRunDetails.errors.length > 0 ? (
                           <div>
-                            <div className="text-muted-foreground">Errors preview:</div>
+                            <div className="text-muted-foreground">{t("projects.errorsPreview")}</div>
                             <div className="mt-1 space-y-1">
                               {focusedImportRunDetails.errors.slice(0, 5).map((errorItem) => (
                                 <div
                                   key={`${errorItem.row}-${errorItem.message}`}
                                   className="rounded-md border border-[hsl(var(--destructive)/0.25)] bg-[hsl(var(--destructive)/0.06)] px-2 py-1 text-[hsl(var(--destructive))]"
                                 >
-                                  Row {errorItem.row}: {errorItem.message}
+                                  {t("projects.rowError")
+                                    .replace("{row}", String(errorItem.row))
+                                    .replace("{message}", errorItem.message)}
                                 </div>
                               ))}
                             </div>
                           </div>
                         ) : (
-                          <div className="text-muted-foreground">No row-level errors captured for this run.</div>
+                          <div className="text-muted-foreground">{t("projects.noRowErrors")}</div>
                         )}
                       </div>
                     )}
@@ -2881,29 +3038,31 @@ export default function ProjectsPage() {
                   <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
                     <div>
                       <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                        Door Allocation Matrix
+                        {t("projects.doorAllocationMatrix")}
                       </div>
-                      <h3 className="text-[15px] font-semibold mt-1">Project Detail Matrix</h3>
+                      <h3 className="text-[15px] font-semibold mt-1">{t("projects.projectDetailMatrix")}</h3>
                       <p className="text-[12px] text-muted-foreground mt-1">
-                        Visual cut by בניין, קומה, דירה, מספר הזמנה, דגם כנף and door location.
+                        {t("projects.visualCut")}
                       </p>
                     </div>
                     <div className="text-[12px] text-muted-foreground">
-                      Visible: {filteredMatrixRows.length} / {matrixRows.length}
+                      {t("projects.visibleCount")
+                        .replace("{filtered}", String(filteredMatrixRows.length))
+                        .replace("{total}", String(matrixRows.length))}
                     </div>
                   </div>
 
                   <div className="flex flex-wrap gap-2 mb-3">
                     {[
-                      { label: "Orders", value: filteredMatrixSummary.orders },
-                      { label: "Houses", value: filteredMatrixSummary.houses },
-                      { label: "Floors", value: filteredMatrixSummary.floors },
-                      { label: "Apartments", value: filteredMatrixSummary.apartments },
-                      { label: "Locations", value: filteredMatrixSummary.locations },
-                      { label: "Markings", value: filteredMatrixSummary.markings },
-                      { label: "Assigned", value: filteredMatrixSummary.assignedCount },
-                      { label: "Open", value: filteredMatrixSummary.openCount },
-                      { label: "Blockers", value: filteredMatrixSummary.issuesCount },
+                      { label: t("projects.orders"), value: filteredMatrixSummary.orders },
+                      { label: t("projects.houses"), value: filteredMatrixSummary.houses },
+                      { label: t("projects.floors"), value: filteredMatrixSummary.floors },
+                      { label: t("projects.apartments"), value: filteredMatrixSummary.apartments },
+                      { label: t("projects.locations"), value: filteredMatrixSummary.locations },
+                      { label: t("projects.markings"), value: filteredMatrixSummary.markings },
+                      { label: t("projects.assigned"), value: filteredMatrixSummary.assignedCount },
+                      { label: t("common.open"), value: filteredMatrixSummary.openCount },
+                      { label: t("projects.blockers"), value: filteredMatrixSummary.issuesCount },
                     ].map((item) => (
                       <span
                         key={item.label}
@@ -2920,7 +3079,7 @@ export default function ProjectsPage() {
                       onChange={(e) => setMatrixOrderNumber(e.target.value)}
                       className="h-9 rounded-lg border border-border bg-background px-3 text-[12px]"
                     >
-                      <option value="all">All orders</option>
+                      <option value="all">{t("projects.allOrders")}</option>
                       {matrixOrderNumberOptions.map((value) => (
                         <option key={value} value={value}>
                           {value}
@@ -2932,7 +3091,7 @@ export default function ProjectsPage() {
                       onChange={(e) => setMatrixHouse(e.target.value)}
                       className="h-9 rounded-lg border border-border bg-background px-3 text-[12px]"
                     >
-                      <option value="all">All houses</option>
+                      <option value="all">{t("projects.allHouses")}</option>
                       {matrixHouseOptions.map((value) => (
                         <option key={value} value={value}>
                           {value}
@@ -2944,7 +3103,7 @@ export default function ProjectsPage() {
                       onChange={(e) => setMatrixFloor(e.target.value)}
                       className="h-9 rounded-lg border border-border bg-background px-3 text-[12px]"
                     >
-                      <option value="all">All floors</option>
+                      <option value="all">{t("projects.allFloors")}</option>
                       {matrixFloorOptions.map((value) => (
                         <option key={value} value={value}>
                           {value}
@@ -2956,7 +3115,7 @@ export default function ProjectsPage() {
                       onChange={(e) => setMatrixLocation(e.target.value)}
                       className="h-9 rounded-lg border border-border bg-background px-3 text-[12px]"
                     >
-                      <option value="all">All locations</option>
+                      <option value="all">{t("projects.allLocations")}</option>
                       {matrixLocationOptions.map((value) => (
                         <option key={value} value={value}>
                           {locationLabel(value)}
@@ -2968,7 +3127,7 @@ export default function ProjectsPage() {
                       onChange={(e) => setMatrixDoorType(e.target.value)}
                       className="h-9 rounded-lg border border-border bg-background px-3 text-[12px]"
                     >
-                      <option value="all">All door types</option>
+                      <option value="all">{t("projects.allDoorTypes")}</option>
                       {matrixDoorTypeOptions.map((value) => (
                         <option key={value.id} value={value.id}>
                           {value.label}
@@ -2980,7 +3139,7 @@ export default function ProjectsPage() {
                       onChange={(e) => setMatrixStatus(e.target.value)}
                       className="h-9 rounded-lg border border-border bg-background px-3 text-[12px]"
                     >
-                      <option value="all">All statuses</option>
+                      <option value="all">{t("projects.allStatuses")}</option>
                       {matrixStatusOptions.map((value) => (
                         <option key={value} value={value}>
                           {value}
@@ -2990,13 +3149,13 @@ export default function ProjectsPage() {
                     <input
                       value={matrixApartmentSearch}
                       onChange={(e) => setMatrixApartmentSearch(e.target.value)}
-                      placeholder="Apartment..."
+                      placeholder={t("projects.apartmentPlaceholder")}
                       className="h-9 rounded-lg border border-border bg-background px-3 text-[12px]"
                     />
                     <input
                       value={matrixMarkingSearch}
                       onChange={(e) => setMatrixMarkingSearch(e.target.value)}
-                      placeholder="Marking..."
+                      placeholder={t("projects.markingPlaceholder")}
                       className="h-9 rounded-lg border border-border bg-background px-3 text-[12px]"
                     />
                     <button
@@ -3013,13 +3172,13 @@ export default function ProjectsPage() {
                       className="h-9 rounded-lg border border-border bg-card text-[12px] inline-flex items-center justify-center gap-1"
                     >
                       <FilterX className="w-3.5 h-3.5" />
-                      Reset
+                      {t("projects.reset")}
                     </button>
                   </div>
 
                   {filteredMatrixRows.length === 0 ? (
                     <div className="rounded-lg border border-border bg-background px-4 py-8 text-[13px] text-muted-foreground">
-                      No doors for selected filters.
+                      {t("projects.noDoorsForFilters")}
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -3039,11 +3198,11 @@ export default function ProjectsPage() {
                             </div>
                             <div className="flex flex-wrap gap-1.5">
                               {[
-                                { label: "Doors", value: house.total_doors },
-                                { label: "Apartments", value: house.apartments_count },
-                                { label: "Installed", value: house.installed_count },
-                                { label: "Open", value: house.open_count },
-                                { label: "Blockers", value: house.issue_count },
+                                { label: t("projects.doors"), value: house.total_doors },
+                                { label: t("projects.apartments"), value: house.apartments_count },
+                                { label: t("installerProject.installed"), value: house.installed_count },
+                                { label: t("common.open"), value: house.open_count },
+                                { label: t("projects.blockers"), value: house.issue_count },
                               ].map((item) => (
                                 <span
                                   key={`${house.house_number}-${item.label}`}
@@ -3072,10 +3231,10 @@ export default function ProjectsPage() {
                                   </div>
                                   <div className="flex flex-wrap gap-1.5">
                                     {[
-                                      { label: "Doors", value: floor.total_doors },
-                                      { label: "Installed", value: floor.installed_count },
-                                      { label: "Open", value: floor.open_count },
-                                      { label: "Blockers", value: floor.issue_count },
+                                      { label: t("projects.doors"), value: floor.total_doors },
+                                      { label: t("installerProject.installed"), value: floor.installed_count },
+                                      { label: t("common.open"), value: floor.open_count },
+                                      { label: t("projects.blockers"), value: floor.issue_count },
                                     ].map((item) => (
                                       <span
                                         key={`${house.house_number}-${floor.floor_label}-${item.label}`}
@@ -3101,8 +3260,8 @@ export default function ProjectsPage() {
                                             {locationLabel(locationCode)}
                                           </th>
                                         ))}
-                                        <th className="text-left px-3 py-2 font-medium">Status Mix</th>
-                                        <th className="text-left px-3 py-2 font-medium">Blockers</th>
+                                        <th className="text-left px-3 py-2 font-medium">{t("projects.statusMix")}</th>
+                                        <th className="text-left px-3 py-2 font-medium">{t("projects.blockers")}</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -3116,7 +3275,7 @@ export default function ProjectsPage() {
                                               {apartment.apartment_number}
                                             </div>
                                             <div className="text-[11px] text-muted-foreground mt-1">
-                                              Doors: {apartment.total_doors}
+                                              {t("projects.doorsCount").replace("{count}", String(apartment.total_doors))}
                                             </div>
                                           </td>
                                           <td className="px-3 py-3">
@@ -3176,12 +3335,12 @@ export default function ProjectsPage() {
                                                         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
                                                           <span>{door.door_type_label}</span>
                                                           <span>
-                                                            {door.installer_id ? "Assigned" : "Unassigned"}
+                                                            {door.installer_id ? t("projects.assigned") : t("projects.unassigned")}
                                                           </span>
                                                         </div>
                                                         {door.issue_count > 0 ? (
                                                           <div className="mt-1 text-[10px] text-[hsl(var(--destructive))]">
-                                                            {door.issue_titles[0] || "Open blocker"}
+                                                            {door.issue_titles[0] || t("projects.openBlocker")}
                                                             {door.issue_count > 1
                                                               ? ` (+${door.issue_count - 1})`
                                                               : ""}
@@ -3197,21 +3356,21 @@ export default function ProjectsPage() {
                                           <td className="px-3 py-3">
                                             <div className="flex flex-wrap gap-1.5">
                                               <span className="rounded-md border border-border bg-background px-2 py-1 text-[11px] text-foreground">
-                                                Installed: {apartment.installed_count}
+                                                {t("projects.installedShort").replace("{count}", String(apartment.installed_count))}
                                               </span>
                                               <span className="rounded-md border border-border bg-background px-2 py-1 text-[11px] text-foreground">
-                                                Open: {apartment.open_count}
+                                                {t("projects.openShort").replace("{count}", String(apartment.open_count))}
                                               </span>
                                             </div>
                                           </td>
                                           <td className="px-3 py-3">
                                             {apartment.issue_count > 0 ? (
                                               <span className="rounded-md border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-2 py-1 text-[11px] text-[hsl(var(--destructive))]">
-                                                {apartment.issue_count} blocker
+                                                {t("projects.blockerCount").replace("{count}", String(apartment.issue_count)).replace("{suffix}", apartment.issue_count > 1 ? "s" : "")}
                                                 {apartment.issue_count > 1 ? "s" : ""}
                                               </span>
                                             ) : (
-                                              <span className="text-muted-foreground">No blockers</span>
+                                              <span className="text-muted-foreground">{t("projects.noBlockers")}</span>
                                             )}
                                           </td>
                                         </tr>
@@ -3231,29 +3390,29 @@ export default function ProjectsPage() {
                     <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/30 px-3 py-2">
                       <div>
                         <div className="text-[13px] font-semibold text-foreground">
-                          Door Ledger Table
+                          {t("projects.doorLedgerTable")}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Raw door rows for exact audit and import verification.
+                          {t("projects.doorLedgerSubtitle")}
                         </div>
                       </div>
                       <div className="text-[11px] text-muted-foreground">
-                        Rows: {filteredMatrixRows.length}
+                        {t("projects.rowsCount").replace("{count}", String(filteredMatrixRows.length))}
                       </div>
                     </div>
                     <table className="w-full text-[12px]">
                       <thead className="bg-muted/40 text-muted-foreground">
                         <tr>
-                          <th className="text-left px-2 py-2 font-medium">Order</th>
-                          <th className="text-left px-2 py-2 font-medium">House</th>
-                          <th className="text-left px-2 py-2 font-medium">Floor</th>
-                          <th className="text-left px-2 py-2 font-medium">Apt</th>
-                          <th className="text-left px-2 py-2 font-medium">Location</th>
-                          <th className="text-left px-2 py-2 font-medium">Marking</th>
-                          <th className="text-left px-2 py-2 font-medium">Door Type</th>
-                          <th className="text-left px-2 py-2 font-medium">Unit</th>
-                          <th className="text-left px-2 py-2 font-medium">Status</th>
-                          <th className="text-left px-2 py-2 font-medium">Blockers</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("projects.orderNumber")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("projects.houseLabel")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("projects.floorLabel")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("projects.apt")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("projects.location")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("projects.marking")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("projects.doorType")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("projects.unit")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("common.status")}</th>
+                          <th className="text-left px-2 py-2 font-medium">{t("projects.blockers")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -3303,13 +3462,13 @@ export default function ProjectsPage() {
 
                 {loadingLayout && (
                   <div className="glass-card rounded-xl p-4 text-[13px] text-muted-foreground">
-                    Loading layout...
+                    {t("projects.loadingLayout")}
                   </div>
                 )}
 
                 {!loadingLayout && layout && floorGroups.length === 0 && (
                   <div className="glass-card rounded-xl p-4 text-[13px] text-muted-foreground">
-                    No doors in this project yet.
+                    {t("projects.noDoorsInProjectYet")}
                   </div>
                 )}
 
@@ -3318,7 +3477,7 @@ export default function ProjectsPage() {
                     <div key={group.floor} className="glass-card rounded-xl p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-[14px] font-semibold">{group.floor}</h3>
-                        <span className="text-[12px] text-muted-foreground">{group.total} doors</span>
+                        <span className="text-[12px] text-muted-foreground">{t("projects.doorsCount").replace("{count}", String(group.total))}</span>
                       </div>
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {group.buckets.map((bucket, idx) => (
@@ -3326,7 +3485,7 @@ export default function ProjectsPage() {
                             <div className="flex items-start justify-between gap-2">
                               <div>
                                 <div className="text-[12px] text-muted-foreground">
-                                  Order {bucket.order_number || "-"} | House {bucket.house_number || "-"}
+                                  {t("projects.orderNumber")} {bucket.order_number || "-"} | {t("projects.houseLabel")} {bucket.house_number || "-"}
                                 </div>
                                 <div className="text-[13px] font-semibold mt-0.5">
                                   {(bucket.location_code || "unknown").toUpperCase()}
@@ -3356,9 +3515,9 @@ export default function ProjectsPage() {
                               <table className="w-full text-[12px]">
                                 <thead className="bg-muted/50 text-muted-foreground">
                                   <tr>
-                                    <th className="text-left px-2 py-1.5 font-medium">Apt</th>
-                                    <th className="text-left px-2 py-1.5 font-medium">Unit</th>
-                                    <th className="text-left px-2 py-1.5 font-medium">Status</th>
+                                    <th className="text-left px-2 py-1.5 font-medium">{t("projects.apt")}</th>
+                                    <th className="text-left px-2 py-1.5 font-medium">{t("projects.unit")}</th>
+                                    <th className="text-left px-2 py-1.5 font-medium">{t("common.status")}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -3389,7 +3548,7 @@ export default function ProjectsPage() {
               </>
             ) : (
               <div className="glass-card rounded-xl p-6 text-[13px] text-muted-foreground">
-                Select a project to view layout.
+                {t("projects.selectProjectLayout")}
               </div>
             )}
           </section>

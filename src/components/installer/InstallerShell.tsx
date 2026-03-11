@@ -5,23 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, FolderKanban, LogOut } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  {
-    title: "Workspace",
-    href: "/installer",
-    icon: FolderKanban,
-    isActive: (path: string) =>
-      path === "/installer" || path.startsWith("/installer/projects/"),
-  },
-  {
-    title: "Schedule",
-    href: "/installer/calendar",
-    icon: CalendarDays,
-    isActive: (path: string) => path === "/installer/calendar",
-  },
-];
 
 function clearSession(): void {
   localStorage.removeItem("dimax_access_token");
@@ -33,24 +19,50 @@ function clearSession(): void {
 export function InstallerShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useI18n();
+  const navItems = [
+    {
+      title: t("installerShell.workspace"),
+      href: "/installer",
+      icon: FolderKanban,
+      isActive: (path: string) =>
+        path === "/installer" || path.startsWith("/installer/projects/"),
+    },
+    {
+      title: t("installerShell.schedule"),
+      href: "/installer/calendar",
+      icon: CalendarDays,
+      isActive: (path: string) => path === "/installer/calendar",
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto flex w-full max-w-[1440px] flex-col lg:flex-row">
-        <aside className="w-full border-b border-border bg-card lg:min-h-screen lg:w-[280px] lg:border-b-0 lg:border-r">
-          <div className="px-6 pb-4 pt-6">
+    <div className="relative min-h-screen bg-background text-foreground">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 shell-grid opacity-35" />
+        <div className="absolute left-[8%] top-0 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
+        <div className="absolute right-[10%] top-24 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
+      </div>
+      <div className="relative mx-auto flex w-full max-w-[1500px] flex-col gap-6 px-4 py-4 lg:flex-row lg:px-6">
+        <aside className="surface-panel w-full overflow-hidden lg:sticky lg:top-4 lg:min-h-[calc(100vh-2rem)] lg:w-[300px]">
+          <div className="border-b border-border/70 px-6 pb-5 pt-6">
             <div className="flex items-center gap-3">
-              <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-sm font-semibold text-accent-foreground">
+              <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-[hsl(var(--accent)/0.72)] text-sm font-semibold text-accent-foreground shadow-[0_18px_36px_-18px_hsl(var(--accent)/0.72)]">
                 D
               </div>
               <div>
-                <div className="text-sm font-semibold">DIMAX Installer</div>
-                <div className="text-xs text-muted-foreground">Web Workspace</div>
+                <div className="font-display text-base font-semibold">DIMAX Installer</div>
+                <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                  {t("installerShell.webWorkspace")}
+                </div>
               </div>
+            </div>
+            <div className="mt-5 rounded-2xl border border-border/70 bg-background/60 px-4 py-3 text-[13px] text-muted-foreground">
+              {t("installerShell.fieldView")}
             </div>
           </div>
 
-          <nav className="space-y-1 px-3 pb-4">
+          <nav className="space-y-2 px-4 py-5">
             {navItems.map((item) => {
               const active = item.isActive(pathname || "");
               return (
@@ -58,10 +70,10 @@ export function InstallerShell({ children }: { children: ReactNode }) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                    "flex items-center gap-3 rounded-2xl px-3 py-3 text-sm transition-all duration-200",
                     active
-                      ? "bg-accent/15 text-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-gradient-to-r from-accent/16 via-accent/10 to-transparent text-foreground shadow-[inset_0_0_0_1px_hsl(var(--accent)/0.18)]"
+                      : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
                   )}
                 >
                   <item.icon className="h-4 w-4" />
@@ -71,29 +83,32 @@ export function InstallerShell({ children }: { children: ReactNode }) {
             })}
           </nav>
 
-          <div className="border-t border-border px-4 py-4">
+          <div className="mt-auto border-t border-border/70 px-4 py-4">
+            <div className="mb-3">
+              <LanguageSwitcher compact />
+            </div>
             <button
               type="button"
               onClick={() => {
                 clearSession();
                 router.replace("/login");
               }}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background/80 px-3 py-2.5 text-sm text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-background"
             >
               <LogOut className="h-4 w-4" />
-              Sign out
+              {t("common.signOut")}
             </button>
           </div>
         </aside>
 
-        <main className="flex-1">
-          <header className="border-b border-border px-6 py-4">
-            <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+        <main className="motion-page flex-1">
+          <header className="surface-panel px-6 py-4">
+            <div className="inline-flex items-center gap-2 rounded-full bg-background/65 px-3 py-1.5 text-sm text-muted-foreground">
               <CalendarDays className="h-4 w-4" />
-              Installer-only live workspace
+              {t("installerShell.liveWorkspace")}
             </div>
           </header>
-          <div className="p-6">{children}</div>
+          <div className="pt-6">{children}</div>
         </main>
       </div>
     </div>

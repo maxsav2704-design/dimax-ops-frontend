@@ -4,8 +4,11 @@ import { AppProviders } from "@/components/AppProviders";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DIMAX Admin",
-  description: "DIMAX Operations Suite Admin Panel",
+  title: {
+    default: "DIMAX Operations Suite",
+    template: "%s | DIMAX Operations Suite",
+  },
+  description: "Operational control for admin teams and field installers in one system.",
 };
 
 export default function RootLayout({
@@ -14,7 +17,7 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         <AppProviders>{children}</AppProviders>
       </body>

@@ -22,6 +22,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useUserRole } from "@/hooks/use-user-role";
 import { apiFetch } from "@/lib/api";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type ProjectListItem = {
@@ -284,6 +285,7 @@ function SectionMessage({
 
 export default function JournalPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const role = useUserRole();
   const canManage = canRunPrivilegedAdminActions(role);
 
@@ -811,35 +813,38 @@ export default function JournalPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="glass-card card-lift rounded-xl p-5 animate-fade-in">
+      <div className="motion-stagger space-y-6">
+        <div className="page-hero relative overflow-hidden">
+          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="flex flex-col gap-4 border-b border-border/70 pb-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/[0.06] px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-accent/80">
-                Communications Center
-              </div>
-              <h1 className="mt-3 text-2xl font-semibold text-card-foreground">
-                Journal queue, delivery channels and resend control
+              <div className="page-eyebrow">{t("journal.eyebrow")}</div>
+              <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-card-foreground sm:text-4xl">
+                {t("journal.title")}
               </h1>
-              <p className="mt-1 max-w-3xl text-[13px] text-muted-foreground">
-                Control customer communication from one place: create journal drafts, mark them
-                ready, queue email and WhatsApp delivery, and recover failed sends from outbox.
+              <p className="mt-3 max-w-3xl text-[14px] leading-7 text-muted-foreground">
+                {t("journal.subtitle")}
               </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">{t("journal.journals")} {journalSummary.total}</span>
+                <span className="metric-chip">{t("journal.failedOutbox")} {outboxSummary?.failed_total ?? 0}</span>
+                <span className="metric-chip">{t("journal.commsRecovery")}</span>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="surface-subtle flex flex-wrap gap-2 p-4 sm:p-5">
               <button
                 onClick={() => setRefreshTick((value) => value + 1)}
-                className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
+                className="btn-premium rounded-xl px-4 py-2 text-[12px] font-medium"
               >
                 <RefreshCw className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                Refresh
+                {t("common.refresh")}
               </button>
               <button
                 onClick={() => selectedJournalId && router.push(`/journal/${selectedJournalId}`)}
                 disabled={!selectedJournalId}
-                className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-4 py-2 text-[12px] font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Open journal form
+                {t("journal.openJournalForm")}
               </button>
             </div>
           </div>
@@ -847,8 +852,8 @@ export default function JournalPage() {
           {!canManage ? (
             <div className="mt-5">
               <SectionMessage
-                title="Read-only role"
-                description="Installer role can view communication history but cannot create drafts, queue sends, or retry outbox items."
+                title={t("journal.readOnlyRole")}
+                description={t("journal.readOnlyDescription")}
                 tone="info"
               />
             </div>
@@ -857,7 +862,7 @@ export default function JournalPage() {
           {feedback ? (
             <div className="mt-5">
               <SectionMessage
-                title={feedback.tone === "error" ? "Action failed" : "Action update"}
+                title={feedback.tone === "error" ? t("journal.actionFailed") : t("journal.actionUpdate")}
                 description={feedback.message}
                 tone={feedback.tone}
               />
@@ -866,75 +871,75 @@ export default function JournalPage() {
 
           {pageError ? (
             <div className="mt-5">
-              <SectionMessage title="Load error" description={pageError} tone="error" />
+              <SectionMessage title={t("journal.loadError")} description={pageError} tone="error" />
             </div>
           ) : null}
 
           <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Journals
+                {t("journal.journals")}
               </div>
               <div className="mt-2 text-xl font-semibold text-card-foreground">
                 {journalSummary.total}
               </div>
               <div className="mt-1 text-[12px] text-muted-foreground">
-                Draft: {journalSummary.draft}
+                {t("journal.draft")}: {journalSummary.draft}
               </div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Ready
+                {t("journal.ready")}
               </div>
               <div className="mt-2 text-xl font-semibold text-card-foreground">
                 {journalSummary.ready}
               </div>
               <div className="mt-1 text-[12px] text-muted-foreground">
-                Signed: {journalSummary.signed}
+                {t("journal.signed")}: {journalSummary.signed}
               </div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Outbox
+                {t("journal.outbox")}
               </div>
               <div className="mt-2 text-xl font-semibold text-card-foreground">
                 {outboxSummary?.total ?? 0}
               </div>
               <div className="mt-1 text-[12px] text-muted-foreground">
-                Failed: {outboxSummary?.failed_total ?? 0}
+                {t("journal.failed")}: {outboxSummary?.failed_total ?? 0}
               </div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--destructive)/0.08))] p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Overdue
+                {t("common.overdue")}
               </div>
               <div className="mt-2 text-xl font-semibold text-card-foreground">
                 {outboxSummary?.pending_overdue_15m ?? 0}
               </div>
               <div className="mt-1 text-[12px] text-muted-foreground">
-                Pending over 15m
+                {t("journal.pendingOver15m")}
               </div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Email
+                {t("journal.email")}
               </div>
               <div className="mt-2 text-xl font-semibold text-card-foreground">
                 {outboxSummary?.by_channel?.EMAIL ?? 0}
               </div>
               <div className="mt-1 text-[12px] text-muted-foreground">
-                Enabled: {integrations?.email_enabled ? "yes" : "no"}
+                {t("journal.enabled")}: {integrations?.email_enabled ? t("journal.yes") : t("journal.no")}
               </div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                WhatsApp
+                {t("journal.whatsapp")}
               </div>
               <div className="mt-2 text-xl font-semibold text-card-foreground">
                 {outboxSummary?.by_channel?.WHATSAPP ?? 0}
               </div>
               <div className="mt-1 text-[12px] text-muted-foreground">
-                Enabled: {integrations?.whatsapp_enabled ? "yes" : "no"}
+                {t("journal.enabled")}: {integrations?.whatsapp_enabled ? t("journal.yes") : t("journal.no")}
               </div>
             </div>
           </div>
@@ -942,27 +947,27 @@ export default function JournalPage() {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
           <div className="xl:col-span-4">
-            <div className="glass-card rounded-xl p-5">
+            <div className="surface-panel">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-semibold text-card-foreground">Journal Queue</h2>
+                  <h2 className="text-base font-semibold text-card-foreground">{t("journal.journalQueue")}</h2>
                   <p className="mt-1 text-[12px] text-muted-foreground">
-                    Create drafts, filter by status, and pick the active delivery target.
+                    {t("journal.queueDescription")}
                   </p>
                 </div>
                 <Clock3 className="h-4 w-4 text-accent" strokeWidth={1.8} />
               </div>
 
-              <div className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
+              <div className="space-y-3 rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-4">
                 <div>
                   <label className="mb-1 block text-[12px] font-medium text-card-foreground">
-                    Project
+                    {t("journal.project")}
                   </label>
                   <select
-                    aria-label="Create draft project"
+                    aria-label={t("journal.createDraftProject")}
                     value={selectedProjectId}
                     onChange={(event) => setSelectedProjectId(event.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                    className="w-full rounded-xl border border-border/70 bg-background/80 px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
                   >
                     {projects.map((project) => (
                       <option key={project.id} value={project.id}>
@@ -973,25 +978,25 @@ export default function JournalPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-[12px] font-medium text-card-foreground">
-                    Draft title
+                    {t("journal.draftTitle")}
                   </label>
                   <input
-                    aria-label="Draft title"
+                    aria-label={t("journal.draftTitle")}
                     value={createTitle}
                     onChange={(event) => setCreateTitle(event.target.value)}
-                    placeholder="Final delivery package"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                    placeholder={t("journal.finalDeliveryPackage")}
+                    className="w-full rounded-xl border border-border/70 bg-background/80 px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={handleCreateDraft}
                   disabled={!canManage || !selectedProjectId || busyAction === "create"}
-                  title={!canManage ? "Admin role required" : undefined}
-                  className="btn-premium w-full rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-sm font-medium text-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-40"
+                  title={!canManage ? t("journal.adminRoleRequired") : undefined}
+                  className="btn-premium w-full rounded-xl px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Plus className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                  Create Draft
+                  {t("journal.createDraft")}
                 </button>
               </div>
 
@@ -999,36 +1004,36 @@ export default function JournalPage() {
                 <div className="relative flex-1">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <input
-                    aria-label="Search journals"
+                    aria-label={t("journal.searchJournals")}
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Search by project, title or status"
-                    className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-card-foreground outline-none focus:border-accent"
+                    placeholder={t("journal.searchPlaceholder")}
+                    className="w-full rounded-xl border border-border/70 bg-background/80 py-2 pl-9 pr-3 text-sm text-card-foreground outline-none focus:border-accent"
                   />
                 </div>
                 <select
-                  aria-label="Journal status filter"
+                  aria-label={t("journal.statusFilter")}
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                  className="rounded-xl border border-border/70 bg-background/80 px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
                 >
-                  <option value="ALL">All</option>
-                  <option value="DRAFT">Draft</option>
-                  <option value="READY">Ready</option>
-                  <option value="SIGNED">Signed</option>
+                  <option value="ALL">{t("journal.all")}</option>
+                  <option value="DRAFT">{t("journal.draft")}</option>
+                  <option value="READY">{t("journal.ready")}</option>
+                  <option value="SIGNED">{t("journal.signed")}</option>
                 </select>
               </div>
 
               <div className="mt-4 space-y-3">
                 {queueLoading ? (
                   <SectionMessage
-                    title="Loading queue"
-                    description="Fetching journals, projects and integration state."
+                    title={t("journal.loadingQueue")}
+                    description={t("journal.loadingQueueDescription")}
                   />
                 ) : filteredJournals.length === 0 ? (
                   <SectionMessage
-                    title="No journals found"
-                    description="Create the first draft or loosen the current filters."
+                    title={t("journal.noJournalsFound")}
+                    description={t("journal.noJournalsDescription")}
                   />
                 ) : (
                   filteredJournals.map((journal) => {
@@ -1048,13 +1053,13 @@ export default function JournalPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <div className="text-sm font-semibold text-card-foreground">
-                              {journal.title || "Untitled journal"}
+                              {journal.title || t("journal.untitledJournal")}
                             </div>
                             <div className="mt-1 text-[12px] text-muted-foreground">
                               {journal.project_name}
                             </div>
                             <div className="mt-1 text-[11px] text-muted-foreground/90">
-                              {journal.project_address || "Address not set"}
+                              {journal.project_address || t("journal.addressNotSet")}
                             </div>
                           </div>
                           <span
@@ -1067,7 +1072,7 @@ export default function JournalPage() {
                           </span>
                         </div>
                         <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
-                          <span>Signed: {compactDate(journal.signed_at)}</span>
+                          <span>{t("journal.signed")}: {compactDate(journal.signed_at)}</span>
                           <span>{journal.id.slice(0, 8)}</span>
                         </div>
                       </button>
@@ -1082,25 +1087,24 @@ export default function JournalPage() {
             <div className="glass-card rounded-xl p-5">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-semibold text-card-foreground">Send Workspace</h2>
+                  <h2 className="text-base font-semibold text-card-foreground">{t("journal.sendWorkspace")}</h2>
                   <p className="mt-1 text-[12px] text-muted-foreground">
-                    Prepare the final message, choose channels, and queue delivery for the selected
-                    journal.
+                    {t("journal.sendWorkspaceDescription")}
                   </p>
                 </div>
                 <Send className="h-4 w-4 text-accent" strokeWidth={1.8} />
               </div>
               {!selectedJournalId ? (
                 <SectionMessage
-                  title="No journal selected"
-                  description="Choose a journal from the queue to open the delivery workspace."
+                  title={t("journal.noJournalSelected")}
+                  description={t("journal.noJournalSelectedDescription")}
                 />
               ) : detailsError ? (
-                <SectionMessage title="Journal load failed" description={detailsError} tone="error" />
+                <SectionMessage title={t("journal.journalLoadFailed")} description={detailsError} tone="error" />
               ) : detailsLoading ? (
                 <SectionMessage
-                  title="Loading journal"
-                  description="Fetching delivery status, public token and lock state."
+                  title={t("journal.loadingJournal")}
+                  description={t("journal.loadingJournalDescription")}
                 />
               ) : selectedJournal ? (
                 <div className="space-y-5">
@@ -1109,7 +1113,7 @@ export default function JournalPage() {
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-lg font-semibold text-card-foreground">
-                            {selectedJournal.title || "Untitled journal"}
+                            {selectedJournal.title || t("journal.untitledJournal")}
                           </h3>
                           <span
                             className={cn(
@@ -1121,11 +1125,11 @@ export default function JournalPage() {
                           </span>
                         </div>
                         <div className="mt-1 text-[12px] text-muted-foreground">
-                          Snapshot v{selectedJournal.snapshot_version} • Signed: {compactDate(selectedJournal.signed_at)}
+                          {t("journal.snapshotVersion")} v{selectedJournal.snapshot_version} • {t("journal.signed")}: {compactDate(selectedJournal.signed_at)}
                         </div>
                         {selectedJournal.signer_name ? (
                           <div className="mt-1 text-[12px] text-muted-foreground">
-                            Signer: {selectedJournal.signer_name}
+                            {t("journal.signer")}: {selectedJournal.signer_name}
                           </div>
                         ) : null}
                       </div>
@@ -1134,31 +1138,31 @@ export default function JournalPage() {
                           type="button"
                           onClick={handleMarkReady}
                           disabled={!canManage || busyAction === "ready"}
-                          title={!canManage ? "Admin role required" : undefined}
+                          title={!canManage ? t("journal.adminRoleRequired") : undefined}
                           className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <CheckCircle2 className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                          Mark Ready
+                          {t("journal.markReady")}
                         </button>
                         <button
                           type="button"
                           onClick={handleExportPdf}
                           disabled={!canManage || busyAction === "export"}
-                          title={!canManage ? "Admin role required" : undefined}
+                          title={!canManage ? t("journal.adminRoleRequired") : undefined}
                           className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <FileDown className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                          Export PDF
+                          {t("journal.exportPdf")}
                         </button>
                       </div>
                     </div>
 
                     <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <BoolBadge label="Header locked" value={selectedJournal.lock_header} />
-                      <BoolBadge label="Table locked" value={selectedJournal.lock_table} />
-                      <BoolBadge label="Footer locked" value={selectedJournal.lock_footer} />
+                      <BoolBadge label={t("journal.headerLocked")} value={selectedJournal.lock_header} />
+                      <BoolBadge label={t("journal.tableLocked")} value={selectedJournal.lock_table} />
+                      <BoolBadge label={t("journal.footerLocked")} value={selectedJournal.lock_footer} />
                       <BoolBadge
-                        label="Public token active"
+                        label={t("journal.publicTokenActive")}
                         value={Boolean(selectedJournal.public_token)}
                       />
                     </div>
@@ -1166,13 +1170,13 @@ export default function JournalPage() {
                     <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                       <div className="rounded-xl border border-border/70 bg-card/60 p-3">
                         <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                          Email delivery
+                          {t("journal.emailDelivery")}
                         </div>
                         <div className="mt-2 inline-flex rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-card-foreground">
                           {selectedJournal.email_delivery_status}
                         </div>
                         <div className="mt-2 text-[12px] text-muted-foreground">
-                          Last sent: {formatDateTime(selectedJournal.email_last_sent_at)}
+                          {t("journal.lastSent")}: {formatDateTime(selectedJournal.email_last_sent_at)}
                         </div>
                         {selectedJournal.email_last_error ? (
                           <div className="mt-2 text-[12px] text-destructive">
@@ -1182,16 +1186,16 @@ export default function JournalPage() {
                       </div>
                       <div className="rounded-xl border border-border/70 bg-card/60 p-3">
                         <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                          WhatsApp delivery
+                          {t("journal.whatsappDelivery")}
                         </div>
                         <div className="mt-2 inline-flex rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-card-foreground">
                           {selectedJournal.whatsapp_delivery_status}
                         </div>
                         <div className="mt-2 text-[12px] text-muted-foreground">
-                          Last sent: {formatDateTime(selectedJournal.whatsapp_last_sent_at)}
+                          {t("journal.lastSent")}: {formatDateTime(selectedJournal.whatsapp_last_sent_at)}
                         </div>
                         <div className="mt-1 text-[12px] text-muted-foreground">
-                          Delivered: {formatDateTime(selectedJournal.whatsapp_delivered_at)}
+                          {t("journal.delivered")}: {formatDateTime(selectedJournal.whatsapp_delivered_at)}
                         </div>
                         {selectedJournal.whatsapp_last_error ? (
                           <div className="mt-2 text-[12px] text-destructive">
@@ -1205,9 +1209,9 @@ export default function JournalPage() {
                   <div className="rounded-xl border border-border/70 bg-background/40 p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-sm font-semibold text-card-foreground">Templates</h3>
+                        <h3 className="text-sm font-semibold text-card-foreground">{t("journal.templates")}</h3>
                         <p className="mt-1 text-[12px] text-muted-foreground">
-                          Save shared server-side presets for client, site manager and installer flows.
+                          {t("journal.templatesDescription")}
                         </p>
                       </div>
                       <Save className="h-4 w-4 text-accent" strokeWidth={1.8} />
@@ -1215,7 +1219,7 @@ export default function JournalPage() {
 
                     <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr_1fr]">
                       <select
-                        aria-label="Communication template"
+                        aria-label={t("journal.communicationTemplate")}
                         value={selectedTemplateId}
                         onChange={(event) => setSelectedTemplateId(event.target.value)}
                         className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
@@ -1232,24 +1236,24 @@ export default function JournalPage() {
                           onClick={applyTemplate}
                           className="btn-premium flex-1 rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
                         >
-                          Apply
+                          {t("journal.apply")}
                         </button>
                         <button
                           type="button"
                           onClick={deleteTemplate}
                           className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
                         >
-                          Delete
+                          {t("journal.delete")}
                         </button>
                       </div>
                     </div>
 
                     <div className="mt-3 flex gap-2">
                       <input
-                        aria-label="Template name"
+                        aria-label={t("journal.templateName")}
                         value={templateName}
                         onChange={(event) => setTemplateName(event.target.value)}
-                        placeholder="Save current message as template"
+                        placeholder={t("journal.templatePlaceholder")}
                         className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
                       />
                       <button
@@ -1258,16 +1262,16 @@ export default function JournalPage() {
                         className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
                       >
                         <Save className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                        Save
+                        {t("journal.save")}
                       </button>
                     </div>
                   </div>
                   <div className="rounded-xl border border-border/70 bg-background/40 p-4">
                     <div className="mb-3 flex items-center justify-between">
                       <div>
-                        <h3 className="text-sm font-semibold text-card-foreground">Delivery channels</h3>
+                        <h3 className="text-sm font-semibold text-card-foreground">{t("journal.deliveryChannels")}</h3>
                         <p className="mt-1 text-[12px] text-muted-foreground">
-                          Queue email and WhatsApp from the selected journal snapshot.
+                          {t("journal.deliveryChannelsDescription")}
                         </p>
                       </div>
                       <Mail className="h-4 w-4 text-accent" strokeWidth={1.8} />
@@ -1284,9 +1288,9 @@ export default function JournalPage() {
                           className="mt-1"
                         />
                         <div>
-                          <div className="text-sm font-medium text-card-foreground">Email</div>
+                          <div className="text-sm font-medium text-card-foreground">{t("journal.email")}</div>
                           <div className="mt-1 text-[12px] text-muted-foreground">
-                            SMTP configured: {integrations?.smtp_configured ? "yes" : "no"}
+                            {t("journal.smtpConfigured")}: {integrations?.smtp_configured ? t("journal.yes") : t("journal.no")}
                           </div>
                         </div>
                       </label>
@@ -1300,9 +1304,9 @@ export default function JournalPage() {
                           className="mt-1"
                         />
                         <div>
-                          <div className="text-sm font-medium text-card-foreground">WhatsApp</div>
+                          <div className="text-sm font-medium text-card-foreground">{t("journal.whatsapp")}</div>
                           <div className="mt-1 text-[12px] text-muted-foreground">
-                            Twilio configured: {integrations?.twilio_configured ? "yes" : "no"}
+                            {t("journal.twilioConfigured")}: {integrations?.twilio_configured ? t("journal.yes") : t("journal.no")}
                           </div>
                         </div>
                       </label>
@@ -1311,7 +1315,7 @@ export default function JournalPage() {
                     <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-[12px] font-medium text-card-foreground">
-                          Email recipient
+                          {t("journal.emailRecipient")}
                         </label>
                         <input
                           aria-label="Email recipient"
@@ -1323,7 +1327,7 @@ export default function JournalPage() {
                       </div>
                       <div>
                         <label className="mb-1 block text-[12px] font-medium text-card-foreground">
-                          WhatsApp recipient
+                          {t("journal.whatsappRecipient")}
                         </label>
                         <input
                           aria-label="WhatsApp recipient"
@@ -1337,26 +1341,26 @@ export default function JournalPage() {
 
                     <div className="mt-4">
                       <label className="mb-1 block text-[12px] font-medium text-card-foreground">
-                        Subject
+                        {t("journal.subject")}
                       </label>
                       <input
                         aria-label="Journal subject"
                         value={subject}
                         onChange={(event) => setSubject(event.target.value)}
-                        placeholder="Project handover package"
+                        placeholder={t("journal.projectHandoverPackage")}
                         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
                       />
                     </div>
 
                     <div className="mt-4">
                       <label className="mb-1 block text-[12px] font-medium text-card-foreground">
-                        Message
+                        {t("journal.message")}
                       </label>
                       <textarea
                         aria-label="Journal message"
                         value={message}
                         onChange={(event) => setMessage(event.target.value)}
-                        placeholder="Add the customer-facing context for this journal send."
+                        placeholder={t("journal.messagePlaceholder")}
                         rows={6}
                         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
                       />
@@ -1367,26 +1371,26 @@ export default function JournalPage() {
                         type="button"
                         onClick={handleQueueSend}
                         disabled={!canManage || busyAction === "send"}
-                        title={!canManage ? "Admin role required" : undefined}
+                        title={!canManage ? t("journal.adminRoleRequired") : undefined}
                         className="btn-premium rounded-lg border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-medium text-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Send className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                        Queue Send
+                        {t("journal.queueSend")}
                       </button>
                       <button
                         type="button"
                         onClick={() => selectedJournalId && router.push(`/journal/${selectedJournalId}`)}
                         className="btn-premium rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:text-accent"
                       >
-                        Edit journal form
+                        {t("journal.editJournalForm")}
                       </button>
                     </div>
                   </div>
                 </div>
               ) : (
                 <SectionMessage
-                  title="Journal not available"
-                  description="Select a queue item to load the communication workspace."
+                  title={t("journal.journalNotAvailable")}
+                  description={t("journal.journalNotAvailableDescription")}
                 />
               )}
             </div>
@@ -1396,9 +1400,9 @@ export default function JournalPage() {
             <div className="glass-card rounded-xl p-5">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-semibold text-card-foreground">Delivery Log</h2>
+                  <h2 className="text-base font-semibold text-card-foreground">{t("journal.deliveryLog")}</h2>
                   <p className="mt-1 text-[12px] text-muted-foreground">
-                    Monitor outbox delivery, provider errors and retry queue recovery.
+                    {t("journal.deliveryLogDescription")}
                   </p>
                 </div>
                 <MessageSquare className="h-4 w-4 text-accent" strokeWidth={1.8} />
@@ -1406,29 +1410,29 @@ export default function JournalPage() {
 
               {deliveryLoading ? (
                 <SectionMessage
-                  title="Loading outbox"
-                  description="Fetching delivery summary and recent communication attempts."
+                  title={t("journal.loadingOutbox")}
+                  description={t("journal.loadingOutboxDescription")}
                 />
               ) : (
                 <>
                   <div className="grid grid-cols-1 gap-3">
                     <div className="rounded-xl border border-border/70 bg-background/40 p-3">
                       <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                        Channel mix
+                        {t("journal.channelMix")}
                       </div>
                       <div className="mt-2 flex flex-wrap gap-2 text-[12px] text-card-foreground">
-                        <span>Email: {outboxSummary?.by_channel?.EMAIL ?? 0}</span>
-                        <span>WhatsApp: {outboxSummary?.by_channel?.WHATSAPP ?? 0}</span>
+                        <span>{t("journal.email")}: {outboxSummary?.by_channel?.EMAIL ?? 0}</span>
+                        <span>{t("journal.whatsapp")}: {outboxSummary?.by_channel?.WHATSAPP ?? 0}</span>
                       </div>
                     </div>
                     <div className="rounded-xl border border-border/70 bg-background/40 p-3">
                       <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                        Delivery status
+                        {t("journal.deliveryStatus")}
                       </div>
                       <div className="mt-2 flex flex-wrap gap-2 text-[12px] text-card-foreground">
-                        <span>Delivered: {outboxSummary?.by_delivery_status?.DELIVERED ?? 0}</span>
-                        <span>Pending: {outboxSummary?.by_delivery_status?.PENDING ?? 0}</span>
-                        <span>Failed: {outboxSummary?.by_delivery_status?.FAILED ?? 0}</span>
+                        <span>{t("journal.delivered")}: {outboxSummary?.by_delivery_status?.DELIVERED ?? 0}</span>
+                        <span>PENDING: {outboxSummary?.by_delivery_status?.PENDING ?? 0}</span>
+                        <span>{t("journal.failed")}: {outboxSummary?.by_delivery_status?.FAILED ?? 0}</span>
                       </div>
                     </div>
                   </div>
@@ -1436,8 +1440,8 @@ export default function JournalPage() {
                   <div className="mt-4 space-y-3">
                     {outboxItems.length === 0 ? (
                       <SectionMessage
-                        title="No delivery items"
-                        description="Send a journal or clear the current filter to inspect outbox traffic."
+                        title={t("journal.noDeliveryItems")}
+                        description={t("journal.noDeliveryItemsDescription")}
                       />
                     ) : (
                       outboxItems.map((item) => (
@@ -1458,18 +1462,18 @@ export default function JournalPage() {
                                 </span>
                               </div>
                               <div className="mt-1 text-[12px] text-muted-foreground">
-                                {item.recipient || "Recipient missing"}
+                                {item.recipient || t("journal.recipientMissing")}
                               </div>
                             </div>
                             <button
                               type="button"
                               onClick={() => handleRetryOutbox(item.id)}
                               disabled={!canManage || busyAction === `retry:${item.id}`}
-                              title={!canManage ? "Admin role required" : undefined}
+                              title={!canManage ? t("journal.adminRoleRequired") : undefined}
                               className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
                             >
                               <RotateCcw className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                              Retry
+                              {t("journal.retry")}
                             </button>
                           </div>
                           {item.subject ? (
@@ -1479,7 +1483,7 @@ export default function JournalPage() {
                           ) : null}
                           {item.template_name ? (
                             <div className="mt-1 text-[11px] uppercase tracking-[0.18em] text-accent">
-                              Template: {item.template_name}
+                              {t("journal.template")}: {item.template_name}
                             </div>
                           ) : null}
                           {item.message_preview ? (
@@ -1488,14 +1492,14 @@ export default function JournalPage() {
                             </div>
                           ) : null}
                           <div className="mt-3 space-y-1 text-[11px] text-muted-foreground">
-                            <div>Scheduled: {formatDateTime(item.scheduled_at)}</div>
+                            <div>{t("journal.scheduled")}: {formatDateTime(item.scheduled_at)}</div>
                             <div>
-                              Attempts: {item.attempts}/{item.max_attempts}
+                              {t("journal.attempts")}: {item.attempts}/{item.max_attempts}
                             </div>
-                            <div>Delivery: {item.delivery_status}</div>
-                            {item.attachment_name ? <div>Attachment: {item.attachment_name}</div> : null}
+                            <div>{t("journal.delivery")}: {item.delivery_status}</div>
+                            {item.attachment_name ? <div>{t("journal.attachment")}: {item.attachment_name}</div> : null}
                             {item.last_error ? (
-                              <div className="text-destructive">Error: {item.last_error}</div>
+                              <div className="text-destructive">{t("journal.error")}: {item.last_error}</div>
                             ) : null}
                           </div>
                         </div>
@@ -1508,32 +1512,32 @@ export default function JournalPage() {
               <div className="mt-5 rounded-xl border border-border/70 bg-background/40 p-4">
                 <div className="mb-3 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-accent" strokeWidth={1.8} />
-                  <h3 className="text-sm font-semibold text-card-foreground">Integration snapshot</h3>
+                  <h3 className="text-sm font-semibold text-card-foreground">{t("journal.integrationSnapshot")}</h3>
                 </div>
                 {integrations ? (
                   <div className="space-y-2">
-                    <BoolBadge label="Email enabled" value={integrations.email_enabled} />
-                    <BoolBadge label="WhatsApp enabled" value={integrations.whatsapp_enabled} />
-                    <BoolBadge label="Storage configured" value={integrations.storage_configured} />
+                    <BoolBadge label={t("journal.emailEnabled")} value={integrations.email_enabled} />
+                    <BoolBadge label={t("journal.whatsappEnabled")} value={integrations.whatsapp_enabled} />
+                    <BoolBadge label={t("journal.storageConfigured")} value={integrations.storage_configured} />
                     <BoolBadge
-                      label="WhatsApp fallback to email"
+                      label={t("journal.whatsappFallbackToEmail")}
                       value={integrations.whatsapp_fallback_to_email}
                     />
                     <BoolBadge
-                      label="Waze navigation enabled"
+                      label={t("journal.wazeNavigationEnabled")}
                       value={integrations.waze_navigation_enabled}
                     />
                     <div className="rounded-xl border border-border/70 bg-card/60 p-3 text-[12px] text-muted-foreground">
-                      <div>Public base URL: {integrations.public_base_url}</div>
+                      <div>{t("journal.publicBaseUrl")}: {integrations.public_base_url}</div>
                       <div className="mt-1">
-                        Journal token TTL: {integrations.journal_public_token_ttl_sec}s
+                        {t("journal.tokenTtl")}: {integrations.journal_public_token_ttl_sec}s
                       </div>
                     </div>
                   </div>
                 ) : (
                   <SectionMessage
-                    title="Integration settings unavailable"
-                    description="The settings endpoint did not return a snapshot."
+                    title={t("journal.integrationUnavailable")}
+                    description={t("journal.integrationUnavailableDescription")}
                   />
                 )}
               </div>
