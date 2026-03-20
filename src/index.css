@@ -371,6 +371,22 @@
     overflow-wrap: anywhere;
   }
 
+  .readability-wrap h1,
+  .readability-wrap h2,
+  .readability-wrap h3 {
+    text-wrap: balance;
+  }
+
+  .readability-wrap p {
+    text-wrap: pretty;
+  }
+
+  .btn-premium,
+  button,
+  a {
+    touch-action: manipulation;
+  }
+
   .progress-glow {
     @apply transition-all duration-500 ease-out;
   }

@@ -284,6 +284,8 @@ export default function PublicLandingPage() {
   const { locale, t } = useI18n();
 
   const lt = (key: string) => landingOverrides[locale]?.[key] ?? t(key);
+  const installerSurfaceValue =
+    locale === "ru" ? "Веб" : locale === "he" ? "ווב" : "Web";
 
   const pillars = [
     {
@@ -428,20 +430,20 @@ export default function PublicLandingPage() {
       <div className="pointer-events-none absolute right-[-8rem] top-20 h-[24rem] w-[24rem] rounded-full bg-primary/10 blur-3xl" />
 
       <div className="relative mx-auto flex min-h-screen max-w-[1380px] flex-col px-5 py-6 sm:px-8 lg:px-10">
-        <header className="flex items-center justify-between gap-4">
+        <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="page-eyebrow">{lt("landing.eyebrow")}</div>
-          <div className="flex items-center gap-3">
+          <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
             <LanguageSwitcher compact />
             <Link
               href="/login"
-              className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium"
+              className="btn-premium inline-flex h-10 items-center justify-center rounded-xl px-4 text-[13px] font-medium"
             >
               {lt("landing.primaryCta")}
             </Link>
           </div>
         </header>
 
-        <main className="motion-stagger flex-1 py-8 lg:py-12">
+        <main className="motion-stagger readability-wrap flex-1 py-8 lg:py-12">
           <section className="page-hero motion-page-enter overflow-hidden">
             <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
               <div className="max-w-3xl">
@@ -455,14 +457,14 @@ export default function PublicLandingPage() {
                 <div className="mt-7 flex flex-wrap gap-3">
                   <Link
                     href="/login"
-                    className="btn-premium h-12 rounded-2xl px-5 text-[14px] font-semibold"
+                    className="btn-premium inline-flex h-12 w-full items-center justify-center rounded-2xl px-5 text-[14px] font-semibold sm:w-auto"
                   >
                     {lt("landing.primaryCta")}
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
                     href="/login?next=/installer"
-                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-border/70 bg-background/70 px-5 text-[14px] font-medium text-foreground"
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border/70 bg-background/70 px-5 text-[14px] font-medium text-foreground sm:w-auto"
                   >
                     {lt("landing.secondaryCta")}
                   </Link>
@@ -480,7 +482,7 @@ export default function PublicLandingPage() {
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                     {lt("landing.statInstaller")}
                   </div>
-                  <div className="mt-2 text-3xl font-semibold text-foreground">Web</div>
+                  <div className="mt-2 text-3xl font-semibold text-foreground">{installerSurfaceValue}</div>
                 </div>
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-4 py-4">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -496,7 +498,7 @@ export default function PublicLandingPage() {
             {pillars.map((pillar) => {
               const Icon = pillar.icon;
               return (
-                <article key={pillar.title} className="surface-panel p-5">
+                <article key={pillar.title} className="surface-panel readability-wrap card-lift p-5">
                   <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-border/70 bg-background/75">
                     <Icon className="h-5 w-5 text-accent" />
                   </div>
@@ -557,7 +559,7 @@ export default function PublicLandingPage() {
                 {routePreviews.map((item) => (
                   <div
                     key={item.route}
-                    className="overflow-hidden rounded-[1.6rem] border border-border/70 bg-background/72"
+                    className="card-lift overflow-hidden rounded-[1.6rem] border border-border/70 bg-background/72"
                   >
                     <div className={`relative h-32 border-b border-border/60 bg-gradient-to-br ${item.accent}`}>
                       <div className="absolute inset-0 shell-grid opacity-20" />

@@ -22,7 +22,7 @@ const workspaceOverrides: Partial<Record<Locale, Record<string, string>>> = {
     "installerWorkspace.noUrgentPriorities": "No urgent priorities right now.",
   },
   ru: {
-    "installerWorkspace.issueContinuity": "Issue continuity",
+    "installerWorkspace.issueContinuity": "Непрерывность проблем",
     "installerWorkspace.todaySchedule": "Расписание на сегодня",
     "installerWorkspace.projectsShort": "Проекты",
     "installerWorkspace.problemShort": "Проблемы",
@@ -108,6 +108,11 @@ function formatDate(value: string): string {
 export default function InstallerWorkspacePage() {
   const { locale, t } = useI18n();
   const tt = (key: string) => workspaceOverrides[locale]?.[key] ?? t(key);
+  const copy = (en: string, ru: string, he: string) => {
+    if (locale === "ru") return ru;
+    if (locale === "he") return he;
+    return en;
+  };
   const [nowIso] = useState(() => new Date().toISOString());
   const [projectQuickFilter, setProjectQuickFilter] = useState<ProjectQuickFilter>("ALL");
   const [isQueryInitialized, setIsQueryInitialized] = useState(false);
@@ -369,8 +374,8 @@ export default function InstallerWorkspacePage() {
   }
 
   return (
-    <div className="motion-stagger space-y-6">
-      <div className="page-hero relative overflow-hidden">
+    <div className="motion-stagger readability-wrap space-y-6">
+      <div className="page-hero readability-wrap relative overflow-hidden">
         <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
         <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
@@ -387,7 +392,7 @@ export default function InstallerWorkspacePage() {
               <span className="metric-chip">{tt("installerWorkspace.todaySchedule")}</span>
             </div>
           </div>
-          <div className="surface-subtle min-w-[280px] max-w-xl space-y-4 p-4 sm:p-5">
+          <div className="surface-subtle min-w-0 max-w-xl space-y-4 p-4 sm:p-5 xl:min-w-[280px]">
             <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -470,7 +475,7 @@ export default function InstallerWorkspacePage() {
           >
             <div className="text-sm text-muted-foreground">{tt("installerWorkspace.todayShort")}</div>
             <div className="mt-1 text-2xl font-semibold">
-              {tasksQuery.isLoading ? "..." : taskStats.today}
+              {tasksQuery.isLoading ? "…" : taskStats.today}
             </div>
             <Link
               href="/installer/calendar?preset=today"
@@ -485,7 +490,7 @@ export default function InstallerWorkspacePage() {
           >
             <div className="text-sm text-muted-foreground">{t("common.overdue")}</div>
             <div className="mt-1 text-2xl font-semibold">
-              {tasksQuery.isLoading ? "..." : taskStats.overdue}
+              {tasksQuery.isLoading ? "…" : taskStats.overdue}
             </div>
             <Link
               href="/installer/calendar?preset=7d&overdue=1"
@@ -500,7 +505,7 @@ export default function InstallerWorkspacePage() {
           >
             <div className="text-sm text-muted-foreground">{tt("installerWorkspace.withoutProject")}</div>
             <div className="mt-1 text-2xl font-semibold">
-              {tasksQuery.isLoading ? "..." : taskStats.withoutProject}
+              {tasksQuery.isLoading ? "…" : taskStats.withoutProject}
             </div>
             <Link
               href="/installer/calendar?preset=7d&project_id=none"
@@ -549,10 +554,10 @@ export default function InstallerWorkspacePage() {
               <div className="mt-1 text-xs text-muted-foreground">{item.meta}</div>
                 <Link
                   href={item.href}
-                  aria-label={`Open priority ${item.title}`}
+                  aria-label={`${copy("Open priority", "Открыть приоритет", "פתח עדיפות")} ${item.title}`}
                   className="mt-3 inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
                 >
-                  Open priority
+                  {copy("Open priority", "Открыть приоритет", "פתח עדיפות")}
                 </Link>
               </div>
             ))}
@@ -567,7 +572,7 @@ export default function InstallerWorkspacePage() {
             <div className="flex flex-wrap gap-2">
               {(
                 [
-                  ["ALL", "All"],
+                  ["ALL", t("common.all")],
                   ["PROBLEM", t("installerWorkspace.onlyProblem")],
                   ["ACTIVE", t("installerWorkspace.onlyActive")],
                   ["TODAY_TASKS", t("installerWorkspace.hasTasksToday")],
@@ -594,7 +599,7 @@ export default function InstallerWorkspacePage() {
           </div>
           {projectsQuery.isLoading && (
             <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-              Loading projects...
+              {copy("Loading projects…", "Загружаем проекты…", "טוען פרויקטים…")}
             </div>
           )}
           {!projectsQuery.isLoading && projects.length === 0 && (
@@ -617,7 +622,7 @@ export default function InstallerWorkspacePage() {
                 <div>
                   <div className="font-medium">{project.name}</div>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    {project.address || "No address"}
+                    {project.address || copy("No address", "Нет адреса", "אין כתובת")}
                   </div>
                 </div>
                 <span className="rounded-lg border border-border/70 bg-background/70 px-2.5 py-1 text-xs">
@@ -629,13 +634,13 @@ export default function InstallerWorkspacePage() {
                   href={`/installer/projects/${project.id}`}
                   className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
-                  Open project
+                  {copy("Open project", "Открыть проект", "פתח פרויקט")}
                 </Link>
                 <Link
                   href={`/installer/calendar?project_id=${project.id}`}
                   className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
-                  Open schedule
+                  {copy("Open schedule", "Открыть расписание", "פתח לוח זמנים")}
                 </Link>
                 <Link
                   href={`/installer/calendar?preset=today&project_id=${project.id}`}
@@ -654,7 +659,7 @@ export default function InstallerWorkspacePage() {
                     href={buildInstallerIssuesHref(project.id, { issueStatus: "BLOCKED" })}
                     className="inline-flex items-center rounded-xl border border-amber-500/40 bg-amber-500/12 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-amber-500/20"
                   >
-                    Open issues
+                    {copy("Open issues", "Открыть проблемы", "פתח תקלות")}
                   </Link>
                 )}
                 {project.waze_url && (
@@ -664,7 +669,7 @@ export default function InstallerWorkspacePage() {
                     rel="noreferrer"
                     className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                   >
-                    Open Waze
+                    {copy("Open Waze", "Открыть Waze", "פתח Waze")}
                   </a>
                 )}
               </div>
@@ -679,7 +684,7 @@ export default function InstallerWorkspacePage() {
           </div>
           {eventsQuery.isLoading && (
             <div className="surface-panel text-sm text-muted-foreground">
-              Loading events...
+              {copy("Loading events…", "Загружаем события…", "טוען אירועים…")}
             </div>
           )}
           {!eventsQuery.isLoading && events.length === 0 && (

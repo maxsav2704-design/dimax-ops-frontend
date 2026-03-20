@@ -6,7 +6,46 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Wrench } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Locale } from "@/lib/i18n";
+
+const projectOverrides: Partial<Record<Locale, Record<string, string>>> = {
+  en: {
+    "installerProject.dismiss": "Dismiss",
+    "installerProject.loadingProject": "Loading project details...",
+    "installerProject.quickSearchPlaceholder": "Unit, order, apartment, location, marking",
+    "installerProject.noAddonTypes": "No add-on types",
+    "installerProject.optionalComment": "Optional comment",
+    "installerProject.noReasons": "No reasons",
+    "installerProject.doorLabel": "Door",
+    "installerProject.onlyThisDoor": "Only this door",
+    "installerProject.openDoor": "Open door",
+    "installerProject.issueStatusFilter": "Issue status filter",
+  },
+  ru: {
+    "installerProject.dismiss": "Закрыть",
+    "installerProject.loadingProject": "Загружаем детали проекта...",
+    "installerProject.quickSearchPlaceholder": "Дверь, заказ, квартира, локация, маркировка",
+    "installerProject.noAddonTypes": "Нет типов доп. работ",
+    "installerProject.optionalComment": "Необязательный комментарий",
+    "installerProject.noReasons": "Нет причин",
+    "installerProject.doorLabel": "Дверь",
+    "installerProject.onlyThisDoor": "Только эта дверь",
+    "installerProject.openDoor": "Открыть дверь",
+    "installerProject.issueStatusFilter": "Фильтр статуса проблемы",
+  },
+  he: {
+    "installerProject.dismiss": "סגור",
+    "installerProject.loadingProject": "טוען פרטי פרויקט...",
+    "installerProject.quickSearchPlaceholder": "דלת, הזמנה, דירה, מיקום, סימון",
+    "installerProject.noAddonTypes": "אין סוגי תוספות",
+    "installerProject.optionalComment": "הערה אופציונלית",
+    "installerProject.noReasons": "אין סיבות",
+    "installerProject.doorLabel": "דלת",
+    "installerProject.onlyThisDoor": "רק הדלת הזו",
+    "installerProject.openDoor": "פתח דלת",
+    "installerProject.issueStatusFilter": "סינון סטטוס תקלה",
+  },
+};
 
 type InstallerDoor = {
   id: string;
@@ -119,7 +158,10 @@ function parseDoorQuickFilter(value: string | null): DoorQuickFilter | null {
 }
 
 export default function InstallerProjectPage({ projectId }: InstallerProjectPageProps) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const pt = (key: string) => projectOverrides[locale]?.[key] ?? t(key);
+  const shortOnlyThis =
+    locale === "ru" ? "Только эта" : locale === "he" ? "רק זו" : "Only this";
   const queryClient = useQueryClient();
   const [selectedReasonId, setSelectedReasonId] = useState("");
   const [notInstalledComment, setNotInstalledComment] = useState("");
@@ -511,8 +553,8 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
   }, [doorQuickFilter, issueSearch, issueStatusFilter]);
 
   return (
-    <div className="motion-stagger space-y-6">
-      <section className="page-hero relative overflow-hidden">
+    <div className="motion-stagger readability-wrap space-y-6">
+      <section className="page-hero readability-wrap relative overflow-hidden">
         <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
         <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-3xl">
@@ -541,7 +583,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               </span>
             </div>
           </div>
-          <div className="surface-subtle min-w-[280px] max-w-xl space-y-4 p-4 sm:p-5">
+          <div className="surface-subtle min-w-0 max-w-xl space-y-4 p-4 sm:p-5 xl:min-w-[280px]">
             <div className="text-[12px] leading-5 text-muted-foreground">
               {t("installerProject.contextCopy")}
             </div>
@@ -597,7 +639,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               onClick={() => setActionError(null)}
               className="inline-flex items-center rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
             >
-              Dismiss
+              {pt("installerProject.dismiss")}
             </button>
           </div>
         </div>
@@ -605,7 +647,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
 
       {detailsQuery.isLoading && (
         <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-          {t("installerProject.projectDetails")}...
+          {pt("installerProject.loadingProject")}
         </div>
       )}
 
@@ -682,7 +724,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   value={doorSearch}
                   onChange={(event) => setDoorSearch(event.target.value)}
                   className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
-                  placeholder="Unit, order, apartment, location, marking"
+                  placeholder={pt("installerProject.quickSearchPlaceholder")}
                 />
               </label>
               <label className="block">
@@ -729,7 +771,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   onChange={(event) => setSelectedAddonTypeId(event.target.value)}
                   className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
                 >
-                  {addonTypes.length === 0 && <option value="">No add-on types</option>}
+                  {addonTypes.length === 0 && <option value="">{pt("installerProject.noAddonTypes")}</option>}
                   {addonTypes.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name}
@@ -752,7 +794,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   value={addonComment}
                   onChange={(event) => setAddonComment(event.target.value)}
                   className="mt-1 min-h-20 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                  placeholder="Optional comment"
+                  placeholder={pt("installerProject.optionalComment")}
                 />
               </label>
               <button
@@ -819,7 +861,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                     className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
                   />
                   <select
-                    aria-label="Issue status filter"
+                    aria-label={pt("installerProject.issueStatusFilter")}
                     value={issueStatusFilter}
                     onChange={(event) => setIssueStatusFilter(event.target.value)}
                     className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
@@ -865,7 +907,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                       {issue.title || t("installerProject.issueFallback")}
                     </div>
                     <div className="mt-1 text-xs text-amber-100/80">
-                      Door {relatedDoor?.unit_label || issue.door_id}
+                      {pt("installerProject.doorLabel")} {relatedDoor?.unit_label || issue.door_id}
                     </div>
                   </div>
                   <span className="rounded-md border border-amber-400/40 px-2 py-1 text-xs text-amber-200">
@@ -883,13 +925,13 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                         onClick={() => focusIssueDoor(relatedDoor)}
                         className="font-medium text-amber-200 underline-offset-2 hover:underline"
                       >
-                        Only this door {relatedDoor.unit_label}
+                        {pt("installerProject.onlyThisDoor")} {relatedDoor.unit_label}
                       </button>
                       <a
                         href={`#door-${relatedDoor.id}`}
                         className="font-medium text-amber-200 underline-offset-2 hover:underline"
                       >
-                        Open door {relatedDoor.unit_label}
+                        {pt("installerProject.openDoor")} {relatedDoor.unit_label}
                       </a>
                     </>
                   ) : (
@@ -996,10 +1038,10 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                         <button
                           type="button"
                           onClick={() => focusPriorityDoor(door)}
-                          aria-label={`Only this ${door.unitLabel}`}
+                          aria-label={`${shortOnlyThis} ${door.unitLabel}`}
                           className="rounded border border-current/20 bg-background/70 px-1.5 py-0.5 text-[11px] transition-colors hover:bg-background"
                         >
-                          Only this
+                          {shortOnlyThis}
                         </button>
                       </span>
                     ))}
@@ -1050,7 +1092,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                           onChange={(event) => setSelectedReasonId(event.target.value)}
                           className="h-9 rounded-lg border border-border bg-background px-2 text-xs"
                         >
-                          {reasons.length === 0 && <option value="">No reasons</option>}
+                          {reasons.length === 0 && <option value="">{pt("installerProject.noReasons")}</option>}
                           {reasons.map((reason) => (
                             <option key={reason.id} value={reason.id}>
                               {reason.code} - {reason.name}

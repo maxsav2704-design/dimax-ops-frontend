@@ -531,6 +531,8 @@ function chunkIds(values: string[], size: number): string[][] {
 export default function ProjectsPage() {
   const { locale, t } = useI18n();
   const tt = (key: string) => projectsOverrides[locale]?.[key] ?? t(key);
+  const copy = (en: string, ru: string, he: string) =>
+    locale === "ru" ? ru : locale === "he" ? he : en;
   const searchParams = useSearchParams();
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [doorTypes, setDoorTypes] = useState<DoorType[]>([]);
@@ -1028,8 +1030,8 @@ export default function ProjectsPage() {
                 <th className="text-left px-2 py-1.5 font-medium">קומה</th>
                 <th className="text-left px-2 py-1.5 font-medium">דירה</th>
                 <th className="text-left px-2 py-1.5 font-medium">דגם כנף</th>
-                <th className="text-left px-2 py-1.5 font-medium">Locations</th>
-                <th className="text-left px-2 py-1.5 font-medium">Doors</th>
+                <th className="text-left px-2 py-1.5 font-medium">{copy("Locations", "Локации", "מיקומים")}</th>
+                <th className="text-left px-2 py-1.5 font-medium">{copy("Doors", "Двери", "דלתות")}</th>
               </tr>
             </thead>
             <tbody>
@@ -1608,8 +1610,8 @@ export default function ProjectsPage() {
 
   return (
     <DashboardLayout>
-      <div className="motion-stagger max-w-[1500px] space-y-6 p-6 lg:p-8">
-        <section className="page-hero relative overflow-hidden">
+      <div className="motion-stagger readability-wrap max-w-[1500px] space-y-6 p-6 lg:p-8">
+        <section className="page-hero readability-wrap relative overflow-hidden">
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl">
@@ -1631,7 +1633,7 @@ export default function ProjectsPage() {
                 )}
               </div>
             </div>
-            <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
+            <div className="surface-subtle min-w-0 max-w-xl space-y-4 p-4 sm:p-5 xl:min-w-[320px]">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
@@ -2747,11 +2749,11 @@ export default function ProjectsPage() {
                           className="h-7 rounded-md border border-border bg-background px-2 text-[11px]"
                         >
                           <option value="all">{t("projects.allStatuses")}</option>
-                          <option value="ANALYZED">ANALYZED</option>
-                          <option value="SUCCESS">SUCCESS</option>
-                          <option value="PARTIAL">PARTIAL</option>
-                          <option value="FAILED">FAILED</option>
-                          <option value="EMPTY">EMPTY</option>
+                          <option value="ANALYZED">{copy("ANALYZED", "ПРОАНАЛИЗИРОВАНО", "נותח")}</option>
+                          <option value="SUCCESS">{copy("SUCCESS", "УСПЕШНО", "הצליח")}</option>
+                          <option value="PARTIAL">{copy("PARTIAL", "ЧАСТИЧНО", "חלקי")}</option>
+                          <option value="FAILED">{copy("FAILED", "ОШИБКА", "נכשל")}</option>
+                          <option value="EMPTY">{copy("EMPTY", "ПУСТО", "ריק")}</option>
                         </select>
                         <button
                           onClick={() => {
@@ -2854,7 +2856,7 @@ export default function ProjectsPage() {
                                         disabled={retryingRunId === run.id}
                                         className="h-7 px-2 rounded-md border border-border bg-card text-[11px] disabled:opacity-50"
                                       >
-                                        {retryingRunId === run.id ? `${t("projects.retry")}...` : t("projects.retry")}
+                                        {retryingRunId === run.id ? `${t("projects.retry")}…` : t("projects.retry")}
                                       </button>
                                     ) : null}
                                   </div>

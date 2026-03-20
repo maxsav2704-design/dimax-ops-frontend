@@ -1377,6 +1377,35 @@ function SectionMessage({
 export default function ReportsPage() {
   const { locale, t } = useI18n();
   const tt = (key: string) => reportsOverrides[locale]?.[key] ?? t(key);
+  const copy = (en: string, ru: string, he: string) => {
+    if (locale === "ru") return ru;
+    if (locale === "he") return he;
+    return en;
+  };
+  const optionLabel = (label: string) => {
+    switch (label) {
+      case "Profit":
+        return copy("Profit", "Прибыль", "רווח");
+      case "Margin %":
+        return copy("Margin %", "Маржа %", "מרווח %");
+      case "Installed Doors":
+        return copy("Installed Doors", "Смонтированные двери", "דלתות מותקנות");
+      case "Profit / Door":
+        return copy("Profit / Door", "Прибыль / дверь", "רווח / דלת");
+      case "Open Issues":
+        return copy("Open Issues", "Открытые проблемы", "תקלות פתוחות");
+      case "Total Doors":
+        return copy("Total Doors", "Всего дверей", "סה\"כ דלתות");
+      case "Not Installed":
+        return copy("Not Installed", "Не смонтировано", "לא הותקן");
+      case "Planned Revenue":
+        return copy("Planned Revenue", "Плановая выручка", "הכנסה מתוכננת");
+      case "Installed Revenue":
+        return copy("Installed Revenue", "Выручка по монтажу", "הכנסה מותקנת");
+      default:
+        return label;
+    }
+  };
   const reportsFocusCopy = getReportsFocusCopy(t);
   const reportsOpsPresetCopy = getReportsOpsPresetCopy(t);
   const router = useRouter();
@@ -2132,7 +2161,7 @@ export default function ReportsPage() {
 
   return (
     <DashboardLayout>
-      <div className="motion-stagger max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <div className="motion-stagger readability-wrap max-w-[1400px] space-y-6 p-6 lg:p-8">
         <section className="page-hero readability-wrap relative overflow-hidden">
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
@@ -2175,12 +2204,12 @@ export default function ReportsPage() {
                 value={presetName}
                 onChange={(e) => setPresetName(e.target.value)}
                 placeholder={t("reports.savePreset")}
-                className="h-10 rounded-xl border border-border/70 bg-background/80 px-3 text-[13px]"
+                className="h-10 min-w-0 flex-1 rounded-xl border border-border/70 bg-background/80 px-3 text-[13px] sm:min-w-[180px]"
               />
               <button
                 type="button"
                 onClick={handleSavePreset}
-                className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
+                className="h-10 w-full rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium sm:w-auto"
               >
                 {t("reports.savePreset")}
               </button>
@@ -2188,7 +2217,7 @@ export default function ReportsPage() {
                 aria-label="Saved Presets"
                 value={selectedPresetId}
                 onChange={(e) => setSelectedPresetId(e.target.value)}
-                className="h-10 rounded-xl border border-border/70 bg-background/80 px-2 text-[13px]"
+                className="h-10 min-w-0 flex-1 rounded-xl border border-border/70 bg-background/80 px-2 text-[13px] sm:min-w-[180px]"
               >
                 <option value="">{t("reports.savedPresets")}</option>
                 {savedPresets.map((preset) => (
@@ -2200,14 +2229,14 @@ export default function ReportsPage() {
               <button
                 type="button"
                 onClick={handleApplySelectedPreset}
-                className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
+                className="h-10 w-full rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium sm:w-auto"
               >
                 {t("reports.applyPreset")}
               </button>
               <button
                 type="button"
                 onClick={handleDeleteSelectedPreset}
-                className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
+                className="h-10 w-full rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium sm:w-auto"
               >
                 {t("reports.deletePreset")}
               </button>
@@ -2565,7 +2594,7 @@ export default function ReportsPage() {
                       </span>
                     </div>
                     <div className="mt-1 text-[11px] text-muted-foreground">
-                      target {metric.target} | warn {metric.warn_threshold} | danger{" "}
+                      {copy("target", "цель", "יעד")} {metric.target} | {copy("warn", "предупр.", "אזהרה")} {metric.warn_threshold} | {copy("danger", "риск", "סיכון")}{" "}
                       {metric.danger_threshold}
                     </div>
                   </div>
@@ -2574,7 +2603,7 @@ export default function ReportsPage() {
 
               <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] px-4 py-4 space-y-3">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Action Playbooks
+                  {copy("Action Playbooks", "Сценарии действий", "תרחישי פעולה")}
                 </div>
                 {slaPlaybooks.map((playbook) => (
                   <div
@@ -2629,22 +2658,24 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 {operationsSlaHistoryQuery.isLoading ? (
-                  <div className="text-[12px] text-muted-foreground">Loading trend...</div>
+                  <div className="text-[12px] text-muted-foreground">
+                    {copy("Loading trend…", "Загружаем тренд…", "טוען מגמה…")}
+                  </div>
                 ) : operationsSlaHistoryQuery.isError ? (
                   <div className="text-[12px] text-[hsl(var(--destructive))]">
                     {operationsSlaHistoryQuery.error instanceof Error
                       ? operationsSlaHistoryQuery.error.message
-                      : "Failed to load SLA trend"}
+                      : copy("Failed to load SLA trend", "Не удалось загрузить тренд SLA", "טעינת מגמת SLA נכשלה")}
                   </div>
                 ) : (
                   <>
                     <div className="grid gap-2 md:grid-cols-4 text-[12px]">
                       <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
-                        <div className="text-muted-foreground">Current</div>
+                        <div className="text-muted-foreground">{copy("Current", "Текущее", "נוכחי")}</div>
                         <div className="font-semibold">{slaHistorySummary?.current_status || tt("reports.notAvailableShort")}</div>
                       </div>
                       <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
-                        <div className="text-muted-foreground">Status Days</div>
+                        <div className="text-muted-foreground">{copy("Status Days", "Дней в статусе", "ימים בסטטוס")}</div>
                         <div className="font-semibold">
                           OK {slaHistorySummary?.ok_days || 0} | WARN {slaHistorySummary?.warn_days || 0} | DANGER{" "}
                           {slaHistorySummary?.danger_days || 0}
@@ -2938,9 +2969,9 @@ export default function ReportsPage() {
                   <thead className="bg-muted/40 text-muted-foreground">
                     <tr>
                       <th className="text-left px-3 py-2 font-medium">{tt("reports.summary")}</th>
-                      <th className="text-right px-3 py-2 font-medium">Revenue</th>
-                      <th className="text-right px-3 py-2 font-medium">Payroll</th>
-                      <th className="text-right px-3 py-2 font-medium">Profit</th>
+                      <th className="text-right px-3 py-2 font-medium">{copy("Revenue", "Выручка", "הכנסה")}</th>
+                      <th className="text-right px-3 py-2 font-medium">{copy("Payroll", "ФОТ", "שכר")}</th>
+                      <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2992,10 +3023,10 @@ export default function ReportsPage() {
                   <table className="w-full text-[12px]">
                     <thead className="bg-muted/40 text-muted-foreground">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">Reason</th>
-                        <th className="text-right px-3 py-2 font-medium">Doors</th>
-                        <th className="text-right px-3 py-2 font-medium">Revenue</th>
-                        <th className="text-right px-3 py-2 font-medium">Profit</th>
+                        <th className="text-left px-3 py-2 font-medium">{copy("Reason", "Причина", "סיבה")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{copy("Doors", "Двери", "דלתות")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{copy("Revenue", "Выручка", "הכנסה")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3036,8 +3067,8 @@ export default function ReportsPage() {
                     <thead className="bg-muted/40 text-muted-foreground">
                       <tr>
                         <th className="text-left px-3 py-2 font-medium">{tt("reports.addon")}</th>
-                        <th className="text-right px-3 py-2 font-medium">Qty</th>
-                        <th className="text-right px-3 py-2 font-medium">Profit</th>
+                        <th className="text-right px-3 py-2 font-medium">{copy("Qty", "Кол-во", "כמות")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
                         <th className="text-right px-3 py-2 font-medium">{tt("reports.missingPlans")}</th>
                       </tr>
                     </thead>
@@ -3221,7 +3252,7 @@ export default function ReportsPage() {
                         </td>
                       </tr>
                       <tr className="border-t border-border/70">
-                        <td className="px-3 py-2 font-medium text-foreground">Profit</td>
+                        <td className="px-3 py-2 font-medium text-foreground">{copy("Profit", "Прибыль", "רווח")}</td>
                         <td className="px-3 py-2 text-right">
                           {formatAmount(projectPlanFact.planned_profit_total)}
                         </td>
@@ -3293,41 +3324,41 @@ export default function ReportsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Actual Margin
+                      {copy("Actual Margin", "Фактическая маржа", "מרווח בפועל")}
                     </div>
                     <div className="mt-2 text-[22px] font-semibold text-foreground">
                       {formatPercent(projectRiskDrilldown.summary.actual_margin_pct)}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      Profit gap {formatAmount(projectRiskDrilldown.summary.profit_gap_total)}
+                      {copy("Profit gap", "Разрыв по прибыли", "פער רווח")} {formatAmount(projectRiskDrilldown.summary.profit_gap_total)}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Completion / Delayed
+                      {copy("Completion / Delayed", "Завершение / задержка", "השלמה / עיכוב")}
                     </div>
                     <div className="mt-2 text-[22px] font-semibold text-foreground">
                       {formatPercent(projectRiskDrilldown.summary.completion_pct)}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      {projectRiskDrilldown.summary.not_installed_doors} delayed doors
+                      {projectRiskDrilldown.summary.not_installed_doors} {copy("delayed doors", "дверей в задержке", "דלתות בעיכוב")}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Issue Pressure
+                      {copy("Issue Pressure", "Давление проблем", "לחץ תקלות")}
                     </div>
                     <div className="mt-2 text-[22px] font-semibold text-foreground">
                       {projectRiskDrilldown.summary.open_issues} /{" "}
                       {projectRiskDrilldown.summary.blocked_open_issues}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      Open / blocked issues
+                      {copy("Open / blocked issues", "Открытые / заблокированные проблемы", "תקלות פתוחות / חסומות")}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Data Risk
+                      {copy("Data Risk", "Риск данных", "סיכון נתונים")}
                     </div>
                     <div className="mt-2 text-[22px] font-semibold text-foreground">
                       {projectRiskDrilldown.summary.missing_planned_rates_doors
@@ -3335,7 +3366,7 @@ export default function ReportsPage() {
                         + projectRiskDrilldown.summary.missing_addon_plans_facts}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      rates + addon plan gaps
+                      {copy("rates + addon plan gaps", "пробелы по ставкам и add-on плану", "פערי תעריפים ותכנון add-on")}
                     </div>
                   </div>
                 </div>
@@ -3369,14 +3400,14 @@ export default function ReportsPage() {
 
                   <div className="rounded-lg border border-border bg-card overflow-auto xl:col-span-1">
                     <div className="border-b border-border/70 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Stalled Reasons
+                      {copy("Stalled Reasons", "Причины задержки", "סיבות לעיכוב")}
                     </div>
                     <table className="w-full text-[12px]">
                       <thead className="bg-muted/40 text-muted-foreground">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">Reason</th>
-                          <th className="text-right px-3 py-2 font-medium">Doors</th>
-                          <th className="text-right px-3 py-2 font-medium">Profit Leak</th>
+                          <th className="text-left px-3 py-2 font-medium">{copy("Reason", "Причина", "סיבה")}</th>
+                          <th className="text-right px-3 py-2 font-medium">{copy("Doors", "Двери", "דלתות")}</th>
+                          <th className="text-right px-3 py-2 font-medium">{copy("Profit Leak", "Потеря прибыли", "דליפת רווח")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -3413,17 +3444,17 @@ export default function ReportsPage() {
                     <table className="w-full text-[12px]">
                       <thead className="bg-muted/40 text-muted-foreground">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">Order</th>
-                          <th className="text-right px-3 py-2 font-medium">Gap</th>
-                          <th className="text-right px-3 py-2 font-medium">Issues</th>
-                          <th className="text-right px-3 py-2 font-medium">Completion</th>
+                          <th className="text-left px-3 py-2 font-medium">{copy("Order", "Заказ", "הזמנה")}</th>
+                          <th className="text-right px-3 py-2 font-medium">{copy("Gap", "Разрыв", "פער")}</th>
+                          <th className="text-right px-3 py-2 font-medium">{copy("Issues", "Проблемы", "תקלות")}</th>
+                          <th className="text-right px-3 py-2 font-medium">{copy("Completion", "Завершение", "השלמה")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(projectRiskDrilldown.risky_orders || []).length === 0 ? (
                           <tr>
                             <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                              No risky orders.
+                              {copy("No risky orders.", "Рискованных заказов нет.", "אין הזמנות מסוכנות.")}
                             </td>
                           </tr>
                         ) : (
@@ -3479,10 +3510,10 @@ export default function ReportsPage() {
                 <table className="w-full text-[12px]">
                   <thead className="bg-muted/40 text-muted-foreground">
                     <tr>
-                      <th className="text-left px-3 py-2 font-medium">Project</th>
-                      <th className="text-right px-3 py-2 font-medium">Profit</th>
-                      <th className="text-right px-3 py-2 font-medium">Margin</th>
-                      <th className="text-right px-3 py-2 font-medium">Completion</th>
+                      <th className="text-left px-3 py-2 font-medium">{copy("Project", "Проект", "פרויקט")}</th>
+                      <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
+                      <th className="text-right px-3 py-2 font-medium">{copy("Margin", "Маржа", "מרווח")}</th>
+                      <th className="text-right px-3 py-2 font-medium">{copy("Completion", "Завершение", "השלמה")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -3538,10 +3569,10 @@ export default function ReportsPage() {
                 <table className="w-full text-[12px]">
                   <thead className="bg-muted/40 text-muted-foreground">
                     <tr>
-                      <th className="text-left px-3 py-2 font-medium">Project</th>
-                      <th className="text-right px-3 py-2 font-medium">Profit</th>
-                      <th className="text-right px-3 py-2 font-medium">Margin</th>
-                      <th className="text-right px-3 py-2 font-medium">Data Risk</th>
+                      <th className="text-left px-3 py-2 font-medium">{copy("Project", "Проект", "פרויקט")}</th>
+                      <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
+                      <th className="text-right px-3 py-2 font-medium">{copy("Margin", "Маржа", "מרווח")}</th>
+                      <th className="text-right px-3 py-2 font-medium">{copy("Data Risk", "Риск данных", "סיכון נתונים")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -3684,10 +3715,10 @@ export default function ReportsPage() {
                   <table className="w-full text-[12px]">
                     <thead className="bg-muted/40 text-muted-foreground">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">Project</th>
-                        <th className="text-right px-3 py-2 font-medium">Profit</th>
-                        <th className="text-right px-3 py-2 font-medium">Margin</th>
-                        <th className="text-right px-3 py-2 font-medium">Issues</th>
+                        <th className="text-left px-3 py-2 font-medium">{copy("Project", "Проект", "פרויקט")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{copy("Margin", "Маржа", "מרווח")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{copy("Issues", "Проблемы", "תקלות")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3723,10 +3754,10 @@ export default function ReportsPage() {
                   <table className="w-full text-[12px]">
                     <thead className="bg-muted/40 text-muted-foreground">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">Order</th>
-                        <th className="text-right px-3 py-2 font-medium">Profit</th>
-                        <th className="text-right px-3 py-2 font-medium">Delayed</th>
-                        <th className="text-right px-3 py-2 font-medium">Completion</th>
+                        <th className="text-left px-3 py-2 font-medium">{copy("Order", "Заказ", "הזמנה")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{copy("Delayed", "Задержка", "עיכוב")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{copy("Completion", "Завершение", "השלמה")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3761,10 +3792,10 @@ export default function ReportsPage() {
                   <table className="w-full text-[12px]">
                     <thead className="bg-muted/40 text-muted-foreground">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">Installer</th>
-                        <th className="text-left px-3 py-2 font-medium">Band</th>
-                        <th className="text-right px-3 py-2 font-medium">Profit</th>
-                        <th className="text-right px-3 py-2 font-medium">Margin</th>
+                        <th className="text-left px-3 py-2 font-medium">{copy("Installer", "Монтажник", "מתקין")}</th>
+                        <th className="text-left px-3 py-2 font-medium">{copy("Band", "Сегмент", "קטגוריה")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
+                        <th className="text-right px-3 py-2 font-medium">{copy("Margin", "Маржа", "מרווח")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3833,7 +3864,7 @@ export default function ReportsPage() {
               >
                 {INSTALLER_MATRIX_SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {optionLabel(option.label)}
                   </option>
                 ))}
               </select>
@@ -3860,26 +3891,34 @@ export default function ReportsPage() {
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
               {installerProfitabilityMatrixQuery.error instanceof Error
                 ? installerProfitabilityMatrixQuery.error.message
-                : "Failed to load installer profitability matrix"}
+                : copy(
+                    "Failed to load installer profitability matrix",
+                    "Не удалось загрузить матрицу прибыльности монтажников",
+                    "טעינת מטריצת רווחיות המתקינים נכשלה"
+                  )}
             </div>
           ) : installerProfitabilityMatrix.length === 0 ? (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              No installer profitability rows.
+              {copy(
+                "No installer profitability rows.",
+                "Нет строк прибыльности по монтажникам.",
+                "אין שורות רווחיות למתקינים."
+              )}
             </div>
           ) : (
             <div className="overflow-auto">
               <table className="w-full text-[12px]">
                 <thead className="bg-muted/40 text-muted-foreground">
                   <tr>
-                    <th className="text-left px-3 py-2 font-medium">Installer</th>
-                    <th className="text-left px-3 py-2 font-medium">Band</th>
-                    <th className="text-right px-3 py-2 font-medium">Installed</th>
-                    <th className="text-right px-3 py-2 font-medium">Revenue</th>
-                    <th className="text-right px-3 py-2 font-medium">Profit</th>
-                    <th className="text-right px-3 py-2 font-medium">Margin</th>
-                    <th className="text-right px-3 py-2 font-medium">Profit / Door</th>
-                    <th className="text-right px-3 py-2 font-medium">Issues</th>
-                    <th className="text-right px-3 py-2 font-medium">Data Risk</th>
+                    <th className="text-left px-3 py-2 font-medium">{copy("Installer", "Монтажник", "מתקין")}</th>
+                    <th className="text-left px-3 py-2 font-medium">{copy("Band", "Сегмент", "קטגוריה")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Installed", "Смонтировано", "הותקן")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Revenue", "Выручка", "הכנסה")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Margin", "Маржа", "מרווח")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Profit / Door", "Прибыль / дверь", "רווח / דלת")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Issues", "Проблемы", "תקלות")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Data Risk", "Риск данных", "סיכון נתונים")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -3949,7 +3988,7 @@ export default function ReportsPage() {
               >
                 {INSTALLER_PROJECT_SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {optionLabel(option.label)}
                   </option>
                 ))}
               </select>
@@ -3976,13 +4015,25 @@ export default function ReportsPage() {
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
               {installerProjectProfitabilityQuery.error instanceof Error
                 ? installerProjectProfitabilityQuery.error.message
-                : "Failed to load installer-project cross-view"}
+                : copy(
+                    "Failed to load installer-project cross-view",
+                    "Не удалось загрузить cross-view по монтажникам и проектам",
+                    "טעינת cross-view למתקינים ופרויקטים נכשלה"
+                  )}
             </div>
           ) : installerProjectProfitability.length === 0 ? (
             <div className="px-4 py-6">
               <SectionMessage
-                title="No installer-project cross-view rows"
-                detail="This view appears after installed doors or add-on facts create measurable profitability per installer and project."
+                title={copy(
+                  "No installer-project cross-view rows",
+                  "Нет строк cross-view по монтажникам и проектам",
+                  "אין שורות cross-view למתקינים ופרויקטים"
+                )}
+                detail={copy(
+                  "This view appears after installed doors or add-on facts create measurable profitability per installer and project.",
+                  "Этот блок появляется после того, как смонтированные двери или add-on факты формируют измеримую прибыльность по монтажнику и проекту.",
+                  "בלוק זה מופיע לאחר שדלתות מותקנות או עובדות add-on יוצרות רווחיות מדידה לפי מתקין ופרויקט."
+                )}
               />
             </div>
           ) : (
@@ -3990,15 +4041,17 @@ export default function ReportsPage() {
               <table className="w-full text-[12px]">
                 <thead className="bg-muted/40 text-muted-foreground">
                   <tr>
-                    <th className="text-left px-3 py-2 font-medium">Installer / Project</th>
-                    <th className="text-left px-3 py-2 font-medium">Band</th>
-                    <th className="text-right px-3 py-2 font-medium">Installed</th>
-                    <th className="text-right px-3 py-2 font-medium">Revenue</th>
-                    <th className="text-right px-3 py-2 font-medium">Profit</th>
-                    <th className="text-right px-3 py-2 font-medium">Margin</th>
-                    <th className="text-right px-3 py-2 font-medium">Profit / Door</th>
-                    <th className="text-right px-3 py-2 font-medium">Issues</th>
-                    <th className="text-right px-3 py-2 font-medium">Data Risk</th>
+                    <th className="text-left px-3 py-2 font-medium">
+                      {copy("Installer / Project", "Монтажник / проект", "מתקין / פרויקט")}
+                    </th>
+                    <th className="text-left px-3 py-2 font-medium">{copy("Band", "Сегмент", "קטגוריה")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Installed", "Смонтировано", "הותקן")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Revenue", "Выручка", "הכנסה")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Margin", "Маржа", "מרווח")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Profit / Door", "Прибыль / дверь", "רווח / דלת")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Issues", "Проблемы", "תקלות")}</th>
+                    <th className="text-right px-3 py-2 font-medium">{copy("Data Risk", "Риск данных", "סיכון נתונים")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -4099,12 +4152,12 @@ export default function ReportsPage() {
           </div>
 
           <div className="grid grid-cols-[1fr_120px_120px_120px_120px_110px] gap-3 px-4 py-3 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
-            <span>Installer</span>
-            <span className="text-right">Installed</span>
-            <span className="text-right">Payroll</span>
-            <span className="text-right">Revenue</span>
-            <span className="text-right">Profit</span>
-            <span className="text-right">Missing Rates</span>
+            <span>{copy("Installer", "Монтажник", "מתקין")}</span>
+            <span className="text-right">{copy("Installed", "Смонтировано", "הותקן")}</span>
+            <span className="text-right">{copy("Payroll", "ФОТ", "שכר")}</span>
+            <span className="text-right">{copy("Revenue", "Выручка", "הכנסה")}</span>
+            <span className="text-right">{copy("Profit", "Прибыль", "רווח")}</span>
+            <span className="text-right">{copy("Missing Rates", "Нет ставок", "חסרים תעריפים")}</span>
           </div>
 
           {installersKpiQuery.isLoading && (
@@ -4116,7 +4169,11 @@ export default function ReportsPage() {
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
               {installersKpiQuery.error instanceof Error
                 ? installersKpiQuery.error.message
-                : "Failed to load installers KPI"}
+                : copy(
+                    "Failed to load installers KPI",
+                    "Не удалось загрузить KPI монтажников",
+                    "טעינת KPI המתקינים נכשלה"
+                  )}
             </div>
           )}
           {!installersKpiQuery.isLoading &&
@@ -4173,17 +4230,27 @@ export default function ReportsPage() {
                 {tt("reports.installerDrilldownTitle")}
               </div>
               <div className="text-[13px] text-muted-foreground">
-                Profitability, projects, orders and addon impact for the selected installer
+                {copy(
+                  "Profitability, projects, orders and addon impact for the selected installer",
+                  "Доходность, проекты, заказы и влияние доп. работ по выбранному монтажнику",
+                  "רווחיות, פרויקטים, הזמנות והשפעת תוספות עבור המתקין שנבחר"
+                )}
               </div>
             </div>
             <select
-              aria-label="Installer KPI Details Filter"
+              aria-label={copy(
+                "Installer KPI Details Filter",
+                "Фильтр деталей KPI монтажника",
+                "מסנן פרטי KPI למתקין"
+              )}
               value={installerDetailsId}
               onChange={(e) => setInstallerDetailsId(e.target.value)}
               className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
             >
               <option value="">
-                {installersKpiQuery.isLoading ? "Loading installers..." : "Select installer"}
+                {installersKpiQuery.isLoading
+                  ? copy("Loading installers…", "Загружаем монтажников…", "טוען מתקינים…")
+                  : copy("Select installer", "Выберите монтажника", "בחר מתקין")}
               </option>
               {installersKpiItems.map((item) => (
                 <option key={item.installer_id} value={item.installer_id}>
@@ -4195,17 +4262,29 @@ export default function ReportsPage() {
 
           {installersKpiQuery.isLoading && installersKpiItems.length === 0 && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading installer drill-down...
+              {copy(
+                "Loading installer drill-down…",
+                "Загружаем drill-down по монтажнику…",
+                "טוען drill-down למתקין…"
+              )}
             </div>
           )}
           {!installersKpiQuery.isLoading && installersKpiItems.length === 0 && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              No installers available for drill-down.
+              {copy(
+                "No installers available for drill-down.",
+                "Нет монтажников для drill-down.",
+                "אין מתקינים זמינים ל-drill-down."
+              )}
             </div>
           )}
           {installerDetailsQuery.isLoading && installerDetailsId && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading installer details...
+              {copy(
+                "Loading installer details…",
+                "Загружаем детали монтажника…",
+                "טוען פרטי מתקין…"
+              )}
             </div>
           )}
           {installerDetailsQuery.isError && installerDetailsId && (
@@ -4228,8 +4307,8 @@ export default function ReportsPage() {
                       {formatAmount(installerDetails.revenue_total)}
                     </div>
                     <div className="mt-1 text-[12px] text-muted-foreground">
-                      Payroll {formatAmount(installerDetails.payroll_total)} | Profit{" "}
-                      {formatAmount(installerDetails.profit_total)}
+                      {copy("Payroll", "Payroll", "שכר")} {formatAmount(installerDetails.payroll_total)} |{" "}
+                      {copy("Profit", "Прибыль", "רווח")} {formatAmount(installerDetails.profit_total)}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
@@ -4280,17 +4359,21 @@ export default function ReportsPage() {
                     <table className="w-full text-[12px]">
                       <thead className="bg-muted/40 text-muted-foreground">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">Project</th>
-                          <th className="text-right px-3 py-2 font-medium">Installed</th>
-                          <th className="text-right px-3 py-2 font-medium">Issues</th>
-                          <th className="text-right px-3 py-2 font-medium">Profit</th>
+                          <th className="text-left px-3 py-2 font-medium">{copy("Project", "Проект", "פרויקט")}</th>
+                          <th className="text-right px-3 py-2 font-medium">{copy("Installed", "Установлено", "הותקן")}</th>
+                          <th className="text-right px-3 py-2 font-medium">{copy("Issues", "Проблемы", "תקלות")}</th>
+                          <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {installerDetails.top_projects.length === 0 ? (
                           <tr>
                             <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                              No project drill-down rows.
+                              {copy(
+                                "No project drill-down rows.",
+                                "Нет строк по проектному drill-down.",
+                                "אין שורות drill-down לפרויקט."
+                              )}
                             </td>
                           </tr>
                         ) : (
@@ -4301,7 +4384,7 @@ export default function ReportsPage() {
                                 <div className="text-[11px] text-muted-foreground">
                                   {item.last_installed_at
                                     ? formatDateTime(item.last_installed_at)
-                                    : "No install date"}
+                                    : copy("No install date", "Нет даты установки", "אין תאריך התקנה")}
                                 </div>
                               </td>
                               <td className="px-3 py-2 text-right">{item.installed_doors}</td>
@@ -4320,17 +4403,21 @@ export default function ReportsPage() {
                     <table className="w-full text-[12px]">
                       <thead className="bg-muted/40 text-muted-foreground">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">Order</th>
-                          <th className="text-right px-3 py-2 font-medium">Installed</th>
-                          <th className="text-right px-3 py-2 font-medium">Revenue</th>
-                          <th className="text-right px-3 py-2 font-medium">Profit</th>
+                          <th className="text-left px-3 py-2 font-medium">{copy("Order", "Заказ", "הזמנה")}</th>
+                          <th className="text-right px-3 py-2 font-medium">{copy("Installed", "Установлено", "הותקן")}</th>
+                          <th className="text-right px-3 py-2 font-medium">{copy("Revenue", "Выручка", "הכנסה")}</th>
+                          <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {installerDetails.order_breakdown.length === 0 ? (
                           <tr>
                             <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                              No order breakdown rows.
+                              {copy(
+                                "No order breakdown rows.",
+                                "Нет строк по разбивке заказов.",
+                                "אין שורות פירוט להזמנות."
+                              )}
                             </td>
                           </tr>
                         ) : (
@@ -4361,10 +4448,14 @@ export default function ReportsPage() {
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Order Numbers KPI
+                {copy("Order Numbers KPI", "KPI по номерам заказов", "KPI לפי מספרי הזמנה")}
               </div>
               <div className="text-[13px] text-muted-foreground">
-                Money and operational control by order number
+                {copy(
+                  "Money and operational control by order number",
+                  "Деньги и операционный контроль по номеру заказа",
+                  "כסף ובקרה תפעולית לפי מספר הזמנה"
+                )}
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -4392,7 +4483,7 @@ export default function ReportsPage() {
                   setOrderNumbersQuery(e.target.value);
                   setOrderNumbersKpiOffset(0);
                 }}
-                placeholder="Search order"
+                placeholder={copy("Search order…", "Поиск заказа…", "חפש הזמנה…")}
                 className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
               />
               <select
@@ -4405,7 +4496,7 @@ export default function ReportsPage() {
               >
                 {ORDER_NUMBERS_SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {optionLabel(option.label)}
                   </option>
                 ))}
               </select>
@@ -4435,34 +4526,42 @@ export default function ReportsPage() {
           </div>
 
           <div className="grid grid-cols-[1fr_80px_90px_90px_80px_120px_120px_120px_110px] gap-3 px-4 py-3 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
-            <span>Order</span>
-            <span className="text-right">Total</span>
-            <span className="text-right">Installed</span>
-            <span className="text-right">Not Installed</span>
-            <span className="text-right">Issues</span>
-            <span className="text-right">Planned</span>
-            <span className="text-right">Payroll</span>
-            <span className="text-right">Profit</span>
-            <span className="text-right">Completion</span>
+            <span>{copy("Order", "Заказ", "הזמנה")}</span>
+            <span className="text-right">{copy("Total", "Всего", "סה\"כ")}</span>
+            <span className="text-right">{copy("Installed", "Установлено", "הותקן")}</span>
+            <span className="text-right">{copy("Not Installed", "Не установлено", "לא הותקן")}</span>
+            <span className="text-right">{copy("Issues", "Проблемы", "תקלות")}</span>
+            <span className="text-right">{copy("Planned", "План", "מתוכנן")}</span>
+            <span className="text-right">{copy("Payroll", "Payroll", "שכר")}</span>
+            <span className="text-right">{copy("Profit", "Прибыль", "רווח")}</span>
+            <span className="text-right">{copy("Completion", "Готовность", "השלמה")}</span>
           </div>
 
           {orderNumbersKpiQuery.isLoading && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading order numbers KPI...
+              {copy(
+                "Loading order numbers KPI…",
+                "Загружаем KPI по номерам заказов…",
+                "טוען KPI למספרי הזמנות…"
+              )}
             </div>
           )}
           {orderNumbersKpiQuery.isError && (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
               {orderNumbersKpiQuery.error instanceof Error
                 ? orderNumbersKpiQuery.error.message
-                : "Failed to load order numbers KPI"}
+                : copy(
+                    "Failed to load order numbers KPI",
+                    "Не удалось загрузить KPI по номерам заказов",
+                    "טעינת KPI למספרי הזמנות נכשלה"
+                  )}
             </div>
           )}
           {!orderNumbersKpiQuery.isLoading &&
             !orderNumbersKpiQuery.isError &&
             orderNumbersKpiItems.length === 0 && (
               <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                No order KPI rows.
+                {copy("No order KPI rows.", "Нет строк KPI по заказам.", "אין שורות KPI להזמנות.")}
               </div>
             )}
           {!orderNumbersKpiQuery.isLoading &&
@@ -4485,7 +4584,7 @@ export default function ReportsPage() {
             ))}
           <div className="px-4 py-3 border-t border-border/70 flex items-center justify-between text-[12px]">
             <div className="text-muted-foreground">
-              Total matched: {orderNumbersKpiQuery.data?.total || 0}
+              {copy("Total matched", "Всего совпадений", "סה\"כ התאמות")}: {orderNumbersKpiQuery.data?.total || 0}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -4514,7 +4613,7 @@ export default function ReportsPage() {
               Delivery
             </div>
             {deliveryQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">Loading...</div>
+              <div className="text-[13px] text-muted-foreground">{copy("Loading…", "Загрузка…", "טוען…")}</div>
             ) : (
               <div className="space-y-1 text-[13px]">
                 <div className="flex items-center gap-2">
@@ -4546,7 +4645,7 @@ export default function ReportsPage() {
               Outbox Queue
             </div>
             {outboxSummaryQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">Loading...</div>
+              <div className="text-[13px] text-muted-foreground">{copy("Loading…", "Загрузка…", "טוען…")}</div>
             ) : (
               <div className="space-y-1 text-[13px]">
                 <div>Total: {outboxSummary?.total ?? 0}</div>
@@ -4792,7 +4891,7 @@ export default function ReportsPage() {
 
         <div
           id="reports-failed-outbox"
-          className="glass-card rounded-xl overflow-hidden border border-border"
+          className="glass-card rounded-xl overflow-x-auto border border-border"
         >
           <div className="px-4 py-3 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
             {t("reports.failedOutboxQueue")}
@@ -4813,7 +4912,7 @@ export default function ReportsPage() {
             failedItems.map((item) => (
               <div
                 key={item.id}
-                className="grid grid-cols-[120px_120px_120px_160px_1fr_120px] gap-3 px-4 py-3 border-t border-border/70 text-[13px] items-center"
+                className="grid min-w-[860px] grid-cols-[120px_120px_120px_160px_1fr_120px] gap-3 px-4 py-3 border-t border-border/70 text-[13px] items-center"
               >
                 <div className="font-medium">{item.channel}</div>
                 <div>{item.status}</div>
@@ -4822,7 +4921,7 @@ export default function ReportsPage() {
                   {item.attempts}/{item.max_attempts}
                 </div>
                 <div className="text-muted-foreground truncate">
-                  {item.last_error || "No error payload"}
+                  {item.last_error || copy("No error payload", "Нет payload ошибки", "אין payload לשגיאה")}
                 </div>
                 <button
                   onClick={() => retryMutation.mutate(item.id)}
@@ -4831,28 +4930,30 @@ export default function ReportsPage() {
                   className="h-8 px-3 rounded-md border border-border bg-card text-[12px] inline-flex items-center gap-1.5 disabled:opacity-50"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  Retry
+                  {copy("Retry", "Повторить", "נסה שוב")}
                 </button>
               </div>
             ))}
         </div>
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
-          <div className="grid grid-cols-[180px_130px_130px_130px_1fr] gap-3 px-4 py-3 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
-            <span>Time</span>
-            <span>Level</span>
-            <span>Metric</span>
-            <span>Usage</span>
-            <span>Action</span>
+        <div className="glass-card rounded-xl overflow-x-auto border border-border">
+          <div className="grid min-w-[720px] grid-cols-[180px_130px_130px_130px_1fr] gap-3 px-4 py-3 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <span>{copy("Time", "Время", "זמן")}</span>
+            <span>{copy("Level", "Уровень", "רמה")}</span>
+            <span>{copy("Metric", "Метрика", "מדד")}</span>
+            <span>{copy("Usage", "Использование", "שימוש")}</span>
+            <span>{copy("Action", "Действие", "פעולה")}</span>
           </div>
 
           {alertsQuery.isLoading && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">Loading alerts...</div>
+            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+              {copy("Loading alerts…", "Загружаем алерты…", "טוען התראות…")}
+            </div>
           )}
 
           {!alertsQuery.isLoading && items.length === 0 && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              No limit alerts yet.
+              {copy("No limit alerts yet.", "Алертов по лимитам пока нет.", "אין עדיין התראות מגבלה.")}
             </div>
           )}
 
@@ -4907,9 +5008,9 @@ export default function ReportsPage() {
             })}
         </div>
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
+        <div className="glass-card rounded-xl overflow-x-auto border border-border">
           <div className="px-4 py-3 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
-            Catalog Audit Report
+            {copy("Catalog Audit Report", "Аудит справочников", "דוח ביקורת קטלוג")}
           </div>
           <div className="px-4 py-3 border-b border-border/70 grid gap-2 md:grid-cols-[180px_220px_150px_150px_auto] items-center">
             <select
@@ -4920,7 +5021,7 @@ export default function ReportsPage() {
               }}
               className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
             >
-              <option value="">All entities</option>
+              <option value="">{copy("All entities", "Все сущности", "כל הישויות")}</option>
               {AUDIT_ENTITY_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -4935,7 +5036,7 @@ export default function ReportsPage() {
               }}
               className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
             >
-              <option value="">All actions</option>
+              <option value="">{copy("All actions", "Все действия", "כל הפעולות")}</option>
               {AUDIT_ACTION_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -4960,7 +5061,7 @@ export default function ReportsPage() {
               type="date"
               className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
             />
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <button
                 onClick={() =>
                   exportAuditMutation.mutate()
@@ -4969,7 +5070,7 @@ export default function ReportsPage() {
                 title={privilegedActionHint}
                 className="h-9 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
               >
-                Export CSV
+                {copy("Export CSV", "Экспорт CSV", "ייצוא CSV")}
               </button>
               <button
                 onClick={() => {
@@ -4981,30 +5082,32 @@ export default function ReportsPage() {
                 }}
                 className="h-9 px-3 rounded-md border border-border bg-card text-[12px]"
               >
-                Reset
+                {copy("Reset", "Сбросить", "איפוס")}
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-[170px_120px_1fr_1fr] gap-3 px-4 py-3 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
-            <span>Time</span>
-            <span>Entity</span>
-            <span>Action</span>
-            <span>Reason</span>
+          <div className="grid min-w-[640px] grid-cols-[170px_120px_1fr_1fr] gap-3 px-4 py-3 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <span>{copy("Time", "Время", "זמן")}</span>
+            <span>{copy("Entity", "Сущность", "ישות")}</span>
+            <span>{copy("Action", "Действие", "פעולה")}</span>
+            <span>{copy("Reason", "Причина", "סיבה")}</span>
           </div>
           {auditCatalogsQuery.isLoading && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">Loading audit...</div>
+            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+              {copy("Loading audit…", "Загружаем аудит…", "טוען audit…")}
+            </div>
           )}
           {!auditCatalogsQuery.isLoading && auditItems.length === 0 && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              No catalog audit entries.
+              {copy("No catalog audit entries.", "Записей аудита справочников нет.", "אין רשומות ביקורת קטלוג.")}
             </div>
           )}
           {!auditCatalogsQuery.isLoading &&
             auditItems.map((item) => (
               <div
                 key={item.id}
-                className="grid grid-cols-[170px_120px_1fr_1fr] gap-3 px-4 py-3 border-t border-border/70 text-[13px] items-center"
+                className="grid min-w-[640px] grid-cols-[170px_120px_1fr_1fr] gap-3 px-4 py-3 border-t border-border/70 text-[13px] items-center"
               >
                 <div className="text-muted-foreground">{formatDateTime(item.created_at)}</div>
                 <div className="font-medium">{item.entity_type}</div>
@@ -5012,9 +5115,9 @@ export default function ReportsPage() {
                 <div className="text-muted-foreground">{item.reason || "-"}</div>
               </div>
             ))}
-          <div className="px-4 py-3 border-t border-border/70 flex items-center justify-between text-[12px]">
+          <div className="px-4 py-3 border-t border-border/70 flex flex-wrap items-center justify-between gap-2 text-[12px]">
             <div className="text-muted-foreground">
-              Total matched: {auditSummary?.total || 0}
+              {copy("Total matched", "Всего совпадений", "סה\"כ התאמות")}: {auditSummary?.total || 0}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -5022,22 +5125,22 @@ export default function ReportsPage() {
                 onClick={() => setAuditOffset((x) => Math.max(0, x - AUDIT_PREVIEW_LIMIT))}
                 className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
               >
-                Prev
+                {tt("reports.prev")}
               </button>
               <button
                 disabled={!auditCanNext}
                 onClick={() => setAuditOffset((x) => x + AUDIT_PREVIEW_LIMIT)}
                 className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
               >
-                Next
+                {tt("reports.next")}
               </button>
             </div>
           </div>
         </div>
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
+        <div className="glass-card rounded-xl overflow-x-auto border border-border">
           <div className="px-4 py-3 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
-            Issue Audit Report
+            {copy("Issue Audit Report", "Аудит проблем", "דוח ביקורת תקלות")}
           </div>
           <div className="px-4 py-3 border-b border-border/70 grid gap-2 md:grid-cols-[220px_240px_150px_150px_auto] items-center">
             <select
@@ -5048,7 +5151,7 @@ export default function ReportsPage() {
               }}
               className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
             >
-              <option value="">All actions</option>
+              <option value="">{copy("All actions", "Все действия", "כל הפעולות")}</option>
               {ISSUE_AUDIT_ACTION_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -5061,7 +5164,7 @@ export default function ReportsPage() {
                 setIssueAuditIssueId(e.target.value);
                 setIssueAuditOffset(0);
               }}
-              placeholder="Issue UUID"
+              placeholder={copy("Issue UUID", "UUID проблемы", "UUID תקלה")}
               className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
             />
             <input
@@ -5082,14 +5185,14 @@ export default function ReportsPage() {
               type="date"
               className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
             />
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <button
                 onClick={() => exportIssueAuditMutation.mutate()}
                 disabled={!canRunPrivilegedActions || exportIssueAuditMutation.isPending}
                 title={privilegedActionHint}
                 className="h-9 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
               >
-                Export CSV
+                {copy("Export CSV", "Экспорт CSV", "ייצוא CSV")}
               </button>
               <button
                 onClick={() => {
@@ -5101,28 +5204,34 @@ export default function ReportsPage() {
                 }}
                 className="h-9 px-3 rounded-md border border-border bg-card text-[12px]"
               >
-                Reset
+                {copy("Reset", "Сбросить", "איפוס")}
               </button>
             </div>
           </div>
           {issueAuditIssueIdTrimmed.length > 0 && !issueAuditIssueIdNormalized ? (
             <div className="px-4 pt-2 text-[12px] text-[hsl(var(--warning-foreground))]">
-              Issue UUID format is invalid, filter is not applied.
+              {copy(
+                "Issue UUID format is invalid, filter is not applied.",
+                "Формат UUID проблемы неверный, фильтр не применяется.",
+                "פורמט UUID התקלה לא תקין, המסנן לא הוחל."
+              )}
             </div>
           ) : null}
 
-          <div className="grid grid-cols-[170px_1fr_1fr_220px] gap-3 px-4 py-3 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
-            <span>Time</span>
-            <span>Action</span>
-            <span>Changed fields</span>
-            <span>Controls</span>
+          <div className="grid min-w-[760px] grid-cols-[170px_1fr_1fr_220px] gap-3 px-4 py-3 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <span>{copy("Time", "Время", "זמן")}</span>
+            <span>{copy("Action", "Действие", "פעולה")}</span>
+            <span>{copy("Changed fields", "Изменённые поля", "שדות שהשתנו")}</span>
+            <span>{copy("Controls", "Управление", "פקדים")}</span>
           </div>
           {issueAuditQuery.isLoading && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">Loading issue audit...</div>
+            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+              {copy("Loading issue audit…", "Загружаем аудит проблем…", "טוען audit תקלות…")}
+            </div>
           )}
           {!issueAuditQuery.isLoading && issueAuditItems.length === 0 && (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              No issue audit entries.
+              {copy("No issue audit entries.", "Записей аудита проблем нет.", "אין רשומות ביקורת תקלות.")}
             </div>
           )}
           {!issueAuditQuery.isLoading &&
@@ -5131,17 +5240,19 @@ export default function ReportsPage() {
               const isExpanded = expandedIssueAuditId === item.id;
               return (
                 <div key={item.id} className="border-t border-border/70">
-                  <div className="grid grid-cols-[170px_1fr_1fr_220px] gap-3 px-4 py-3 text-[13px] items-start">
+                  <div className="grid min-w-[760px] grid-cols-[170px_1fr_1fr_220px] gap-3 px-4 py-3 text-[13px] items-start">
                     <div className="text-muted-foreground">{formatDateTime(item.created_at)}</div>
                     <div>
                       <div className="font-medium">{item.action}</div>
                       <div className="text-[11px] text-muted-foreground mt-0.5">
-                        {item.reason || "No reason"}
+                        {item.reason || copy("No reason", "Без причины", "ללא סיבה")}
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {changedFields.length === 0 ? (
-                        <span className="text-[12px] text-muted-foreground">No detected changes</span>
+                        <span className="text-[12px] text-muted-foreground">
+                          {copy("No detected changes", "Изменений не обнаружено", "לא זוהו שינויים")}
+                        </span>
                       ) : (
                         changedFields.slice(0, 4).map((field) => (
                           <span
@@ -5158,7 +5269,7 @@ export default function ReportsPage() {
                         </span>
                       ) : null}
                     </div>
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
                       <button
                         onClick={() => {
                           if (item.entity_id) {
@@ -5168,7 +5279,7 @@ export default function ReportsPage() {
                         disabled={!item.entity_id}
                         className="h-8 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
                       >
-                        Open Issue
+                        {copy("Open Issue", "Открыть проблему", "פתח תקלה")}
                       </button>
                       <button
                         onClick={() =>
@@ -5178,7 +5289,9 @@ export default function ReportsPage() {
                         }
                         className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
                       >
-                        {isExpanded ? "Hide Diff" : "Show Diff"}
+                        {isExpanded
+                          ? copy("Hide Diff", "Скрыть diff", "הסתר diff")
+                          : copy("Show Diff", "Показать diff", "הצג diff")}
                       </button>
                     </div>
                   </div>
@@ -5187,7 +5300,7 @@ export default function ReportsPage() {
                       <div className="grid gap-2 md:grid-cols-2">
                         <div className="rounded-lg border border-border/70 bg-background/60">
                           <div className="px-3 py-2 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
-                            Before
+                            {copy("Before", "До", "לפני")}
                           </div>
                           <pre className="p-3 text-[11px] leading-5 whitespace-pre-wrap break-all text-muted-foreground overflow-x-auto">
                             {prettyJson(item.before)}
@@ -5195,7 +5308,7 @@ export default function ReportsPage() {
                         </div>
                         <div className="rounded-lg border border-border/70 bg-background/60">
                           <div className="px-3 py-2 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
-                            After
+                            {copy("After", "После", "אחרי")}
                           </div>
                           <pre className="p-3 text-[11px] leading-5 whitespace-pre-wrap break-all text-muted-foreground overflow-x-auto">
                             {prettyJson(item.after)}
@@ -5207,9 +5320,9 @@ export default function ReportsPage() {
                 </div>
               );
             })}
-          <div className="px-4 py-3 border-t border-border/70 flex items-center justify-between text-[12px]">
+          <div className="px-4 py-3 border-t border-border/70 flex flex-wrap items-center justify-between gap-2 text-[12px]">
             <div className="text-muted-foreground">
-              Total matched: {issueAuditSummary?.total || 0}
+              {copy("Total matched", "Всего совпадений", "סה\"כ התאמות")}: {issueAuditSummary?.total || 0}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -5219,14 +5332,14 @@ export default function ReportsPage() {
                 }
                 className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
               >
-                Prev
+                {tt("reports.prev")}
               </button>
               <button
                 disabled={!issueAuditCanNext}
                 onClick={() => setIssueAuditOffset((x) => x + AUDIT_PREVIEW_LIMIT)}
                 className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
               >
-                Next
+                {tt("reports.next")}
               </button>
             </div>
           </div>

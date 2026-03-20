@@ -41,7 +41,7 @@ async function resolveDefaultPath(accessToken: string): Promise<string> {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [companyId, setCompanyId] = useState(
     () =>
       (typeof window !== "undefined" &&
@@ -57,6 +57,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accessNotice, setAccessNotice] = useState<string | null>(null);
+  const canSubmit = Boolean(companyId.trim() && email.trim() && password);
+  const suiteBadgeLabel =
+    locale === "ru" ? "Платформа" : locale === "he" ? "פלטפורמה" : "Suite";
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -163,9 +166,9 @@ export default function LoginPage() {
         </section>
 
         <section className="px-6 py-8 sm:px-8 sm:py-10 lg:px-10 lg:py-12">
-          <div className="mb-8 lg:hidden">
-            <div className="flex items-center justify-between gap-3">
-              <div className="page-eyebrow">Dimax Ops</div>
+            <div className="mb-8 lg:hidden">
+              <div className="flex items-center justify-between gap-3">
+              <div className="page-eyebrow">DIMAX</div>
               <div className="flex items-center gap-2">
                 <Link
                   href="/welcome"
@@ -179,7 +182,7 @@ export default function LoginPage() {
             <h1 className="mt-4 text-3xl font-semibold text-card-foreground">{t("login.signIn")}</h1>
           </div>
 
-          <div className="surface-panel animate-panel-rise p-6 sm:p-7">
+          <div className="surface-panel readability-wrap animate-panel-rise p-6 sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h1 className="text-[26px] font-semibold text-card-foreground tracking-tight">{t("login.admin")}</h1>
@@ -196,76 +199,104 @@ export default function LoginPage() {
                 </Link>
                 <LanguageSwitcher compact />
                 <div className="rounded-2xl bg-accent/10 px-3 py-2 text-right">
-                  <div className="text-[10px] uppercase tracking-[0.24em] text-accent">Suite</div>
+                  <div className="text-[10px] uppercase tracking-[0.24em] text-accent">{suiteBadgeLabel}</div>
                   <div className="mt-1 font-display text-lg font-semibold text-foreground">24/7</div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 space-y-4">
-          <label className="block">
+            <form
+              className="mt-6 space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void onSubmit();
+              }}
+            >
+          <label className="block" htmlFor="company-id">
             <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">{t("login.companyId")}</span>
             <div className="relative">
-              <Building2 className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Building2 aria-hidden="true" className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
+                id="company-id"
+                name="company_id"
                 value={companyId}
                 onChange={(e) => setCompanyId(e.target.value)}
+                autoComplete="organization"
+                dir="auto"
+                spellCheck={false}
                 className="h-12 w-full rounded-xl border border-border bg-background/80 pl-11 pr-4 text-[13px] shadow-[inset_0_1px_0_hsl(0_0%_100%/0.45)] transition-all duration-200 focus:border-accent/45 focus:outline-none focus:ring-2 focus:ring-accent/20"
               />
             </div>
           </label>
 
-          <label className="block">
+          <label className="block" htmlFor="email">
             <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">{t("login.email")}</span>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Mail aria-hidden="true" className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
+                id="email"
+                name="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 type="email"
+                autoComplete="username"
+                dir="auto"
+                inputMode="email"
+                spellCheck={false}
                 className="h-12 w-full rounded-xl border border-border bg-background/80 pl-11 pr-4 text-[13px] shadow-[inset_0_1px_0_hsl(0_0%_100%/0.45)] transition-all duration-200 focus:border-accent/45 focus:outline-none focus:ring-2 focus:ring-accent/20"
               />
             </div>
           </label>
 
-          <label className="block">
+          <label className="block" htmlFor="password">
             <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">{t("login.password")}</span>
             <div className="relative">
-              <KeyRound className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <KeyRound aria-hidden="true" className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
+                id="password"
+                name="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 type="password"
+                autoComplete="current-password"
                 className="h-12 w-full rounded-xl border border-border bg-background/80 pl-11 pr-4 text-[13px] shadow-[inset_0_1px_0_hsl(0_0%_100%/0.45)] transition-all duration-200 focus:border-accent/45 focus:outline-none focus:ring-2 focus:ring-accent/20"
               />
             </div>
           </label>
-            </div>
 
             {accessNotice && (
-              <div className="mt-4 rounded-xl border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-4 py-3 text-[12px] text-[hsl(var(--warning-foreground))]">
+              <div
+                role="status"
+                aria-live="polite"
+                className="mt-4 rounded-xl border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-4 py-3 text-[12px] text-[hsl(var(--warning-foreground))]"
+              >
                 {accessNotice}
               </div>
             )}
 
             {error && (
-              <div className="mt-4 rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[12px] text-[hsl(var(--destructive))]">
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="mt-4 rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[12px] text-[hsl(var(--destructive))]"
+              >
                 {error}
               </div>
             )}
 
             <button
-              onClick={() => void onSubmit()}
-              disabled={!companyId.trim() || !email.trim() || !password || loading}
+              type="submit"
+              disabled={!canSubmit || loading}
               className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent text-[13px] font-semibold text-accent-foreground shadow-[0_22px_44px_-22px_hsl(var(--accent)/0.75)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_28px_54px_-24px_hsl(var(--accent)/0.82)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <LogIn className="h-4 w-4" />
+              <LogIn aria-hidden="true" className="h-4 w-4" />
               {loading ? t("login.signingIn") : t("login.signIn")}
             </button>
 
             <div className="mt-4 text-[11px] text-muted-foreground">
               {t("login.usageHint")}
             </div>
+            </form>
           </div>
         </section>
       </div>

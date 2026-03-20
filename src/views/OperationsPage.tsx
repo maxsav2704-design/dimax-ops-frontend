@@ -518,6 +518,11 @@ function extractBatchOutboxIds(result: OperationsBatchResult | null): string[] {
 export default function OperationsPage() {
   const { locale, t } = useI18n();
   const tt = (key: string) => operationsOverrides[locale]?.[key] ?? t(key);
+  const copy = (en: string, ru: string, he: string) => {
+    if (locale === "ru") return ru;
+    if (locale === "he") return he;
+    return en;
+  };
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const userRole = useUserRole();
@@ -1106,7 +1111,7 @@ export default function OperationsPage() {
 
   return (
     <DashboardLayout>
-      <div className="motion-stagger max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <div className="motion-stagger readability-wrap max-w-[1400px] space-y-6 p-6 lg:p-8">
         <div className="page-hero readability-wrap relative overflow-hidden">
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
@@ -1166,7 +1171,7 @@ export default function OperationsPage() {
                     })
                   }
                   aria-pressed={onlyActionable}
-                  className="inline-flex h-11 items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted aria-[pressed=true]:border-accent aria-[pressed=true]:bg-[hsl(var(--accent)/0.12)] aria-[pressed=true]:text-accent"
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 text-[13px] font-medium text-card-foreground transition-colors hover:bg-muted aria-[pressed=true]:border-accent aria-[pressed=true]:bg-[hsl(var(--accent)/0.12)] aria-[pressed=true]:text-accent sm:w-auto"
                 >
                   {t("operations.onlyActionable")}
                 </button>
@@ -1175,7 +1180,7 @@ export default function OperationsPage() {
                   onClick={() => {
                     void refetchAll();
                   }}
-                  className="btn-premium h-11 rounded-xl px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                  className="btn-premium h-11 w-full rounded-xl px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                   disabled={isRefreshing}
                 >
                   <RefreshCcw className="h-4 w-4" />
@@ -1281,7 +1286,7 @@ export default function OperationsPage() {
                   actionableFailedImports.length === 0 ||
                   busyAction === "imports:bulk"
                 }
-                className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-8 w-full items-center justify-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                 >
                 {busyAction === "imports:bulk"
                   ? t("operations.retryingImports")
@@ -1298,7 +1303,7 @@ export default function OperationsPage() {
                   actionableFailedOutbox.length === 0 ||
                   busyAction === "outbox:bulk"
                 }
-                className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-8 w-full items-center justify-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {busyAction === "outbox:bulk"
                   ? t("operations.retryingDeliveries")
@@ -1314,7 +1319,7 @@ export default function OperationsPage() {
                   actionableImportProjectIds.length === 0 ||
                   busyAction === "imports:reconcile"
                 }
-                className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-8 w-full items-center justify-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {busyAction === "imports:reconcile"
                   ? t("operations.reconcilingProjects")
@@ -1886,7 +1891,7 @@ export default function OperationsPage() {
                     <div>
                       <div className="font-medium text-card-foreground">{item.project_name}</div>
                       <div className="mt-1 text-xs text-muted-foreground">
-                        {item.mode} | {item.source_filename || "No file"} | {formatDateTime(item.created_at)}
+                        {item.mode} | {item.source_filename || copy("No file", "Нет файла", "אין קובץ")} | {formatDateTime(item.created_at)}
                       </div>
                     </div>
                     <span className="rounded-md border border-border px-2 py-1 text-[11px]">
@@ -1894,30 +1899,30 @@ export default function OperationsPage() {
                     </span>
                   </div>
                   <div className="mt-2 text-xs text-muted-foreground">
-                    rows {item.parsed_rows} / prepared {item.prepared_rows} / imported {item.imported}
-                    {" | "}errors {item.errors_count}
+                    {copy("rows", "строк", "שורות")} {item.parsed_rows} / {copy("prepared", "подготовлено", "מוכן")} {item.prepared_rows} / {copy("imported", "импортировано", "יובא")} {item.imported}
+                    {" | "}{copy("errors", "ошибки", "שגיאות")} {item.errors_count}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {item.last_error || "No error payload"}
+                    {item.last_error || copy("No error payload", "Нет payload ошибки", "אין payload לשגיאה")}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
                     <Link
                       href={buildProjectsImportHref(item.project_id, [item.project_id])}
                       className="font-medium text-accent hover:underline"
                     >
-                      Project imports
+                      {copy("Project imports", "Импорты проекта", "ייבואי פרויקט")}
                     </Link>
                     <Link
                       href={`/reports?focus=operations&ops_preset=failed-imports&project_id=${encodeURIComponent(item.project_id)}`}
                       className="font-medium text-muted-foreground hover:text-foreground hover:underline"
                     >
-                      Project report
+                      {copy("Project report", "Отчет по проекту", "דוח פרויקט")}
                     </Link>
                     <Link
                       href={`/projects?project_id=${encodeURIComponent(item.project_id)}`}
                       className="font-medium text-muted-foreground hover:text-foreground hover:underline"
                     >
-                      Open project
+                      {copy("Open project", "Открыть проект", "פתח פרויקט")}
                     </Link>
                     {item.retry_available ? (
                       <button
@@ -1928,7 +1933,9 @@ export default function OperationsPage() {
                         disabled={!canRunPrivilegedActions || busyAction === `import:${item.run_id}`}
                         className="font-medium text-accent disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {busyAction === `import:${item.run_id}` ? "Retrying import..." : "Retry import"}
+                        {busyAction === `import:${item.run_id}`
+                          ? copy("Retrying import…", "Повторяем импорт…", "מנסה שוב את הייבוא…")
+                          : copy("Retry import", "Повторить импорт", "נסה שוב ייבוא")}
                       </button>
                     ) : null}
                   </div>
@@ -1940,7 +1947,7 @@ export default function OperationsPage() {
           <section className="rounded-xl border border-border bg-card">
             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Failed Outbox
+                {copy("Failed Outbox", "Неуспешный outbox", "Outbox שנכשל")}
               </h2>
               <div className="flex gap-3 text-[12px]">
                 <Link
@@ -1950,10 +1957,10 @@ export default function OperationsPage() {
                   })}
                   className="font-medium text-accent hover:underline"
                 >
-                  Delivery reports
+                  {copy("Delivery reports", "Отчеты по доставке", "דוחות משלוח")}
                 </Link>
                 <Link href="/journal" className="font-medium text-accent hover:underline">
-                  Journal
+                  {copy("Journal", "??????", "????")}
                 </Link>
               </div>
             </div>
@@ -1983,7 +1990,7 @@ export default function OperationsPage() {
                         {item.recipient || item.subject || item.channel}
                       </div>
                       <div className="mt-1 text-xs text-muted-foreground">
-                        {item.channel} | {item.delivery_status} | scheduled {formatDateTime(item.scheduled_at)}
+                        {item.channel} | {item.delivery_status} | {copy("scheduled", "запланировано", "מתוזמן")} {formatDateTime(item.scheduled_at)}
                       </div>
                     </div>
                     <span className="rounded-md border border-border px-2 py-1 text-[11px]">
@@ -1991,7 +1998,7 @@ export default function OperationsPage() {
                     </span>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {item.last_error || "No error payload"}
+                    {item.last_error || copy("No error payload", "Нет payload ошибки", "אין payload לשגיאה")}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
                     <Link
@@ -2001,13 +2008,13 @@ export default function OperationsPage() {
                       })}
                       className="font-medium text-accent hover:underline"
                     >
-                      Delivery report
+                      {copy("Delivery report", "????? ?? ????????", "??? ?????")}
                     </Link>
                     <Link
                       href="/journal"
                       className="font-medium text-muted-foreground hover:text-foreground hover:underline"
                     >
-                      Journal outbox
+                      {copy("Journal outbox", "Outbox журнала", "Outbox יומן")}
                     </Link>
                     <button
                       type="button"
@@ -2017,7 +2024,9 @@ export default function OperationsPage() {
                       disabled={!canRunPrivilegedActions || busyAction === `outbox:${item.id}`}
                       className="font-medium text-accent disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {busyAction === `outbox:${item.id}` ? "Retrying delivery..." : "Retry delivery"}
+                      {busyAction === `outbox:${item.id}`
+                        ? copy("Retrying delivery…", "Повторяем доставку…", "מנסה שוב משלוח…")
+                        : copy("Retry delivery", "Повторить доставку", "נסה שוב משלוח")}
                     </button>
                   </div>
                 </div>
@@ -2028,40 +2037,40 @@ export default function OperationsPage() {
           <section className="rounded-xl border border-border bg-card">
             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Sync Health
+                {copy("Sync Health", "Состояние синка", "מצב סנכרון")}
               </h2>
               <Link
                 href="/installers"
                 className="text-[12px] font-medium text-accent hover:underline"
               >
-                Open installers
+                {copy("Open installers", "Открыть монтажников", "פתח מתקינים")}
               </Link>
             </div>
             <div className="space-y-0">
               {syncQuery.isLoading && (
                 <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                  Loading sync health...
+                  {copy("Loading sync health…", "Загружаем состояние синка…", "טוען מצב סנכרון…")}
                 </div>
               )}
               {!syncQuery.isLoading && !sync && (
                 <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                  No sync health data.
+                  {copy("No sync health data.", "Нет данных по синку.", "אין נתוני סנכרון.")}
                 </div>
               )}
               {sync && (
                 <>
                   <div className="px-4 py-3 text-[13px]">
                     <div className="font-medium text-card-foreground">
-                      ok {sync.counts.ok} | warn {sync.counts.warn} | danger {sync.counts.danger}
+                      {copy("ok", "ok", "ok")} {sync.counts.ok} | {copy("warn", "???????.", "??????")} {sync.counts.warn} | {copy("danger", "????", "?????")} {sync.counts.danger}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      dead {sync.counts.dead} | never seen {sync.counts.never_seen} | alerts sent{" "}
+                      {copy("dead", "?????????", "???????")} {sync.counts.dead} | {copy("never seen", "?? ??????", "?? ????")} {sync.counts.never_seen} | {copy("alerts sent", "?????????? ???????", "?????? ?????")}{" "}
                       {sync.alerts_sent}
                     </div>
                   </div>
                   {visibleSyncItems.length === 0 ? (
                     <div className="border-t border-border/70 px-4 py-6 text-[13px] text-muted-foreground">
-                      No actionable sync items.
+                      {copy("No actionable sync items.", "??? ????????? ????? ??? ????????.", "??? ????? ?????? ??????.")}
                     </div>
                   ) : null}
                   {visibleSyncItems.map((item) => (
@@ -2076,7 +2085,7 @@ export default function OperationsPage() {
                         </span>
                       </div>
                       <div className="mt-1 text-xs text-muted-foreground">
-                        lag {item.lag} | offline {item.days_offline} days | last seen{" "}
+                        {copy("lag", "???", "?????")} {item.lag} | {copy("offline", "??????", "?? ?????")} {item.days_offline} {copy("days", "??.", "????")} | {copy("last seen", "????????? ??????", "???? ???????")}{" "}
                         {formatDateTime(item.last_seen_at)}
                       </div>
                       <div className="mt-3 text-xs">
@@ -2084,13 +2093,13 @@ export default function OperationsPage() {
                           href={`/reports?focus=operations&ops_preset=issue-pressure&installer_id=${encodeURIComponent(item.installer_id)}`}
                           className="mr-3 font-medium text-accent hover:underline"
                         >
-                          Installer report
+                          {copy("Installer report", "????? ?? ??????????", "??? ?????")}
                         </Link>
                         <Link
                           href="/installers"
                           className="font-medium text-accent hover:underline"
                         >
-                          Installer board
+                          {copy("Installer board", "?????? ???????????", "??? ???????")}
                         </Link>
                       </div>
                     </div>
@@ -2116,7 +2125,7 @@ export default function OperationsPage() {
             <AlertDialogDescription>{batchActionDescription()}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{copy("Cancel", "Отмена", "ביטול")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 void confirmBatchAction();
