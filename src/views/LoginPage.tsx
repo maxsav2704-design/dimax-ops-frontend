@@ -7,6 +7,8 @@ import { Building2, KeyRound, LogIn, Mail } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { apiBaseUrl } from "@/lib/api";
+import { resolveAdminHomePath } from "@/lib/admin-access";
+import { normalizeAuthSession, persistAccessToken } from "@/lib/auth-session";
 import { useI18n } from "@/lib/i18n";
 
 type LoginResponse = {
@@ -17,11 +19,14 @@ type LoginResponse = {
 
 type AuthMeResponse = {
   role: "ADMIN" | "INSTALLER";
+  admin_scope?: "OWNER" | "OPERATIONS" | "FINANCE" | "VIEWER" | null;
+  can_view_rates?: boolean | null;
 };
 
 async function resolveDefaultPath(accessToken: string): Promise<string> {
   try {
     const response = await fetch(`${apiBaseUrl()}/api/v1/auth/me`, {
+      credentials: "include",
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
@@ -30,10 +35,14 @@ async function resolveDefaultPath(accessToken: string): Promise<string> {
       return "/";
     }
     const body = (await response.json()) as AuthMeResponse;
-    if (body.role === "INSTALLER") {
+    const session = normalizeAuthSession(body);
+    if (!session) {
+      return "/";
+    }
+    if (session.role === "INSTALLER") {
       return "/installer";
     }
-    return "/";
+    return resolveAdminHomePath(session);
   } catch {
     return "/";
   }
@@ -59,7 +68,9 @@ export default function LoginPage() {
   const [accessNotice, setAccessNotice] = useState<string | null>(null);
   const canSubmit = Boolean(companyId.trim() && email.trim() && password);
   const suiteBadgeLabel =
-    locale === "ru" ? "Платформа" : locale === "he" ? "פלטפורמה" : "Suite";
+    locale === "ru" ? "\u0421\u0438\u0441\u0442\u0435\u043c\u0430" : locale === "he" ? "\u05DE\u05E2\u05E8\u05DB\u05EA" : "Suite";
+  const welcomeLinkLabel =
+    locale === "ru" ? "\u041E \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0435" : locale === "he" ? "\u05E2\u05DC \u05D4\u05DE\u05D5\u05E6\u05E8" : "Welcome";
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -83,6 +94,7 @@ export default function LoginPage() {
     try {
       const response = await fetch(`${apiBaseUrl()}/api/v1/auth/login`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           company_id: companyId.trim(),
@@ -101,8 +113,7 @@ export default function LoginPage() {
         throw new Error(message);
       }
       const body = (await response.json()) as LoginResponse;
-      localStorage.setItem("dimax_access_token", body.access_token);
-      localStorage.setItem("dimax_refresh_token", body.refresh_token);
+      persistAccessToken(body.access_token);
       localStorage.setItem("dimax_company_id", companyId.trim());
       localStorage.setItem("dimax_email", email.trim());
       let nextPath = await resolveDefaultPath(body.access_token);
@@ -133,11 +144,13 @@ export default function LoginPage() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--accent)/0.16),transparent_34%),linear-gradient(135deg,hsl(var(--primary)/0.96),hsl(var(--primary)/0.88))]" />
           <div className="absolute inset-0 shell-grid opacity-15" />
           <div className="relative z-10">
-            <div className="page-eyebrow border-white/20 bg-white/10 text-white">{t("login.eyebrow")}</div>
-            <h1 className="mt-6 max-w-lg text-5xl font-semibold leading-[0.96] text-white">
+            <div className="page-eyebrow border-white/20 bg-white/10 text-white shadow-[0_10px_30px_-20px_rgba(0,0,0,0.55)]">
+              {t("login.eyebrow")}
+            </div>
+            <h1 className="mt-6 max-w-lg text-5xl font-semibold leading-[0.96] text-white [text-shadow:0_3px_20px_rgba(6,12,18,0.42)]">
               {t("login.title")}
             </h1>
-            <p className="mt-5 max-w-xl text-[15px] leading-7 text-white/72">
+            <p className="mt-5 max-w-xl text-[15px] font-medium leading-7 text-white [text-shadow:0_1px_2px_rgba(6,12,18,0.82),0_0_16px_rgba(6,12,18,0.34)]">
               {t("login.subtitle")}
             </p>
 
@@ -149,18 +162,22 @@ export default function LoginPage() {
               ].map(([title, text]) => (
                 <div
                   key={title}
-                  className="rounded-[1.4rem] border border-white/10 bg-white/8 px-4 py-4 backdrop-blur-sm"
+                  className="rounded-[1.4rem] border border-white/12 bg-white/10 px-4 py-4 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.5)] backdrop-blur-sm"
                 >
-                  <div className="font-display text-lg font-semibold text-white">{title}</div>
-                  <p className="mt-2 text-[12px] leading-6 text-white/68">{text}</p>
+                  <div className="font-display text-lg font-semibold text-white [text-shadow:0_1px_2px_rgba(6,12,18,0.82),0_0_12px_rgba(6,12,18,0.28)]">
+                    {title}
+                  </div>
+                  <p className="mt-2 text-[12px] font-medium leading-6 text-white [text-shadow:0_1px_2px_rgba(6,12,18,0.82),0_0_10px_rgba(6,12,18,0.22)]">
+                    {text}
+                  </p>
                 </div>
               ))}
             </div>
 
             <div className="mt-10 flex flex-wrap gap-3">
-              <span className="metric-chip bg-white/10 text-white/78">{t("login.chip.adminCenter")}</span>
-              <span className="metric-chip bg-white/10 text-white/78">{t("login.chip.installerWorkspace")}</span>
-              <span className="metric-chip bg-white/10 text-white/78">{t("login.chip.recoveryReady")}</span>
+              <span className="metric-chip metric-chip-hero">{t("login.chip.adminCenter")}</span>
+              <span className="metric-chip metric-chip-hero">{t("login.chip.installerWorkspace")}</span>
+              <span className="metric-chip metric-chip-hero">{t("login.chip.recoveryReady")}</span>
             </div>
           </div>
         </section>
@@ -172,9 +189,9 @@ export default function LoginPage() {
               <div className="flex items-center gap-2">
                 <Link
                   href="/welcome"
-                  className="inline-flex h-9 items-center rounded-xl border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground"
+                  className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-xl border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground"
                 >
-                  {t("landing.eyebrow")}
+                  {welcomeLinkLabel}
                 </Link>
                 <LanguageSwitcher compact />
               </div>
@@ -183,30 +200,27 @@ export default function LoginPage() {
           </div>
 
           <div className="surface-panel readability-wrap animate-panel-rise p-6 sm:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <div>
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between xl:gap-5">
+              <div className="min-w-0 xl:flex-1 xl:pr-2">
                 <h1 className="text-[26px] font-semibold text-card-foreground tracking-tight">{t("login.admin")}</h1>
-                <p className="mt-1 text-[13px] text-muted-foreground">
-                  {t("login.secureAccess")}
-                </p>
               </div>
-              <div className="hidden items-start gap-3 sm:flex">
+              <div className="hidden items-start gap-3 sm:flex sm:flex-wrap xl:w-auto xl:shrink-0 xl:justify-end xl:flex-nowrap">
                 <Link
                   href="/welcome"
-                  className="inline-flex h-10 items-center rounded-xl border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground"
+                  className="inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-xl border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground"
                 >
-                  {t("landing.eyebrow")}
+                  {welcomeLinkLabel}
                 </Link>
                 <LanguageSwitcher compact />
-                <div className="rounded-2xl bg-accent/10 px-3 py-2 text-right">
-                  <div className="text-[10px] uppercase tracking-[0.24em] text-accent">{suiteBadgeLabel}</div>
+                <div className="min-w-[104px] shrink-0 rounded-2xl bg-accent/10 px-3 py-2 text-center">
+                  <div className="whitespace-nowrap text-[10px] uppercase tracking-[0.24em] text-accent">{suiteBadgeLabel}</div>
                   <div className="mt-1 font-display text-lg font-semibold text-foreground">24/7</div>
                 </div>
               </div>
             </div>
 
             <form
-              className="mt-6 space-y-4"
+              className="mt-5 space-y-4"
               onSubmit={(event) => {
                 event.preventDefault();
                 void onSubmit();

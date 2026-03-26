@@ -12,6 +12,26 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -319,158 +339,172 @@ export function CatalogCrudPage({
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 max-w-[1500px]">
-        <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground tracking-tight">{title}</h1>
-            <p className="text-[13px] text-muted-foreground mt-0.5">{subtitle}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => exportMutation.mutate()}
-              className="h-9 px-3 rounded-lg border border-border bg-card text-[12px] font-medium inline-flex items-center gap-1.5"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Export
-            </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="h-9 px-3 rounded-lg border border-border bg-card text-[12px] font-medium inline-flex items-center gap-1.5"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              Import
-            </button>
-            <button
-              onClick={onOpenCreate}
-              className="h-9 px-4 rounded-lg bg-accent text-accent-foreground text-[13px] font-medium inline-flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Add {entityLabel}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,application/json"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0] || null;
-                void onImportFilePicked(file);
-                event.currentTarget.value = "";
-              }}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          <div className="glass-card rounded-xl p-4">
-            <p className="text-[12px] text-muted-foreground">Total</p>
-            <p className="text-[24px] font-semibold">{metrics.total}</p>
-          </div>
-          <div className="glass-card rounded-xl p-4">
-            <p className="text-[12px] text-muted-foreground">Active</p>
-            <p className="text-[24px] font-semibold text-[hsl(var(--success))]">{metrics.active}</p>
-          </div>
-          <div className="glass-card rounded-xl p-4">
-            <p className="text-[12px] text-muted-foreground">Inactive</p>
-            <p className="text-[24px] font-semibold text-muted-foreground">{metrics.inactive}</p>
-          </div>
-        </div>
-
-        <div className="glass-card rounded-xl p-4 mb-4 flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={`Search ${entityLabel.toLowerCase()}...`}
-              className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-[13px]"
-            />
-          </div>
-          <button
-            onClick={() => setStatusFilter("all")}
-            className={cn(
-              "h-9 px-3 rounded-md border text-[12px]",
-              statusFilter === "all"
-                ? "bg-accent text-accent-foreground border-accent"
-                : "bg-card border-border text-muted-foreground"
-            )}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setStatusFilter("active")}
-            className={cn(
-              "h-9 px-3 rounded-md border text-[12px]",
-              statusFilter === "active"
-                ? "bg-accent text-accent-foreground border-accent"
-                : "bg-card border-border text-muted-foreground"
-            )}
-          >
-            Active
-          </button>
-          <button
-            onClick={() => setStatusFilter("inactive")}
-            className={cn(
-              "h-9 px-3 rounded-md border text-[12px]",
-              statusFilter === "inactive"
-                ? "bg-accent text-accent-foreground border-accent"
-                : "bg-card border-border text-muted-foreground"
-            )}
-          >
-            Inactive
-          </button>
-        </div>
-
-        <div className="glass-card rounded-xl p-4 mb-4">
-          <div className="flex flex-wrap items-center gap-2 justify-between">
-            <label className="inline-flex items-center gap-2 text-[12px] text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={allVisibleSelected}
-                onChange={toggleSelectAllVisible}
-              />
-              Select all visible rows
-            </label>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[12px] text-muted-foreground">
-                Selected: {selectedCount}
-              </span>
-              <button
-                disabled={selectedCount === 0 || bulkMutation.isPending}
-                onClick={() => bulkMutation.mutate("activate")}
-                className="h-8 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
-              >
-                Activate
-              </button>
-              <button
-                disabled={selectedCount === 0 || bulkMutation.isPending}
-                onClick={() => bulkMutation.mutate("deactivate")}
-                className="h-8 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
-              >
-                Deactivate
-              </button>
-              <button
-                disabled={selectedCount === 0 || bulkMutation.isPending}
-                onClick={() => bulkMutation.mutate("delete")}
-                className="h-8 px-3 rounded-md border border-border bg-card text-[12px] text-[hsl(var(--destructive))] disabled:opacity-50"
-              >
-                Delete
-              </button>
+      <div className="page-shell page-stack motion-stagger">
+        <section className="page-hero">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="page-eyebrow">{entityLabel} catalog</div>
+              <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
+                {title}
+              </h1>
+              <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">{subtitle}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">Rows {metrics.total}</span>
+                <span className="metric-chip">Active {metrics.active}</span>
+                <span className="metric-chip">Selected {selectedCount}</span>
+              </div>
+            </div>
+            <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="metric-label">Scope</div>
+                  <div className="mt-1 text-lg font-semibold text-foreground capitalize">{statusFilter}</div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="metric-label">Visible</div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">{items.length}</div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="metric-label">Import mode</div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">
+                    {createOnlyImport ? "Create only" : "Create + update"}
+                  </div>
+                </div>
+              </div>
+              <div className="toolbar-row">
+                <Button variant="outline" size="sm" onClick={() => exportMutation.mutate()}>
+                  <Download className="h-3.5 w-3.5" />
+                  Export
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-3.5 w-3.5" />
+                  Import
+                </Button>
+                <Button size="sm" onClick={onOpenCreate}>
+                  <Plus className="h-3.5 w-3.5" />
+                  Add {entityLabel}
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] || null;
+                    void onImportFilePicked(file);
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </div>
             </div>
           </div>
-          <label className="mt-3 inline-flex items-center gap-2 text-[12px] text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={createOnlyImport}
-              onChange={(event) => setCreateOnlyImport(event.target.checked)}
-            />
-            Import in create-only mode
-          </label>
+        </section>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="metric-tile">
+            <div className="metric-label">Total</div>
+            <div className="metric-value">{metrics.total}</div>
+            <div className="metric-subtext">All visible catalog rows</div>
+          </div>
+          <div className="metric-tile-success">
+            <div className="metric-label">Active</div>
+            <div className="metric-value">{metrics.active}</div>
+            <div className="metric-subtext">Available in live admin flows</div>
+          </div>
+          <div className="metric-tile-soft">
+            <div className="metric-label">Inactive</div>
+            <div className="metric-value">{metrics.inactive}</div>
+            <div className="metric-subtext">Hidden from active assignment</div>
+          </div>
         </div>
 
+        <section className="toolbar-panel page-stack-tight">
+          <div className="toolbar-row">
+            <div className="relative min-w-[260px] flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={`Search ${entityLabel.toLowerCase()}...`}
+                className="control-input pl-10"
+              />
+            </div>
+            <Button
+              variant={statusFilter === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter("all")}
+            >
+              All
+            </Button>
+            <Button
+              variant={statusFilter === "active" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter("active")}
+            >
+              Active
+            </Button>
+            <Button
+              variant={statusFilter === "inactive" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter("inactive")}
+            >
+              Inactive
+            </Button>
+          </div>
+        </section>
+
+        <section className="surface-panel panel-pad-sm page-stack-tight">
+          <div className="panel-heading">
+            <div>
+              <div className="panel-title">Bulk actions</div>
+              <div className="panel-subtitle">
+                Review visible rows, adjust status in one pass, and keep imports disciplined.
+              </div>
+            </div>
+            <div className="text-[12px] leading-6 text-muted-foreground">Selected: {selectedCount}</div>
+          </div>
+          <div className="toolbar-row">
+            <label className="checkbox-row">
+              <Checkbox checked={allVisibleSelected} onCheckedChange={toggleSelectAllVisible} />
+              <span>Select all visible rows</span>
+            </label>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={selectedCount === 0 || bulkMutation.isPending}
+              onClick={() => bulkMutation.mutate("activate")}
+            >
+              Activate
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={selectedCount === 0 || bulkMutation.isPending}
+              onClick={() => bulkMutation.mutate("deactivate")}
+            >
+              Deactivate
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={selectedCount === 0 || bulkMutation.isPending}
+              onClick={() => bulkMutation.mutate("delete")}
+            >
+              Delete
+            </Button>
+          </div>
+          <label className="checkbox-row">
+            <Checkbox
+              checked={createOnlyImport}
+              onCheckedChange={(value) => setCreateOnlyImport(value === true)}
+            />
+            <span>Import in create-only mode</span>
+          </label>
+        </section>
+
         {message && (
-          <div className="mb-4 rounded-lg border border-[hsl(var(--success)/0.25)] bg-[hsl(var(--success)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--success))] flex items-center gap-2">
-            <CheckCheck className="w-4 h-4" />
+          <div className="rounded-xl border border-[hsl(var(--success)/0.25)] bg-[hsl(var(--success)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--success))] flex items-center gap-2">
+            <CheckCheck className="h-4 w-4 shrink-0" />
             {message}
           </div>
         )}
@@ -482,8 +516,8 @@ export function CatalogCrudPage({
           bulkMutation.isError ||
           importMutation.isError ||
           exportMutation.isError) && (
-          <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
               {String(
                 listQuery.error ||
@@ -499,201 +533,201 @@ export function CatalogCrudPage({
           </div>
         )}
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
-          <div className="grid grid-cols-[42px_1fr_1fr_140px_180px_96px] gap-3 px-4 py-3 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
-            <span />
-            <span>Code</span>
-            <span>Name</span>
-            <span>Status</span>
-            <span>Updated At</span>
-            <span>Actions</span>
-          </div>
-
-          {listQuery.isLoading && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              Loading {title.toLowerCase()}...
-            </div>
-          )}
-
-          {!listQuery.isLoading && items.length === 0 && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              No rows found.
-            </div>
-          )}
-
-          {!listQuery.isLoading &&
-            items.map((item) => (
-              <div
-                key={item.id}
-                className={cn(
-                  "grid grid-cols-[42px_1fr_1fr_140px_180px_96px] gap-3 px-4 py-3 border-t border-border/70 text-[13px] items-center",
-                  selectedIds.has(item.id) && "bg-[hsl(var(--accent)/0.06)]"
-                )}
-              >
-                <div>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(item.id)}
-                    onChange={() => toggleRowSelection(item.id)}
-                  />
-                </div>
-                <div className="font-medium text-card-foreground">{item.code}</div>
-                <div className="text-card-foreground">{item.name}</div>
-                <div>
-                  <span
+        <section className="data-table-shell">
+          <Table>
+            <TableHeader className="data-table-head">
+              <TableRow className="border-b border-border/80 hover:bg-transparent">
+                <TableHead className="w-[48px]">
+                  <span className="sr-only">Select</span>
+                </TableHead>
+                <TableHead>Code</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Updated at</TableHead>
+                <TableHead className="w-[112px] text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {listQuery.isLoading ? (
+                <TableRow className="data-table-row">
+                  <TableCell colSpan={6} className="py-8 text-sm text-muted-foreground">
+                    Loading {title.toLowerCase()}...
+                  </TableCell>
+                </TableRow>
+              ) : items.length === 0 ? (
+                <TableRow className="data-table-row">
+                  <TableCell colSpan={6} className="py-8 text-sm text-muted-foreground">
+                    No rows found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                items.map((item) => (
+                  <TableRow
+                    key={item.id}
                     className={cn(
-                      "inline-flex items-center rounded-md border px-2 py-1 text-[11px] font-semibold",
-                      item.is_active
-                        ? "text-[hsl(var(--success))] bg-[hsl(var(--success)/0.12)] border-[hsl(var(--success)/0.25)]"
-                        : "text-muted-foreground bg-muted border-border"
+                      "data-table-row",
+                      selectedIds.has(item.id) && "bg-[hsl(var(--accent)/0.06)]"
                     )}
                   >
-                    {item.is_active ? "Active" : "Inactive"}
-                  </span>
-                </div>
-                <div className="text-muted-foreground">{formatDateTime(item.updated_at)}</div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => onOpenEdit(item)}
-                    className="h-8 w-8 rounded-md border border-border bg-card inline-flex items-center justify-center"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => deleteMutation.mutate(item.id)}
-                    className="h-8 w-8 rounded-md border border-border bg-card text-[hsl(var(--destructive))] inline-flex items-center justify-center"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-        </div>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(item.id)}
+                        onCheckedChange={() => toggleRowSelection(item.id)}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium text-card-foreground">{item.code}</TableCell>
+                    <TableCell className="text-card-foreground">{item.name}</TableCell>
+                    <TableCell>
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]",
+                          item.is_active
+                            ? "border-[hsl(var(--success)/0.25)] bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))]"
+                            : "border-border bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {item.is_active ? "Active" : "Inactive"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{formatDateTime(item.updated_at)}</TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1.5">
+                        <Button variant="outline" size="sm" onClick={() => onOpenEdit(item)} className="px-2.5">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteMutation.mutate(item.id)}
+                          className="px-2.5 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </section>
       </div>
 
-      {isCreateOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="w-full max-w-[560px] rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[16px] font-semibold">Create {entityLabel}</h2>
-              <button
-                onClick={() => setIsCreateOpen(false)}
-                className="h-8 px-3 rounded-md border border-border text-[12px]"
-              >
-                Close
-              </button>
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="max-w-[620px]">
+          <DialogHeader>
+            <DialogTitle>Create {entityLabel}</DialogTitle>
+            <DialogDescription>
+              Add a new catalog row with disciplined naming and a stable status baseline.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="field-stack">
+              <Label htmlFor={`${queryKey}-create-code`}>Code</Label>
+              <Input
+                id={`${queryKey}-create-code`}
+                value={form.code}
+                onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
+                className="control-input"
+              />
             </div>
-            <div className="grid grid-cols-1 gap-3">
-              <div>
-                <label className="block text-[12px] text-muted-foreground mb-1">Code</label>
-                <input
-                  value={form.code}
-                  onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px]"
-                />
-              </div>
-              <div>
-                <label className="block text-[12px] text-muted-foreground mb-1">Name</label>
-                <input
-                  value={form.name}
-                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px]"
-                />
-              </div>
-              <label className="inline-flex items-center gap-2 text-[12px] text-card-foreground">
-                <input
-                  type="checkbox"
-                  checked={form.is_active}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, is_active: event.target.checked }))
-                  }
-                />
-                Active
-              </label>
-            </div>
-            <div className="mt-4 flex items-center justify-end gap-2">
-              <button
-                onClick={() => setIsCreateOpen(false)}
-                className="h-9 px-4 rounded-lg border border-border text-[13px]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => createMutation.mutate()}
-                disabled={!canSubmitForm || createMutation.isPending}
-                className="h-9 px-4 rounded-lg bg-accent text-accent-foreground text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                Save
-              </button>
+            <div className="field-stack">
+              <Label htmlFor={`${queryKey}-create-name`}>Name</Label>
+              <Input
+                id={`${queryKey}-create-name`}
+                value={form.name}
+                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                className="control-input"
+              />
             </div>
           </div>
-        </div>
-      )}
+          <label className="checkbox-row">
+            <Checkbox
+              checked={form.is_active}
+              onCheckedChange={(value) =>
+                setForm((prev) => ({ ...prev, is_active: value === true }))
+              }
+            />
+            <span>Active</span>
+          </label>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createMutation.mutate()}
+              disabled={!canSubmitForm || createMutation.isPending}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {isEditOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="w-full max-w-[560px] rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[16px] font-semibold">Edit {entityLabel}</h2>
-              <button
-                onClick={() => {
-                  setIsEditOpen(false);
-                  setEditingItem(null);
-                }}
-                className="h-8 px-3 rounded-md border border-border text-[12px]"
-              >
-                Close
-              </button>
+      <Dialog
+        open={isEditOpen}
+        onOpenChange={(open) => {
+          setIsEditOpen(open);
+          if (!open) {
+            setEditingItem(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-[620px]">
+          <DialogHeader>
+            <DialogTitle>Edit {entityLabel}</DialogTitle>
+            <DialogDescription>
+              Adjust naming, code, and activation state without disturbing catalog structure.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="field-stack">
+              <Label htmlFor={`${queryKey}-edit-code`}>Code</Label>
+              <Input
+                id={`${queryKey}-edit-code`}
+                value={form.code}
+                onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
+                className="control-input"
+              />
             </div>
-            <div className="grid grid-cols-1 gap-3">
-              <div>
-                <label className="block text-[12px] text-muted-foreground mb-1">Code</label>
-                <input
-                  value={form.code}
-                  onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px]"
-                />
-              </div>
-              <div>
-                <label className="block text-[12px] text-muted-foreground mb-1">Name</label>
-                <input
-                  value={form.name}
-                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px]"
-                />
-              </div>
-              <label className="inline-flex items-center gap-2 text-[12px] text-card-foreground">
-                <input
-                  type="checkbox"
-                  checked={form.is_active}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, is_active: event.target.checked }))
-                  }
-                />
-                Active
-              </label>
-            </div>
-            <div className="mt-4 flex items-center justify-end gap-2">
-              <button
-                onClick={() => {
-                  setIsEditOpen(false);
-                  setEditingItem(null);
-                }}
-                className="h-9 px-4 rounded-lg border border-border text-[13px]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => updateMutation.mutate()}
-                disabled={!canSubmitForm || updateMutation.isPending}
-                className="h-9 px-4 rounded-lg bg-accent text-accent-foreground text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                Save
-              </button>
+            <div className="field-stack">
+              <Label htmlFor={`${queryKey}-edit-name`}>Name</Label>
+              <Input
+                id={`${queryKey}-edit-name`}
+                value={form.name}
+                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                className="control-input"
+              />
             </div>
           </div>
-        </div>
-      )}
+          <label className="checkbox-row">
+            <Checkbox
+              checked={form.is_active}
+              onCheckedChange={(value) =>
+                setForm((prev) => ({ ...prev, is_active: value === true }))
+              }
+            />
+            <span>Active</span>
+          </label>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditOpen(false);
+                setEditingItem(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => updateMutation.mutate()}
+              disabled={!canSubmitForm || updateMutation.isPending}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

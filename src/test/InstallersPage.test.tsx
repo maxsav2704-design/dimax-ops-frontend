@@ -1,4 +1,4 @@
-﻿import { render, screen } from "@testing-library/react";
+﻿import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -8,8 +8,8 @@ import InstallersPage from "@/views/InstallersPage";
 const { apiFetchMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
 }));
-const { userRoleMock } = vi.hoisted(() => ({
-  userRoleMock: vi.fn(),
+const { authSessionMock } = vi.hoisted(() => ({
+  authSessionMock: vi.fn(),
 }));
 
 vi.mock("@/components/DashboardLayout", () => ({
@@ -22,18 +22,22 @@ vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
 }));
 
-vi.mock("@/hooks/use-user-role", () => ({
-  useUserRole: userRoleMock,
+vi.mock("@/hooks/use-auth-session", () => ({
+  useAuthSession: authSessionMock,
 }));
 
 describe("InstallersPage", () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
-    userRoleMock.mockReset();
+    authSessionMock.mockReset();
   });
 
   it("disables privileged installer actions for installer role", async () => {
-    userRoleMock.mockReturnValue("INSTALLER");
+    authSessionMock.mockReturnValue({
+      role: "INSTALLER",
+      admin_scope: null,
+      can_view_rates: false,
+    });
     apiFetchMock.mockImplementation(async (path: string) => {
       if (String(path).includes("/api/v1/admin/installers?")) {
         return [];
@@ -53,5 +57,57 @@ describe("InstallersPage", () => {
 
     expect(await screen.findByText("Installer role has read-only access to installers and rates.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add Installer" })).toBeDisabled();
+  });
+
+  it("allows finance scope to open installer details and view rate controls", async () => {
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "FINANCE",
+      can_view_rates: true,
+    });
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+      if (url.includes("/api/v1/admin/installers?")) {
+        return [
+          {
+            id: "installer-1",
+            company_id: "company-1",
+            full_name: "Installer Finance",
+            phone: null,
+            email: "finance@example.com",
+            status: "ACTIVE",
+            is_active: true,
+            user_id: null,
+            created_at: "2026-03-21T10:00:00Z",
+            updated_at: "2026-03-21T11:00:00Z",
+            deleted_at: null,
+          },
+        ];
+      }
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [{ id: "door-type-1", code: "STD", name: "Standard" }];
+      }
+      if (url.includes("/api/v1/admin/installer-rates")) {
+        return [];
+      }
+      return [];
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallersPage />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Installer profile changes are read-only for your scope, but rate controls remain available.")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Add Installer" })).toBeDisabled();
+    const editButton = await screen.findByRole("button", { name: "Edit Installer Finance" });
+    expect(editButton).toBeEnabled();
+    fireEvent.click(editButton);
+    expect(await screen.findByText("Installer Rates")).toBeInTheDocument();
   });
 });

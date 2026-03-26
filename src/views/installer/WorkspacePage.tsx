@@ -1,76 +1,15 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
-import { apiFetch } from "@/lib/api";
-import { useI18n, type Locale } from "@/lib/i18n";
+import { fetchInstallerWorkspace } from "@/lib/installer-api";
+import { useI18n } from "@/lib/i18n";
 import { buildInstallerIssuesHref } from "@/views/installer/issue-links";
 
-const workspaceOverrides: Partial<Record<Locale, Record<string, string>>> = {
-  en: {
-    "installerWorkspace.issueContinuity": "Issue continuity",
-    "installerWorkspace.todaySchedule": "Today schedule",
-    "installerWorkspace.projectsShort": "Projects",
-    "installerWorkspace.problemShort": "Problem",
-    "installerWorkspace.todayShort": "Today",
-    "installerWorkspace.withoutProject": "Without project",
-    "installerWorkspace.openTodayBoard": "Open today board",
-    "installerWorkspace.buildingTodayPriorities": "Building today priorities...",
-    "installerWorkspace.noUrgentPriorities": "No urgent priorities right now.",
-  },
-  ru: {
-    "installerWorkspace.issueContinuity": "Непрерывность проблем",
-    "installerWorkspace.todaySchedule": "Расписание на сегодня",
-    "installerWorkspace.projectsShort": "Проекты",
-    "installerWorkspace.problemShort": "Проблемы",
-    "installerWorkspace.todayShort": "Сегодня",
-    "installerWorkspace.withoutProject": "Без проекта",
-    "installerWorkspace.openTodayBoard": "Открыть доску дня",
-    "installerWorkspace.buildingTodayPriorities": "Собираем приоритеты на сегодня...",
-    "installerWorkspace.noUrgentPriorities": "Сейчас нет срочных приоритетов.",
-  },
-  he: {
-    "installerWorkspace.issueContinuity": "רציפות תקלות",
-    "installerWorkspace.todaySchedule": "לו״ז להיום",
-    "installerWorkspace.projectsShort": "פרויקטים",
-    "installerWorkspace.problemShort": "בעיות",
-    "installerWorkspace.todayShort": "היום",
-    "installerWorkspace.withoutProject": "ללא פרויקט",
-    "installerWorkspace.openTodayBoard": "פתח לוח יום",
-    "installerWorkspace.buildingTodayPriorities": "בונה עדיפויות להיום...",
-    "installerWorkspace.noUrgentPriorities": "כרגע אין עדיפויות דחופות.",
-  },
-};
-
 type ProjectQuickFilter = "ALL" | "PROBLEM" | "ACTIVE" | "TODAY_TASKS";
-
-type InstallerProjectListItem = {
-  id: string;
-  name: string;
-  address: string | null;
-  status: string;
-  waze_url: string | null;
-};
-
-type InstallerProjectListResponse = {
-  items: InstallerProjectListItem[];
-};
-
-type CalendarEvent = {
-  id: string;
-  title: string;
-  starts_at: string;
-  ends_at: string;
-  event_type: string;
-  project_id?: string | null;
-};
-
-type CalendarEventsResponse = {
-  items: CalendarEvent[];
-};
 
 type PriorityItem = {
   id: string;
@@ -79,6 +18,42 @@ type PriorityItem = {
   href: string;
   tone: "problem" | "overdue" | "today";
 };
+
+function formatMoney(
+  value: string | number | null | undefined,
+  currency: string | null | undefined
+): string {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) {
+    return String(value);
+  }
+
+  const formatted = new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(numeric);
+
+  return currency ? `${formatted} ${currency}` : formatted;
+}
+
+function formatDate(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleString([], {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 function getWorkspaceIssueHref(projectId: string, eventType: string, title: string) {
   if (eventType.trim().toLowerCase() !== "service") {
@@ -91,28 +66,14 @@ function getWorkspaceIssueHref(projectId: string, eventType: string, title: stri
   });
 }
 
-function formatDate(value: string): string {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString([], {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export default function InstallerWorkspacePage() {
   const { locale, t } = useI18n();
-  const tt = (key: string) => workspaceOverrides[locale]?.[key] ?? t(key);
   const copy = (en: string, ru: string, he: string) => {
     if (locale === "ru") return ru;
     if (locale === "he") return he;
     return en;
   };
+
   const [nowIso] = useState(() => new Date().toISOString());
   const [projectQuickFilter, setProjectQuickFilter] = useState<ProjectQuickFilter>("ALL");
   const [isQueryInitialized, setIsQueryInitialized] = useState(false);
@@ -127,54 +88,44 @@ export default function InstallerWorkspacePage() {
   const [tasksRange] = useState(() => {
     const now = new Date(nowIso);
     const from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const to = now;
     return {
       fromIso: from.toISOString(),
-      toIso: to.toISOString(),
+      toIso: now.toISOString(),
     };
   });
 
-  const projectsQuery = useQuery({
-    queryKey: ["installer-projects"],
-    queryFn: () => apiFetch<InstallerProjectListResponse>("/api/v1/installer/projects"),
-    refetchInterval: 30_000,
-  });
-
-  const eventsQuery = useQuery({
+  const workspaceQuery = useQuery({
     queryKey: [
-      "installer-calendar-events",
+      "installer-workspace",
       calendarRange.fromIso,
       calendarRange.toIso,
+      tasksRange.fromIso,
+      tasksRange.toIso,
     ],
     queryFn: () =>
-      apiFetch<CalendarEventsResponse>(
-        `/api/v1/installer/calendar/events?starts_at=${encodeURIComponent(
-          calendarRange.fromIso
-        )}&ends_at=${encodeURIComponent(calendarRange.toIso)}`
-      ),
-    refetchInterval: 30_000,
-  });
-  const tasksQuery = useQuery({
-    queryKey: ["installer-task-events", tasksRange.fromIso, tasksRange.toIso],
-    queryFn: () =>
-      apiFetch<CalendarEventsResponse>(
-        `/api/v1/installer/calendar/events?starts_at=${encodeURIComponent(
-          tasksRange.fromIso
-        )}&ends_at=${encodeURIComponent(tasksRange.toIso)}`
-      ),
+      fetchInstallerWorkspace({
+        calendarFromIso: calendarRange.fromIso,
+        calendarToIso: calendarRange.toIso,
+        tasksFromIso: tasksRange.fromIso,
+        tasksToIso: tasksRange.toIso,
+      }),
     refetchInterval: 30_000,
   });
 
-  const projects = projectsQuery.data?.items || [];
-  const events = eventsQuery.data?.items || [];
-  const taskEvents = tasksQuery.data?.items || [];
+  const workspace = workspaceQuery.data;
+  const projects = workspace?.projects || [];
+  const events = workspace?.events || [];
+  const taskEvents = workspace?.taskEvents || [];
+  const issues = workspace?.issues || [];
+  const earningsSummary = workspace?.earningsSummary || null;
+  const syncQueue = workspace?.syncQueue || null;
 
   const stats = useMemo(() => {
     const total = projects.length;
     const inProblem = projects.filter((item) => item.status === "PROBLEM").length;
-    const done = projects.filter((item) => item.status === "DONE").length;
-    return { total, inProblem, done };
+    return { total, inProblem };
   }, [projects]);
+
   const taskStats = useMemo(() => {
     const now = new Date(nowIso);
     const dayStart = new Date(now);
@@ -208,6 +159,16 @@ export default function InstallerWorkspacePage() {
         .map((event) => event.project_id as string)
     );
   }, [nowIso, taskEvents]);
+
+  const syncStats = useMemo(() => {
+    const items = syncQueue?.items || [];
+    return {
+      total: items.length,
+      pending: items.filter((item) => item.status === "PENDING").length,
+      failed: items.filter((item) => item.status === "FAILED").length,
+      blocked: items.filter((item) => item.status === "BLOCKED").length,
+    };
+  }, [syncQueue]);
 
   const projectQuickFilterCounts = useMemo(
     () => ({
@@ -254,15 +215,13 @@ export default function InstallerWorkspacePage() {
   }, []);
 
   useEffect(() => {
-    if (!isQueryInitialized) {
-      return;
-    }
-    if (typeof window === "undefined") {
+    if (!isQueryInitialized || typeof window === "undefined") {
       return;
     }
 
     const nextParams = new URLSearchParams(window.location.search);
     nextParams.delete("project_filter");
+
     if (projectQuickFilter === "PROBLEM") {
       nextParams.set("project_filter", "problem");
     } else if (projectQuickFilter === "ACTIVE") {
@@ -272,9 +231,7 @@ export default function InstallerWorkspacePage() {
     }
 
     const nextSearch = nextParams.toString();
-    const nextUrl = nextSearch
-      ? `${window.location.pathname}?${nextSearch}`
-      : window.location.pathname;
+    const nextUrl = nextSearch ? `${window.location.pathname}?${nextSearch}` : window.location.pathname;
     window.history.replaceState(window.history.state, "", nextUrl);
   }, [isQueryInitialized, projectQuickFilter]);
 
@@ -290,9 +247,7 @@ export default function InstallerWorkspacePage() {
 
     for (const project of projects.filter((item) => item.status === "PROBLEM")) {
       const key = `project:${project.id}`;
-      if (seen.has(key)) {
-        continue;
-      }
+      if (seen.has(key)) continue;
       seen.add(key);
       items.push({
         id: key,
@@ -301,9 +256,7 @@ export default function InstallerWorkspacePage() {
         href: `/installer/projects/${project.id}`,
         tone: "problem",
       });
-      if (items.length >= 4) {
-        return items;
-      }
+      if (items.length >= 4) return items;
     }
 
     const overdueEvents = [...taskEvents]
@@ -312,23 +265,23 @@ export default function InstallerWorkspacePage() {
 
     for (const event of overdueEvents) {
       const key = event.project_id ? `project:${event.project_id}` : `event:${event.id}`;
-      if (seen.has(key)) {
-        continue;
-      }
+      if (seen.has(key)) continue;
       seen.add(key);
       const project = event.project_id ? projectsById.get(event.project_id) : null;
       items.push({
         id: key,
         title: project?.name || event.title,
-        meta: `Overdue task | ${formatDate(event.ends_at)}`,
+        meta: copy(
+          `Overdue task | ${formatDate(event.ends_at)}`,
+          `Просроченная задача | ${formatDate(event.ends_at)}`,
+          `משימה באיחור | ${formatDate(event.ends_at)}`
+        ),
         href: project
           ? getWorkspaceIssueHref(project.id, event.event_type, event.title)
           : "/installer/calendar?preset=7d&overdue=1",
         tone: "overdue",
       });
-      if (items.length >= 4) {
-        return items;
-      }
+      if (items.length >= 4) return items;
     }
 
     const todayEvents = [...taskEvents]
@@ -340,42 +293,35 @@ export default function InstallerWorkspacePage() {
 
     for (const event of todayEvents) {
       const key = event.project_id ? `project:${event.project_id}` : `event:${event.id}`;
-      if (seen.has(key)) {
-        continue;
-      }
+      if (seen.has(key)) continue;
       seen.add(key);
       const project = event.project_id ? projectsById.get(event.project_id) : null;
       items.push({
         id: key,
         title: project?.name || event.title,
-        meta: `Today ${event.event_type.toLowerCase()} | ${formatDate(event.starts_at)}`,
+        meta: copy(
+          `Today ${event.event_type.toLowerCase()} | ${formatDate(event.starts_at)}`,
+          `Сегодня ${event.event_type.toLowerCase()} | ${formatDate(event.starts_at)}`,
+          `היום ${event.event_type.toLowerCase()} | ${formatDate(event.starts_at)}`
+        ),
         href: project
           ? getWorkspaceIssueHref(project.id, event.event_type, event.title)
           : "/installer/calendar?preset=today&project_id=none",
         tone: "today",
       });
-      if (items.length >= 4) {
-        return items;
-      }
+      if (items.length >= 4) return items;
     }
 
     return items;
-  }, [nowIso, projects, taskEvents]);
-
-  const isRefreshing =
-    projectsQuery.isFetching || eventsQuery.isFetching || tasksQuery.isFetching;
+  }, [copy, nowIso, projects, t, taskEvents]);
 
   async function refetchWorkspace() {
-    await Promise.all([
-      projectsQuery.refetch(),
-      eventsQuery.refetch(),
-      tasksQuery.refetch(),
-    ]);
+    await workspaceQuery.refetch();
   }
 
   return (
     <div className="motion-stagger readability-wrap space-y-6">
-      <div className="page-hero readability-wrap relative overflow-hidden">
+      <section className="page-hero relative overflow-hidden">
         <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
         <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
@@ -383,52 +329,122 @@ export default function InstallerWorkspacePage() {
             <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.04em]">
               {t("installerWorkspace.title")}
             </h1>
-            <p className="mt-3 text-sm leading-7 text-muted-foreground">
-              {t("installerWorkspace.subtitle")}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="metric-chip">{t("installerWorkspace.priorityDoors")}</span>
-              <span className="metric-chip">{tt("installerWorkspace.issueContinuity")}</span>
-              <span className="metric-chip">{tt("installerWorkspace.todaySchedule")}</span>
-            </div>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground">{t("installerWorkspace.subtitle")}</p>
           </div>
-          <div className="surface-subtle min-w-0 max-w-xl space-y-4 p-4 sm:p-5 xl:min-w-[280px]">
-            <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {tt("installerWorkspace.projectsShort")}
-                  </div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">{stats.total}</div>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {tt("installerWorkspace.problemShort")}
-                  </div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">{stats.inProblem}</div>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {tt("installerWorkspace.todayShort")}
-                  </div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">{taskStats.today}</div>
-                </div>
+
+          <div className="surface-subtle min-w-0 max-w-xl space-y-4 p-4 sm:p-5 xl:min-w-[320px]">
+            <div className="text-[12px] leading-5 text-muted-foreground">
+              {copy(
+                "Start from today, then open the project that needs action.",
+                "Сначала смотри задачи на сегодня, затем открывай проект, где нужно действие.",
+                "התחל מהיום ואז פתח את הפרויקט שדורש פעולה."
+              )}
             </div>
-            <button
-              type="button"
-              disabled={isRefreshing}
-              onClick={() => {
-                void refetchWorkspace();
-              }}
-              className="btn-premium h-11 rounded-xl px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              {isRefreshing ? t("common.refreshing") : t("common.refresh")}
-            </button>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {copy("Projects", "Проекты", "פרויקטים")}
+                </div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{stats.total}</div>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {copy("Problems", "Проблемы", "תקלות")}
+                </div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{stats.inProblem}</div>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {copy("Today", "Сегодня", "היום")}
+                </div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{taskStats.today}</div>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {copy("Today earnings", "Заработок за день", "רווח להיום")}
+                </div>
+                <div className="mt-1 text-lg font-semibold text-foreground">
+                  {formatMoney(earningsSummary?.today_total, earningsSummary?.currency)}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {copy("Month earnings", "Заработок за месяц", "רווח לחודש")}
+                </div>
+                <div className="mt-1 text-lg font-semibold text-foreground">
+                  {formatMoney(earningsSummary?.month_total, earningsSummary?.currency)}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {copy("Open issues", "Открытые проблемы", "תקלות פתוחות")}
+                </div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{issues.length}</div>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {copy("Sync queue", "Очередь синка", "תור סנכרון")}
+                </div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{syncStats.total}</div>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {copy("Data source", "Источник данных", "מקור נתונים")}
+                </div>
+                <div className="mt-1 text-sm font-medium text-foreground">
+                  {workspace?.source === "workspace-endpoint"
+                    ? copy("Workspace API", "Единый API", "API מרכזי")
+                    : copy("Fallback compose", "Собрано из API", "נבנה ממספר API")}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Link
+                href="/installer/calendar?preset=today"
+                className="btn-premium inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-medium"
+              >
+                {copy("Open today board", "Открыть план на сегодня", "פתח לוח להיום")}
+              </Link>
+              <button
+                type="button"
+                disabled={workspaceQuery.isFetching}
+                onClick={() => {
+                  void refetchWorkspace();
+                }}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border/70 bg-background/70 px-4 text-sm font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                {workspaceQuery.isFetching ? t("common.refreshing") : t("common.refresh")}
+              </button>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Link
+                href="/installer/earnings"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-border/70 bg-background/70 px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {copy("Open earnings", "Открыть заработок", "פתח רווחים")}
+              </Link>
+              <Link
+                href="/installer/sync-queue"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-border/70 bg-background/70 px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {copy("Open sync queue", "Открыть очередь синка", "פתח תור סנכרון")}
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {(projectsQuery.isError || eventsQuery.isError || tasksQuery.isError) && (
+      {workspaceQuery.isError && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
           <span>{t("installerWorkspace.error")}</span>
           <button
@@ -443,73 +459,52 @@ export default function InstallerWorkspacePage() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
-          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
-          <div className="text-sm text-muted-foreground">{t("installerWorkspace.assignedProjects")}</div>
-          <div className="mt-1 text-2xl font-semibold">{stats.total}</div>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
-          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
-          <div className="text-sm text-muted-foreground">{t("installerWorkspace.problemProjects")}</div>
-          <div className="mt-1 text-2xl font-semibold">{stats.inProblem}</div>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
-          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
-          <div className="text-sm text-muted-foreground">{t("installerWorkspace.completedProjects")}</div>
-          <div className="mt-1 text-2xl font-semibold">{stats.done}</div>
-        </div>
-      </div>
-
       <section className="space-y-3">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <div className="page-eyebrow">{t("installerWorkspace.executionPulse")}</div>
-            <h2 className="mt-2 text-lg font-semibold">{t("installerWorkspace.todayTasks")}</h2>
-          </div>
+        <div>
+          <div className="page-eyebrow">{t("installerWorkspace.executionPulse")}</div>
+          <h2 className="mt-2 text-lg font-semibold">{t("installerWorkspace.todayTasks")}</h2>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
-          <div
-            data-testid="installer-tasks-today"
-            className="surface-panel"
-          >
-            <div className="text-sm text-muted-foreground">{tt("installerWorkspace.todayShort")}</div>
-            <div className="mt-1 text-2xl font-semibold">
-              {tasksQuery.isLoading ? "…" : taskStats.today}
+          <div data-testid="installer-tasks-today" className="metric-tile flex h-full min-h-[164px] flex-col items-start">
+            <div className="metric-label">{copy("Today", "Сегодня", "היום")}</div>
+            <div className="mt-3 flex-1">
+              <div className="text-[2.25rem] font-semibold leading-none tracking-tight text-foreground tabular-nums">
+                {workspaceQuery.isLoading ? "…" : taskStats.today}
+              </div>
             </div>
             <Link
               href="/installer/calendar?preset=today"
-              className="mt-3 inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+              className="mt-auto inline-flex min-h-10 items-center rounded-xl border border-border bg-background px-4 text-sm font-medium transition-colors hover:bg-muted"
             >
               {t("installerWorkspace.openTodayTasks")}
             </Link>
           </div>
-          <div
-            data-testid="installer-tasks-overdue"
-            className="surface-panel"
-          >
-            <div className="text-sm text-muted-foreground">{t("common.overdue")}</div>
-            <div className="mt-1 text-2xl font-semibold">
-              {tasksQuery.isLoading ? "…" : taskStats.overdue}
+
+          <div data-testid="installer-tasks-overdue" className="metric-tile flex h-full min-h-[164px] flex-col items-start">
+            <div className="metric-label">{t("common.overdue")}</div>
+            <div className="mt-3 flex-1">
+              <div className="text-[2.25rem] font-semibold leading-none tracking-tight text-foreground tabular-nums">
+                {workspaceQuery.isLoading ? "…" : taskStats.overdue}
+              </div>
             </div>
             <Link
               href="/installer/calendar?preset=7d&overdue=1"
-              className="mt-3 inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+              className="mt-auto inline-flex min-h-10 items-center rounded-xl border border-border bg-background px-4 text-sm font-medium transition-colors hover:bg-muted"
             >
               {t("installerWorkspace.openOverdueTasks")}
             </Link>
           </div>
-          <div
-            data-testid="installer-tasks-no-project"
-            className="surface-panel"
-          >
-            <div className="text-sm text-muted-foreground">{tt("installerWorkspace.withoutProject")}</div>
-            <div className="mt-1 text-2xl font-semibold">
-              {tasksQuery.isLoading ? "…" : taskStats.withoutProject}
+
+          <div data-testid="installer-tasks-no-project" className="metric-tile flex h-full min-h-[164px] flex-col items-start">
+            <div className="metric-label">{copy("Without project", "Без проекта", "ללא פרויקט")}</div>
+            <div className="mt-3 flex-1">
+              <div className="text-[2.25rem] font-semibold leading-none tracking-tight text-foreground tabular-nums">
+                {workspaceQuery.isLoading ? "…" : taskStats.withoutProject}
+              </div>
             </div>
             <Link
               href="/installer/calendar?preset=7d&project_id=none"
-              className="mt-3 inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+              className="mt-auto inline-flex min-h-10 items-center rounded-xl border border-border bg-background px-4 text-sm font-medium transition-colors hover:bg-muted"
             >
               {t("installerWorkspace.openNoProjectTasks")}
             </Link>
@@ -524,34 +519,45 @@ export default function InstallerWorkspacePage() {
             href="/installer/calendar?preset=today"
             className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
           >
-            {tt("installerWorkspace.openTodayBoard")}
+            {copy("Open today board", "Открыть план на сегодня", "פתח לוח להיום")}
           </Link>
         </div>
-        {tasksQuery.isLoading && (
+
+        {workspaceQuery.isLoading && (
           <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            {tt("installerWorkspace.buildingTodayPriorities")}
+            {copy(
+              "Building today priorities...",
+              "Собираем приоритеты на сегодня...",
+              "טוען סדר עדיפויות להיום..."
+            )}
           </div>
         )}
-        {!tasksQuery.isLoading && priorityItems.length === 0 && (
+
+        {!workspaceQuery.isLoading && priorityItems.length === 0 && (
           <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            {tt("installerWorkspace.noUrgentPriorities")}
+            {copy(
+              "No urgent priorities right now.",
+              "Срочных приоритетов сейчас нет.",
+              "אין עדיפויות דחופות כרגע."
+            )}
           </div>
         )}
+
         {priorityItems.length > 0 && (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {priorityItems.map((item) => (
-            <div
-              key={item.id}
-              className={
-                item.tone === "problem"
-                  ? "relative overflow-hidden rounded-2xl border border-amber-500/40 bg-[linear-gradient(180deg,hsl(38_100%_60%/0.16),hsl(38_100%_60%/0.08))] p-4"
-                  : item.tone === "overdue"
-                    ? "relative overflow-hidden rounded-2xl border border-[hsl(var(--destructive)/0.35)] bg-[linear-gradient(180deg,hsl(var(--destructive)/0.16),hsl(var(--destructive)/0.08))] p-4"
-                    : "surface-panel"
-              }
-            >
-              <div className="text-sm font-semibold">{item.title}</div>
-              <div className="mt-1 text-xs text-muted-foreground">{item.meta}</div>
+              <div
+                key={item.id}
+                className={
+                  item.tone === "problem"
+                    ? "relative overflow-hidden rounded-2xl border border-amber-500/40 bg-[linear-gradient(180deg,hsl(38_100%_60%/0.16),hsl(38_100%_60%/0.08))] p-4"
+                    : item.tone === "overdue"
+                      ? "relative overflow-hidden rounded-2xl border border-[hsl(var(--destructive)/0.35)] bg-[linear-gradient(180deg,hsl(var(--destructive)/0.16),hsl(var(--destructive)/0.08))] p-4"
+                      : "surface-panel"
+                }
+              >
+                <div className="text-sm font-semibold">{item.title}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{item.meta}</div>
                 <Link
                   href={item.href}
                   aria-label={`${copy("Open priority", "Открыть приоритет", "פתח עדיפות")} ${item.title}`}
@@ -597,21 +603,25 @@ export default function InstallerWorkspacePage() {
               })}
             </div>
           </div>
-          {projectsQuery.isLoading && (
+
+          {workspaceQuery.isLoading && (
             <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-              {copy("Loading projects…", "Загружаем проекты…", "טוען פרויקטים…")}
+              {copy("Loading projects...", "Загружаем проекты...", "טוען פרויקטים...")}
             </div>
           )}
-          {!projectsQuery.isLoading && projects.length === 0 && (
+
+          {!workspaceQuery.isLoading && projects.length === 0 && (
             <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
               {t("installerWorkspace.noAssignedProjects")}
             </div>
           )}
-          {!projectsQuery.isLoading && projects.length > 0 && filteredProjects.length === 0 && (
+
+          {!workspaceQuery.isLoading && projects.length > 0 && filteredProjects.length === 0 && (
             <div className="surface-panel text-sm text-muted-foreground">
               {t("installerWorkspace.noProjectsSelectedFilter")}
             </div>
           )}
+
           {filteredProjects.map((project) => (
             <div
               key={project.id}
@@ -629,6 +639,7 @@ export default function InstallerWorkspacePage() {
                   {project.status}
                 </span>
               </div>
+
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link
                   href={`/installer/projects/${project.id}`}
@@ -641,18 +652,6 @@ export default function InstallerWorkspacePage() {
                   className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
                   {copy("Open schedule", "Открыть расписание", "פתח לוח זמנים")}
-                </Link>
-                <Link
-                  href={`/installer/calendar?preset=today&project_id=${project.id}`}
-                  className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
-                >
-                  {t("installerWorkspace.todayOnProject")}
-                </Link>
-                <Link
-                  href={`/installer/projects/${project.id}#project-doors`}
-                  className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
-                >
-                  {t("installerWorkspace.priorityDoors")}
                 </Link>
                 {project.status === "PROBLEM" && (
                   <Link
@@ -682,16 +681,19 @@ export default function InstallerWorkspacePage() {
             <div className="page-eyebrow">{t("installerWorkspace.forwardView")}</div>
             <h2 className="mt-2 text-lg font-semibold">{t("installerWorkspace.next7Days")}</h2>
           </div>
-          {eventsQuery.isLoading && (
+
+          {workspaceQuery.isLoading && (
             <div className="surface-panel text-sm text-muted-foreground">
-              {copy("Loading events…", "Загружаем события…", "טוען אירועים…")}
+              {copy("Loading events...", "Загружаем события...", "טוען אירועים...")}
             </div>
           )}
-          {!eventsQuery.isLoading && events.length === 0 && (
+
+          {!workspaceQuery.isLoading && events.length === 0 && (
             <div className="surface-panel text-sm text-muted-foreground">
               {t("installerWorkspace.noEventsScheduled")}
             </div>
           )}
+
           {events.map((event) => (
             <div
               key={event.id}
@@ -701,6 +703,23 @@ export default function InstallerWorkspacePage() {
               <div className="font-medium">{event.title}</div>
               <div className="mt-1 text-xs text-muted-foreground">{event.event_type}</div>
               <div className="mt-2 text-sm text-muted-foreground">{formatDate(event.starts_at)}</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {event.project_id ? (
+                  <Link
+                    href={getWorkspaceIssueHref(event.project_id, event.event_type, event.title)}
+                    className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                  >
+                    {copy("Open project", "Открыть проект", "פתח פרויקט")}
+                  </Link>
+                ) : (
+                  <Link
+                    href="/installer/calendar?preset=7d&project_id=none"
+                    className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                  >
+                    {copy("Open calendar", "Открыть календарь", "פתח יומן")}
+                  </Link>
+                )}
+              </div>
             </div>
           ))}
         </section>

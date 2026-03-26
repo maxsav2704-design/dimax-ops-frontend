@@ -7,7 +7,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale } = useI18n();
 
   return (
-    <div className="inline-flex items-center gap-1 rounded-2xl border border-border/70 bg-background/70 p-1">
+    <div className="inline-flex shrink-0 items-center gap-1 rounded-2xl border border-border/70 bg-background/70 p-1">
       {languageOptions.map((option) => {
         const active = option.locale === locale;
         return (

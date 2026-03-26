@@ -14,12 +14,15 @@ interface NextScheduleProps {
 
 export function NextSchedule({ events, onOpenCalendar }: NextScheduleProps) {
   return (
-    <div className="glass-card card-lift rounded-xl p-5 animate-fade-in">
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-sm font-semibold text-card-foreground">Next schedule</h3>
+    <div className="glass-card card-lift rounded-[1.2rem] p-5 animate-fade-in">
+      <div className="panel-heading mb-5">
+        <div>
+          <h3 className="panel-title">Next schedule</h3>
+          <p className="panel-subtitle mt-1">Upcoming operational slots with clear time windows.</p>
+        </div>
         <button
           onClick={onOpenCalendar}
-          className="btn-premium text-[12px] font-medium text-muted-foreground hover:text-accent px-3 py-1.5 rounded-lg border border-border"
+          className="btn-premium rounded-xl border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
         >
           Open calendar
         </button>
@@ -30,10 +33,10 @@ export function NextSchedule({ events, onOpenCalendar }: NextScheduleProps) {
           {events.map((event, i) => (
             <div
               key={i}
-              className="flex-shrink-0 w-[280px] rounded-xl border border-accent/15 bg-accent/[0.04] p-4 cursor-pointer group/event transition-all duration-250 ease-in-out hover:border-accent/35 hover:bg-accent/[0.07] hover:-translate-y-0.5 hover:shadow-[0_4px_16px_-4px_hsl(var(--accent)/0.12)]"
+              className="group/event flex w-[296px] flex-shrink-0 flex-col justify-between rounded-[1.15rem] border border-accent/15 bg-accent/[0.04] p-4 transition-all duration-250 ease-in-out hover:-translate-y-0.5 hover:border-accent/35 hover:bg-accent/[0.07] hover:shadow-[0_12px_28px_-16px_hsl(var(--accent)/0.18)]"
             >
-              <p className="text-[13px] font-semibold text-card-foreground mb-3">{event.title}</p>
-              <div className="flex items-center justify-between">
+              <p className="mb-4 text-[14px] font-semibold leading-6 text-card-foreground">{event.title}</p>
+              <div className="flex items-center justify-between gap-3">
                 <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center transition-all duration-250 group-hover/event:bg-accent/20 group-hover/event:shadow-[0_0_8px_hsl(var(--accent)/0.2)]">
                   <span className="text-[11px] font-semibold text-accent">{event.initials}</span>
                 </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -10,9 +10,9 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { useUserRole } from "@/hooks/use-user-role";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
-import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
+import { canAccessAdminModule } from "@/lib/admin-access";
 import { cn } from "@/lib/utils";
 
 type CompanySettings = {
@@ -109,8 +109,8 @@ export default function SettingsPage() {
   const [whatsappTestRecipient, setWhatsappTestRecipient] = useState("+972500000000");
   const [testMessage, setTestMessage] = useState("DIMAX delivery channel test");
   const [testFeedback, setTestFeedback] = useState("");
-  const userRole = useUserRole();
-  const canManageSettings = canRunPrivilegedAdminActions(userRole);
+  const session = useAuthSession();
+  const canManageSettings = canAccessAdminModule(session, "settings");
   const privilegedActionHint = canManageSettings
     ? undefined
     : "Installer role is read-only in settings";
@@ -195,79 +195,114 @@ export default function SettingsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 max-w-[1400px]">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground tracking-tight">Settings</h1>
-            <p className="text-[13px] text-muted-foreground mt-0.5">
-              Company profile and integration health
-            </p>
+      <div className="page-shell page-stack motion-stagger">
+        <section className="page-hero">
+          <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="page-eyebrow">Company controls</div>
+              <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
+                Settings
+              </h1>
+              <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">
+                Company profile, provider readiness, token limits, and controlled recovery settings.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">Email {integrations?.email_enabled ? "on" : "off"}</span>
+                <span className="metric-chip">WhatsApp {integrations?.whatsapp_enabled ? "on" : "off"}</span>
+                <span className="metric-chip">Storage {integrations?.storage_configured ? "ready" : "pending"}</span>
+              </div>
+            </div>
+            <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="metric-label">Company</div>
+                  <div className="mt-1 min-h-[3.5rem] text-lg font-semibold text-foreground">{company?.name || "—"}</div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="metric-label">Mode</div>
+                  <div className="mt-1 min-h-[3.5rem] text-lg font-semibold text-foreground">
+                    {canManageSettings ? "Manage" : "Read only"}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="metric-label">Refresh state</div>
+                  <div className="mt-1 min-h-[3.5rem] text-lg font-semibold text-foreground">
+                    {isLoading ? "Syncing" : "Ready"}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  void companyQuery.refetch();
+                  void integrationsQuery.refetch();
+                  void integrationsHealthQuery.refetch();
+                }}
+                className="btn-premium h-11 rounded-xl border border-border bg-card/80 px-4 text-[13px] font-medium flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
+                Refresh
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => {
-              void companyQuery.refetch();
-              void integrationsQuery.refetch();
-              void integrationsHealthQuery.refetch();
-            }}
-            className="btn-premium h-9 px-4 rounded-lg border border-border bg-card text-[13px] font-medium flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
-            Refresh
-          </button>
-        </div>
+        </section>
 
         {isError && (
-          <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
+          <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
             Failed to load settings. Verify auth and backend availability.
           </div>
         )}
         {!canManageSettings && (
-          <div className="mb-4 rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))]">
+          <div className="rounded-xl border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))]">
             Installer role has read-only access to company settings.
           </div>
         )}
         {testFeedback && (
-          <div className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-[13px] text-foreground">
+          <div className="rounded-xl border border-border/70 bg-card/80 px-4 py-3 text-[13px] text-foreground">
             {testFeedback}
           </div>
         )}
 
         {isLoading && (
-          <div className="glass-card rounded-xl p-4 text-[13px] text-muted-foreground">
+          <div className="surface-panel panel-pad-sm text-[13px] text-muted-foreground">
             Loading settings...
           </div>
         )}
 
         {!isLoading && company && integrations && integrationsHealth && (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-            <section className="glass-card rounded-xl p-5 xl:col-span-1">
-              <div className="flex items-center gap-2 mb-4">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+            <section className="surface-panel panel-pad xl:col-span-1">
+              <div className="panel-heading mb-4">
+                <div>
+                  <h2 className="panel-title">Company</h2>
+                  <p className="panel-subtitle">Canonical identity used by every public handoff and system notice.</p>
+                </div>
                 <Settings2 className="w-4 h-4 text-accent" />
-                <h2 className="text-[14px] font-semibold">Company</h2>
               </div>
-              <div className="space-y-3">
-                <label className="block text-[12px] text-muted-foreground">Company name</label>
-                <input
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  disabled={!canManageSettings}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-accent/40 disabled:opacity-60 disabled:cursor-not-allowed"
-                />
-                <div className="flex items-center justify-between text-[12px] text-muted-foreground">
-                  <span>Status</span>
-                  <BoolBadge value={company.is_active} />
+              <div className="space-y-4">
+                <div className="field-stack">
+                  <label className="field-label">Company name</label>
+                  <input
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    disabled={!canManageSettings}
+                    className="control-input"
+                  />
                 </div>
-                <div className="text-[12px] text-muted-foreground">
-                  Created: {formatDate(company.created_at)}
-                </div>
-                <div className="text-[12px] text-muted-foreground">
-                  Updated: {formatDate(company.updated_at)}
+                <div className="surface-subtle flex min-h-[220px] flex-col px-3 py-3">
+                  <div className="flex items-center justify-between text-[12px] leading-6 text-muted-foreground">
+                    <span>Status</span>
+                    <BoolBadge value={company.is_active} />
+                  </div>
+                  <div className="mt-3 grid gap-1 text-[12px] leading-6 text-muted-foreground">
+                    <div>Created: {formatDate(company.created_at)}</div>
+                    <div>Updated: {formatDate(company.updated_at)}</div>
+                  </div>
                 </div>
                 <button
                   onClick={() => updateCompanyMutation.mutate(companyName.trim())}
                   disabled={!canManageSettings || !companyName.trim() || updateCompanyMutation.isPending}
                   title={privilegedActionHint}
-                  className="h-10 w-full rounded-lg bg-accent text-accent-foreground text-[13px] font-medium flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 text-[13px] font-medium text-accent-foreground shadow-[0_16px_34px_-18px_hsl(var(--accent)/0.55)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Save className="w-4 h-4" />
                   Save Company
@@ -275,116 +310,107 @@ export default function SettingsPage() {
               </div>
             </section>
 
-            <section className="glass-card rounded-xl p-5 xl:col-span-2">
-              <h2 className="text-[14px] font-semibold mb-4">Integrations Snapshot</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="rounded-lg border border-border bg-background px-3 py-3">
-                  <p className="text-[12px] text-muted-foreground mb-2">Email / SMTP</p>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[12px] text-muted-foreground">SMTP configured</span>
-                    <BoolBadge value={integrations.smtp_configured} />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[12px] text-muted-foreground">Email enabled</span>
-                    <BoolBadge value={integrations.email_enabled} />
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[12px] text-muted-foreground">Channel ready</span>
-                    <BoolBadge value={integrationsHealth.email.ready} />
-                  </div>
-                  <div className="mt-2 text-[12px] text-muted-foreground">
-                    Sender: {integrationsHealth.email.sender_identity || "-"}
-                  </div>
-                  {integrationsHealth.email.notes.map((note) => (
-                    <div key={note} className="mt-1 text-[12px] text-muted-foreground">
-                      {note}
+            <section className="surface-panel panel-pad xl:col-span-2">
+              <div className="panel-heading mb-4">
+                <div>
+                  <h2 className="panel-title">Integrations Snapshot</h2>
+                  <p className="panel-subtitle">Delivery readiness, storage posture, and protection limits in one place.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="surface-subtle px-3 py-3">
+                  <p className="metric-label mb-3">Email / SMTP</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] leading-6 text-muted-foreground">SMTP configured</span>
+                      <BoolBadge value={integrations.smtp_configured} />
                     </div>
-                  ))}
-                </div>
-
-                <div className="rounded-lg border border-border bg-background px-3 py-3">
-                  <p className="text-[12px] text-muted-foreground mb-2">WhatsApp / Twilio</p>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[12px] text-muted-foreground">Twilio configured</span>
-                    <BoolBadge value={integrations.twilio_configured} />
-                  </div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[12px] text-muted-foreground">WhatsApp enabled</span>
-                    <BoolBadge value={integrations.whatsapp_enabled} />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[12px] text-muted-foreground">Fallback to email</span>
-                    <BoolBadge value={integrations.whatsapp_fallback_to_email} />
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[12px] text-muted-foreground">Channel ready</span>
-                    <BoolBadge value={integrationsHealth.whatsapp.ready} />
-                  </div>
-                  <div className="mt-2 text-[12px] text-muted-foreground">
-                    Sender: {integrationsHealth.whatsapp.sender_identity || "-"}
-                  </div>
-                  <div className="mt-1 text-[12px] text-muted-foreground">
-                    Callback configured: {integrationsHealth.whatsapp.callback_configured ? "yes" : "no"}
-                  </div>
-                  {integrationsHealth.whatsapp.notes.map((note) => (
-                    <div key={note} className="mt-1 text-[12px] text-muted-foreground">
-                      {note}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] leading-6 text-muted-foreground">Email enabled</span>
+                      <BoolBadge value={integrations.email_enabled} />
                     </div>
-                  ))}
-                </div>
-
-                <div className="rounded-lg border border-border bg-background px-3 py-3">
-                  <p className="text-[12px] text-muted-foreground mb-2">Storage / Links</p>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[12px] text-muted-foreground">Storage configured</span>
-                    <BoolBadge value={integrations.storage_configured} />
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] leading-6 text-muted-foreground">Channel ready</span>
+                      <BoolBadge value={integrationsHealth.email.ready} />
+                    </div>
                   </div>
-                  <div className="text-[12px] text-muted-foreground">
-                    Public URL: {integrations.public_base_url || "-"}
-                  </div>
-                  <div className="text-[12px] text-muted-foreground">
-                    Waze URL: {integrations.waze_base_url || "-"}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[12px] text-muted-foreground">Waze nav</span>
-                    <BoolBadge value={integrations.waze_navigation_enabled} />
+                  <div className="mt-auto pt-3 space-y-1 text-[12px] leading-6 text-muted-foreground">
+                    <div>Sender: {integrationsHealth.email.sender_identity || "-"}</div>
+                    {integrationsHealth.email.notes.map((note) => (
+                      <div key={note}>{note}</div>
+                    ))}
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-border bg-background px-3 py-3">
-                  <p className="text-[12px] text-muted-foreground mb-2">Limits / Sync / Auth</p>
-                  <div className="text-[12px] text-muted-foreground">
-                    File token TTL: {integrations.file_token_ttl_sec}s
+                <div className="surface-subtle flex min-h-[220px] flex-col px-3 py-3">
+                  <p className="metric-label mb-3">WhatsApp / Twilio</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] leading-6 text-muted-foreground">Twilio configured</span>
+                      <BoolBadge value={integrations.twilio_configured} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] leading-6 text-muted-foreground">WhatsApp enabled</span>
+                      <BoolBadge value={integrations.whatsapp_enabled} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] leading-6 text-muted-foreground">Fallback to email</span>
+                      <BoolBadge value={integrations.whatsapp_fallback_to_email} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] leading-6 text-muted-foreground">Channel ready</span>
+                      <BoolBadge value={integrationsHealth.whatsapp.ready} />
+                    </div>
                   </div>
-                  <div className="text-[12px] text-muted-foreground">
-                    File token uses: {integrations.file_token_uses}
+                  <div className="mt-auto pt-3 space-y-1 text-[12px] leading-6 text-muted-foreground">
+                    <div>Sender: {integrationsHealth.whatsapp.sender_identity || "-"}</div>
+                    <div>Callback configured: {integrationsHealth.whatsapp.callback_configured ? "yes" : "no"}</div>
+                    {integrationsHealth.whatsapp.notes.map((note) => (
+                      <div key={note}>{note}</div>
+                    ))}
                   </div>
-                  <div className="text-[12px] text-muted-foreground">
-                    Journal token TTL: {integrations.journal_public_token_ttl_sec}s
+                </div>
+
+                <div className="surface-subtle min-h-[220px] px-3 py-3">
+                  <p className="metric-label mb-3">Storage / Links</p>
+                  <div className="space-y-2 text-[12px] leading-6 text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <span>Storage configured</span>
+                      <BoolBadge value={integrations.storage_configured} />
+                    </div>
+                    <div>Public URL: {integrations.public_base_url || "-"}</div>
+                    <div>Waze URL: {integrations.waze_base_url || "-"}</div>
+                    <div className="flex items-center gap-2">
+                      <span>Waze nav</span>
+                      <BoolBadge value={integrations.waze_navigation_enabled} />
+                    </div>
                   </div>
-                  <div className="text-[12px] text-muted-foreground mt-1">
-                    Sync lag warn/danger: {integrations.sync_warn_lag}/{integrations.sync_danger_lag}
-                  </div>
-                  <div className="text-[12px] text-muted-foreground">
-                    Auth login RL: {integrations.auth_login_rl_max_req} req/{integrations.auth_login_rl_window_sec}s
-                  </div>
-                  <div className="text-[12px] text-muted-foreground">
-                    Auth refresh RL: {integrations.auth_refresh_rl_max_req} req/{integrations.auth_refresh_rl_window_sec}s
+                </div>
+
+                <div className="surface-subtle min-h-[220px] px-3 py-3">
+                  <p className="metric-label mb-3">Limits / Sync / Auth</p>
+                  <div className="space-y-1 text-[12px] leading-6 text-muted-foreground">
+                    <div>File token TTL: {integrations.file_token_ttl_sec}s</div>
+                    <div>File token uses: {integrations.file_token_uses}</div>
+                    <div>Journal token TTL: {integrations.journal_public_token_ttl_sec}s</div>
+                    <div>Sync lag warn/danger: {integrations.sync_warn_lag}/{integrations.sync_danger_lag}</div>
+                    <div>Auth login RL: {integrations.auth_login_rl_max_req} req/{integrations.auth_login_rl_window_sec}s</div>
+                    <div>Auth refresh RL: {integrations.auth_refresh_rl_max_req} req/{integrations.auth_refresh_rl_window_sec}s</div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-5 rounded-lg border border-border bg-background px-4 py-4">
-                <h3 className="text-[13px] font-semibold mb-3">Provider test send</h3>
+              <div className="surface-subtle mt-5 px-4 py-4">
+                <h3 className="panel-title mb-3">Provider test send</h3>
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  <div className="rounded-lg border border-border bg-card px-3 py-3">
-                    <div className="text-[12px] font-medium text-foreground mb-2">Email test</div>
+                  <div className="flex min-h-[184px] flex-col rounded-2xl border border-border/70 bg-background/75 px-3 py-3">
+                    <div className="metric-label mb-3">Email test</div>
                     <input
                       aria-label="Email test recipient"
                       value={emailTestRecipient}
                       onChange={(e) => setEmailTestRecipient(e.target.value)}
                       disabled={!canManageSettings}
-                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-accent/40 disabled:opacity-60"
+                      className="control-input"
                     />
                     <button
                       onClick={() => emailTestMutation.mutate()}
@@ -395,21 +421,21 @@ export default function SettingsPage() {
                         emailTestMutation.isPending
                       }
                       title={privilegedActionHint}
-                      className="mt-3 h-10 w-full rounded-lg border border-border bg-card text-[13px] font-medium flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="mt-auto inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-border/70 bg-background/80 text-[13px] font-medium transition-colors hover:border-accent/35 hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <Send className="w-4 h-4" />
                       Send Email Test
                     </button>
                   </div>
 
-                  <div className="rounded-lg border border-border bg-card px-3 py-3">
-                    <div className="text-[12px] font-medium text-foreground mb-2">WhatsApp test</div>
+                  <div className="flex min-h-[184px] flex-col rounded-2xl border border-border/70 bg-background/75 px-3 py-3">
+                    <div className="metric-label mb-3">WhatsApp test</div>
                     <input
                       aria-label="WhatsApp test recipient"
                       value={whatsappTestRecipient}
                       onChange={(e) => setWhatsappTestRecipient(e.target.value)}
                       disabled={!canManageSettings}
-                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-accent/40 disabled:opacity-60"
+                      className="control-input"
                     />
                     <button
                       onClick={() => whatsappTestMutation.mutate()}
@@ -420,7 +446,7 @@ export default function SettingsPage() {
                         whatsappTestMutation.isPending
                       }
                       title={privilegedActionHint}
-                      className="mt-3 h-10 w-full rounded-lg border border-border bg-card text-[13px] font-medium flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="mt-auto inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-border/70 bg-background/80 text-[13px] font-medium transition-colors hover:border-accent/35 hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <Send className="w-4 h-4" />
                       Send WhatsApp Test
@@ -428,15 +454,15 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <label className="block text-[12px] text-muted-foreground mb-1">Test message</label>
+                <div className="field-stack mt-4">
+                  <label className="field-label">Test message</label>
                   <textarea
                     aria-label="Provider test message"
                     value={testMessage}
                     onChange={(e) => setTestMessage(e.target.value)}
                     disabled={!canManageSettings}
                     rows={3}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-accent/40 disabled:opacity-60"
+                    className="control-textarea"
                   />
                 </div>
               </div>
@@ -447,3 +473,4 @@ export default function SettingsPage() {
     </DashboardLayout>
   );
 }
+

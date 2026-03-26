@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Search, Settings } from "lucide-react";
+import { CalendarDays, FolderKanban, Settings, ShieldAlert } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DispatcherBoard } from "@/components/dashboard/DispatcherBoard";
@@ -259,36 +259,49 @@ const Index = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-[1400px] p-6 lg:p-8">
+      <div className="page-shell page-stack motion-stagger">
         <div className="page-hero mb-8">
           <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl">
-              <div className="page-eyebrow">Operational Snapshot</div>
-              <h1 className="mt-4 text-3xl font-semibold text-foreground sm:text-4xl">Dashboard</h1>
+              <div className="page-eyebrow">Операционный обзор</div>
+              <h1 className="mt-4 text-3xl font-semibold text-foreground sm:text-4xl">Дашборд</h1>
               <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">
-                The last 7 days across projects, blockers, dispatch pressure and crew availability.
-                Built to answer where risk is growing and what should move next.
+                Один экран для понимания текущего состояния: где растёт риск, какие проекты требуют внимания
+                и куда логично перейти следующим шагом.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="metric-chip">Dispatch pressure</span>
-                <span className="metric-chip">Crew load</span>
-                <span className="metric-chip">Issue concentration</span>
+                <span className="metric-chip">Проекты</span>
+                <span className="metric-chip">Проблемы</span>
+                <span className="metric-chip">Календарь</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="relative group/search">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors duration-200 group-focus-within/search:text-accent" strokeWidth={1.8} />
-                <input
-                  type="text"
-                  placeholder="Search project, installer or issue..."
-                  className="h-11 w-[270px] rounded-xl border border-border bg-card/80 pl-9 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/40 transition-all duration-200"
-                />
-              </div>
-              <button className="btn-premium h-11 px-4 rounded-xl border border-border bg-card/80 text-[13px] font-medium text-card-foreground hover:text-accent flex items-center gap-2 group/export">
-                <Download className="w-3.5 h-3.5 transition-all duration-250 ease-in-out group-hover/export:scale-110 group-hover/export:text-accent group-hover/export:drop-shadow-[0_0_4px_hsl(var(--accent)/0.3)]" strokeWidth={1.8} />
-                Export
+            <div className="toolbar-row">
+              <button
+                type="button"
+                onClick={() => router.push("/operations")}
+                className="btn-premium h-11 rounded-xl border border-border bg-card/80 px-4 text-[13px] font-medium text-card-foreground hover:text-accent flex items-center gap-2"
+              >
+                <ShieldAlert className="h-4 w-4" strokeWidth={1.8} />
+                Операции
               </button>
               <button
+                type="button"
+                onClick={() => router.push("/projects")}
+                className="btn-premium h-11 rounded-xl border border-border bg-card/80 px-4 text-[13px] font-medium text-card-foreground hover:text-accent flex items-center gap-2"
+              >
+                <FolderKanban className="h-4 w-4" strokeWidth={1.8} />
+                Проекты
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/calendar")}
+                className="btn-premium h-11 rounded-xl border border-border bg-card/80 px-4 text-[13px] font-medium text-card-foreground hover:text-accent flex items-center gap-2"
+              >
+                <CalendarDays className="h-4 w-4" strokeWidth={1.8} />
+                Календарь
+              </button>
+              <button
+                type="button"
                 onClick={() => router.push("/settings")}
                 className="btn-premium h-11 w-11 rounded-xl border border-border bg-card/80 flex items-center justify-center group/settings"
               >

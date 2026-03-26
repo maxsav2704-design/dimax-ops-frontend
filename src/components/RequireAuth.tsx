@@ -1,25 +1,28 @@
 "use client";
 
 import { apiFetch, getAccessToken } from "@/lib/api";
-import { canAccessAdminPath } from "@/lib/admin-access";
+import { canAccessAdminPath, resolveAdminHomePath } from "@/lib/admin-access";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { normalizeAuthSession, type AuthSession } from "@/lib/auth-session";
 
 type AuthMeResponse = {
   role: "ADMIN" | "INSTALLER";
+  admin_scope?: "OWNER" | "OPERATIONS" | "FINANCE" | "VIEWER" | null;
+  can_view_rates?: boolean | null;
 };
 
 type AuthScope = "admin" | "installer" | "any";
 
-function isAllowed(scope: AuthScope, role: AuthMeResponse["role"], pathname: string): boolean {
+function isAllowed(scope: AuthScope, session: AuthSession, pathname: string): boolean {
   if (scope === "any") {
     return true;
   }
   if (scope === "installer") {
-    return role === "INSTALLER";
+    return session.role === "INSTALLER";
   }
-  return canAccessAdminPath(role, pathname);
+  return canAccessAdminPath(session, pathname);
 }
 
 function deniedErrorCode(scope: AuthScope): string {
@@ -56,21 +59,28 @@ export function RequireAuth({
 
       try {
         const me = await apiFetch<AuthMeResponse>("/api/v1/auth/me");
+        const session = normalizeAuthSession(me);
         if (cancelled) {
           return;
         }
-        if (scope === "admin" && me.role === "INSTALLER") {
+        if (!session) {
+          router.replace(`/login?next=${encodeURIComponent(next)}`);
+          return;
+        }
+        if (scope === "admin" && session.role === "INSTALLER") {
           router.replace("/installer");
           return;
         }
-        if (scope === "installer" && me.role === "ADMIN") {
-          router.replace("/");
+        if (scope === "installer" && session.role === "ADMIN") {
+          router.replace(resolveAdminHomePath(session));
           return;
         }
-        if (!isAllowed(scope, me.role, next)) {
-          router.replace(
-            `/login?next=${encodeURIComponent(next)}&error=${deniedErrorCode(scope)}`
-          );
+        if (!isAllowed(scope, session, next)) {
+          if (session.role === "ADMIN") {
+            router.replace(resolveAdminHomePath(session));
+            return;
+          }
+          router.replace(`/login?next=${encodeURIComponent(next)}&error=${deniedErrorCode(scope)}`);
           return;
         }
         setAllowed(true);

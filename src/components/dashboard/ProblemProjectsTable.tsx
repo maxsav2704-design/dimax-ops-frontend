@@ -13,40 +13,45 @@ interface ProblemProjectsTableProps {
 
 export function ProblemProjectsTable({ projects, onViewAll }: ProblemProjectsTableProps) {
   return (
-    <div className="glass-card card-lift rounded-xl p-5 animate-fade-in h-full">
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-sm font-semibold text-card-foreground">Problem Projects (Top 10)</h3>
+    <div className="glass-card card-lift h-full rounded-[1.2rem] p-5 animate-fade-in">
+      <div className="panel-heading mb-5">
+        <div>
+          <h3 className="panel-title">Problem Projects (Top 10)</h3>
+          <p className="panel-subtitle mt-1">Projects with the highest unresolved installation pressure.</p>
+        </div>
         <button
           onClick={onViewAll}
-          className="btn-premium text-[12px] font-medium text-muted-foreground hover:text-accent px-3 py-1.5 rounded-lg border border-border"
+          className="btn-premium rounded-xl border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
         >
           View all
         </button>
       </div>
 
       {projects.length > 0 ? (
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left text-[11px] font-medium text-muted-foreground pb-2.5 uppercase tracking-wider">Project</th>
-              <th className="text-left text-[11px] font-medium text-muted-foreground pb-2.5 uppercase tracking-wider">Problems</th>
-              <th className="text-left text-[11px] font-medium text-muted-foreground pb-2.5 uppercase tracking-wider">Updated</th>
-            </tr>
-          </thead>
-          <tbody>
-            {projects.map((p, i) => (
-              <tr key={i} className="border-b border-border/50 last:border-0 row-hover cursor-pointer">
-                <td className="py-3 text-[13px] text-card-foreground font-medium">{p.name}</td>
-                <td className="py-3">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-destructive/10 text-destructive text-[12px] font-medium">
-                    {p.problems}
-                  </span>
-                </td>
-                <td className="py-3 text-[12px] text-muted-foreground">{p.updated}</td>
+        <div className="data-table-shell">
+          <table className="w-full">
+            <thead>
+              <tr className="data-table-head">
+                <th className="px-4 py-3 text-left">Project</th>
+                <th className="px-4 py-3 text-left">Problems</th>
+                <th className="px-4 py-3 text-left">Updated</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {projects.map((p, i) => (
+                <tr key={i} className="data-table-row row-hover cursor-pointer">
+                  <td className="px-4 py-3 font-medium text-card-foreground">{p.name}</td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-destructive">
+                      {p.problems}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-[12px] text-muted-foreground">{p.updated}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-10 text-center">
           <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mb-3">

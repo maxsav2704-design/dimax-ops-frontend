@@ -11,8 +11,8 @@ const { apiFetchMock } = vi.hoisted(() => ({
 const { searchParamsMock } = vi.hoisted(() => ({
   searchParamsMock: vi.fn(),
 }));
-const { userRoleMock } = vi.hoisted(() => ({
-  userRoleMock: vi.fn(),
+const { authSessionMock } = vi.hoisted(() => ({
+  authSessionMock: vi.fn(),
 }));
 
 vi.mock("@/components/DashboardLayout", () => ({
@@ -25,8 +25,8 @@ vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
 }));
 
-vi.mock("@/hooks/use-user-role", () => ({
-  useUserRole: userRoleMock,
+vi.mock("@/hooks/use-auth-session", () => ({
+  useAuthSession: authSessionMock,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -38,9 +38,13 @@ describe("IssuesPage", () => {
     vi.restoreAllMocks();
     apiFetchMock.mockReset();
     searchParamsMock.mockReset();
-    userRoleMock.mockReset();
+    authSessionMock.mockReset();
     searchParamsMock.mockReturnValue(new URLSearchParams(""));
-    userRoleMock.mockReturnValue("ADMIN");
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "OWNER",
+      can_view_rates: true,
+    });
   });
 
   afterEach(() => {
@@ -252,7 +256,11 @@ describe("IssuesPage", () => {
   }, 15000);
 
   it("disables privileged workflow actions for installer role", async () => {
-    userRoleMock.mockReturnValue("INSTALLER");
+    authSessionMock.mockReturnValue({
+      role: "INSTALLER",
+      admin_scope: null,
+      can_view_rates: false,
+    });
 
     apiFetchMock.mockImplementation(async (path: string) => {
       if (path.includes("/api/v1/admin/installers")) {

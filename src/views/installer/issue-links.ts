@@ -6,7 +6,7 @@ export function buildInstallerIssuesHref(
   }
 ) {
   const params = new URLSearchParams();
-  params.set("door_filter", "WITH_ISSUES");
+  params.set("project_id", projectId);
 
   const normalizedIssueStatus = options?.issueStatus?.trim();
   if (normalizedIssueStatus) {
@@ -18,5 +18,5 @@ export function buildInstallerIssuesHref(
     params.set("issue_search", normalizedIssueSearch);
   }
 
-  return `/installer/projects/${projectId}?${params.toString()}#project-open-issues`;
+  return `/installer/issues?${params.toString()}`;
 }

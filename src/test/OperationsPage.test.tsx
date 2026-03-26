@@ -15,10 +15,19 @@ vi.mock("@/lib/api", () => ({
 vi.mock("next/navigation", () => ({
   usePathname: () => "/operations",
   useSearchParams: () => new URLSearchParams(window.location.search),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+  }),
 }));
 
-vi.mock("@/hooks/use-user-role", () => ({
-  useUserRole: () => "ADMIN",
+vi.mock("@/hooks/use-auth-session", () => ({
+  useAuthSession: () => ({
+    role: "ADMIN",
+    admin_scope: "OWNER",
+    can_view_rates: true,
+  }),
 }));
 
 function renderSubject() {

@@ -17,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useUserRole } from "@/hooks/use-user-role";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
 import { useI18n, type Locale } from "@/lib/i18n";
@@ -525,8 +525,8 @@ export default function OperationsPage() {
   };
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const userRole = useUserRole();
-  const canRunPrivilegedActions = canRunPrivilegedAdminActions(userRole);
+  const session = useAuthSession();
+  const canRunPrivilegedActions = canRunPrivilegedAdminActions(session);
   const [busyAction, setBusyAction] = useState("");
   const [onlyActionable, setOnlyActionable] = useState(searchParams?.get("actionable") === "1");
   const [deliveryChannelFilter, setDeliveryChannelFilter] = useState(
@@ -1130,30 +1130,22 @@ export default function OperationsPage() {
               </div>
             </div>
             <div className="surface-subtle min-w-0 max-w-xl space-y-4 p-4 sm:p-5 xl:min-w-[320px]">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="min-w-0 rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {t("operations.actionable")}
-                  </div>
-                  <div className="mt-1 text-lg font-semibold leading-tight text-foreground">
-                    {onlyActionable ? t("operations.actionableFocused") : t("operations.actionableMixed")}
-                  </div>
-                </div>
-                <div className="min-w-0 rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {t("operations.deliveryLane")}
-                  </div>
-                  <div className="mt-1 text-lg font-semibold leading-tight text-foreground">
-                    {deliveryChannelFilter || t("common.all")}
-                  </div>
-                </div>
-                <div className="min-w-0 rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {t("operations.provider")}
-                  </div>
-                  <div className="mt-1 text-lg font-semibold leading-tight text-foreground">
-                    {webhookProviderFilter || t("common.all")}
-                  </div>
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-4 py-3">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-muted-foreground">
+                  <span>
+                    {t("operations.actionable")}{" "}
+                    <span className="font-semibold text-foreground">
+                      {onlyActionable ? t("operations.actionableFocused") : t("operations.actionableMixed")}
+                    </span>
+                  </span>
+                  <span>
+                    {t("operations.deliveryLane")}{" "}
+                    <span className="font-semibold text-foreground">{deliveryChannelFilter || t("common.all")}</span>
+                  </span>
+                  <span>
+                    {t("operations.provider")}{" "}
+                    <span className="font-semibold text-foreground">{webhookProviderFilter || t("common.all")}</span>
+                  </span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -1212,15 +1204,15 @@ export default function OperationsPage() {
           {cards.map((card) => (
             <div
               key={card.label}
-              className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4"
+              className="relative flex min-h-[148px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4"
             >
               <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm text-muted-foreground">{card.label}</div>
                 <card.icon className="h-4 w-4 text-muted-foreground" />
               </div>
-              <div className="mt-2 text-2xl font-semibold">{card.value}</div>
-              <div className="mt-2 text-xs text-muted-foreground">{card.note}</div>
+              <div className="mt-3 text-2xl font-semibold tabular-nums">{card.value}</div>
+              <div className="mt-auto pt-3 text-xs leading-5 text-muted-foreground">{card.note}</div>
             </div>
           ))}
         </div>
@@ -1261,7 +1253,7 @@ export default function OperationsPage() {
         </section>
 
         <section className="surface-panel">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 {t("operations.actionSummary")}
@@ -1286,8 +1278,8 @@ export default function OperationsPage() {
                   actionableFailedImports.length === 0 ||
                   busyAction === "imports:bulk"
                 }
-                className="inline-flex h-8 w-full items-center justify-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                >
+                className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              >
                 {busyAction === "imports:bulk"
                   ? t("operations.retryingImports")
                   : `${t("operations.retryActionableImports")} (${actionableFailedImports.length})`}
@@ -1303,7 +1295,7 @@ export default function OperationsPage() {
                   actionableFailedOutbox.length === 0 ||
                   busyAction === "outbox:bulk"
                 }
-                className="inline-flex h-8 w-full items-center justify-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {busyAction === "outbox:bulk"
                   ? t("operations.retryingDeliveries")
@@ -1319,7 +1311,7 @@ export default function OperationsPage() {
                   actionableImportProjectIds.length === 0 ||
                   busyAction === "imports:reconcile"
                 }
-                className="inline-flex h-8 w-full items-center justify-center rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-border/70 bg-background/70 px-3 text-[12px] font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {busyAction === "imports:reconcile"
                   ? t("operations.reconcilingProjects")
@@ -1332,12 +1324,12 @@ export default function OperationsPage() {
               <Link
                 key={`${item.label}-${item.href}`}
                 href={item.href}
-                className="rounded-xl border border-border/70 bg-background/70 px-4 py-3 transition-colors hover:bg-muted"
+                className="flex min-h-[92px] flex-col rounded-xl border border-border/70 bg-background/70 px-4 py-3 transition-colors hover:bg-muted"
               >
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   {item.label}
                 </div>
-                <div className="mt-1 text-sm font-medium text-foreground">{item.value}</div>
+                <div className="mt-auto pt-3 text-sm font-medium leading-6 text-foreground">{item.value}</div>
               </Link>
             ))}
           </div>
@@ -1960,7 +1952,7 @@ export default function OperationsPage() {
                   {copy("Delivery reports", "Отчеты по доставке", "דוחות משלוח")}
                 </Link>
                 <Link href="/journal" className="font-medium text-accent hover:underline">
-                  {copy("Journal", "??????", "????")}
+                  {copy("Journal", "Журнал", "יומן")}
                 </Link>
               </div>
             </div>
@@ -2008,7 +2000,7 @@ export default function OperationsPage() {
                       })}
                       className="font-medium text-accent hover:underline"
                     >
-                      {copy("Delivery report", "????? ?? ????????", "??? ?????")}
+                      {copy("Delivery report", "Отчёт по доставке", "דוח משלוח")}
                     </Link>
                     <Link
                       href="/journal"
@@ -2061,16 +2053,16 @@ export default function OperationsPage() {
                 <>
                   <div className="px-4 py-3 text-[13px]">
                     <div className="font-medium text-card-foreground">
-                      {copy("ok", "ok", "ok")} {sync.counts.ok} | {copy("warn", "???????.", "??????")} {sync.counts.warn} | {copy("danger", "????", "?????")} {sync.counts.danger}
+                      {copy("ok", "ok", "ok")} {sync.counts.ok} | {copy("warn", "предупр.", "אזהרה")} {sync.counts.warn} | {copy("danger", "риск", "סיכון")} {sync.counts.danger}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      {copy("dead", "?????????", "???????")} {sync.counts.dead} | {copy("never seen", "?? ??????", "?? ????")} {sync.counts.never_seen} | {copy("alerts sent", "?????????? ???????", "?????? ?????")}{" "}
+                      {copy("dead", "неактивен", "מנותק")} {sync.counts.dead} | {copy("never seen", "не замечен", "לא נראה")} {sync.counts.never_seen} | {copy("alerts sent", "алертов отправлено", "התראות נשלחו")}{" "}
                       {sync.alerts_sent}
                     </div>
                   </div>
                   {visibleSyncItems.length === 0 ? (
                     <div className="border-t border-border/70 px-4 py-6 text-[13px] text-muted-foreground">
-                      {copy("No actionable sync items.", "??? ????????? ????? ??? ????????.", "??? ????? ?????? ??????.")}
+                      {copy("No actionable sync items.", "Нет actionable-элементов по синку.", "אין פריטי סנכרון לטיפול.")}
                     </div>
                   ) : null}
                   {visibleSyncItems.map((item) => (
@@ -2085,7 +2077,7 @@ export default function OperationsPage() {
                         </span>
                       </div>
                       <div className="mt-1 text-xs text-muted-foreground">
-                        {copy("lag", "???", "?????")} {item.lag} | {copy("offline", "??????", "?? ?????")} {item.days_offline} {copy("days", "??.", "????")} | {copy("last seen", "????????? ??????", "???? ???????")}{" "}
+                        {copy("lag", "лаг", "פיגור")} {item.lag} | {copy("offline", "офлайн", "לא מקוון")} {item.days_offline} {copy("days", "дн.", "ימים")} | {copy("last seen", "последний сигнал", "נראה לאחרונה")}{" "}
                         {formatDateTime(item.last_seen_at)}
                       </div>
                       <div className="mt-3 text-xs">
@@ -2093,13 +2085,13 @@ export default function OperationsPage() {
                           href={`/reports?focus=operations&ops_preset=issue-pressure&installer_id=${encodeURIComponent(item.installer_id)}`}
                           className="mr-3 font-medium text-accent hover:underline"
                         >
-                          {copy("Installer report", "????? ?? ??????????", "??? ?????")}
+                          {copy("Installer report", "Отчёт по монтажнику", "דוח מתקין")}
                         </Link>
                         <Link
                           href="/installers"
                           className="font-medium text-accent hover:underline"
                         >
-                          {copy("Installer board", "?????? ???????????", "??? ???????")}
+                          {copy("Installer board", "Доска монтажников", "לוח מתקינים")}
                         </Link>
                       </div>
                     </div>

@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { useUserRole } from "@/hooks/use-user-role";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { useI18n } from "@/lib/i18n";
@@ -286,8 +286,8 @@ function SectionMessage({
 export default function JournalPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const role = useUserRole();
-  const canManage = canRunPrivilegedAdminActions(role);
+  const session = useAuthSession();
+  const canManage = canRunPrivilegedAdminActions(session);
 
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [journals, setJournals] = useState<JournalListItem[]>([]);
@@ -813,7 +813,7 @@ export default function JournalPage() {
 
   return (
     <DashboardLayout>
-      <div className="motion-stagger space-y-6">
+      <div className="page-shell page-stack motion-stagger">
         <div className="page-hero relative overflow-hidden">
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="flex flex-col gap-4 border-b border-border/70 pb-5 lg:flex-row lg:items-start lg:justify-between">
@@ -831,10 +831,10 @@ export default function JournalPage() {
                 <span className="metric-chip">{t("journal.commsRecovery")}</span>
               </div>
             </div>
-            <div className="surface-subtle flex flex-wrap gap-2 p-4 sm:p-5">
+            <div className="surface-subtle flex flex-wrap items-stretch gap-2 p-4 sm:p-5">
               <button
                 onClick={() => setRefreshTick((value) => value + 1)}
-                className="btn-premium rounded-xl px-4 py-2 text-[12px] font-medium"
+                className="btn-premium min-h-10 rounded-xl px-4 py-2 text-[12px] font-medium"
               >
                 <RefreshCw className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
                 {t("common.refresh")}
@@ -842,7 +842,7 @@ export default function JournalPage() {
               <button
                 onClick={() => selectedJournalId && router.push(`/journal/${selectedJournalId}`)}
                 disabled={!selectedJournalId}
-                className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-4 py-2 text-[12px] font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex min-h-10 items-center rounded-xl border border-border/70 bg-background/75 px-4 py-2 text-[12px] font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {t("journal.openJournalForm")}
               </button>
@@ -874,75 +874,6 @@ export default function JournalPage() {
               <SectionMessage title={t("journal.loadError")} description={pageError} tone="error" />
             </div>
           ) : null}
-
-          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
-            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                {t("journal.journals")}
-              </div>
-              <div className="mt-2 text-xl font-semibold text-card-foreground">
-                {journalSummary.total}
-              </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
-                {t("journal.draft")}: {journalSummary.draft}
-              </div>
-            </div>
-            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                {t("journal.ready")}
-              </div>
-              <div className="mt-2 text-xl font-semibold text-card-foreground">
-                {journalSummary.ready}
-              </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
-                {t("journal.signed")}: {journalSummary.signed}
-              </div>
-            </div>
-            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                {t("journal.outbox")}
-              </div>
-              <div className="mt-2 text-xl font-semibold text-card-foreground">
-                {outboxSummary?.total ?? 0}
-              </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
-                {t("journal.failed")}: {outboxSummary?.failed_total ?? 0}
-              </div>
-            </div>
-            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--destructive)/0.08))] p-4">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                {t("common.overdue")}
-              </div>
-              <div className="mt-2 text-xl font-semibold text-card-foreground">
-                {outboxSummary?.pending_overdue_15m ?? 0}
-              </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
-                {t("journal.pendingOver15m")}
-              </div>
-            </div>
-            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                {t("journal.email")}
-              </div>
-              <div className="mt-2 text-xl font-semibold text-card-foreground">
-                {outboxSummary?.by_channel?.EMAIL ?? 0}
-              </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
-                {t("journal.enabled")}: {integrations?.email_enabled ? t("journal.yes") : t("journal.no")}
-              </div>
-            </div>
-            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                {t("journal.whatsapp")}
-              </div>
-              <div className="mt-2 text-xl font-semibold text-card-foreground">
-                {outboxSummary?.by_channel?.WHATSAPP ?? 0}
-              </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
-                {t("journal.enabled")}: {integrations?.whatsapp_enabled ? t("journal.yes") : t("journal.no")}
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
@@ -958,7 +889,7 @@ export default function JournalPage() {
                 <Clock3 className="h-4 w-4 text-accent" strokeWidth={1.8} />
               </div>
 
-              <div className="space-y-3 rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-4">
+              <div className="surface-subtle space-y-3 p-4">
                 <div>
                   <label className="mb-1 block text-[12px] font-medium text-card-foreground">
                     {t("journal.project")}
@@ -967,7 +898,7 @@ export default function JournalPage() {
                     aria-label={t("journal.createDraftProject")}
                     value={selectedProjectId}
                     onChange={(event) => setSelectedProjectId(event.target.value)}
-                    className="w-full rounded-xl border border-border/70 bg-background/80 px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                    className="control-input"
                   >
                     {projects.map((project) => (
                       <option key={project.id} value={project.id}>
@@ -985,7 +916,7 @@ export default function JournalPage() {
                     value={createTitle}
                     onChange={(event) => setCreateTitle(event.target.value)}
                     placeholder={t("journal.finalDeliveryPackage")}
-                    className="w-full rounded-xl border border-border/70 bg-background/80 px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                    className="control-input"
                   />
                 </div>
                 <button
@@ -1008,14 +939,14 @@ export default function JournalPage() {
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                     placeholder={t("journal.searchPlaceholder")}
-                    className="w-full rounded-xl border border-border/70 bg-background/80 py-2 pl-9 pr-3 text-sm text-card-foreground outline-none focus:border-accent"
+                    className="control-input pl-9"
                   />
                 </div>
                 <select
                   aria-label={t("journal.statusFilter")}
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
-                  className="rounded-xl border border-border/70 bg-background/80 px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                  className="control-input"
                 >
                   <option value="ALL">{t("journal.all")}</option>
                   <option value="DRAFT">{t("journal.draft")}</option>
@@ -1084,7 +1015,7 @@ export default function JournalPage() {
           </div>
 
           <div className="xl:col-span-5">
-            <div className="glass-card rounded-xl p-5">
+            <div className="surface-panel panel-pad">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-base font-semibold text-card-foreground">{t("journal.sendWorkspace")}</h2>
@@ -1108,7 +1039,7 @@ export default function JournalPage() {
                 />
               ) : selectedJournal ? (
                 <div className="space-y-5">
-                  <div className="rounded-xl border border-border/70 bg-background/40 p-4">
+                  <div className="surface-subtle p-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -1206,7 +1137,7 @@ export default function JournalPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-border/70 bg-background/40 p-4">
+                  <div className="surface-subtle p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div>
                         <h3 className="text-sm font-semibold text-card-foreground">{t("journal.templates")}</h3>
@@ -1254,7 +1185,7 @@ export default function JournalPage() {
                         value={templateName}
                         onChange={(event) => setTemplateName(event.target.value)}
                         placeholder={t("journal.templatePlaceholder")}
-                        className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                        className="control-input flex-1"
                       />
                       <button
                         type="button"
@@ -1266,7 +1197,7 @@ export default function JournalPage() {
                       </button>
                     </div>
                   </div>
-                  <div className="rounded-xl border border-border/70 bg-background/40 p-4">
+                  <div className="surface-subtle p-4">
                     <div className="mb-3 flex items-center justify-between">
                       <div>
                         <h3 className="text-sm font-semibold text-card-foreground">{t("journal.deliveryChannels")}</h3>
@@ -1322,7 +1253,7 @@ export default function JournalPage() {
                           value={emailTo}
                           onChange={(event) => setEmailTo(event.target.value)}
                           placeholder="client@example.com"
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                          className="control-input"
                         />
                       </div>
                       <div>
@@ -1334,7 +1265,7 @@ export default function JournalPage() {
                           value={whatsappTo}
                           onChange={(event) => setWhatsappTo(event.target.value)}
                           placeholder="+9725xxxxxxx"
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                          className="control-input"
                         />
                       </div>
                     </div>
@@ -1348,7 +1279,7 @@ export default function JournalPage() {
                         value={subject}
                         onChange={(event) => setSubject(event.target.value)}
                         placeholder={t("journal.projectHandoverPackage")}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                        className="control-input"
                       />
                     </div>
 
@@ -1362,7 +1293,7 @@ export default function JournalPage() {
                         onChange={(event) => setMessage(event.target.value)}
                         placeholder={t("journal.messagePlaceholder")}
                         rows={6}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                        className="control-textarea"
                       />
                     </div>
 
@@ -1397,7 +1328,7 @@ export default function JournalPage() {
           </div>
 
           <div className="xl:col-span-3">
-            <div className="glass-card rounded-xl p-5">
+            <div className="surface-panel panel-pad">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-base font-semibold text-card-foreground">{t("journal.deliveryLog")}</h2>
@@ -1416,7 +1347,7 @@ export default function JournalPage() {
               ) : (
                 <>
                   <div className="grid grid-cols-1 gap-3">
-                    <div className="rounded-xl border border-border/70 bg-background/40 p-3">
+                    <div className="surface-subtle p-3">
                       <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                         {t("journal.channelMix")}
                       </div>
@@ -1425,7 +1356,7 @@ export default function JournalPage() {
                         <span>{t("journal.whatsapp")}: {outboxSummary?.by_channel?.WHATSAPP ?? 0}</span>
                       </div>
                     </div>
-                    <div className="rounded-xl border border-border/70 bg-background/40 p-3">
+                    <div className="surface-subtle p-3">
                       <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                         {t("journal.deliveryStatus")}
                       </div>
@@ -1445,7 +1376,7 @@ export default function JournalPage() {
                       />
                     ) : (
                       outboxItems.map((item) => (
-                        <div key={item.id} className="rounded-xl border border-border/70 bg-background/40 p-4">
+                        <div key={item.id} className="surface-subtle p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <div className="flex flex-wrap items-center gap-2">
@@ -1509,7 +1440,7 @@ export default function JournalPage() {
                 </>
               )}
 
-              <div className="mt-5 rounded-xl border border-border/70 bg-background/40 p-4">
+              <div className="surface-subtle mt-5 p-4">
                 <div className="mb-3 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-accent" strokeWidth={1.8} />
                   <h3 className="text-sm font-semibold text-card-foreground">{t("journal.integrationSnapshot")}</h3>

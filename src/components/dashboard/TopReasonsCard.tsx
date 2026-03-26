@@ -12,21 +12,26 @@ interface TopReasonsCardProps {
 
 export function TopReasonsCard({ reasons }: TopReasonsCardProps) {
   return (
-    <div className="glass-card card-lift rounded-xl p-5 animate-fade-in h-full">
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-sm font-semibold text-card-foreground">Top reasons</h3>
-        <span className="text-[11px] text-muted-foreground">7d range</span>
+    <div className="glass-card card-lift h-full rounded-[1.2rem] p-5 animate-fade-in">
+      <div className="panel-heading mb-5">
+        <div>
+          <h3 className="panel-title">Top reasons</h3>
+          <p className="panel-subtitle mt-1">Issue drivers across the last seven-day window.</p>
+        </div>
+        <span className="metric-chip">7d range</span>
       </div>
 
       {reasons.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {reasons.map((r, i) => (
             <div key={i} className="group/reason cursor-pointer">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[12px] font-medium text-card-foreground">{r.reason}</span>
-                <span className="text-[11px] text-muted-foreground">{r.count}</span>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="text-[13px] font-medium leading-6 text-card-foreground">{r.reason}</span>
+                <span className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  {r.count}
+                </span>
               </div>
-              <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
                 <div
                   className="h-full rounded-full bg-accent/70 transition-all duration-500 group-hover/reason:bg-accent progress-glow"
                   style={{ width: `${r.percentage}%` }}

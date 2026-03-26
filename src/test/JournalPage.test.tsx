@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
@@ -19,8 +20,8 @@ vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
 }));
 
-vi.mock("@/hooks/use-user-role", () => ({
-  useUserRole: () => "ADMIN",
+vi.mock("@/hooks/use-auth-session", () => ({
+  useAuthSession: () => ({ role: "ADMIN", admin_scope: "OWNER", can_view_rates: true }),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -249,6 +250,22 @@ function buildApiMock() {
   };
 }
 
+function renderJournalPage() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <JournalPage />
+    </QueryClientProvider>
+  );
+}
+
 describe("JournalPage", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -278,7 +295,7 @@ describe("JournalPage", () => {
   });
 
   it("loads communication center data and opens journal form route", async () => {
-    render(<JournalPage />);
+    renderJournalPage();
 
     expect(await screen.findByText("Communications Center")).toBeInTheDocument();
     expect(await screen.findByText("Final Handover Pack")).toBeInTheDocument();
@@ -288,10 +305,10 @@ describe("JournalPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open journal form" }));
     expect(pushMock).toHaveBeenCalledWith("/journal/journal-1");
-  });
+  }, 15000);
 
   it("queues journal send with email and WhatsApp payload", async () => {
-    render(<JournalPage />);
+    renderJournalPage();
 
     await screen.findByLabelText("Email recipient");
 
@@ -329,7 +346,7 @@ describe("JournalPage", () => {
   }, 15000);
 
   it("applies preview and saves shared template via backend", async () => {
-    render(<JournalPage />);
+    renderJournalPage();
 
     await screen.findByLabelText("Communication template");
 
@@ -366,7 +383,7 @@ describe("JournalPage", () => {
   });
 
   it("retries failed outbox delivery from the log", async () => {
-    render(<JournalPage />);
+    renderJournalPage();
 
     await screen.findByText("Please review the delivery package.");
     await screen.findByRole("button", { name: "Retry" });

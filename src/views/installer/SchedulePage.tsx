@@ -89,7 +89,10 @@ function getScheduleIssueSearchPreset(eventType: string, title: string) {
 
 export default function InstallerSchedulePage() {
   const { locale, t } = useI18n();
-  const tt = (key: string) => scheduleOverrides[locale]?.[key] ?? t(key);
+  const normalizeReadableText = (value: string, fallback: string) =>
+    /(\?{3,}|Р\S|Ч\S|вЂ)/.test(value) ? fallback : value;
+  const tt = (key: string) =>
+    normalizeReadableText(scheduleOverrides[locale]?.[key] ?? t(key), t(key));
   const rangePresetLabels: Record<RangePreset, string> = {
     today: t("common.today"),
     "7d": t("installerSchedule.next7Days"),
@@ -218,6 +221,9 @@ export default function InstallerSchedulePage() {
     });
   }, [eventTypeFilter, events, nowIso, overdueOnly, projectFilter]);
 
+  const hasActiveFilters =
+    preset !== "7d" || eventTypeFilter !== "ALL" || projectFilter !== "ALL" || overdueOnly;
+
   return (
     <div className="motion-stagger space-y-6">
       <section className="page-hero relative overflow-hidden">
@@ -241,6 +247,16 @@ export default function InstallerSchedulePage() {
             </div>
           </div>
           <div className="surface-subtle max-w-3xl space-y-4 p-4 sm:p-5">
+            <div className="text-[12px] leading-5 text-muted-foreground">
+              {normalizeReadableText(
+                locale === "ru"
+                  ? "\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0432\u044b\u0431\u0435\u0440\u0438 \u0434\u0435\u043d\u044c, \u0437\u0430\u0442\u0435\u043c \u043e\u0442\u043a\u0440\u043e\u0439 \u043d\u0443\u0436\u043d\u043e\u0435 \u0441\u043e\u0431\u044b\u0442\u0438\u0435 \u0438 \u043f\u0435\u0440\u0435\u0439\u0434\u0438 \u0432 \u043f\u0440\u043e\u0435\u043a\u0442."
+                  : locale === "he"
+                    ? "\u05d1\u05d7\u05e8 \u05e7\u05d5\u05d3\u05dd \u05d8\u05d5\u05d5\u05d7 \u05d6\u05de\u05df, \u05d0\u05d6 \u05e4\u05ea\u05d7 \u05d0\u05d9\u05e8\u05d5\u05e2 \u05d5\u05d4\u05de\u05e9\u05da \u05dc\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8."
+                    : "Choose the day range first, then open the event you need and continue to the project.",
+                "Choose the day range first, then open the event you need and continue to the project."
+              )}
+            </div>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div
                 role="group"
@@ -266,96 +282,107 @@ export default function InstallerSchedulePage() {
               );
             })}
               </div>
-              <button
-                type="button"
-                aria-pressed={overdueOnly}
-                onClick={() => setOverdueOnly((prev) => !prev)}
-                className={
-                  overdueOnly
-                    ? "rounded-xl border border-border bg-accent px-3 py-2 text-xs font-medium text-accent-foreground"
-                    : "rounded-xl border border-border/70 bg-background/75 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                }
-              >
-                {t("installerSchedule.overdueOnly")}
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void eventsQuery.refetch()}
+                  className="btn-premium rounded-xl px-4 py-2 text-sm font-medium"
+                >
+                  <RefreshCcw className="h-4 w-4" />
+                  {t("common.refresh")}
+                </button>
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  disabled={!hasActiveFilters}
+                  className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-3 py-2 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {t("installerSchedule.resetFilters")}
+                </button>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{t("installerSchedule.eventType")}</span>
-            <select
-              aria-label={t("installerSchedule.eventType")}
-              value={eventTypeFilter}
-              onChange={(event) => setEventTypeFilter(event.target.value || "ALL")}
-              className="h-10 rounded-xl border border-border/70 bg-background/80 px-2 text-sm text-foreground"
-            >
-              <option value="ALL">{t("installerSchedule.allTypes")}</option>
-              {eventTypeOptions.map((eventType) => (
-                <option key={eventType} value={eventType}>
-                  {eventType}
-                </option>
-              ))}
-            </select>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="field-stack">
+                <span className="text-sm text-muted-foreground">{t("installerSchedule.eventType")}</span>
+                <select
+                  aria-label={t("installerSchedule.eventType")}
+                  value={eventTypeFilter}
+                  onChange={(event) => setEventTypeFilter(event.target.value || "ALL")}
+                  className="control-input"
+                >
+                  <option value="ALL">{t("installerSchedule.allTypes")}</option>
+                  {eventTypeOptions.map((eventType) => (
+                    <option key={eventType} value={eventType}>
+                      {eventType}
+                    </option>
+                  ))}
+                </select>
               </label>
-              <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{t("common.project")}</span>
-            <select
-              aria-label={t("common.project")}
-              value={projectFilter}
-              onChange={(event) => setProjectFilter(event.target.value)}
-              className="h-10 rounded-xl border border-border/70 bg-background/80 px-2 text-sm text-foreground"
-            >
-              <option value="ALL">{t("installerSchedule.allProjects")}</option>
-              <option value="NONE">{t("installerSchedule.noProject")}</option>
-              {projectOptions.map((projectId) => (
-                <option key={projectId} value={projectId}>
-                  {projectId}
-                </option>
-              ))}
-            </select>
+              <label className="field-stack">
+                <span className="text-sm text-muted-foreground">{t("common.project")}</span>
+                <select
+                  aria-label={t("common.project")}
+                  value={projectFilter}
+                  onChange={(event) => setProjectFilter(event.target.value)}
+                  className="control-input"
+                >
+                  <option value="ALL">{t("installerSchedule.allProjects")}</option>
+                  <option value="NONE">{t("installerSchedule.noProject")}</option>
+                  {projectOptions.map((projectId) => (
+                    <option key={projectId} value={projectId}>
+                      {projectId}
+                    </option>
+                  ))}
+                </select>
               </label>
-              <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{t("installerSchedule.range")}</span>
-            <select
-              aria-label={t("installerSchedule.range")}
-              value={preset}
-              onChange={(event) => setPreset(event.target.value as RangePreset)}
-              className="h-10 rounded-xl border border-border/70 bg-background/80 px-2 text-sm text-foreground"
-            >
-              <option value="today">{t("common.today")}</option>
-              <option value="7d">{t("installerSchedule.next7Days")}</option>
-              <option value="30d">{t("installerSchedule.next30Days")}</option>
-            </select>
-              </label>
-              <button
-                type="button"
-                onClick={() => void eventsQuery.refetch()}
-                className="btn-premium rounded-xl px-4 py-2 text-sm font-medium"
-              >
-                <RefreshCcw className="h-4 w-4" />
-                {t("common.refresh")}
-              </button>
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-3 py-2 text-sm transition-colors hover:bg-muted"
-              >
-                {t("installerSchedule.resetFilters")}
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  downloadScheduleCsv(
-                    buildScheduleCsv(filteredEvents),
-                    scheduleExportFilename()
-                  )
-                }
-                disabled={filteredEvents.length === 0}
-                className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-3 py-2 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {t("installerSchedule.exportCsv")}
-              </button>
+              <div className="field-stack">
+                <span className="text-sm text-muted-foreground">{t("installerSchedule.overdueOnly")}</span>
+                <button
+                  type="button"
+                  aria-pressed={overdueOnly}
+                  onClick={() => setOverdueOnly((prev) => !prev)}
+                  className={
+                    overdueOnly
+                      ? "inline-flex h-11 items-center justify-center rounded-xl border border-border bg-accent px-3 text-sm font-medium text-accent-foreground"
+                      : "inline-flex h-11 items-center justify-center rounded-xl border border-border/70 bg-background/75 px-3 text-sm text-foreground transition-colors hover:bg-muted"
+                  }
+                >
+                  {t("installerSchedule.overdueOnly")}
+                </button>
+              </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="page-eyebrow">{t("installerSchedule.eyebrow")}</div>
+            <h2 className="mt-2 text-lg font-semibold">
+              {normalizeReadableText(
+                locale === "ru"
+                  ? "\u0421\u043e\u0431\u044b\u0442\u0438\u044f \u0432 \u0440\u0430\u0431\u043e\u0442\u0435"
+                  : locale === "he"
+                    ? "\u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc"
+                    : "Events in focus",
+                "Events in focus"
+              )}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              downloadScheduleCsv(
+                buildScheduleCsv(filteredEvents),
+                scheduleExportFilename()
+              )
+            }
+            disabled={filteredEvents.length === 0}
+            className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-3 py-2 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {t("installerSchedule.exportCsv")}
+          </button>
         </div>
       </section>
 
@@ -413,25 +440,6 @@ export default function InstallerSchedulePage() {
               <span className="rounded-md border border-border px-2 py-1 text-foreground">
                 {event.project_id ? `${t("installerSchedule.projectPrefix")} ${event.project_id}` : t("installerSchedule.noProject")}
               </span>
-              {event.project_id && (
-                <>
-                  <Link
-                    href={`/installer/projects/${event.project_id}#project-doors`}
-                    className="inline-flex items-center rounded-lg border border-border bg-background px-2.5 py-1 transition-colors hover:bg-muted"
-                  >
-                    Priority doors
-                  </Link>
-                  <Link
-                    href={buildInstallerIssuesHref(event.project_id, {
-                      issueStatus: getScheduleIssueStatusPreset(event.event_type),
-                      issueSearch: getScheduleIssueSearchPreset(event.event_type, event.title),
-                    })}
-                    className="inline-flex items-center rounded-lg border border-border bg-background px-2.5 py-1 transition-colors hover:bg-muted"
-                  >
-                    Open issues
-                  </Link>
-                </>
-              )}
             </div>
 
             {event.location && (
@@ -443,12 +451,23 @@ export default function InstallerSchedulePage() {
 
             <div className="mt-3 flex flex-wrap gap-2">
               {event.project_id && (
-                <Link
-                  href={`/installer/projects/${event.project_id}`}
-                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
-                >
-                  Open project
-                </Link>
+                <>
+                  <Link
+                    href={`/installer/projects/${event.project_id}`}
+                    className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                  >
+                    Open project
+                  </Link>
+                  <Link
+                    href={buildInstallerIssuesHref(event.project_id, {
+                      issueStatus: getScheduleIssueStatusPreset(event.event_type),
+                      issueSearch: getScheduleIssueSearchPreset(event.event_type, event.title),
+                    })}
+                    className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                  >
+                    Open issues
+                  </Link>
+                </>
               )}
               {event.waze_url && (
                 <a

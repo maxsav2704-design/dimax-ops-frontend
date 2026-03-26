@@ -11,8 +11,8 @@ const { apiFetchMock } = vi.hoisted(() => ({
 const { pushMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
 }));
-const { userRoleMock } = vi.hoisted(() => ({
-  userRoleMock: vi.fn(),
+const { authSessionMock } = vi.hoisted(() => ({
+  authSessionMock: vi.fn(),
 }));
 
 vi.mock("@/components/DashboardLayout", () => ({
@@ -32,8 +32,8 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 
-vi.mock("@/hooks/use-user-role", () => ({
-  useUserRole: userRoleMock,
+vi.mock("@/hooks/use-auth-session", () => ({
+  useAuthSession: authSessionMock,
 }));
 
 function mockReportWebhookSignals(url: string) {
@@ -105,8 +105,8 @@ describe("ReportsPage", () => {
     vi.restoreAllMocks();
     apiFetchMock.mockReset();
     pushMock.mockReset();
-    userRoleMock.mockReset();
-    userRoleMock.mockReturnValue(null);
+    authSessionMock.mockReset();
+    authSessionMock.mockReturnValue(null);
     if (typeof window !== "undefined" && window.localStorage) {
       if (typeof window.localStorage.clear === "function") {
         window.localStorage.clear();
@@ -542,6 +542,37 @@ describe("ReportsPage", () => {
           missing_addon_plans_facts: 1,
         };
       }
+      if (url.includes("/api/v1/admin/projects/57f6df22-fe4b-47db-af44-198ab5f5a462/addons/plan")) {
+        return {
+          items: [
+            {
+              id: "addon-plan-1",
+              addon_type_id: "addon-1",
+              addon_name: "Handle Upgrade",
+              qty_planned: 3,
+              client_price: 120,
+              installer_price: 55,
+              notes: "Lobby priority",
+            },
+          ],
+        };
+      }
+      if (url.includes("/api/v1/admin/projects/57f6df22-fe4b-47db-af44-198ab5f5a462/urgency-surcharges")) {
+        return {
+          items: [
+            {
+              id: "surcharge-1",
+              scope: "ORDER_NUMBER",
+              order_number: "AZ-100",
+              reason: "Late-night uplift",
+              client_amount: 250,
+              installer_amount: 120,
+              effective_date: "2026-02-22",
+              notes: "Approved",
+            },
+          ],
+        };
+      }
       if (url.includes("/api/v1/admin/reports/project-risk-drilldown/")) {
         return {
           generated_at: "2026-02-22T18:06:00Z",
@@ -928,6 +959,23 @@ describe("ReportsPage", () => {
         return url.includes("/api/v1/admin/reports/project-plan-fact/");
       });
       expect(hasProjectPlanFactCall).toBe(true);
+    });
+    expect(await screen.findByText("Additional Works Plan")).toBeInTheDocument();
+    expect(await screen.findByText("Urgency Surcharge")).toBeInTheDocument();
+    expect(await screen.findByText("Handle Upgrade")).toBeInTheDocument();
+    await waitFor(() => {
+      const hasProjectAddonPlanCall = apiFetchMock.mock.calls.some((call) => {
+        const url = String(call[0]);
+        return url.includes("/api/v1/admin/projects/57f6df22-fe4b-47db-af44-198ab5f5a462/addons/plan");
+      });
+      expect(hasProjectAddonPlanCall).toBe(true);
+    });
+    await waitFor(() => {
+      const hasProjectUrgencyCall = apiFetchMock.mock.calls.some((call) => {
+        const url = String(call[0]);
+        return url.includes("/api/v1/admin/projects/57f6df22-fe4b-47db-af44-198ab5f5a462/urgency-surcharges");
+      });
+      expect(hasProjectUrgencyCall).toBe(true);
     });
     await waitFor(() => {
       const hasIssuesAddonsImpactCall = apiFetchMock.mock.calls.some((call) => {
@@ -1706,7 +1754,11 @@ describe("ReportsPage", () => {
   });
 
   it("disables privileged actions for INSTALLER role", async () => {
-    userRoleMock.mockReturnValue("INSTALLER");
+    authSessionMock.mockReturnValue({
+      role: "INSTALLER",
+      admin_scope: null,
+      can_view_rates: false,
+    });
 
     apiFetchMock.mockImplementation(async (path: string) => {
       const url = String(path);

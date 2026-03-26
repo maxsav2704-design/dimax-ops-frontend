@@ -8,8 +8,8 @@ import CalendarPage from "@/views/CalendarPage";
 const { apiFetchMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
 }));
-const { userRoleMock } = vi.hoisted(() => ({
-  userRoleMock: vi.fn(),
+const { authSessionMock } = vi.hoisted(() => ({
+  authSessionMock: vi.fn(),
 }));
 
 vi.mock("@/components/DashboardLayout", () => ({
@@ -22,15 +22,15 @@ vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
 }));
 
-vi.mock("@/hooks/use-user-role", () => ({
-  useUserRole: userRoleMock,
+vi.mock("@/hooks/use-auth-session", () => ({
+  useAuthSession: authSessionMock,
 }));
 
 describe("CalendarPage", () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
-    userRoleMock.mockReset();
-    userRoleMock.mockReturnValue("ADMIN");
+    authSessionMock.mockReset();
+    authSessionMock.mockReturnValue({ role: "ADMIN", admin_scope: "OWNER", can_view_rates: true });
   });
 
   it("creates calendar event from admin page", async () => {
@@ -159,7 +159,7 @@ describe("CalendarPage", () => {
   });
 
   it("disables privileged calendar actions for installer role", async () => {
-    userRoleMock.mockReturnValue("INSTALLER");
+    authSessionMock.mockReturnValue({ role: "INSTALLER", admin_scope: null, can_view_rates: false });
     apiFetchMock.mockImplementation(async (path: string) => {
       const url = String(path);
       if (url.includes("/api/v1/admin/calendar/events?")) {

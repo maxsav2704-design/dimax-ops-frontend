@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { useUserRole } from "@/hooks/use-user-role";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { cn } from "@/lib/utils";
@@ -151,8 +151,8 @@ export default function CalendarPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [form, setForm] = useState<EventFormState>(makeDefaultForm(weekStartDate));
-  const userRole = useUserRole();
-  const canManageCalendar = canRunPrivilegedAdminActions(userRole);
+  const session = useAuthSession();
+  const canManageCalendar = canRunPrivilegedAdminActions(session);
   const privilegedActionHint = canManageCalendar
     ? undefined
     : "Installer role is read-only in calendar";
@@ -269,6 +269,16 @@ export default function CalendarPage() {
     return map;
   }, [eventsQuery.data?.items, filterType, weekDays]);
 
+  const visibleEventsCount = useMemo(
+    () => Array.from(eventsByDay.values()).reduce((total, dayEvents) => total + dayEvents.length, 0),
+    [eventsByDay]
+  );
+
+  const activeDaysCount = useMemo(
+    () => Array.from(eventsByDay.values()).filter((dayEvents) => dayEvents.length > 0).length,
+    [eventsByDay]
+  );
+
   const onPrevWeek = () => {
     const next = new Date(weekStartDate);
     next.setDate(weekStartDate.getDate() - 7);
@@ -323,121 +333,160 @@ export default function CalendarPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 max-w-[1500px]">
-        <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground tracking-tight">Calendar</h1>
-            <p className="text-[13px] text-muted-foreground mt-0.5">
-              Week planning for installation operations
-            </p>
+      <div className="page-shell page-stack motion-stagger">
+        <section className="page-hero">
+          <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="page-eyebrow">Weekly planning</div>
+              <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
+                Calendar
+              </h1>
+              <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">
+                Week planning for installation operations, service visits, and project-linked crew time.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">Visible events {visibleEventsCount}</span>
+                <span className="metric-chip">Active days {activeDaysCount}</span>
+                <span className="metric-chip">Scope {filterType}</span>
+              </div>
+            </div>
+            <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="flex min-h-[92px] flex-col rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="metric-label">Week start</div>
+                  <div className="mt-auto pt-2 text-lg font-semibold text-foreground">
+                    {labelDate(weekStartDate.toISOString())}
+                  </div>
+                </div>
+                <div className="flex min-h-[92px] flex-col rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="metric-label">Filter</div>
+                  <div className="mt-auto pt-2 text-lg font-semibold capitalize text-foreground">
+                    {filterType}
+                  </div>
+                </div>
+                <div className="flex min-h-[92px] flex-col rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
+                  <div className="metric-label">Mode</div>
+                  <div className="mt-auto pt-2 text-lg font-semibold text-foreground">
+                    {canManageCalendar ? "Manage" : "Read only"}
+                  </div>
+                </div>
+              </div>
+              <div className="toolbar-row items-stretch">
+                <button
+                  onClick={onPrevWeek}
+                  className="btn-premium h-10 w-10 rounded-xl border border-border bg-card/80 flex items-center justify-center"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setWeekStartDate(startOfWeek(new Date()))}
+                  className="btn-premium h-10 rounded-xl border border-border bg-card/80 px-4 text-[13px] font-medium"
+                >
+                  Today
+                </button>
+                <button
+                  onClick={onNextWeek}
+                  className="btn-premium h-10 w-10 rounded-xl border border-border bg-card/80 flex items-center justify-center"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={onOpenCreate}
+                  disabled={!canManageCalendar}
+                  title={privilegedActionHint}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-[13px] font-medium text-accent-foreground shadow-[0_16px_34px_-18px_hsl(var(--accent)/0.55)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Event
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+        </section>
+
+        <div className="toolbar-panel">
+          <div className="toolbar-row">
             <button
-              onClick={onPrevWeek}
-              className="btn-premium h-9 w-9 rounded-lg border border-border bg-card flex items-center justify-center"
+              onClick={() => setFilterType("all")}
+              className={cn(
+                "h-9 rounded-xl border px-3 text-[12px] font-medium",
+                filterType === "all"
+                  ? "bg-accent text-accent-foreground border-accent"
+                  : "bg-background/70 border-border/70 text-muted-foreground"
+              )}
             >
-              <ChevronLeft className="w-4 h-4" />
+              All
             </button>
-            <button
-              onClick={() => setWeekStartDate(startOfWeek(new Date()))}
-              className="btn-premium h-9 px-3 rounded-lg border border-border bg-card text-[13px] font-medium"
-            >
-              Today
-            </button>
-            <button
-              onClick={onNextWeek}
-              className="btn-premium h-9 w-9 rounded-lg border border-border bg-card flex items-center justify-center"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onOpenCreate}
-              disabled={!canManageCalendar}
-              title={privilegedActionHint}
-              className="h-9 px-4 rounded-lg bg-accent text-accent-foreground text-[13px] font-medium flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              <Plus className="w-4 h-4" />
-              Add Event
-            </button>
+            {EVENT_TYPE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setFilterType(option.value)}
+                className={cn(
+                  "h-9 rounded-xl border px-3 text-[12px] font-medium capitalize",
+                  filterType === option.value
+                    ? "bg-accent text-accent-foreground border-accent"
+                    : "bg-background/70 border-border/70 text-muted-foreground"
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
 
         {hasLoadError && (
-          <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
+          <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
             Failed to load calendar data.
           </div>
         )}
         {hasActionError && (
-          <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
+          <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
             {actionErrorMessage}
           </div>
         )}
         {!canManageCalendar && (
-          <div className="mb-4 rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))]">
+          <div className="rounded-xl border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))]">
             Installer role has read-only access to calendar planning.
           </div>
         )}
 
-        <div className="glass-card rounded-xl p-4 mb-4 flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setFilterType("all")}
-            className={cn(
-              "h-8 px-3 rounded-md text-[12px] border",
-              filterType === "all"
-                ? "bg-accent text-accent-foreground border-accent"
-                : "bg-card border-border text-muted-foreground"
-            )}
-          >
-            All
-          </button>
-          {EVENT_TYPE_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setFilterType(option.value)}
-              className={cn(
-                "h-8 px-3 rounded-md text-[12px] border capitalize",
-                filterType === option.value
-                  ? "bg-accent text-accent-foreground border-accent"
-                  : "bg-card border-border text-muted-foreground"
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-7">
           {weekDays.map((day) => {
             const key = fromIsoToDate(day.toISOString());
             const dayEvents = eventsByDay.get(key) || [];
             return (
-              <section key={key} className="glass-card rounded-xl p-3 min-h-[260px]">
-                <div className="mb-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <section key={key} className="surface-panel panel-pad-sm min-h-[280px]">
+                <div className="mb-4 border-b border-border/60 pb-3">
+                  <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                     {labelDate(day.toISOString())}
+                  </div>
+                  <div className="mt-2 text-[12px] leading-6 text-muted-foreground">
+                    {dayEvents.length > 0 ? `${dayEvents.length} scheduled items` : "No scheduled items"}
                   </div>
                 </div>
                 <div className="space-y-2">
                   {eventsQuery.isLoading && (
-                    <div className="text-[12px] text-muted-foreground">Loading...</div>
+                    <div className="text-[12px] leading-6 text-muted-foreground">Loading...</div>
                   )}
                   {!eventsQuery.isLoading && dayEvents.length === 0 && (
-                    <div className="text-[12px] text-muted-foreground">No events</div>
+                    <div className="rounded-xl border border-dashed border-border/70 px-3 py-4 text-[12px] leading-6 text-muted-foreground">
+                      No events
+                    </div>
                   )}
                   {dayEvents.map((event) => (
-                    <article key={event.id} className="rounded-lg border border-border bg-background p-2.5">
+                    <article key={event.id} className="rounded-2xl border border-border/70 bg-background/70 p-3 shadow-[inset_0_1px_0_hsl(0_0%_100%/0.3)]">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className="text-[12px] font-semibold text-card-foreground leading-tight">
+                          <div className="text-[12px] font-semibold leading-5 text-card-foreground">
                             {event.title}
                           </div>
-                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                          <div className="mt-1 text-[11px] leading-5 text-muted-foreground">
                             {fromIsoToHHMM(event.starts_at)} - {fromIsoToHHMM(event.ends_at)}
                           </div>
                         </div>
                         <span
                           className={cn(
-                            "text-[10px] px-1.5 py-0.5 rounded-md capitalize",
+                            "rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
                             EVENT_BADGE_CLASS[event.event_type]
                           )}
                         >
@@ -445,16 +494,16 @@ export default function CalendarPage() {
                         </span>
                       </div>
                       {event.location ? (
-                        <div className="text-[11px] text-muted-foreground mt-1 truncate">
+                        <div className="mt-2 text-[11px] leading-5 text-muted-foreground">
                           {event.location}
                         </div>
                       ) : null}
-                      <div className="mt-2 flex items-center justify-end gap-1">
+                      <div className="mt-3 flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => onOpenEdit(event)}
                           disabled={!canManageCalendar}
                           title={privilegedActionHint}
-                          className="h-7 w-7 rounded-md border border-border bg-card flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-border/70 bg-background/80 transition-colors hover:border-accent/35 hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -462,7 +511,7 @@ export default function CalendarPage() {
                           onClick={() => deleteMutation.mutate(event.id)}
                           disabled={!canManageCalendar || deleteMutation.isPending}
                           title={privilegedActionHint}
-                          className="h-7 w-7 rounded-md border border-border bg-card flex items-center justify-center text-[hsl(var(--destructive))] disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-border/70 bg-background/80 text-[hsl(var(--destructive))] transition-colors hover:border-[hsl(var(--destructive)/0.4)] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -478,8 +527,8 @@ export default function CalendarPage() {
 
       {(isCreateOpen || isEditOpen) && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="w-full max-w-[720px] rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-4">
+          <div className="modal-shell max-w-[720px]">
+            <div className="modal-header">
               <h2 className="text-[16px] font-semibold">
                 {isEditOpen ? "Edit Event" : "Create Event"}
               </h2>
@@ -489,25 +538,25 @@ export default function CalendarPage() {
                   setIsEditOpen(false);
                   setEditingEvent(null);
                 }}
-                className="h-8 px-3 rounded-md border border-border text-[12px]"
+                className="inline-flex h-9 items-center rounded-xl border border-border/70 px-3 text-[12px] font-medium text-muted-foreground transition-colors hover:border-accent/35 hover:text-accent"
               >
                 Close
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[12px] text-muted-foreground mb-1">Title</label>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="field-stack">
+                <label className="field-label">Title</label>
                 <input
                   aria-label="Title"
                   value={form.title}
                   onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
                   disabled={!canManageCalendar}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="control-input"
                 />
               </div>
-              <div>
-                <label className="block text-[12px] text-muted-foreground mb-1">Type</label>
+              <div className="field-stack">
+                <label className="field-label">Type</label>
                 <select
                   aria-label="Type"
                   value={form.event_type}
@@ -515,7 +564,7 @@ export default function CalendarPage() {
                     setForm((prev) => ({ ...prev, event_type: e.target.value as EventType }))
                   }
                   disabled={!canManageCalendar}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="control-input"
                 >
                   {EVENT_TYPE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -524,20 +573,20 @@ export default function CalendarPage() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-[12px] text-muted-foreground mb-1">Date</label>
+              <div className="field-stack">
+                <label className="field-label">Date</label>
                 <input
                   aria-label="Date"
                   type="date"
                   value={form.date}
                   onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
                   disabled={!canManageCalendar}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="control-input"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[12px] text-muted-foreground mb-1">Start</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="field-stack">
+                  <label className="field-label">Start</label>
                   <input
                     aria-label="Start"
                     type="time"
@@ -546,11 +595,11 @@ export default function CalendarPage() {
                       setForm((prev) => ({ ...prev, starts_at_hhmm: e.target.value }))
                     }
                     disabled={!canManageCalendar}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="control-input"
                   />
                 </div>
-                <div>
-                  <label className="block text-[12px] text-muted-foreground mb-1">End</label>
+                <div className="field-stack">
+                  <label className="field-label">End</label>
                   <input
                     aria-label="End"
                     type="time"
@@ -559,28 +608,28 @@ export default function CalendarPage() {
                       setForm((prev) => ({ ...prev, ends_at_hhmm: e.target.value }))
                     }
                     disabled={!canManageCalendar}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="control-input"
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-[12px] text-muted-foreground mb-1">Location</label>
+              <div className="field-stack">
+                <label className="field-label">Location</label>
                 <input
                   aria-label="Location"
                   value={form.location}
                   onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))}
                   disabled={!canManageCalendar}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="control-input"
                 />
               </div>
-              <div>
-                <label className="block text-[12px] text-muted-foreground mb-1">Project</label>
+              <div className="field-stack">
+                <label className="field-label">Project</label>
                 <select
                   aria-label="Project"
                   value={form.project_id}
                   onChange={(e) => setForm((prev) => ({ ...prev, project_id: e.target.value }))}
                   disabled={!canManageCalendar}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="control-input"
                 >
                   <option value="">No project</option>
                   {(projectsQuery.data?.items || []).map((project) => (
@@ -592,27 +641,27 @@ export default function CalendarPage() {
               </div>
             </div>
 
-            <div className="mt-3">
-              <label className="block text-[12px] text-muted-foreground mb-1">Description</label>
+            <div className="field-stack mt-4">
+              <label className="field-label">Description</label>
               <textarea
                 aria-label="Description"
                 rows={3}
                 value={form.description}
                 onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
                 disabled={!canManageCalendar}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[13px] disabled:opacity-60 disabled:cursor-not-allowed"
+                className="control-textarea"
               />
             </div>
 
-            <div className="mt-3">
-              <label className="block text-[12px] text-muted-foreground mb-1">Installers</label>
-              <div className="max-h-[140px] overflow-auto rounded-lg border border-border bg-background p-2 space-y-1">
+            <div className="field-stack mt-4">
+              <label className="field-label">Installers</label>
+              <div className="max-h-[160px] space-y-1 overflow-auto rounded-2xl border border-border/70 bg-background/80 p-3">
                 {(installersQuery.data || [])
                   .filter((installer) => installer.is_active)
                   .map((installer) => (
                     <label
                       key={installer.id}
-                      className="flex items-center gap-2 text-[12px] text-card-foreground"
+                      className="checkbox-row"
                     >
                       <input
                         type="checkbox"
@@ -626,19 +675,19 @@ export default function CalendarPage() {
               </div>
             </div>
             {isInvalidTimeRange && (
-              <div className="mt-3 rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-3 py-2 text-[12px] text-[hsl(var(--warning-foreground))]">
+              <div className="mt-4 rounded-xl border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-3 py-2 text-[12px] text-[hsl(var(--warning-foreground))]">
                 End time must be later than start time.
               </div>
             )}
 
-            <div className="mt-4 flex items-center justify-end gap-2">
+            <div className="modal-footer">
               <button
                 onClick={() => {
                   setIsCreateOpen(false);
                   setIsEditOpen(false);
                   setEditingEvent(null);
                 }}
-                className="h-9 px-4 rounded-lg border border-border text-[13px]"
+                className="inline-flex h-10 items-center rounded-xl border border-border/70 px-4 text-[13px] font-medium text-muted-foreground transition-colors hover:border-accent/35 hover:text-accent"
               >
                 Cancel
               </button>
@@ -654,7 +703,7 @@ export default function CalendarPage() {
                   updateMutation.isPending
                 }
                 title={privilegedActionHint}
-                className="h-9 px-4 rounded-lg bg-accent text-accent-foreground text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                className="inline-flex h-10 items-center rounded-xl bg-accent px-4 text-[13px] font-medium text-accent-foreground shadow-[0_16px_34px_-18px_hsl(var(--accent)/0.55)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isEditOpen ? "Save Changes" : "Create Event"}
               </button>

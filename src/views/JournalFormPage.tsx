@@ -1,15 +1,8 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AppWindow, ArrowLeft, CheckCircle2, ChevronRight, Eye, FileDown, Save } from "lucide-react";
+
 import { DashboardLayout } from "@/components/DashboardLayout";
-import {
-  ArrowLeft,
-  Save,
-  CheckCircle2,
-  FileDown,
-  ChevronRight,
-  AppWindow,
-  Eye,
-} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -27,7 +20,6 @@ import { toast } from "@/hooks/use-toast";
 import { MasterCircle, computeCircleState } from "@/components/journal/MasterCircle";
 import InspectionTable, { createEmptyRows, type RowData } from "@/components/journal/InspectionTable";
 
-/* ── underline input component ── */
 function UInput({
   value,
   onChange,
@@ -36,7 +28,7 @@ function UInput({
   placeholder = "",
 }: {
   value?: string;
-  onChange?: (v: string) => void;
+  onChange?: (value: string) => void;
   disabled?: boolean;
   className?: string;
   placeholder?: string;
@@ -44,21 +36,18 @@ function UInput({
   return (
     <input
       value={value}
-      onChange={(e) => onChange?.(e.target.value)}
+      onChange={(event) => onChange?.(event.target.value)}
       disabled={disabled}
       placeholder={placeholder}
-      dir="rtl"
-      className={`bg-transparent border-0 border-b border-foreground/20 outline-none text-[13px] text-foreground px-0.5 py-0.5 w-full focus:border-accent transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed placeholder:text-foreground/15 ${className}`}
+      className={`w-full border-0 border-b border-foreground/16 bg-transparent px-0.5 py-1 text-[13px] text-foreground outline-none transition-colors duration-200 placeholder:text-foreground/25 focus:border-accent disabled:cursor-not-allowed disabled:opacity-45 ${className}`}
     />
   );
 }
 
-/* ── main page ── */
 export default function JournalFormPage() {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"app" | "document">("document");
 
-  /* header fields */
   const [header, setHeader] = useState({
     contractor: "",
     project: "",
@@ -68,286 +57,252 @@ export default function JournalFormPage() {
     installer: "",
   });
 
-  /* footer fields */
   const [footer, setFooter] = useState({
     clientName: "",
     phone: "",
   });
 
-  /* section locks */
   const [headerLocked, setHeaderLocked] = useState(false);
   const [tableLocked, setTableLocked] = useState(false);
   const [footerLocked, setFooterLocked] = useState(false);
-
-  /* table rows */
   const [rows, setRows] = useState<RowData[]>(createEmptyRows());
 
-  /* header completion state */
-  const headerFields = [
+  const headerCircleState = computeCircleState([
     header.contractor,
     header.project,
     header.address,
     header.building,
     header.date,
     header.installer,
-  ];
-  const headerCircleState = computeCircleState(
-    headerFields.map((f) => f.trim().length > 0)
-  );
+  ].map((field) => field.trim().length > 0));
 
-  /* footer completion state */
-  const footerFields = [footer.clientName, footer.phone];
-  const footerCircleState = computeCircleState(
-    footerFields.map((f) => f.trim().length > 0)
-  );
+  const footerCircleState = computeCircleState([
+    footer.clientName,
+    footer.phone,
+  ].map((field) => field.trim().length > 0));
 
   const handleSave = () => {
-    toast({ title: "Saved (mock)", description: "Draft saved successfully." });
+    toast({ title: "Черновик сохранён", description: "Форма успешно сохранена." });
   };
 
   const handleMarkReady = () => {
-    toast({ title: "Marked as Ready", description: "Form status updated." });
+    toast({ title: "Форма готова", description: "Статус журнала обновлён." });
   };
 
   return (
     <DashboardLayout>
-      <div className="p-4 lg:p-6">
-        {/* ── top action bar ── */}
-        <div className="flex items-center justify-between mb-5 max-w-[920px] mx-auto">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/journal")}
-              className="btn-premium w-9 h-9 rounded-lg border border-border bg-card flex items-center justify-center group/back"
-            >
-              <ArrowLeft className="w-4 h-4 text-muted-foreground transition-all duration-200 group-hover/back:text-accent group-hover/back:-translate-x-0.5" strokeWidth={1.8} />
-            </button>
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink
-                    className="text-[13px] text-muted-foreground hover:text-accent cursor-pointer transition-colors"
-                    onClick={() => router.push("/journal")}
-                  >
-                    Journal
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </BreadcrumbSeparator>
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="text-[13px]" dir="rtl">
-                    טופס אישור מסירה סופי - דלתות אש
-                  </BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* view toggle */}
-            <div className="flex items-center gap-0.5 p-0.5 rounded-lg border border-border bg-card mr-2">
+      <div className="page-shell page-stack motion-stagger">
+        <div className="surface-panel panel-pad-sm mx-auto w-full max-w-[1120px]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
               <button
-                onClick={() => setViewMode("document")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-200 ${
-                  viewMode === "document"
-                    ? "bg-accent text-accent-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                onClick={() => router.push("/journal")}
+                className="btn-premium inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card/80 text-muted-foreground hover:text-accent"
               >
-                <Eye className="w-3 h-3" strokeWidth={1.8} />
-                Document
+                <ArrowLeft className="h-4 w-4" strokeWidth={1.8} />
               </button>
-              <button
-                onClick={() => setViewMode("app")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-200 ${
-                  viewMode === "app"
-                    ? "bg-accent text-accent-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <AppWindow className="w-3 h-3" strokeWidth={1.8} />
-                App
-              </button>
+              <div className="min-w-0">
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink
+                        className="cursor-pointer text-[13px] text-muted-foreground transition-colors hover:text-accent"
+                        onClick={() => router.push("/journal")}
+                      >
+                        Журнал
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </BreadcrumbSeparator>
+                    <BreadcrumbItem>
+                      <BreadcrumbPage className="text-[13px] font-medium text-foreground">
+                        Финальная форма сдачи
+                      </BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+                <h1 className="mt-2 text-xl font-semibold tracking-tight text-card-foreground">
+                  Финальная форма сдачи проекта
+                </h1>
+                <p className="mt-1 text-[13px] leading-6 text-muted-foreground">
+                  Собранный документ для передачи клиенту, проверки дверей и финального подтверждения монтажа.
+                </p>
+              </div>
             </div>
 
-            <button
-              onClick={handleSave}
-              className="btn-premium h-8 px-3 rounded-lg border border-border bg-card text-[12px] font-medium text-foreground flex items-center gap-1.5 hover:text-accent"
-            >
-              <Save className="w-3.5 h-3.5" strokeWidth={1.8} />
-              Save Draft
-            </button>
-            <button
-              onClick={handleMarkReady}
-              className="btn-premium h-8 px-3 rounded-lg border border-accent/30 bg-accent/5 text-[12px] font-medium text-accent flex items-center gap-1.5 hover:bg-accent/10"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.8} />
-              Mark Ready
-            </button>
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-0.5 rounded-xl border border-border bg-card/70 p-1">
                 <button
-                  disabled
-                  className="h-8 px-3 rounded-lg border border-border bg-card text-[12px] font-medium text-muted-foreground flex items-center gap-1.5 opacity-40 cursor-not-allowed"
+                  onClick={() => setViewMode("document")}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all duration-200 ${
+                    viewMode === "document"
+                      ? "bg-accent text-accent-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
                 >
-                  <FileDown className="w-3.5 h-3.5" strokeWidth={1.8} />
-                  Export PDF
+                  <Eye className="h-3.5 w-3.5" strokeWidth={1.8} />
+                  Документ
                 </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Backend integration pending</p>
-              </TooltipContent>
-            </Tooltip>
+                <button
+                  onClick={() => setViewMode("app")}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all duration-200 ${
+                    viewMode === "app"
+                      ? "bg-accent text-accent-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <AppWindow className="h-3.5 w-3.5" strokeWidth={1.8} />
+                  Приложение
+                </button>
+              </div>
+
+              <button
+                onClick={handleSave}
+                className="btn-premium inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card/80 px-4 text-[13px] font-medium text-foreground hover:text-accent"
+              >
+                <Save className="h-4 w-4" strokeWidth={1.8} />
+                Сохранить черновик
+              </button>
+              <button
+                onClick={handleMarkReady}
+                className="btn-premium inline-flex h-10 items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-4 text-[13px] font-medium text-accent hover:bg-accent/15"
+              >
+                <CheckCircle2 className="h-4 w-4" strokeWidth={1.8} />
+                Отметить готовой
+              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    disabled
+                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card/80 px-4 text-[13px] font-medium text-muted-foreground opacity-45"
+                  >
+                    <FileDown className="h-4 w-4" strokeWidth={1.8} />
+                    Экспорт PDF
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Интеграция экспорта будет подключена на backend.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         </div>
 
-        {/* ── A4 paper ── */}
         <div
-          className="mx-auto bg-white rounded shadow-[0_2px_20px_-4px_rgba(0,0,0,0.12)] overflow-hidden"
-          style={{
-            width: "210mm",
-            maxWidth: "100%",
-            minHeight: viewMode === "document" ? "297mm" : "auto",
-            fontFamily: "'Heebo', 'Assistant', 'Segoe UI', sans-serif",
-          }}
-          dir="rtl"
+          className="mx-auto w-full max-w-[1120px] overflow-hidden rounded-[1.6rem] border border-border/70 bg-white shadow-[0_28px_80px_-40px_rgba(15,23,42,0.28)]"
+          style={{ width: "210mm", maxWidth: "100%", minHeight: viewMode === "document" ? "297mm" : "auto" }}
         >
-          {/* ─── HEADER BLOCK ─── */}
-          <div className={`relative transition-opacity duration-300 ${headerLocked ? "opacity-40" : ""}`}>
-            {/* master circle */}
+          <div className={`relative border-b border-slate-200 px-8 py-7 transition-opacity duration-300 ${headerLocked ? "opacity-45" : ""}`}>
             {viewMode === "app" && (
-              <div className="absolute top-2 left-2 z-10">
+              <div className="absolute left-4 top-4 z-10">
                 <MasterCircle
                   state={headerLocked ? "complete" : headerCircleState}
-                  onClick={() => setHeaderLocked((l) => !l)}
+                  onClick={() => setHeaderLocked((locked) => !locked)}
                   size="md"
                 />
               </div>
             )}
 
-            {/* top header row */}
-            <div className="flex items-start justify-between px-8 pt-6 pb-2">
-              <div className="flex items-center gap-3">
-                <div className="text-[11px] text-gray-500 leading-tight">
-                  חטיבת<br />השירות
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  DIMAX Operations
                 </div>
-                <div className="w-10 h-10 bg-gray-800 rounded flex items-center justify-center">
-                  <span className="text-white text-[8px] font-bold leading-tight text-center">רב<br/>בריח</span>
+                <div className="mt-2 text-[28px] font-semibold leading-none tracking-tight text-slate-900">
+                  Финальная форма сдачи
+                </div>
+                <div className="mt-2 text-[13px] leading-6 text-slate-500">
+                  Документ для проверки дверей, фиксации статуса и подтверждения передачи клиенту.
                 </div>
               </div>
-              <div className="text-center flex-1 mx-8">
-                <h1 className="text-[22px] font-bold text-gray-900 leading-tight">
-                  טופס אישור מסירה סופי - דלתות אש
-                </h1>
-                <p className="text-[14px] text-gray-500 mt-1 font-medium">002110</p>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Форма</div>
+                <div className="mt-1 text-lg font-semibold text-slate-900">JR-002110</div>
               </div>
-              <div className="w-20" />
             </div>
 
-            {/* fields grid */}
-            <div className="px-8 pt-2 pb-4">
-              <div className="grid grid-cols-2 gap-x-12 gap-y-2">
-                <div className="space-y-2.5">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">שם הקבלן:</span>
-                    <UInput value={header.contractor} onChange={(v) => setHeader((h) => ({ ...h, contractor: v }))} disabled={headerLocked} />
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">שם הפרויקט:</span>
-                    <UInput value={header.project} onChange={(v) => setHeader((h) => ({ ...h, project: v }))} disabled={headerLocked} />
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">כתובת / מגרש:</span>
-                    <UInput value={header.address} onChange={(v) => setHeader((h) => ({ ...h, address: v }))} disabled={headerLocked} />
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">בניין:</span>
-                    <UInput value={header.building} onChange={(v) => setHeader((h) => ({ ...h, building: v }))} disabled={headerLocked} />
-                  </div>
+            <div className="mt-8 grid gap-x-10 gap-y-4 md:grid-cols-2">
+              <div className="space-y-4">
+                <div className="field-stack">
+                  <label className="field-label text-slate-500">Подрядчик</label>
+                  <UInput value={header.contractor} onChange={(value) => setHeader((prev) => ({ ...prev, contractor: value }))} disabled={headerLocked} />
                 </div>
-                <div className="space-y-2.5">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">תאריך:</span>
-                    <UInput value={header.date} onChange={(v) => setHeader((h) => ({ ...h, date: v }))} disabled={headerLocked} placeholder="DD/MM/YYYY" />
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">שם המתקין:</span>
-                    <UInput value={header.installer} onChange={(v) => setHeader((h) => ({ ...h, installer: v }))} disabled={headerLocked} />
-                  </div>
+                <div className="field-stack">
+                  <label className="field-label text-slate-500">Проект</label>
+                  <UInput value={header.project} onChange={(value) => setHeader((prev) => ({ ...prev, project: value }))} disabled={headerLocked} />
+                </div>
+                <div className="field-stack">
+                  <label className="field-label text-slate-500">Адрес / участок</label>
+                  <UInput value={header.address} onChange={(value) => setHeader((prev) => ({ ...prev, address: value }))} disabled={headerLocked} />
+                </div>
+                <div className="field-stack">
+                  <label className="field-label text-slate-500">Корпус / секция</label>
+                  <UInput value={header.building} onChange={(value) => setHeader((prev) => ({ ...prev, building: value }))} disabled={headerLocked} />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="field-stack">
+                  <label className="field-label text-slate-500">Дата</label>
+                  <UInput value={header.date} onChange={(value) => setHeader((prev) => ({ ...prev, date: value }))} disabled={headerLocked} placeholder="ДД.ММ.ГГГГ" />
+                </div>
+                <div className="field-stack">
+                  <label className="field-label text-slate-500">Монтажник</label>
+                  <UInput value={header.installer} onChange={(value) => setHeader((prev) => ({ ...prev, installer: value }))} disabled={headerLocked} />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ─── TABLE BLOCK ─── */}
-          <div className={`relative px-8 py-3 transition-opacity duration-300 ${tableLocked ? "opacity-40" : ""}`}>
+          <div className={`relative border-b border-slate-200 px-8 py-6 transition-opacity duration-300 ${tableLocked ? "opacity-45" : ""}`}>
             {viewMode === "app" && (
-              <div className="absolute top-1 left-2 z-10">
+              <div className="absolute left-4 top-4 z-10">
                 <MasterCircle
                   state={tableLocked ? "complete" : "empty"}
-                  onClick={() => setTableLocked((l) => !l)}
+                  onClick={() => setTableLocked((locked) => !locked)}
                   size="md"
                 />
               </div>
             )}
-            <InspectionTable
-              rows={rows}
-              onRowsChange={setRows}
-              disabled={tableLocked}
-              viewMode={viewMode}
-            />
+            <InspectionTable rows={rows} onRowsChange={setRows} disabled={tableLocked} viewMode={viewMode} />
           </div>
 
-          {/* ─── FOOTER BLOCK ─── */}
-          <div className={`relative px-8 pt-4 pb-6 transition-opacity duration-300 ${footerLocked ? "opacity-40" : ""}`}>
+          <div className={`relative px-8 py-7 transition-opacity duration-300 ${footerLocked ? "opacity-45" : ""}`}>
             {viewMode === "app" && (
-              <div className="absolute top-2 left-2 z-10">
+              <div className="absolute left-4 top-4 z-10">
                 <MasterCircle
                   state={footerLocked ? "complete" : footerCircleState}
-                  onClick={() => setFooterLocked((l) => !l)}
+                  onClick={() => setFooterLocked((locked) => !locked)}
                   size="md"
                 />
               </div>
             )}
 
-            <div className="border border-gray-300 p-4">
-              <div className="flex items-baseline gap-8">
-                <div className="flex items-baseline gap-2 flex-1">
-                  <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">שם הלקוח:</span>
-                  <UInput value={footer.clientName} onChange={(v) => setFooter((f) => ({ ...f, clientName: v }))} disabled={footerLocked} />
+            <div className="rounded-[1.2rem] border border-slate-200 bg-slate-50 px-5 py-5">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="field-stack">
+                  <label className="field-label text-slate-500">Имя клиента</label>
+                  <UInput value={footer.clientName} onChange={(value) => setFooter((prev) => ({ ...prev, clientName: value }))} disabled={footerLocked} />
                 </div>
-                <div className="flex items-baseline gap-2 flex-1">
-                  <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">טלפון:</span>
-                  <UInput value={footer.phone} onChange={(v) => setFooter((f) => ({ ...f, phone: v }))} disabled={footerLocked} placeholder="+972-XX-XXX-XXXX" />
+                <div className="field-stack">
+                  <label className="field-label text-slate-500">Телефон</label>
+                  <UInput value={footer.phone} onChange={(value) => setFooter((prev) => ({ ...prev, phone: value }))} disabled={footerLocked} placeholder="+972-XX-XXX-XXXX" />
                 </div>
-                <div className="flex items-baseline gap-2 flex-1">
-                  <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">חתימת הלקוח:</span>
-                  <div className="flex-1 h-[32px] border-b border-gray-300 relative">
-                    {viewMode === "app" && !footerLocked && (
-                      <span className="absolute inset-0 flex items-center justify-center text-[10px] text-gray-300 italic">
-                        signature pad (coming soon)
-                      </span>
-                    )}
+                <div className="field-stack">
+                  <label className="field-label text-slate-500">Подпись клиента</label>
+                  <div className="flex h-[38px] items-end border-b border-slate-300 text-[11px] text-slate-400">
+                    {viewMode === "app" && !footerLocked ? "Подпись будет подключена позже" : ""}
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="text-center mt-4 space-y-0.5">
-              <p className="text-[9px] text-gray-400">
-                רב בריח (08) תעשיות בע"מ ח.פ. 514160530
-              </p>
-              <p className="text-[9px] text-gray-400">
-                חוצות היוצר 32 ת.ד. 3032, אשקלון 7878030 טלפון 100-800-800-1
-              </p>
-              <p className="text-[9px] text-gray-400">
-                WWW.RAV-BARIACH.CO.IL
-              </p>
+            <div className="mt-5 space-y-1 text-center text-[10px] leading-5 text-slate-400">
+              <p>DIMAX Operations Suite · Финальная передача проекта</p>
+              <p>Документ предназначен для фиксации факта монтажа, проверки и приёмки.</p>
             </div>
           </div>
         </div>
-
-        <div className="h-12" />
       </div>
     </DashboardLayout>
   );

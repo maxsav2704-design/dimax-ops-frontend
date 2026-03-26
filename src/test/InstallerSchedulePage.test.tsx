@@ -54,13 +54,9 @@ describe("InstallerSchedulePage", () => {
     expect(await screen.findByText("My Schedule")).toBeInTheDocument();
     expect(await screen.findByText("Site visit")).toBeInTheDocument();
     expect(screen.getByText("Project project-1")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Priority doors" })).toHaveAttribute(
-      "href",
-      "/installer/projects/project-1#project-doors"
-    );
     expect(screen.getByRole("link", { name: "Open issues" })).toHaveAttribute(
       "href",
-      "/installer/projects/project-1?door_filter=WITH_ISSUES&issue_status=BLOCKED&issue_search=Site+visit#project-open-issues"
+      "/installer/issues?project_id=project-1&issue_status=BLOCKED&issue_search=Site+visit"
     );
     expect(await screen.findByRole("link", { name: "Open project" })).toBeInTheDocument();
   });
@@ -424,7 +420,10 @@ describe("InstallerSchedulePage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Reset filters" }));
     expect(window.location.search).toBe("");
-    expect(screen.getByLabelText("Range")).toHaveValue("7d");
+    expect(screen.getByRole("button", { name: "Next 7 days" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
     expect(screen.getByLabelText("Event type")).toHaveValue("ALL");
     expect(screen.getByLabelText("Project")).toHaveValue("ALL");
     expect(screen.getByRole("button", { name: "Overdue only" })).toHaveAttribute(

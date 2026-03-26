@@ -496,6 +496,575 @@ describe("ProjectsPage", () => {
     expect(screen.getByText("DANGER")).toBeInTheDocument();
   }, 20000);
 
+  it("creates a manual door for the selected project using library products", async () => {
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      const url = String(path);
+
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [{ id: "door-type-1", code: "entrance", name: "Entrance", is_active: true }];
+      }
+
+      if (url.endsWith("/api/v1/admin/projects")) {
+        return {
+          items: [{ id: "project-1", name: "Project A", address: "Address A", status: "ACTIVE" }],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/library")) {
+        return {
+          items: [
+            {
+              id: "product-1",
+              sku: "LIB-001",
+              name_ru: "Входная дверь",
+              name_he: "דלת כניסה",
+              install_type: "INSTALL",
+              manufacturer: "DIMAX",
+              unit: "piece",
+              status: "ACTIVE",
+            },
+          ],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/installers?")) {
+        return {
+          items: [
+            {
+              id: "installer-1",
+              full_name: "Alex Installer",
+              email: "installer@dimax.dev",
+              status: "ACTIVE",
+              is_active: true,
+            },
+          ],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
+        return {
+          default_code: "auto_v1",
+          items: [],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1") && !url.includes("/doors/")) {
+        return {
+          id: "project-1",
+          name: "Project A",
+          address: "Address A",
+          status: "ACTIVE",
+          developer_company: "DIMAX Dev Co",
+          contact_name: "Eyal Cohen",
+          issues_open: [],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1/doors/layout")) {
+        return {
+          project_id: "project-1",
+          total_doors: 0,
+          buckets: [],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/reports/project-plan-fact/project-1")) {
+        return {
+          project_id: "project-1",
+          total_doors: 0,
+          installed_doors: 0,
+          not_installed_doors: 0,
+          completion_pct: 0,
+          open_issues: 0,
+          planned_revenue_total: 0,
+          actual_revenue_total: 0,
+          revenue_gap_total: 0,
+          planned_payroll_total: 0,
+          actual_payroll_total: 0,
+          payroll_gap_total: 0,
+          planned_profit_total: 0,
+          actual_profit_total: 0,
+          profit_gap_total: 0,
+          planned_addons_qty: 0,
+          actual_addons_qty: 0,
+          missing_planned_rates_doors: 0,
+          missing_actual_rates_doors: 0,
+          missing_addon_plans_facts: 0,
+        };
+      }
+
+      if (url.includes("/api/v1/admin/reports/project-risk-drilldown/project-1")) {
+        return {
+          generated_at: "2026-03-02T10:00:00Z",
+          project_id: "project-1",
+          project_name: "Project A",
+          summary: {
+            total_doors: 0,
+            installed_doors: 0,
+            not_installed_doors: 0,
+            completion_pct: 0,
+            open_issues: 0,
+            blocked_open_issues: 0,
+            planned_revenue_total: 0,
+            actual_revenue_total: 0,
+            revenue_gap_total: 0,
+            planned_profit_total: 0,
+            actual_profit_total: 0,
+            profit_gap_total: 0,
+            actual_margin_pct: 0,
+            delayed_revenue_total: 0,
+            delayed_profit_total: 0,
+            blocked_issue_profit_at_risk: 0,
+            addon_revenue_total: 0,
+            addon_profit_total: 0,
+            missing_planned_rates_doors: 0,
+            missing_actual_rates_doors: 0,
+            missing_addon_plans_facts: 0,
+          },
+          drivers: [],
+          top_reasons: [],
+          risky_orders: [],
+        };
+      }
+
+      if (url.includes("/doors/import-history")) {
+        return { items: [] };
+      }
+
+      if (url.includes("/import-runs/failed-queue")) {
+        return { items: [], total: 0, limit: 10, offset: 0 };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1/doors") && init?.method === "POST") {
+        expect(init.body).toBeTruthy();
+        const payload = JSON.parse(String(init.body));
+        expect(payload).toMatchObject({
+          product_id: "product-1",
+          door_code: "D-1201",
+          unit: "12-04",
+          floor: "12",
+          location_code: "dira",
+          order_number: "AZ-5001",
+          install_type: "INSTALL",
+          is_critical: true,
+          assigned_installer_id: "installer-1",
+          planned_install_date: "2026-04-01",
+        });
+        return { id: "door-new-1" };
+      }
+
+      return {};
+    });
+
+    render(<ProjectsPage />);
+
+    const addDoorButton = await screen.findByRole("button", { name: "Add door manually" });
+    fireEvent.click(addDoorButton);
+
+    fireEvent.change(screen.getByLabelText("Library product"), {
+      target: { value: "product-1" },
+    });
+    fireEvent.change(screen.getByLabelText("Door code"), {
+      target: { value: "D-1201" },
+    });
+    fireEvent.change(screen.getByLabelText("Unit / apartment"), {
+      target: { value: "12-04" },
+    });
+    fireEvent.change(screen.getByLabelText("Floor"), {
+      target: { value: "12" },
+    });
+    fireEvent.change(screen.getByLabelText("Location code"), {
+      target: { value: "dira" },
+    });
+    fireEvent.change(screen.getByLabelText("Order number"), {
+      target: { value: "AZ-5001" },
+    });
+    fireEvent.change(screen.getByLabelText("Assigned installer"), {
+      target: { value: "installer-1" },
+    });
+    fireEvent.change(screen.getByLabelText("Planned install date"), {
+      target: { value: "2026-04-01" },
+    });
+    fireEvent.click(screen.getByLabelText("Mark as critical door"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Create door" }));
+
+    await waitFor(() => {
+      expect(
+        apiFetchMock.mock.calls.some(
+          ([callPath, requestInit]) =>
+            String(callPath).includes("/api/v1/admin/projects/project-1/doors") &&
+            (requestInit as RequestInit | undefined)?.method === "POST"
+        )
+      ).toBe(true);
+    });
+  }, 20000);
+
+  it("creates an additional work plan row for the selected project", async () => {
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      const url = String(path);
+
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [];
+      }
+
+      if (url.endsWith("/api/v1/admin/projects")) {
+        return {
+          items: [{ id: "project-1", name: "Project A", address: "Address A", status: "ACTIVE" }],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/library")) {
+        return { items: [] };
+      }
+
+      if (url.includes("/api/v1/admin/installers?")) {
+        return { items: [] };
+      }
+
+      if (url.includes("/api/v1/admin/addons/types")) {
+        return {
+          items: [{ id: "addon-1", name: "Handle Upgrade", unit: "pcs", status: "ACTIVE" }],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
+        return {
+          default_code: "auto_v1",
+          items: [],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1") && !url.includes("/doors/") && !url.includes("/addons/plan")) {
+        return {
+          id: "project-1",
+          name: "Project A",
+          address: "Address A",
+          status: "ACTIVE",
+          developer_company: "DIMAX Dev Co",
+          contact_name: "Eyal Cohen",
+          issues_open: [],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1/doors/layout")) {
+        return {
+          project_id: "project-1",
+          total_doors: 0,
+          buckets: [],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1/addons/plan") && !init?.method) {
+        return { items: [] };
+      }
+
+      if (url.includes("/api/v1/admin/reports/project-plan-fact/project-1")) {
+        return {
+          project_id: "project-1",
+          total_doors: 0,
+          installed_doors: 0,
+          not_installed_doors: 0,
+          completion_pct: 0,
+          open_issues: 0,
+          planned_revenue_total: 0,
+          actual_revenue_total: 0,
+          revenue_gap_total: 0,
+          planned_payroll_total: 0,
+          actual_payroll_total: 0,
+          payroll_gap_total: 0,
+          planned_profit_total: 0,
+          actual_profit_total: 0,
+          profit_gap_total: 0,
+          planned_addons_qty: 0,
+          actual_addons_qty: 0,
+          missing_planned_rates_doors: 0,
+          missing_actual_rates_doors: 0,
+          missing_addon_plans_facts: 0,
+        };
+      }
+
+      if (url.includes("/api/v1/admin/reports/project-risk-drilldown/project-1")) {
+        return {
+          generated_at: "2026-03-02T10:00:00Z",
+          project_id: "project-1",
+          project_name: "Project A",
+          summary: {
+            total_doors: 0,
+            installed_doors: 0,
+            not_installed_doors: 0,
+            completion_pct: 0,
+            open_issues: 0,
+            blocked_open_issues: 0,
+            planned_revenue_total: 0,
+            actual_revenue_total: 0,
+            revenue_gap_total: 0,
+            planned_profit_total: 0,
+            actual_profit_total: 0,
+            profit_gap_total: 0,
+            actual_margin_pct: 0,
+            delayed_revenue_total: 0,
+            delayed_profit_total: 0,
+            blocked_issue_profit_at_risk: 0,
+            addon_revenue_total: 0,
+            addon_profit_total: 0,
+            missing_planned_rates_doors: 0,
+            missing_actual_rates_doors: 0,
+            missing_addon_plans_facts: 0,
+          },
+          drivers: [],
+          top_reasons: [],
+          risky_orders: [],
+        };
+      }
+
+      if (url.includes("/doors/import-history")) {
+        return { items: [] };
+      }
+
+      if (url.includes("/import-runs/failed-queue")) {
+        return { items: [], total: 0, limit: 10, offset: 0 };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1/addons/plan") && init?.method === "POST") {
+        const payload = JSON.parse(String(init.body));
+        expect(payload).toMatchObject({
+          addon_type_id: "addon-1",
+          qty_planned: "3",
+          client_price: "120",
+          installer_price: "55",
+          notes: "Priority lobby",
+        });
+        return { id: "plan-1" };
+      }
+
+      return {};
+    });
+
+    render(<ProjectsPage />);
+
+    const addButton = await screen.findByRole("button", { name: "Add additional work" });
+    fireEvent.click(addButton);
+
+    fireEvent.change(screen.getByLabelText("Add-on type"), {
+      target: { value: "addon-1" },
+    });
+    fireEvent.change(screen.getByLabelText("Qty planned"), {
+      target: { value: "3" },
+    });
+    fireEvent.change(screen.getByLabelText("Client price"), {
+      target: { value: "120" },
+    });
+    fireEvent.change(screen.getByLabelText("Installer price"), {
+      target: { value: "55" },
+    });
+    fireEvent.change(screen.getByLabelText("Notes"), {
+      target: { value: "Priority lobby" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save additional work" }));
+
+    await waitFor(() => {
+      expect(
+        apiFetchMock.mock.calls.some(
+          ([callPath, requestInit]) =>
+            String(callPath).includes("/api/v1/admin/projects/project-1/addons/plan") &&
+            (requestInit as RequestInit | undefined)?.method === "POST"
+        )
+      ).toBe(true);
+    });
+  }, 20000);
+
+  it("creates an urgency surcharge row for the selected project", async () => {
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      const url = String(path);
+
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [];
+      }
+
+      if (url.endsWith("/api/v1/admin/projects")) {
+        return {
+          items: [{ id: "project-1", name: "Project A", address: "Address A", status: "ACTIVE" }],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/library")) {
+        return { items: [] };
+      }
+
+      if (url.includes("/api/v1/admin/installers?")) {
+        return { items: [] };
+      }
+
+      if (url.includes("/api/v1/admin/addons/types")) {
+        return { items: [] };
+      }
+
+      if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
+        return {
+          default_code: "auto_v1",
+          items: [],
+        };
+      }
+
+      if (
+        url.includes("/api/v1/admin/projects/project-1") &&
+        !url.includes("/doors/") &&
+        !url.includes("/addons/plan") &&
+        !url.includes("/urgency-surcharges")
+      ) {
+        return {
+          id: "project-1",
+          name: "Project A",
+          address: "Address A",
+          status: "ACTIVE",
+          developer_company: "DIMAX Dev Co",
+          contact_name: "Eyal Cohen",
+          issues_open: [],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1/doors/layout")) {
+        return {
+          project_id: "project-1",
+          total_doors: 0,
+          buckets: [],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1/addons/plan")) {
+        return { items: [] };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1/urgency-surcharges") && !init?.method) {
+        return { items: [] };
+      }
+
+      if (url.includes("/api/v1/admin/reports/project-plan-fact/project-1")) {
+        return {
+          project_id: "project-1",
+          total_doors: 0,
+          installed_doors: 0,
+          not_installed_doors: 0,
+          completion_pct: 0,
+          open_issues: 0,
+          planned_revenue_total: 0,
+          actual_revenue_total: 0,
+          revenue_gap_total: 0,
+          planned_payroll_total: 0,
+          actual_payroll_total: 0,
+          payroll_gap_total: 0,
+          planned_profit_total: 0,
+          actual_profit_total: 0,
+          profit_gap_total: 0,
+          planned_addons_qty: 0,
+          actual_addons_qty: 0,
+          missing_planned_rates_doors: 0,
+          missing_actual_rates_doors: 0,
+          missing_addon_plans_facts: 0,
+        };
+      }
+
+      if (url.includes("/api/v1/admin/reports/project-risk-drilldown/project-1")) {
+        return {
+          generated_at: "2026-03-02T10:00:00Z",
+          project_id: "project-1",
+          project_name: "Project A",
+          summary: {
+            total_doors: 0,
+            installed_doors: 0,
+            not_installed_doors: 0,
+            completion_pct: 0,
+            open_issues: 0,
+            blocked_open_issues: 0,
+            planned_revenue_total: 0,
+            actual_revenue_total: 0,
+            revenue_gap_total: 0,
+            planned_profit_total: 0,
+            actual_profit_total: 0,
+            profit_gap_total: 0,
+            actual_margin_pct: 0,
+            delayed_revenue_total: 0,
+            delayed_profit_total: 0,
+            blocked_issue_profit_at_risk: 0,
+            addon_revenue_total: 0,
+            addon_profit_total: 0,
+            missing_planned_rates_doors: 0,
+            missing_actual_rates_doors: 0,
+            missing_addon_plans_facts: 0,
+          },
+          drivers: [],
+          top_reasons: [],
+          risky_orders: [],
+        };
+      }
+
+      if (url.includes("/doors/import-history")) {
+        return { items: [] };
+      }
+
+      if (url.includes("/import-runs/failed-queue")) {
+        return { items: [], total: 0, limit: 10, offset: 0 };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1/urgency-surcharges") && init?.method === "POST") {
+        const payload = JSON.parse(String(init.body));
+        expect(payload).toMatchObject({
+          scope: "ORDER_NUMBER",
+          order_number: "AZ-9001",
+          reason: "Late-night escalation",
+          client_amount: "250",
+          installer_amount: "120",
+          effective_date: "2026-04-02",
+          notes: "Approved by ops",
+        });
+        return { id: "surcharge-1" };
+      }
+
+      return {};
+    });
+
+    render(<ProjectsPage />);
+
+    const addButton = await screen.findByRole("button", { name: "Add urgency surcharge" });
+    fireEvent.click(addButton);
+
+    fireEvent.change(screen.getByLabelText("Scope"), {
+      target: { value: "ORDER_NUMBER" },
+    });
+    fireEvent.change(screen.getByLabelText("Order number"), {
+      target: { value: "AZ-9001" },
+    });
+    fireEvent.change(screen.getByLabelText("Reason"), {
+      target: { value: "Late-night escalation" },
+    });
+    fireEvent.change(screen.getByLabelText("Client amount"), {
+      target: { value: "250" },
+    });
+    fireEvent.change(screen.getByLabelText("Installer amount"), {
+      target: { value: "120" },
+    });
+    fireEvent.change(screen.getByLabelText("Effective date"), {
+      target: { value: "2026-04-02" },
+    });
+    fireEvent.change(screen.getByLabelText("Notes"), {
+      target: { value: "Approved by ops" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save surcharge" }));
+
+    await waitFor(() => {
+      expect(
+        apiFetchMock.mock.calls.some(
+          ([callPath, requestInit]) =>
+            String(callPath).includes("/api/v1/admin/projects/project-1/urgency-surcharges") &&
+            (requestInit as RequestInit | undefined)?.method === "POST"
+        )
+      ).toBe(true);
+    });
+  }, 20000);
+
   it("shows selected import run details with diagnostics and errors", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
       const url = String(path);

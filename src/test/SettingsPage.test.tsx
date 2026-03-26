@@ -8,8 +8,8 @@ import SettingsPage from "@/views/SettingsPage";
 const { apiFetchMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
 }));
-const { userRoleMock } = vi.hoisted(() => ({
-  userRoleMock: vi.fn(),
+const { authSessionMock } = vi.hoisted(() => ({
+  authSessionMock: vi.fn(),
 }));
 
 vi.mock("@/components/DashboardLayout", () => ({
@@ -22,8 +22,8 @@ vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
 }));
 
-vi.mock("@/hooks/use-user-role", () => ({
-  useUserRole: userRoleMock,
+vi.mock("@/hooks/use-auth-session", () => ({
+  useAuthSession: authSessionMock,
 }));
 
 function buildBaseSettingsApi() {
@@ -98,11 +98,15 @@ function buildBaseSettingsApi() {
 describe("SettingsPage", () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
-    userRoleMock.mockReset();
+    authSessionMock.mockReset();
   });
 
   it("disables company mutation and provider tests for installer role", async () => {
-    userRoleMock.mockReturnValue("INSTALLER");
+    authSessionMock.mockReturnValue({
+      role: "INSTALLER",
+      admin_scope: null,
+      can_view_rates: false,
+    });
     apiFetchMock.mockImplementation(buildBaseSettingsApi());
 
     const queryClient = new QueryClient({
@@ -124,7 +128,11 @@ describe("SettingsPage", () => {
   });
 
   it("sends integration email test for admin role", async () => {
-    userRoleMock.mockReturnValue("ADMIN");
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "OWNER",
+      can_view_rates: true,
+    });
     apiFetchMock.mockImplementation(async (path: string) => {
       if (path === "/api/v1/admin/settings/integrations/test-email") {
         return {

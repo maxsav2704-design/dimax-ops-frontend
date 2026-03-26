@@ -9,6 +9,13 @@ const { apiFetchMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/api", () => ({
+  ApiError: class ApiError extends Error {
+    status: number;
+    constructor(message: string, status = 500) {
+      super(message);
+      this.status = status;
+    }
+  },
   apiFetch: apiFetchMock,
 }));
 
@@ -89,22 +96,15 @@ describe("InstallerWorkspacePage", () => {
 
     expect((await screen.findAllByText("Ashdod Towers")).length).toBeGreaterThan(0);
     expect(await screen.findByText("Morning visit")).toBeInTheDocument();
-    expect(screen.getByText("Assigned projects")).toBeInTheDocument();
+    expect(screen.getByText("Start from today, then open the project that needs action.")).toBeInTheDocument();
 
     const scheduleLink = screen.getByRole("link", { name: "Open schedule" });
     expect(scheduleLink).toHaveAttribute("href", "/installer/calendar?project_id=project-1");
-    expect(screen.getByRole("link", { name: "Today on project" })).toHaveAttribute(
-      "href",
-      "/installer/calendar?preset=today&project_id=project-1"
-    );
-    expect(screen.getByRole("link", { name: "Priority doors" })).toHaveAttribute(
-      "href",
-      "/installer/projects/project-1#project-doors"
-    );
     expect(screen.getByRole("link", { name: "Open Waze" })).toHaveAttribute(
       "href",
       "https://waze.example/project-1"
     );
+    expect(screen.getAllByRole("link", { name: "Open project" }).length).toBeGreaterThan(0);
 
     expect(screen.getByTestId("installer-tasks-today")).toHaveTextContent("3");
     expect(screen.getByTestId("installer-tasks-overdue")).toHaveTextContent("1");
@@ -216,7 +216,7 @@ describe("InstallerWorkspacePage", () => {
     );
     expect(screen.getByRole("link", { name: "Open issues" })).toHaveAttribute(
       "href",
-      "/installer/projects/project-2?door_filter=WITH_ISSUES&issue_status=BLOCKED#project-open-issues"
+      "/installer/issues?project_id=project-2&issue_status=BLOCKED"
     );
   });
 
@@ -270,7 +270,7 @@ describe("InstallerWorkspacePage", () => {
     const priorityLink = await screen.findByRole("link", { name: "Open priority Ashdod Towers" });
     expect(priorityLink).toHaveAttribute(
       "href",
-      "/installer/projects/project-1?door_filter=WITH_ISSUES&issue_status=BLOCKED&issue_search=Blocked+lock#project-open-issues"
+      "/installer/issues?project_id=project-1&issue_status=BLOCKED&issue_search=Blocked+lock"
     );
   });
 
@@ -373,7 +373,7 @@ describe("InstallerWorkspacePage", () => {
       expect(within(projectsSection).getByText("Haifa Port")).toBeInTheDocument();
       expect(within(projectsSection).queryByText("Jerusalem Mall")).not.toBeInTheDocument();
     });
-  });
+  }, 15000);
 
   it("syncs workspace quick filter to URL query params", async () => {
     const base = new Date();

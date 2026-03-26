@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { useUserRole } from "@/hooks/use-user-role";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { useI18n, type Locale } from "@/lib/i18n";
@@ -221,8 +221,8 @@ export default function IssuesPage() {
   const [form, setForm] = useState<WorkflowFormState>(emptyForm());
   const [formError, setFormError] = useState<string | null>(null);
   const [saveNote, setSaveNote] = useState<string | null>(null);
-  const userRole = useUserRole();
-  const canManageIssues = canRunPrivilegedAdminActions(userRole);
+  const session = useAuthSession();
+  const canManageIssues = canRunPrivilegedAdminActions(session);
   const privilegedActionHint = canManageIssues
     ? undefined
     : "Installer role is read-only in issues";
@@ -408,7 +408,7 @@ export default function IssuesPage() {
 
   return (
     <DashboardLayout>
-      <div className="motion-stagger max-w-[1600px] space-y-4 p-6 lg:p-8">
+      <div className="page-shell page-stack-tight motion-stagger">
         <section className="page-hero relative overflow-hidden">
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
@@ -427,23 +427,30 @@ export default function IssuesPage() {
               </div>
             </div>
             <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{tt("common.status")}</div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">{statusFilter}</div>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{tt("issues.workflow")}</div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">{workflowFilter}</div>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{tt("common.mode")}</div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">
-                    {canManageIssues ? tt("common.manage") : tt("common.readOnly")}
-                  </div>
+              <div className="rounded-2xl border border-border/70 bg-background/70 px-4 py-3">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-muted-foreground">
+                  <span>
+                    {tt("issues.total")}{" "}
+                    <span className="font-semibold text-foreground">{metrics.total}</span>
+                  </span>
+                  <span>
+                    {tt("common.status")}{" "}
+                    <span className="font-semibold text-foreground">{statusFilter}</span>
+                  </span>
+                  <span>
+                    {tt("issues.workflow")}{" "}
+                    <span className="font-semibold text-foreground">{workflowFilter}</span>
+                  </span>
+                  <span>
+                    {tt("common.mode")}{" "}
+                    <span className="font-semibold text-foreground">
+                      {canManageIssues ? tt("common.manage") : tt("common.readOnly")}
+                    </span>
+                  </span>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   void Promise.all([issuesQuery.refetch(), installersQuery.refetch()]);
                 }}
@@ -456,37 +463,12 @@ export default function IssuesPage() {
           </div>
         </section>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{tt("issues.total")}</div>
-            <div className="text-[24px] font-semibold">{metrics.total}</div>
-          </div>
-          <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{tt("common.open")}</div>
-            <div className="text-[24px] font-semibold">{metrics.open}</div>
-          </div>
-          <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--destructive)/0.10))] p-4">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{tt("issues.overdue")}</div>
-            <div className="text-[24px] font-semibold text-[hsl(var(--destructive))]">
-              {metrics.overdue}
-            </div>
-          </div>
-          <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--warning)/0.12))] p-4">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              {tt("issues.priorityP1")}
-            </div>
-            <div className="text-[24px] font-semibold text-[hsl(var(--warning-foreground))]">
-              {metrics.p1}
-            </div>
-          </div>
-        </div>
-
-        <div className="surface-panel grid grid-cols-1 items-center gap-2 md:grid-cols-5">
+        <div className="toolbar-panel grid grid-cols-1 items-center gap-2 md:grid-cols-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
           <select
             aria-label="Status filter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as "all" | IssueStatus)}
-            className="h-10 rounded-xl border border-border/70 bg-background/80 px-3 text-[12px]"
+            className="control-input text-[12px]"
           >
             <option value="all">{tt("issues.allStatuses")}</option>
             {STATUS_OPTIONS.map((option) => (
@@ -499,7 +481,7 @@ export default function IssuesPage() {
             aria-label="Workflow filter"
             value={workflowFilter}
             onChange={(e) => setWorkflowFilter(e.target.value as "all" | IssueWorkflowState)}
-            className="h-10 rounded-xl border border-border/70 bg-background/80 px-3 text-[12px]"
+            className="control-input text-[12px]"
           >
             <option value="all">{tt("issues.allWorkflowStates")}</option>
             {WORKFLOW_OPTIONS.map((option) => (
@@ -515,7 +497,7 @@ export default function IssuesPage() {
               onChange={(e) => setOwnerFilter(e.target.value)}
               placeholder={tt("issues.ownerUserUuid")}
               list="issues-owner-filter-options"
-              className="h-10 w-full rounded-xl border border-border/70 bg-background/80 px-3 text-[12px]"
+              className="control-input text-[12px]"
             />
             <datalist id="issues-owner-filter-options">
               {linkedOwners.map((owner) => (
@@ -535,6 +517,7 @@ export default function IssuesPage() {
             {tt("issues.overdueOnly")}
           </label>
           <button
+            type="button"
             onClick={() => {
               setStatusFilter("all");
               setWorkflowFilter("all");
@@ -565,13 +548,10 @@ export default function IssuesPage() {
         )}
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-4">
-          <section className="surface-panel overflow-hidden p-0">
-            <div className="grid grid-cols-[90px_92px_115px_100px_140px_1fr_150px] gap-2 px-3 py-2 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
-                <span>{tt("common.status")}</span>
+          <section className="data-table-shell">
+            <div className="grid grid-cols-[96px_92px_minmax(0,1fr)_150px] gap-3 px-4 py-2 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
+              <span>{tt("common.status")}</span>
               <span>{t("issues.priority")}</span>
-                <span>{tt("issues.workflow")}</span>
-                <span>{tt("issues.overdue")}</span>
-              <span>{t("issues.unit")}</span>
               <span>{t("issues.titleLabel")}</span>
               <span>{t("issues.updated")}</span>
             </div>
@@ -583,9 +563,10 @@ export default function IssuesPage() {
               issues.map((issue) => (
                 <button
                   key={issue.id}
+                  type="button"
                   onClick={() => setSelectedIssueId(issue.id)}
                   className={cn(
-                    "w-full text-left grid grid-cols-[90px_92px_115px_100px_140px_1fr_150px] gap-2 px-3 py-2.5 border-t border-border/70 text-[12px] row-hover",
+                    "w-full text-left grid grid-cols-[96px_92px_minmax(0,1fr)_150px] gap-3 px-4 py-3 border-t border-border/70 text-[12px] row-hover",
                     issue.id === selectedIssueId && "bg-[linear-gradient(135deg,hsl(var(--accent)/0.14),hsl(var(--accent)/0.06))]"
                   )}
                 >
@@ -607,15 +588,14 @@ export default function IssuesPage() {
                   >
                     {issue.priority}
                   </span>
-                  <span>{issue.workflow_state}</span>
-                  <span className={issue.is_overdue ? "text-[hsl(var(--destructive))]" : "text-muted-foreground"}>
-                    {issue.is_overdue ? t("issues.yes") : t("issues.no")}
-                  </span>
-                  <span title={issue.door_id}>
-                    {issue.door_unit_label} ({shortId(issue.project_id)})
-                  </span>
-                  <span className="truncate" title={issue.title || issue.details || "-"}>
-                    {issue.title || issue.details || "-"}
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium" title={issue.title || issue.details || "-"}>
+                      {issue.title || issue.details || "-"}
+                    </span>
+                    <span className="mt-1 block truncate text-[11px] text-muted-foreground" title={issue.door_id}>
+                      {issue.door_unit_label} · {issue.workflow_state} · {shortId(issue.project_id)}
+                      {issue.is_overdue ? ` · ${tt("issues.overdue")}` : ""}
+                    </span>
                   </span>
                   <span className="text-muted-foreground">{formatDateTime(issue.updated_at)}</span>
                 </button>
@@ -623,7 +603,7 @@ export default function IssuesPage() {
             )}
           </section>
 
-          <section className="glass-card rounded-xl border border-border p-4">
+          <section className="surface-panel panel-pad-sm">
             <div className="flex items-center justify-between gap-2 mb-3">
               <h3 className="text-[14px] font-semibold">{tt("issues.workflowEditor")}</h3>
               {selectedIssue ? (
@@ -636,7 +616,13 @@ export default function IssuesPage() {
             ) : (
               <div className="space-y-3">
                 <div className="text-[12px] rounded-lg border border-border bg-background px-3 py-2">
-                  <div className="text-muted-foreground">{t("issues.doorProject")}</div>
+                  <div className="text-muted-foreground">
+                    {locale === "ru"
+                      ? "\u0412\u044b\u0431\u0440\u0430\u043d\u043d\u0430\u044f \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0430"
+                      : locale === "he"
+                        ? "\u05d4\u05ea\u05e7\u05dc\u05d4 \u05e9\u05e0\u05d1\u05d7\u05e8\u05d4"
+                        : "Selected issue"}
+                  </div>
                   <div className="font-medium mt-0.5">
                     {selectedIssue.door_unit_label} / {selectedIssue.project_id}
                   </div>
@@ -650,7 +636,7 @@ export default function IssuesPage() {
                       setForm((prev) => ({ ...prev, status: e.target.value as IssueStatus }))
                     }
                     disabled={!canManageIssues}
-                    className="h-9 rounded-lg border border-border bg-background px-3 text-[12px] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="control-input h-9 text-[12px]"
                   >
                     {STATUS_OPTIONS.map((option) => (
                       <option key={option} value={option}>
@@ -665,7 +651,7 @@ export default function IssuesPage() {
                       setForm((prev) => ({ ...prev, priority: e.target.value as IssuePriority }))
                     }
                     disabled={!canManageIssues}
-                    className="h-9 rounded-lg border border-border bg-background px-3 text-[12px] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="control-input h-9 text-[12px]"
                   >
                     {PRIORITY_OPTIONS.map((option) => (
                       <option key={option} value={option}>
@@ -685,7 +671,7 @@ export default function IssuesPage() {
                     }))
                   }
                   disabled={!canManageIssues}
-                  className="h-9 w-full rounded-lg border border-border bg-background px-3 text-[12px] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="control-input h-9 text-[12px]"
                 >
                   {WORKFLOW_OPTIONS.map((option) => (
                     <option key={option} value={option}>
@@ -706,7 +692,7 @@ export default function IssuesPage() {
                       }))
                     }
                     disabled={!canManageIssues}
-                    className="h-9 w-full rounded-lg border border-border bg-card px-3 text-[12px] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="control-input h-9 text-[12px]"
                   >
                     <option value="">{t("issues.unassigned")}</option>
                     {linkedOwners.map((owner) => (
@@ -726,7 +712,7 @@ export default function IssuesPage() {
                     }
                     placeholder={t("issues.manualOwnerUuid")}
                     disabled={!canManageIssues}
-                    className="h-9 w-full rounded-lg border border-border bg-card px-3 text-[12px] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="control-input h-9 text-[12px]"
                   />
                 </div>
 
@@ -741,7 +727,7 @@ export default function IssuesPage() {
                     value={form.due_at}
                     onChange={(e) => setForm((prev) => ({ ...prev, due_at: e.target.value }))}
                     disabled={!canManageIssues}
-                  className="h-9 w-full rounded-lg border border-border bg-background px-3 text-[12px] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="control-input h-9 text-[12px]"
                   />
                 </div>
 
@@ -752,7 +738,7 @@ export default function IssuesPage() {
                   rows={4}
                     placeholder={tt("issues.workflowNotes")}
                   disabled={!canManageIssues}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[12px] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="control-textarea text-[12px]"
                 />
 
                 <div className="text-[11px] text-muted-foreground rounded-lg border border-border bg-background px-3 py-2">
@@ -773,26 +759,30 @@ export default function IssuesPage() {
                   </div>
                 )}
 
-                <button
-                  onClick={saveWorkflow}
-                  disabled={!canManageIssues || workflowMutation.isPending}
-                  title={privilegedActionHint}
-                  className="h-9 w-full rounded-lg bg-accent text-accent-foreground text-[13px] font-medium inline-flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  <Save className="w-4 h-4" />
-                  {workflowMutation.isPending ? tt("issues.saving") : tt("issues.saveWorkflow")}
-                </button>
-                <button
-                  onClick={applyWorkflowToFiltered}
-                  disabled={!canManageIssues || bulkWorkflowMutation.isPending || issues.length === 0}
-                  title={privilegedActionHint}
-                  className="h-9 w-full rounded-lg border border-border bg-card text-[13px] font-medium inline-flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  <Save className="w-4 h-4" />
-                  {bulkWorkflowMutation.isPending
-                    ? tt("issues.applyingBulk")
-                    : `${tt("issues.applyToFiltered")} (${issues.length})`}
-                </button>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={saveWorkflow}
+                    disabled={!canManageIssues || workflowMutation.isPending}
+                    title={privilegedActionHint}
+                    className="h-10 w-full rounded-lg bg-accent text-accent-foreground text-[13px] font-medium inline-flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <Save className="w-4 h-4" />
+                    {workflowMutation.isPending ? tt("issues.saving") : tt("issues.saveWorkflow")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyWorkflowToFiltered}
+                    disabled={!canManageIssues || bulkWorkflowMutation.isPending || issues.length === 0}
+                    title={privilegedActionHint}
+                    className="h-10 w-full rounded-lg border border-border bg-card text-[13px] font-medium inline-flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <Save className="w-4 h-4" />
+                    {bulkWorkflowMutation.isPending
+                      ? tt("issues.applyingBulk")
+                      : `${tt("issues.applyToFiltered")} (${issues.length})`}
+                  </button>
+                </div>
               </div>
             )}
           </section>

@@ -1,32 +1,31 @@
-import { MasterCircle, computeCircleState, type CircleState } from "./MasterCircle";
+﻿import { MasterCircle, computeCircleState, type CircleState } from "./MasterCircle";
 
 const TABLE_COLS = [
-  "קומה",
-  "מיקום",
-  "מחזיר שמן",
-  "טריקה",
-  "ניקובים במשקוף",
-  "אינסרט",
-  "מתאם סגירה",
-  "תו תקן",
-  "עוקץ אחורי",
-  "הערות",
+  "Этаж",
+  "Зона",
+  "Доводчик",
+  "Замок",
+  "Отверстия в коробке",
+  "Вставка",
+  "Адаптер закрытия",
+  "Маркировка",
+  "Задний упор",
+  "Примечания",
 ];
 
-// Columns 2–8 are V-check (inspection checkmarks), 0,1,9 are text
 const CHECKABLE_INDICES = [2, 3, 4, 5, 6, 7, 8];
-const isCheckable = (ci: number) => CHECKABLE_INDICES.includes(ci);
+const isCheckable = (columnIndex: number) => CHECKABLE_INDICES.includes(columnIndex);
 
 const ROW_COUNT = 20;
 
 export interface RowData {
   id: number;
-  values: string[]; // "" or "V" for checkable, free text for text cols
+  values: string[];
 }
 
 function createEmptyRows(): RowData[] {
-  return Array.from({ length: ROW_COUNT }, (_, i) => ({
-    id: i,
+  return Array.from({ length: ROW_COUNT }, (_, index) => ({
+    id: index,
     values: TABLE_COLS.map(() => ""),
   }));
 }
@@ -46,156 +45,148 @@ export default function InspectionTable({
   disabled = false,
   viewMode,
 }: InspectionTableProps) {
-  const updateCell = (ri: number, ci: number, val: string) => {
-    const next = [...rows];
-    const newValues = [...next[ri].values];
-    newValues[ci] = val;
-    next[ri] = { ...next[ri], values: newValues };
-    onRowsChange(next);
+  const updateCell = (rowIndex: number, columnIndex: number, value: string) => {
+    const nextRows = [...rows];
+    const nextValues = [...nextRows[rowIndex].values];
+    nextValues[columnIndex] = value;
+    nextRows[rowIndex] = { ...nextRows[rowIndex], values: nextValues };
+    onRowsChange(nextRows);
   };
 
-  const toggleCheck = (ri: number, ci: number) => {
+  const toggleCheck = (rowIndex: number, columnIndex: number) => {
     if (disabled) return;
-    updateCell(ri, ci, rows[ri].values[ci] === "V" ? "" : "V");
+    updateCell(rowIndex, columnIndex, rows[rowIndex].values[columnIndex] === "V" ? "" : "V");
   };
 
-  // Per-row circle: state of all checkable cells in that row
-  const rowCircleState = (ri: number): CircleState =>
-    computeCircleState(CHECKABLE_INDICES.map((ci) => rows[ri].values[ci] === "V"));
+  const rowCircleState = (rowIndex: number): CircleState =>
+    computeCircleState(CHECKABLE_INDICES.map((columnIndex) => rows[rowIndex].values[columnIndex] === "V"));
 
-  const toggleRow = (ri: number) => {
+  const toggleRow = (rowIndex: number) => {
     if (disabled) return;
-    const allChecked = CHECKABLE_INDICES.every((ci) => rows[ri].values[ci] === "V");
-    const next = [...rows];
-    const newValues = [...next[ri].values];
-    CHECKABLE_INDICES.forEach((ci) => {
-      newValues[ci] = allChecked ? "" : "V";
+    const allChecked = CHECKABLE_INDICES.every((columnIndex) => rows[rowIndex].values[columnIndex] === "V");
+    const nextRows = [...rows];
+    const nextValues = [...nextRows[rowIndex].values];
+    CHECKABLE_INDICES.forEach((columnIndex) => {
+      nextValues[columnIndex] = allChecked ? "" : "V";
     });
-    next[ri] = { ...next[ri], values: newValues };
-    onRowsChange(next);
+    nextRows[rowIndex] = { ...nextRows[rowIndex], values: nextValues };
+    onRowsChange(nextRows);
   };
 
-  // Per-column circle: state of all cells in that column
-  const colCircleState = (ci: number): CircleState =>
-    computeCircleState(rows.map((r) => r.values[ci] === "V"));
+  const colCircleState = (columnIndex: number): CircleState =>
+    computeCircleState(rows.map((row) => row.values[columnIndex] === "V"));
 
-  const toggleCol = (ci: number) => {
+  const toggleCol = (columnIndex: number) => {
     if (disabled) return;
-    const allChecked = rows.every((r) => r.values[ci] === "V");
-    const next = rows.map((r) => {
-      const newValues = [...r.values];
-      newValues[ci] = allChecked ? "" : "V";
-      return { ...r, values: newValues };
+    const allChecked = rows.every((row) => row.values[columnIndex] === "V");
+    const nextRows = rows.map((row) => {
+      const nextValues = [...row.values];
+      nextValues[columnIndex] = allChecked ? "" : "V";
+      return { ...row, values: nextValues };
     });
-    onRowsChange(next);
+    onRowsChange(nextRows);
   };
 
-  // Master circle: all checkable cells
-  const allChecks = rows.flatMap((r) =>
-    CHECKABLE_INDICES.map((ci) => r.values[ci] === "V")
+  const masterState = computeCircleState(
+    rows.flatMap((row) => CHECKABLE_INDICES.map((columnIndex) => row.values[columnIndex] === "V"))
   );
-  const masterState = computeCircleState(allChecks);
 
   const toggleAll = () => {
     if (disabled) return;
     const allChecked = masterState === "complete";
-    const next = rows.map((r) => {
-      const newValues = [...r.values];
-      CHECKABLE_INDICES.forEach((ci) => {
-        newValues[ci] = allChecked ? "" : "V";
+    const nextRows = rows.map((row) => {
+      const nextValues = [...row.values];
+      CHECKABLE_INDICES.forEach((columnIndex) => {
+        nextValues[columnIndex] = allChecked ? "" : "V";
       });
-      return { ...r, values: newValues };
+      return { ...row, values: nextValues };
     });
-    onRowsChange(next);
+    onRowsChange(nextRows);
   };
 
   return (
-    <div className="border border-gray-300 bg-gray-50">
-      {/* table title + master circle */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-300">
-        <p className="text-[13px] font-semibold text-gray-700 flex-1 text-center">
-          נושאים לבדיקה (יש לסמן ב-V)
+    <div className="overflow-hidden rounded-[1.1rem] border border-gray-300 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+      <div className="flex items-center justify-between border-b border-gray-300 bg-gray-50 px-3 py-2">
+        <p className="flex-1 text-center text-[13px] font-semibold text-gray-700">
+          Контрольный лист. Отмечайте проверенные позиции
         </p>
         {viewMode === "app" && (
-          <MasterCircle
-            state={masterState}
-            onClick={toggleAll}
-            disabled={disabled}
-            size="md"
-          />
+          <MasterCircle state={masterState} onClick={toggleAll} disabled={disabled} size="md" />
         )}
       </div>
 
-      {/* table */}
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse" style={{ minWidth: 720 }}>
+        <table className="w-full border-collapse" style={{ minWidth: 760 }}>
           <thead>
             <tr>
-              {TABLE_COLS.map((col, ci) => (
+              {TABLE_COLS.map((column, columnIndex) => (
                 <th
-                  key={col}
-                  className="text-[11px] font-semibold text-gray-600 py-2 px-1 border border-gray-300 bg-gray-100 text-center whitespace-nowrap"
+                  key={column}
+                  className="border border-gray-300 bg-gray-100 px-1 py-2 text-center text-[11px] font-semibold text-gray-600"
                 >
                   <div className="flex flex-col items-center gap-1">
-                    {viewMode === "app" && isCheckable(ci) && (
+                    {viewMode === "app" && isCheckable(columnIndex) && (
                       <MasterCircle
-                        state={colCircleState(ci)}
-                        onClick={() => toggleCol(ci)}
+                        state={colCircleState(columnIndex)}
+                        onClick={() => toggleCol(columnIndex)}
                         disabled={disabled}
                         size="sm"
                       />
                     )}
-                    <span>{col}</span>
+                    <span>{column}</span>
                   </div>
                 </th>
               ))}
               {viewMode === "app" && (
-                <th className="w-7 border border-gray-300 bg-gray-100 text-[9px] text-gray-400 font-normal">
-                  שורה
+                <th className="w-8 border border-gray-300 bg-gray-100 text-[9px] font-normal text-gray-400">
+                  Стр.
                 </th>
               )}
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, ri) => {
-              const rState = rowCircleState(ri);
-              const rowGreyed = rState === "complete";
+            {rows.map((row, rowIndex) => {
+              const rowState = rowCircleState(rowIndex);
+              const rowGreyed = rowState === "complete";
+
               return (
                 <tr
                   key={row.id}
-                  className={`transition-opacity duration-150 ${rowGreyed && !disabled ? "opacity-40" : ""} ${disabled ? "opacity-30" : ""}`}
+                  className={`transition-opacity duration-150 ${rowGreyed && !disabled ? "opacity-45" : ""} ${disabled ? "opacity-30" : ""}`}
                 >
-                  {row.values.map((val, ci) => (
-                    <td key={ci} className="border border-gray-300 p-0">
-                      {isCheckable(ci) ? (
+                  {row.values.map((value, columnIndex) => (
+                    <td key={columnIndex} className="border border-gray-300 p-0 align-middle">
+                      {isCheckable(columnIndex) ? (
                         <button
                           type="button"
-                          onClick={() => toggleCheck(ri, ci)}
+                          onClick={() => toggleCheck(rowIndex, columnIndex)}
                           disabled={disabled}
-                          className="w-full h-[26px] flex items-center justify-center bg-transparent hover:bg-blue-50/30 transition-colors duration-100 disabled:cursor-not-allowed"
+                          className="flex h-[28px] w-full items-center justify-center bg-transparent transition-colors duration-100 hover:bg-blue-50/40 disabled:cursor-not-allowed"
                         >
-                          {val === "V" && (
-                            <span className="text-[14px] text-gray-800 font-medium select-none" style={{ fontFamily: "'Segoe Script', 'Comic Sans MS', cursive" }}>
+                          {value === "V" && (
+                            <span
+                              className="select-none text-[14px] font-semibold text-gray-800"
+                              style={{ fontFamily: "'Segoe UI Symbol', 'Segoe UI', sans-serif" }}
+                            >
                               ✓
                             </span>
                           )}
                         </button>
                       ) : (
                         <input
-                          value={val}
+                          value={value}
                           disabled={disabled}
-                          onChange={(e) => updateCell(ri, ci, e.target.value)}
-                          dir="rtl"
-                          className="w-full h-[26px] bg-transparent border-0 outline-none text-[11px] text-gray-800 px-1.5 text-center focus:bg-blue-50/40 transition-colors duration-150 disabled:cursor-not-allowed"
+                          onChange={(event) => updateCell(rowIndex, columnIndex, event.target.value)}
+                          className="h-[28px] w-full border-0 bg-transparent px-1.5 text-center text-[11px] text-gray-800 outline-none transition-colors duration-150 focus:bg-blue-50/40 disabled:cursor-not-allowed"
                         />
                       )}
                     </td>
                   ))}
                   {viewMode === "app" && (
-                    <td className="border border-gray-300 p-0 text-center">
+                    <td className="border border-gray-300 p-0 text-center align-middle">
                       <MasterCircle
-                        state={rState}
-                        onClick={() => toggleRow(ri)}
+                        state={rowState}
+                        onClick={() => toggleRow(rowIndex)}
                         disabled={disabled}
                         size="sm"
                       />

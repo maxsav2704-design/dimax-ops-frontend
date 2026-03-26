@@ -159,9 +159,16 @@ function parseDoorQuickFilter(value: string | null): DoorQuickFilter | null {
 
 export default function InstallerProjectPage({ projectId }: InstallerProjectPageProps) {
   const { locale, t } = useI18n();
-  const pt = (key: string) => projectOverrides[locale]?.[key] ?? t(key);
+  const normalizeReadableText = (value: string, fallback: string) =>
+    /(\?{3,}|Р\S|Ч\S)/.test(value) ? fallback : value;
+  const pt = (key: string) =>
+    normalizeReadableText(projectOverrides[locale]?.[key] ?? t(key), t(key));
   const shortOnlyThis =
-    locale === "ru" ? "Только эта" : locale === "he" ? "רק זו" : "Only this";
+    locale === "ru"
+      ? "\u0422\u043e\u043b\u044c\u043a\u043e \u044d\u0442\u0430"
+      : locale === "he"
+        ? "\u05e8\u05e7 \u05d6\u05d5"
+        : "Only this";
   const queryClient = useQueryClient();
   const [selectedReasonId, setSelectedReasonId] = useState("");
   const [notInstalledComment, setNotInstalledComment] = useState("");
@@ -574,26 +581,34 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="metric-chip">{t("installerProject.doors")} {details?.doors.length ?? "--"}</span>
-              <span className="metric-chip">{t("installerProject.visible")} {details ? filteredDoors.length : "--"}</span>
               <span className="metric-chip">
                 {t("installerProject.issues")} {details?.issues_open.length ?? "--"}
               </span>
-              <span className="metric-chip">
-                {t("common.updated")} {details?.server_time ? formatDate(details.server_time) : "--"}
-              </span>
             </div>
           </div>
-          <div className="surface-subtle min-w-0 max-w-xl space-y-4 p-4 sm:p-5 xl:min-w-[280px]">
+          <div className="surface-subtle min-w-0 max-w-xl space-y-4 p-4 sm:p-5 xl:min-w-[320px]">
             <div className="text-[12px] leading-5 text-muted-foreground">
               {t("installerProject.contextCopy")}
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               <Link
                 href={`/installer/calendar?project_id=${projectId}`}
                 className="btn-premium justify-center rounded-xl px-4 py-3 text-sm font-medium"
               >
                 {t("installerProject.openSchedule")}
               </Link>
+              <a
+                href="#project-doors"
+                className="inline-flex items-center justify-center rounded-xl border border-border/70 bg-background/75 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {t("installerProject.doorsSection")}
+              </a>
+              <a
+                href="#project-open-issues"
+                className="inline-flex items-center justify-center rounded-xl border border-border/70 bg-background/75 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {t("installerProject.openIssues")}
+              </a>
               {details?.waze_url ? (
                 <a
                   href={details.waze_url}
@@ -653,24 +668,6 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
 
       {details && (
         <>
-          <section className="grid gap-4 md:grid-cols-4">
-            <div className="surface-panel">
-              <div className="text-sm text-muted-foreground">{t("installerProject.doorsTotal")}</div>
-              <div className="mt-1 text-2xl font-semibold">{details.doors.length}</div>
-            </div>
-            <div className="surface-panel">
-              <div className="text-sm text-muted-foreground">{t("installerProject.visibleByFilters")}</div>
-              <div className="mt-1 text-2xl font-semibold">{filteredDoors.length}</div>
-            </div>
-            <div className="surface-panel">
-              <div className="text-sm text-muted-foreground">{t("installerProject.openIssues")}</div>
-              <div className="mt-1 text-2xl font-semibold">{details.issues_open.length}</div>
-            </div>
-            <div className="surface-panel">
-              <div className="text-sm text-muted-foreground">{t("installerProject.lastUpdate")}</div>
-              <div className="mt-1 text-sm font-medium">{formatDate(details.server_time)}</div>
-            </div>
-          </section>
 
           <section className="grid gap-4 lg:grid-cols-2">
             <div className="surface-panel space-y-3">
@@ -971,12 +968,6 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted"
                 >
                   {t("installerProject.openIssues")}
-                </a>
-                <a
-                  href="#project-add-on-fact"
-                  className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted"
-                >
-                  {t("installerProject.addonFact")}
                 </a>
                 <button
                   type="button"

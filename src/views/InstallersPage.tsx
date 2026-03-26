@@ -12,9 +12,9 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { useUserRole } from "@/hooks/use-user-role";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
-import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
+import { canRunPrivilegedAdminActions, canViewRates } from "@/lib/admin-access";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -105,14 +105,18 @@ function InstallerCard({
   installer,
   onEdit,
   onDelete,
-  actionsDisabled,
-  actionHint,
+  editDisabled,
+  deleteDisabled,
+  editHint,
+  deleteHint,
 }: {
   installer: Installer;
   onEdit: () => void;
   onDelete: () => void;
-  actionsDisabled: boolean;
-  actionHint?: string;
+  editDisabled: boolean;
+  deleteDisabled: boolean;
+  editHint?: string;
+  deleteHint?: string;
 }) {
   const initials = installer.full_name
     .split(" ")
@@ -122,20 +126,22 @@ function InstallerCard({
     .toUpperCase();
 
   return (
-    <article className="glass-card rounded-xl p-4 border border-border">
-      <div className="flex items-start justify-between gap-2">
+    <article className="surface-panel panel-pad-sm flex h-full flex-col gap-4">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-accent/15 text-accent font-semibold text-[12px] flex items-center justify-center">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/15 text-[12px] font-semibold text-accent shadow-[inset_0_1px_0_hsl(0_0%_100%/0.35)]">
             {initials || "IN"}
           </div>
-          <div>
-            <h3 className="text-[14px] font-semibold text-card-foreground">{installer.full_name}</h3>
-            <p className="text-[12px] text-muted-foreground">{installer.status}</p>
+          <div className="min-w-0">
+            <h3 className="text-[15px] font-semibold tracking-tight text-card-foreground">
+              {installer.full_name}
+            </h3>
+            <p className="mt-0.5 text-[12px] leading-6 text-muted-foreground">{installer.status}</p>
           </div>
         </div>
         <span
           className={cn(
-            "text-[10px] rounded-md px-2 py-1 border",
+            "inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
             installer.is_active
               ? "bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.25)]"
               : "bg-muted text-muted-foreground border-border"
@@ -145,27 +151,45 @@ function InstallerCard({
         </span>
       </div>
 
-      <div className="mt-3 space-y-1 text-[12px] text-muted-foreground">
-        <div>Phone: {installer.phone || "-"}</div>
-        <div>Email: {installer.email || "-"}</div>
-        <div>User link: {installer.user_id || "not linked"}</div>
-        <div>Updated: {formatDate(installer.updated_at)}</div>
+      <div className="grid gap-2 text-[12px] text-muted-foreground">
+        <div className="rounded-xl border border-border/60 bg-background/55 px-3 py-2">
+          <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">Phone</div>
+          <div className="mt-1 leading-6 text-card-foreground">{installer.phone || "-"}</div>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-background/55 px-3 py-2">
+          <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">Email</div>
+          <div className="mt-1 break-all leading-6 text-card-foreground">{installer.email || "-"}</div>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="rounded-xl border border-border/60 bg-background/55 px-3 py-2">
+            <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">User link</div>
+            <div className="mt-1 break-all leading-6 text-card-foreground">
+              {installer.user_id || "not linked"}
+            </div>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-background/55 px-3 py-2">
+            <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">Updated</div>
+            <div className="mt-1 leading-6 text-card-foreground">{formatDate(installer.updated_at)}</div>
+          </div>
+        </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-end gap-1">
+      <div className="mt-auto flex items-center justify-end gap-2">
         <button
           onClick={onEdit}
-          disabled={actionsDisabled}
-          title={actionHint}
-          className="h-8 w-8 rounded-md border border-border bg-card flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+          disabled={editDisabled}
+          title={editHint}
+          aria-label={`Edit ${installer.full_name}`}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background/80 transition-colors hover:border-accent/35 hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Pencil className="w-4 h-4" />
         </button>
         <button
           onClick={onDelete}
-          disabled={actionsDisabled}
-          title={actionHint}
-          className="h-8 w-8 rounded-md border border-border bg-card text-[hsl(var(--destructive))] flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+          disabled={deleteDisabled}
+          title={deleteHint}
+          aria-label={`Delete ${installer.full_name}`}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background/80 text-[hsl(var(--destructive))] transition-colors hover:border-[hsl(var(--destructive)/0.4)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -186,75 +210,83 @@ function InstallerBaseForm({
   void disabled;
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-[12px] text-muted-foreground mb-1">Full name</label>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="field-stack">
+          <label className="field-label">Full name</label>
           <input
             value={form.full_name}
             onChange={(e) => onChange({ ...form, full_name: e.target.value })}
-            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px]"
+            disabled={disabled}
+            className="control-input"
           />
         </div>
-        <div>
-          <label className="block text-[12px] text-muted-foreground mb-1">Status</label>
+        <div className="field-stack">
+          <label className="field-label">Status</label>
           <select
             value={form.status}
             onChange={(e) => onChange({ ...form, status: e.target.value })}
-            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px]"
+            disabled={disabled}
+            className="control-input"
           >
             <option value="ACTIVE">ACTIVE</option>
             <option value="INACTIVE">INACTIVE</option>
             <option value="BUSY">BUSY</option>
           </select>
         </div>
-        <div>
-          <label className="block text-[12px] text-muted-foreground mb-1">Phone</label>
+        <div className="field-stack">
+          <label className="field-label">Phone</label>
           <input
             value={form.phone}
             onChange={(e) => onChange({ ...form, phone: e.target.value })}
-            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px]"
+            disabled={disabled}
+            className="control-input"
           />
         </div>
-        <div>
-          <label className="block text-[12px] text-muted-foreground mb-1">Email</label>
+        <div className="field-stack">
+          <label className="field-label">Email</label>
           <input
             value={form.email}
             onChange={(e) => onChange({ ...form, email: e.target.value })}
-            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px]"
+            disabled={disabled}
+            className="control-input"
           />
         </div>
-        <div>
-          <label className="block text-[12px] text-muted-foreground mb-1">Address</label>
+        <div className="field-stack">
+          <label className="field-label">Address</label>
           <input
             value={form.address}
             onChange={(e) => onChange({ ...form, address: e.target.value })}
-            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px]"
+            disabled={disabled}
+            className="control-input"
           />
         </div>
-        <div>
-          <label className="block text-[12px] text-muted-foreground mb-1">Passport ID</label>
+        <div className="field-stack">
+          <label className="field-label">Passport ID</label>
           <input
             value={form.passport_id}
             onChange={(e) => onChange({ ...form, passport_id: e.target.value })}
-            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[13px]"
+            disabled={disabled}
+            className="control-input"
           />
         </div>
       </div>
 
-      <div className="mt-3">
-        <label className="block text-[12px] text-muted-foreground mb-1">Notes</label>
+      <div className="field-stack mt-4">
+        <label className="field-label">Notes</label>
         <textarea
           rows={2}
           value={form.notes}
           onChange={(e) => onChange({ ...form, notes: e.target.value })}
-          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[13px]"
+          disabled={disabled}
+          className="control-textarea"
         />
       </div>
 
-      <label className="mt-3 inline-flex items-center gap-2 text-[12px] text-card-foreground">
+      <label className="checkbox-row mt-4">
         <input
           type="checkbox"
           checked={form.is_active}
+          disabled={disabled}
           onChange={(e) => onChange({ ...form, is_active: e.target.checked })}
         />
         Is active
@@ -274,11 +306,14 @@ export default function InstallersPage() {
 
   const [form, setForm] = useState<InstallerFormState>(emptyForm());
   const [editingInstaller, setEditingInstaller] = useState<Installer | null>(null);
-  const userRole = useUserRole();
-  const canManageInstallers = canRunPrivilegedAdminActions(userRole);
+  const session = useAuthSession();
+  const canManageInstallers = canRunPrivilegedAdminActions(session);
+  const canManageRates = canViewRates(session);
+  const canOpenInstallerDetails = canManageInstallers || canManageRates;
   const privilegedActionHint = canManageInstallers
     ? undefined
     : "Installer role is read-only in installers";
+  const rateActionHint = canManageRates ? undefined : "Rate access is restricted for your scope";
 
   const [linkUserId, setLinkUserId] = useState("");
   const [newRateDoorTypeId, setNewRateDoorTypeId] = useState("");
@@ -321,7 +356,7 @@ export default function InstallersPage() {
       apiFetch<InstallerRate[]>(
         `/api/v1/admin/installer-rates?installer_id=${editingInstaller?.id}&limit=500`
       ),
-    enabled: isEditOpen && Boolean(editingInstaller?.id),
+    enabled: isEditOpen && Boolean(editingInstaller?.id) && canManageRates,
   });
 
   useEffect(() => {
@@ -484,7 +519,7 @@ export default function InstallersPage() {
 
   return (
     <DashboardLayout>
-      <div className="motion-stagger max-w-[1500px] space-y-6 p-6 lg:p-8">
+      <div className="page-shell page-stack motion-stagger">
         <section className="page-hero relative overflow-hidden">
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
           <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
@@ -499,7 +534,7 @@ export default function InstallersPage() {
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="metric-chip">{t("installers.total")} {metrics.total}</span>
                 <span className="metric-chip">{t("common.active")} {metrics.active}</span>
-                <span className="metric-chip">{t("installers.rateControls")}</span>
+                {canManageRates ? <span className="metric-chip">{t("installers.rateControls")}</span> : null}
               </div>
             </div>
             <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
@@ -517,7 +552,7 @@ export default function InstallersPage() {
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{t("common.mode")}</div>
                   <div className="mt-1 text-lg font-semibold text-foreground">
-                    {canManageInstallers ? t("common.manage") : t("common.readOnly")}
+                    {canManageInstallers ? t("common.manage") : canManageRates ? "Rates only" : t("common.readOnly")}
                   </div>
                 </div>
               </div>
@@ -534,29 +569,14 @@ export default function InstallersPage() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
-            <p className="text-[12px] text-muted-foreground">Total</p>
-            <p className="text-[24px] font-semibold">{metrics.total}</p>
-          </div>
-          <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--success)/0.10))] p-4">
-            <p className="text-[12px] text-muted-foreground">Active</p>
-            <p className="text-[24px] font-semibold text-[hsl(var(--success))]">{metrics.active}</p>
-          </div>
-          <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--muted)/0.18))] p-4">
-            <p className="text-[12px] text-muted-foreground">Inactive</p>
-            <p className="text-[24px] font-semibold text-muted-foreground">{metrics.inactive}</p>
-          </div>
-        </div>
-
-        <div className="surface-panel flex flex-wrap items-center gap-2">
+        <div className="toolbar-panel">
           <div className="relative flex-1 min-w-[240px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("installers.searchPlaceholder")}
-              className="h-10 w-full rounded-xl border border-border/70 bg-background/80 pl-9 pr-3 text-[13px]"
+              className="control-input pl-9"
             />
           </div>
           <button
@@ -602,7 +622,9 @@ export default function InstallersPage() {
         )}
         {!canManageInstallers && (
           <div className="mb-4 rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))]">
-            {t("installers.readOnlyNotice")}
+            {canManageRates
+              ? "Installer profile changes are read-only for your scope, but rate controls remain available."
+              : t("installers.readOnlyNotice")}
           </div>
         )}
 
@@ -626,8 +648,10 @@ export default function InstallersPage() {
               installer={installer}
               onEdit={() => onOpenEdit(installer)}
               onDelete={() => deleteMutation.mutate(installer.id)}
-              actionsDisabled={!canManageInstallers}
-              actionHint={privilegedActionHint}
+              editDisabled={!canOpenInstallerDetails}
+              deleteDisabled={!canManageInstallers}
+              editHint={canOpenInstallerDetails ? undefined : privilegedActionHint}
+              deleteHint={privilegedActionHint}
             />
           ))}
         </div>
@@ -635,12 +659,12 @@ export default function InstallersPage() {
 
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="w-full max-w-[760px] rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-4">
+          <div className="modal-shell max-w-[760px]">
+            <div className="modal-header">
               <h2 className="text-[16px] font-semibold">{t("installers.createInstaller")}</h2>
               <button
                 onClick={() => setIsCreateOpen(false)}
-                className="h-8 px-3 rounded-md border border-border text-[12px]"
+                className="inline-flex h-9 items-center rounded-xl border border-border/70 px-3 text-[12px] font-medium text-muted-foreground transition-colors hover:border-accent/35 hover:text-accent"
               >
                 Close
               </button>
@@ -648,10 +672,10 @@ export default function InstallersPage() {
 
             <InstallerBaseForm form={form} onChange={setForm} disabled={!canManageInstallers} />
 
-            <div className="mt-4 flex items-center justify-end gap-2">
+            <div className="modal-footer">
               <button
                 onClick={() => setIsCreateOpen(false)}
-                className="h-9 px-4 rounded-lg border border-border text-[13px]"
+                className="inline-flex h-10 items-center rounded-xl border border-border/70 px-4 text-[13px] font-medium text-muted-foreground transition-colors hover:border-accent/35 hover:text-accent"
               >
                 Cancel
               </button>
@@ -659,7 +683,7 @@ export default function InstallersPage() {
                 onClick={() => createMutation.mutate()}
                 disabled={!canManageInstallers || !form.full_name.trim() || createMutation.isPending}
                 title={privilegedActionHint}
-                className="h-9 px-4 rounded-lg bg-accent text-accent-foreground text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                className="inline-flex h-10 items-center rounded-xl bg-accent px-4 text-[13px] font-medium text-accent-foreground shadow-[0_16px_34px_-18px_hsl(var(--accent)/0.55)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Save
               </button>
@@ -670,15 +694,15 @@ export default function InstallersPage() {
 
       {isEditOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="w-full max-w-[980px] rounded-xl border border-border bg-card p-5 max-h-[92vh] overflow-auto">
-            <div className="flex items-center justify-between mb-4">
+          <div className="modal-shell max-h-[92vh] max-w-[980px] overflow-auto">
+            <div className="modal-header">
               <h2 className="text-[16px] font-semibold">Edit Installer</h2>
               <button
                 onClick={() => {
                   setIsEditOpen(false);
                   setEditingInstaller(null);
                 }}
-                className="h-8 px-3 rounded-md border border-border text-[12px]"
+                className="inline-flex h-9 items-center rounded-xl border border-border/70 px-3 text-[12px] font-medium text-muted-foreground transition-colors hover:border-accent/35 hover:text-accent"
               >
                 Close
               </button>
@@ -686,9 +710,14 @@ export default function InstallersPage() {
 
             <InstallerBaseForm form={form} onChange={setForm} disabled={!canManageInstallers} />
 
-            <div className="mt-4 rounded-lg border border-border bg-background p-3">
-              <h3 className="text-[13px] font-semibold mb-2">User Link</h3>
-              <div className="text-[12px] text-muted-foreground mb-2">
+            <div className="surface-panel panel-pad-sm mt-5 space-y-3">
+              <div className="panel-heading">
+                <div>
+                  <h3 className="panel-title">User Link</h3>
+                  <p className="panel-subtitle">Bind the installer card to a platform user account.</p>
+                </div>
+              </div>
+              <div className="text-[12px] leading-6 text-muted-foreground">
                 Current linked user: {editingInstaller?.user_id || "none"}
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -696,13 +725,13 @@ export default function InstallersPage() {
                   value={linkUserId}
                   onChange={(e) => setLinkUserId(e.target.value)}
                   placeholder="User UUID for link"
-                  className="h-9 flex-1 min-w-[280px] rounded-lg border border-border bg-card px-3 text-[13px]"
+                  className="control-input h-10 min-w-[280px] flex-1"
                 />
                 <button
                   onClick={() => linkUserMutation.mutate()}
                   disabled={!canManageInstallers || !linkUserId.trim() || linkUserMutation.isPending}
                   title={privilegedActionHint}
-                  className="h-9 px-3 rounded-lg border border-border bg-card text-[12px] font-medium inline-flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/70 bg-background/80 px-3 text-[12px] font-medium transition-colors hover:border-accent/35 hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Link2 className="w-3.5 h-3.5" />
                   Link
@@ -711,7 +740,7 @@ export default function InstallersPage() {
                   onClick={() => unlinkUserMutation.mutate()}
                   disabled={!canManageInstallers || !editingInstaller?.user_id || unlinkUserMutation.isPending}
                   title={privilegedActionHint}
-                  className="h-9 px-3 rounded-lg border border-border bg-card text-[12px] font-medium inline-flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/70 bg-background/80 px-3 text-[12px] font-medium transition-colors hover:border-accent/35 hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Unlink2 className="w-3.5 h-3.5" />
                   Unlink
@@ -719,13 +748,22 @@ export default function InstallersPage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-lg border border-border bg-background p-3">
-              <h3 className="text-[13px] font-semibold mb-2">Installer Rates</h3>
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_140px_120px] gap-2 mb-3">
+            {canManageRates ? (
+            <div className="surface-panel panel-pad-sm mt-5 space-y-4">
+              <div className="panel-heading">
+                <div>
+                  <h3 className="panel-title">Installer Rates</h3>
+                  <p className="panel-subtitle">Keep rate rows aligned with current door-type pricing.</p>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2 text-right text-[12px] text-muted-foreground">
+                  {rates.length} rows
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_140px_130px]">
                 <select
                   value={newRateDoorTypeId}
                   onChange={(e) => setNewRateDoorTypeId(e.target.value)}
-                  className="h-9 rounded-lg border border-border bg-card px-3 text-[12px]"
+                  className="control-input h-10"
                 >
                   {(doorTypes || []).map((doorType) => (
                     <option key={doorType.id} value={doorType.id}>
@@ -737,13 +775,13 @@ export default function InstallersPage() {
                   value={newRatePrice}
                   onChange={(e) => setNewRatePrice(e.target.value)}
                   placeholder="Price"
-                  className="h-9 rounded-lg border border-border bg-card px-3 text-[12px]"
+                  className="control-input h-10"
                 />
                 <button
                   onClick={() => createRateMutation.mutate()}
-                  disabled={!canManageInstallers || !newRateDoorTypeId || !newRatePrice || createRateMutation.isPending}
-                  title={privilegedActionHint}
-                  className="h-9 rounded-lg bg-accent text-accent-foreground text-[12px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                  disabled={!canManageRates || !newRateDoorTypeId || !newRatePrice || createRateMutation.isPending}
+                  title={rateActionHint}
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-accent px-4 text-[12px] font-medium text-accent-foreground shadow-[0_16px_34px_-18px_hsl(var(--accent)/0.55)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Add Rate
                 </button>
@@ -751,19 +789,19 @@ export default function InstallersPage() {
 
               <div className="space-y-2">
                 {ratesQuery.isLoading && (
-                  <div className="text-[12px] text-muted-foreground">Loading rates...</div>
+                  <div className="text-[12px] leading-6 text-muted-foreground">Loading rates...</div>
                 )}
                 {!ratesQuery.isLoading && rates.length === 0 && (
-                  <div className="text-[12px] text-muted-foreground">No rates configured yet.</div>
+                  <div className="text-[12px] leading-6 text-muted-foreground">No rates configured yet.</div>
                 )}
                 {rates.map((rate) => {
                   const doorType = doorTypeMap.get(rate.door_type_id);
                   return (
                     <div
                       key={rate.id}
-                      className="rounded-md border border-border bg-card px-3 py-2 flex flex-wrap items-center gap-2"
+                      className="grid gap-2 rounded-2xl border border-border/70 bg-background/60 px-3 py-3 md:grid-cols-[minmax(0,1fr)_120px_auto_auto] md:items-center"
                     >
-                      <div className="text-[12px] font-medium min-w-[220px]">
+                      <div className="min-w-0 text-[12px] font-medium leading-6 text-card-foreground">
                         {doorType ? `${doorType.code} - ${doorType.name}` : rate.door_type_id}
                       </div>
                       <input
@@ -771,21 +809,21 @@ export default function InstallersPage() {
                         onChange={(e) =>
                           setRateDrafts((prev) => ({ ...prev, [rate.id]: e.target.value }))
                         }
-                        className="h-8 w-[120px] rounded-md border border-border bg-background px-2 text-[12px]"
+                        className="control-input h-9 w-full px-2.5 tabular-nums"
                       />
                       <button
                         onClick={() => updateRateMutation.mutate(rate.id)}
-                        disabled={!canManageInstallers || updateRateMutation.isPending}
-                        title={privilegedActionHint}
-                        className="h-8 px-3 rounded-md border border-border text-[12px] disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={!canManageRates || updateRateMutation.isPending}
+                        title={rateActionHint}
+                        className="inline-flex h-9 items-center rounded-xl border border-border/70 bg-background/80 px-3 text-[12px] font-medium transition-colors hover:border-accent/35 hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         Save
                       </button>
                       <button
                         onClick={() => deleteRateMutation.mutate(rate.id)}
-                        disabled={!canManageInstallers || deleteRateMutation.isPending}
-                        title={privilegedActionHint}
-                        className="h-8 px-3 rounded-md border border-border text-[12px] text-[hsl(var(--destructive))] disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={!canManageRates || deleteRateMutation.isPending}
+                        title={rateActionHint}
+                        className="inline-flex h-9 items-center rounded-xl border border-border/70 bg-background/80 px-3 text-[12px] font-medium text-[hsl(var(--destructive))] transition-colors hover:border-[hsl(var(--destructive)/0.4)] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         Delete
                       </button>
@@ -794,14 +832,21 @@ export default function InstallersPage() {
                 })}
               </div>
             </div>
+            ) : (
+              <div className="surface-panel panel-pad-sm mt-5">
+                <p className="text-[12px] leading-6 text-muted-foreground">
+                  Rate controls are hidden for your current admin scope.
+                </p>
+              </div>
+            )}
 
-            <div className="mt-4 flex items-center justify-end gap-2">
+            <div className="modal-footer">
               <button
                 onClick={() => {
                   setIsEditOpen(false);
                   setEditingInstaller(null);
                 }}
-                className="h-9 px-4 rounded-lg border border-border text-[13px]"
+                className="inline-flex h-10 items-center rounded-xl border border-border/70 px-4 text-[13px] font-medium text-muted-foreground transition-colors hover:border-accent/35 hover:text-accent"
               >
                 Cancel
               </button>
@@ -809,7 +854,7 @@ export default function InstallersPage() {
                 onClick={() => updateMutation.mutate()}
                 disabled={!canManageInstallers || !form.full_name.trim() || updateMutation.isPending}
                 title={privilegedActionHint}
-                className="h-9 px-4 rounded-lg bg-accent text-accent-foreground text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                className="inline-flex h-10 items-center rounded-xl bg-accent px-4 text-[13px] font-medium text-accent-foreground shadow-[0_16px_34px_-18px_hsl(var(--accent)/0.55)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Save Installer
               </button>

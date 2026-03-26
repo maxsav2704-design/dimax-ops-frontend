@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -15,7 +15,8 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { apiBaseUrl, apiFetch, getAccessToken } from "@/lib/api";
-import { useUserRole } from "@/hooks/use-user-role";
+import { useAuthSession } from "@/hooks/use-auth-session";
+import { canAccessAdminModule, canViewRates } from "@/lib/admin-access";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -769,6 +770,27 @@ type ProjectPlanFactResponse = {
   missing_addon_plans_facts: number;
 };
 
+type ProjectAddonPlanItem = {
+  id?: string;
+  addon_type_id: string;
+  addon_name?: string | null;
+  qty_planned: string | number;
+  client_price: string | number;
+  installer_price: string | number;
+  notes?: string | null;
+};
+
+type UrgencySurchargeItem = {
+  id?: string;
+  scope: "PROJECT" | "ORDER_NUMBER";
+  order_number?: string | null;
+  reason: string;
+  client_amount: string | number;
+  installer_amount: string | number;
+  effective_date?: string | null;
+  notes?: string | null;
+};
+
 type ProjectRiskDriverItem = {
   code: string;
   label: string;
@@ -1411,11 +1433,16 @@ export default function ReportsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const userRole = useUserRole();
-  const canRunPrivilegedActions = userRole !== "INSTALLER";
+  const session = useAuthSession();
+  const canRunPrivilegedActions = !session || (session.role === "ADMIN" && session.admin_scope !== "VIEWER");
+  const canOpenOperations = !session || canAccessAdminModule(session, "operations");
+  const canExportFinancialReports = !session || canViewRates(session);
   const privilegedActionHint = canRunPrivilegedActions
     ? undefined
     : t("reports.installerReadOnlyHint");
+  const ratesScopeHint = canExportFinancialReports
+    ? undefined
+    : "Financial exports are restricted for your current admin scope.";
   const [offset, setOffset] = useState(0);
   const [auditOffset, setAuditOffset] = useState(0);
   const [auditEntityType, setAuditEntityType] = useState("");
@@ -1596,6 +1623,30 @@ export default function ReportsPage() {
       apiFetch<ProjectPlanFactResponse>(
         `/api/v1/admin/reports/project-plan-fact/${projectPlanFactProjectId}`
       ),
+    enabled: Boolean(projectPlanFactProjectId),
+    refetchInterval: 30_000,
+  });
+
+  const projectAddonPlanQuery = useQuery({
+    queryKey: ["reports-project-addon-plan", projectPlanFactProjectId],
+    queryFn: async () => {
+      const response = await apiFetch<ProjectAddonPlanItem[] | { items?: ProjectAddonPlanItem[] }>(
+        `/api/v1/admin/projects/${projectPlanFactProjectId}/addons/plan`
+      );
+      return Array.isArray(response) ? response : response.items || [];
+    },
+    enabled: Boolean(projectPlanFactProjectId),
+    refetchInterval: 30_000,
+  });
+
+  const projectUrgencySurchargesQuery = useQuery({
+    queryKey: ["reports-project-urgency-surcharges", projectPlanFactProjectId],
+    queryFn: async () => {
+      const response = await apiFetch<UrgencySurchargeItem[] | { items?: UrgencySurchargeItem[] }>(
+        `/api/v1/admin/projects/${projectPlanFactProjectId}/urgency-surcharges`
+      );
+      return Array.isArray(response) ? response : response.items || [];
+    },
     enabled: Boolean(projectPlanFactProjectId),
     refetchInterval: 30_000,
   });
@@ -1868,6 +1919,41 @@ export default function ReportsPage() {
   const installerProjectProfitability = installerProjectProfitabilityQuery.data?.items || [];
   const projectOptions = projectsQuery.data?.items || [];
   const projectPlanFact = projectPlanFactQuery.data;
+  const projectAddonPlan = projectAddonPlanQuery.data || [];
+  const projectUrgencySurcharges = projectUrgencySurchargesQuery.data || [];
+  const projectAddonPlanTotals = useMemo(
+    () =>
+      projectAddonPlan.reduce(
+        (acc, item) => {
+          const qty = Number(item.qty_planned) || 0;
+          const clientPrice = Number(item.client_price) || 0;
+          const installerPrice = Number(item.installer_price) || 0;
+          acc.rows += 1;
+          acc.qty += qty;
+          acc.client += qty * clientPrice;
+          acc.installer += qty * installerPrice;
+          return acc;
+        },
+        { rows: 0, qty: 0, client: 0, installer: 0 }
+      ),
+    [projectAddonPlan]
+  );
+  const projectUrgencyTotals = useMemo(
+    () =>
+      projectUrgencySurcharges.reduce(
+        (acc, item) => {
+          acc.rows += 1;
+          acc.client += Number(item.client_amount) || 0;
+          acc.installer += Number(item.installer_amount) || 0;
+          if (item.scope === "ORDER_NUMBER") {
+            acc.orderScoped += 1;
+          }
+          return acc;
+        },
+        { rows: 0, client: 0, installer: 0, orderScoped: 0 }
+      ),
+    [projectUrgencySurcharges]
+  );
   const projectRiskDrilldown = projectRiskDrilldownQuery.data;
   const topProjectsMargin = topProjectsMarginQuery.data?.items || [];
   const riskProjectsMargin = riskProjectsMarginQuery.data?.items || [];
@@ -1951,6 +2037,62 @@ export default function ReportsPage() {
       : scopedInstallerId
         ? t("reports.scopedInstaller").replace("{id}", scopedInstallerId)
         : null;
+  const reportsJumpLinks = [
+    {
+      label: copy("Open Operations SLA", "Открыть SLA операций", "פתח SLA תפעולי"),
+      target: "reports-operations-sla",
+    },
+    {
+      label: copy("Open Plan vs Fact", "Открыть план / факт", "פתח תכנון מול ביצוע"),
+      target: "reports-project-plan-fact",
+    },
+    {
+      label: copy("Open Project Risk", "Открыть риск проекта", "פתח סיכון פרויקט"),
+      target: "reports-project-risk-drilldown",
+    },
+    {
+      label: copy("Open Installers KPI", "Открыть KPI монтажников", "פתח KPI מתקינים"),
+      target: "reports-installers-kpi",
+    },
+  ];
+
+  const refetchAllReports = () => {
+    void Promise.all([
+      alertsQuery.refetch(),
+      deliveryQuery.refetch(),
+      outboxSummaryQuery.refetch(),
+      operationsCenterQuery.refetch(),
+      operationsSlaQuery.refetch(),
+      operationsSlaHistoryQuery.refetch(),
+      issuesAnalyticsQuery.refetch(),
+      issuesAddonsImpactQuery.refetch(),
+      riskConcentrationQuery.refetch(),
+      installerProfitabilityMatrixQuery.refetch(),
+      installerProjectProfitabilityQuery.refetch(),
+      projectsQuery.refetch(),
+      projectPlanFactQuery.refetch(),
+      projectRiskDrilldownQuery.refetch(),
+      topProjectsMarginQuery.refetch(),
+      riskProjectsMarginQuery.refetch(),
+      installersKpiQuery.refetch(),
+      installerDetailsQuery.refetch(),
+      orderNumbersKpiQuery.refetch(),
+      failedOutboxQuery.refetch(),
+      auditCatalogsQuery.refetch(),
+      issueAuditQuery.refetch(),
+    ]);
+  };
+
+  const scrollToReportsSection = (targetId: string) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const element = document.getElementById(targetId);
+    if (!element) {
+      return;
+    }
+    element.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   useEffect(() => {
     if (projectOptions.length === 0) {
@@ -2173,128 +2315,168 @@ export default function ReportsPage() {
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
                 {t("reports.subtitle")}
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="metric-chip">
-                  {t("reports.unreadAlerts")} {unreadBadge}
-                </span>
-                <span className="metric-chip">
-                  {t("reports.focus")}{" "}
-                  {activeFocus ? reportsFocusCopy[activeFocus].title : t("reports.portfolio")}
-                </span>
-                <span className="metric-chip">
-                  {t("reports.privileged")}{" "}
-                  {canRunPrivilegedActions ? t("reports.enabled") : t("reports.readOnly")}
-                </span>
+            </div>
+            <div className="surface-subtle min-w-0 max-w-2xl space-y-4 p-4 sm:p-5 xl:min-w-[360px]">
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-2">
+                    <div className="text-[12px] leading-5 text-muted-foreground">
+                      {t("reports.helper")}
+                    </div>
+                    <div className="text-[12px] text-muted-foreground">
+                      {activeFocus
+                        ? copy("Focused view", "Активный фокус", "מיקוד פעיל")
+                        : t("reports.focus")}{" "}
+                      <span className="font-semibold text-foreground">
+                        {activeFocus
+                          ? copy("Applied", "Применён", "מוחל")
+                          : t("reports.portfolio")}
+                      </span>
+                      {" · "}
+                      <span>{copy("Unread:", "Непрочитано:", "לא נקראו:")}</span>{" "}
+                      <span className="font-semibold text-foreground">{unreadBadge}</span>
+                    </div>
+                  </div>
+                  <div className="inline-flex h-9 items-center gap-2 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px]">
+                    <BellRing className="h-4 w-4 text-accent" />
+                    <span className="text-muted-foreground">{t("reports.privileged")}:</span>
+                    <span className="font-semibold text-foreground">
+                      {canRunPrivilegedActions ? t("reports.enabled") : t("reports.readOnly")}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-border/70 bg-background/60 p-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {copy("Next step", "Следующий шаг", "השלב הבא")}
+                  </div>
+                  <div className="mt-1 text-[12px] leading-5 text-muted-foreground">
+                    {copy(
+                      "Refresh the slice, open the active queue, or go straight to operations.",
+                      "Обновите срез, откройте активную очередь или сразу перейдите в операции.",
+                      "רעננו את החתך, פתחו את התור הפעיל או עברו ישירות לאופרציות."
+                    )}
+                  </div>
+                  <div className={cn("mt-3 grid gap-2", canOpenOperations ? "sm:grid-cols-3" : "sm:grid-cols-1")}>
+                    <button
+                      type="button"
+                      onClick={refetchAllReports}
+                      className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium"
+                    >
+                      <RefreshCw className="h-4 w-4" strokeWidth={1.8} />
+                      {t("common.refresh")}
+                    </button>
+                    {canOpenOperations ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => router.push("/operations?actionable=1")}
+                          className="h-10 rounded-xl border border-border/70 bg-background/70 px-4 text-[13px] font-medium text-foreground"
+                        >
+                          {copy("Open actionable queue", "?????????????? ???????????????? ????????????", "?????? ?????? ????????")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => router.push("/operations")}
+                          className="h-10 rounded-xl border border-border/70 bg-background/70 px-4 text-[13px] font-medium text-foreground"
+                        >
+                          {copy("Go to operations", "?????????????? ?? ????????????????", "???????? ??????????????????")}
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed border-border/60 bg-background/45 px-3 py-2">
+                    <div className="text-[12px] text-muted-foreground">
+                      {copy(
+                        "Alert queue",
+                        "Очередь алертов",
+                        "תור ההתראות"
+                      )}{" "}
+                      <span className="font-semibold text-foreground">{unreadBadge}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => markReadMutation.mutate()}
+                      disabled={
+                        !canRunPrivilegedActions ||
+                        markReadMutation.isPending ||
+                        unreadCount === 0
+                      }
+                      title={ratesScopeHint}
+                      className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <CheckCheck className="h-4 w-4" strokeWidth={1.8} />
+                      {t("reports.markAllRead")}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-border/70 bg-background/60 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                      {copy("Saved views", "Сохранённые виды", "תצוגות שמורות")}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => exportExecutiveMutation.mutate()}
+                      disabled={!canExportFinancialReports || exportExecutiveMutation.isPending}
+                      title={privilegedActionHint}
+                      aria-label={t("reports.exportExecutiveCsv")}
+                      className="h-9 rounded-xl border border-border/70 bg-background/70 px-3 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {t("reports.exportExecutiveCsv")}
+                    </button>
+                  </div>
+                  <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+                    <input
+                      aria-label={t("reports.presetName")}
+                      value={presetName}
+                      onChange={(e) => setPresetName(e.target.value)}
+                      placeholder={t("reports.savePreset")}
+                      className="h-10 min-w-0 rounded-xl border border-border/70 bg-background/80 px-3 text-[13px]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSavePreset}
+                      className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
+                    >
+                      {t("reports.savePreset")}
+                    </button>
+                  </div>
+                  <div className="mt-2 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+                    <select
+                      aria-label="Saved Presets"
+                      value={selectedPresetId}
+                      onChange={(e) => setSelectedPresetId(e.target.value)}
+                      className="h-10 min-w-0 rounded-xl border border-border/70 bg-background/80 px-2 text-[13px]"
+                    >
+                      <option value="">{t("reports.savedPresets")}</option>
+                      {savedPresets.map((preset) => (
+                        <option key={preset.id} value={preset.id}>
+                          {preset.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleApplySelectedPreset}
+                      className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
+                    >
+                      {t("reports.applyPreset")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteSelectedPreset}
+                      className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
+                    >
+                      {t("reports.deletePreset")}
+                    </button>
+                  </div>
+                </div>
+
+                </div>
               </div>
             </div>
-            <div className="surface-subtle min-w-0 max-w-2xl space-y-3 p-4 sm:p-5 xl:min-w-[320px]">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="text-[12px] leading-5 text-muted-foreground">
-                  {t("reports.helper")}
-                </div>
-                <div className="inline-flex h-9 items-center gap-2 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px]">
-                  <BellRing className="h-4 w-4 text-accent" />
-                  <span className="text-muted-foreground">{t("reports.unread")}:</span>
-                  <span className="font-semibold text-foreground">{unreadBadge}</span>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-              <input
-                aria-label={t("reports.presetName")}
-                value={presetName}
-                onChange={(e) => setPresetName(e.target.value)}
-                placeholder={t("reports.savePreset")}
-                className="h-10 min-w-0 flex-1 rounded-xl border border-border/70 bg-background/80 px-3 text-[13px] sm:min-w-[180px]"
-              />
-              <button
-                type="button"
-                onClick={handleSavePreset}
-                className="h-10 w-full rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium sm:w-auto"
-              >
-                {t("reports.savePreset")}
-              </button>
-              <select
-                aria-label="Saved Presets"
-                value={selectedPresetId}
-                onChange={(e) => setSelectedPresetId(e.target.value)}
-                className="h-10 min-w-0 flex-1 rounded-xl border border-border/70 bg-background/80 px-2 text-[13px] sm:min-w-[180px]"
-              >
-                <option value="">{t("reports.savedPresets")}</option>
-                {savedPresets.map((preset) => (
-                  <option key={preset.id} value={preset.id}>
-                    {preset.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={handleApplySelectedPreset}
-                className="h-10 w-full rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium sm:w-auto"
-              >
-                {t("reports.applyPreset")}
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteSelectedPreset}
-                className="h-10 w-full rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium sm:w-auto"
-              >
-                {t("reports.deletePreset")}
-              </button>
-              </div>
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <button
-              onClick={() => {
-                void Promise.all([
-                  alertsQuery.refetch(),
-                  deliveryQuery.refetch(),
-                  outboxSummaryQuery.refetch(),
-                  operationsCenterQuery.refetch(),
-                  operationsSlaQuery.refetch(),
-                  operationsSlaHistoryQuery.refetch(),
-                  issuesAnalyticsQuery.refetch(),
-                  issuesAddonsImpactQuery.refetch(),
-                  riskConcentrationQuery.refetch(),
-                  installerProfitabilityMatrixQuery.refetch(),
-                  installerProjectProfitabilityQuery.refetch(),
-                  projectsQuery.refetch(),
-                  projectPlanFactQuery.refetch(),
-                  projectRiskDrilldownQuery.refetch(),
-                  topProjectsMarginQuery.refetch(),
-                  riskProjectsMarginQuery.refetch(),
-                  installersKpiQuery.refetch(),
-                  installerDetailsQuery.refetch(),
-                  orderNumbersKpiQuery.refetch(),
-                  failedOutboxQuery.refetch(),
-                  auditCatalogsQuery.refetch(),
-                  issueAuditQuery.refetch(),
-                ]);
-              }}
-                  className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium"
-                >
-                  <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
-                  {t("common.refresh")}
-                </button>
-                <button
-                  onClick={() => exportExecutiveMutation.mutate()}
-                  disabled={!canRunPrivilegedActions || exportExecutiveMutation.isPending}
-                  title={privilegedActionHint}
-                  aria-label={t("reports.exportExecutiveCsv")}
-                  className="h-10 rounded-xl border border-border/70 bg-background/70 px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {t("reports.exportExecutiveCsv")}
-                </button>
-                <button
-                  onClick={() => markReadMutation.mutate()}
-                  disabled={!canRunPrivilegedActions || markReadMutation.isPending || unreadCount === 0}
-                  title={privilegedActionHint}
-                  className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <CheckCheck className="w-4 h-4" strokeWidth={1.8} />
-                  {t("reports.markAllRead")}
-                </button>
-              </div>
-            </div>
-          </div>
         </section>
 
         {alertsQuery.isError && (
@@ -2771,7 +2953,7 @@ export default function ReportsPage() {
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     {tt("reports.openTotal")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">
+                  <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
                     {issuesAnalytics?.summary.open_issues ?? 0} /{" "}
                     {issuesAnalytics?.summary.total_issues ?? 0}
                   </div>
@@ -2794,7 +2976,7 @@ export default function ReportsPage() {
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     MTTR (h)
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">
+                  <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
                     {issuesAnalytics?.summary.mttr_hours ?? 0}
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
@@ -2913,7 +3095,7 @@ export default function ReportsPage() {
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     {tt("reports.openIssuesAtRisk")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">
+                  <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
                     {issuesAddonsImpact?.summary?.open_issues ?? 0}
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
@@ -2941,7 +3123,7 @@ export default function ReportsPage() {
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     {tt("reports.delayedDoors")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">
+                  <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
                     {issuesAddonsImpact?.summary?.not_installed_doors ?? 0}
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
@@ -2976,7 +3158,7 @@ export default function ReportsPage() {
                   </thead>
                   <tbody>
                     <tr className="border-t border-border/70">
-                      <td className="px-3 py-2 font-medium text-foreground">{tt("reports.openIssuesExposure")}</td>
+                      <td className="px-3 py-2.5 font-medium text-foreground">{tt("reports.openIssuesExposure")}</td>
                       <td className="px-3 py-2 text-right">
                         {formatAmount(issuesAddonsImpact?.summary?.open_issue_revenue_at_risk)}
                       </td>
@@ -2988,7 +3170,7 @@ export default function ReportsPage() {
                       </td>
                     </tr>
                     <tr className="border-t border-border/70">
-                      <td className="px-3 py-2 font-medium text-foreground">{tt("reports.delayedNotInstalled")}</td>
+                      <td className="px-3 py-2.5 font-medium text-foreground">{tt("reports.delayedNotInstalled")}</td>
                       <td className="px-3 py-2 text-right">
                         {formatAmount(issuesAddonsImpact?.summary?.delayed_revenue_total)}
                       </td>
@@ -3000,7 +3182,7 @@ export default function ReportsPage() {
                       </td>
                     </tr>
                     <tr className="border-t border-border/70">
-                      <td className="px-3 py-2 font-medium text-foreground">{tt("reports.addonRealized")}</td>
+                      <td className="px-3 py-2.5 font-medium text-foreground">{tt("reports.addonRealized")}</td>
                       <td className="px-3 py-2 text-right">
                         {formatAmount(issuesAddonsImpact?.summary?.addon_revenue_total)}
                       </td>
@@ -3042,7 +3224,7 @@ export default function ReportsPage() {
                             key={item.reason_id || item.reason_name}
                             className="border-t border-border/70"
                           >
-                            <td className="px-3 py-2 font-medium text-foreground">
+                            <td className="px-3 py-2.5 font-medium text-foreground">
                               {item.reason_name}
                             </td>
                             <td className="px-3 py-2 text-right">{item.doors}</td>
@@ -3085,7 +3267,7 @@ export default function ReportsPage() {
                             key={item.addon_type_id || item.addon_name}
                             className="border-t border-border/70"
                           >
-                            <td className="px-3 py-2 font-medium text-foreground">
+                            <td className="px-3 py-2.5 font-medium text-foreground">
                               {item.addon_name}
                             </td>
                             <td className="px-3 py-2 text-right">
@@ -3228,7 +3410,7 @@ export default function ReportsPage() {
                     </thead>
                     <tbody>
                       <tr className="border-t border-border/70">
-                        <td className="px-3 py-2 font-medium text-foreground">{t("reports.revenue")}</td>
+                        <td className="px-3 py-2.5 font-medium text-foreground">{t("reports.revenue")}</td>
                         <td className="px-3 py-2 text-right">
                           {formatAmount(projectPlanFact.planned_revenue_total)}
                         </td>
@@ -3240,7 +3422,7 @@ export default function ReportsPage() {
                         </td>
                       </tr>
                       <tr className="border-t border-border/70">
-                        <td className="px-3 py-2 font-medium text-foreground">{tt("reports.payroll")}</td>
+                        <td className="px-3 py-2.5 font-medium text-foreground">{tt("reports.payroll")}</td>
                         <td className="px-3 py-2 text-right">
                           {formatAmount(projectPlanFact.planned_payroll_total)}
                         </td>
@@ -3252,7 +3434,7 @@ export default function ReportsPage() {
                         </td>
                       </tr>
                       <tr className="border-t border-border/70">
-                        <td className="px-3 py-2 font-medium text-foreground">{copy("Profit", "Прибыль", "רווח")}</td>
+                        <td className="px-3 py-2.5 font-medium text-foreground">{copy("Profit", "Прибыль", "רווח")}</td>
                         <td className="px-3 py-2 text-right">
                           {formatAmount(projectPlanFact.planned_profit_total)}
                         </td>
@@ -3265,6 +3447,182 @@ export default function ReportsPage() {
                       </tr>
                     </tbody>
                   </table>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                  <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="max-w-[32rem]">
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                          {copy("Additional Works Plan", "План доп. работ", "תוכנית עבודות נוספות")}
+                        </div>
+                        <div className="mt-1 text-[12px] text-muted-foreground">
+                          {copy(
+                            "Planned add-on rows that should later reconcile with installer facts.",
+                            "Плановые строки доп. работ, которые позже должны сойтись с фактами монтажника.",
+                            "שורות add-on מתוכננות שאמורות בהמשך להתאזן מול דיווחי המתקין."
+                          )}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border/70 bg-background/70 px-3 py-2 text-right text-[12px] text-muted-foreground">
+                        {copy("Rows", "Строки", "שורות")}: {projectAddonPlanTotals.rows}
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                          {copy("Qty planned", "План", "כמות")}
+                        </div>
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{formatAmount(projectAddonPlanTotals.qty)}</div>
+                      </div>
+                      <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                          {copy("Client total", "Сумма клиента", "סה\"כ לקוח")}
+                        </div>
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{formatAmount(projectAddonPlanTotals.client)}</div>
+                      </div>
+                      <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                          {copy("Installer total", "Сумма монтажника", "סה\"כ מתקין")}
+                        </div>
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{formatAmount(projectAddonPlanTotals.installer)}</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 overflow-auto rounded-lg border border-border">
+                      <table className="min-w-[520px] w-full text-[12px] leading-5">
+                        <thead className="bg-muted/40 text-muted-foreground">
+                          <tr>
+                            <th className="px-3 py-2.5 text-left font-medium">{tt("reports.addon")}</th>
+                            <th className="px-3 py-2.5 text-right font-medium">{copy("Qty", "Кол-во", "כמות")}</th>
+                            <th className="px-3 py-2.5 text-right font-medium">{copy("Client", "Клиент", "לקוח")}</th>
+                            <th className="px-3 py-2.5 text-right font-medium">{copy("Installer", "Монтажник", "מתקין")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {projectAddonPlanQuery.isLoading ? (
+                            <tr>
+                              <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                                {copy(
+                                  "Loading additional works plan...",
+                                  "Загружаем план доп. работ...",
+                                  "טוען תוכנית עבודות נוספות..."
+                                )}
+                              </td>
+                            </tr>
+                          ) : projectAddonPlan.length === 0 ? (
+                            <tr>
+                              <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                                {copy(
+                                  "No planned additional works for this project.",
+                                  "Для этого проекта нет запланированных доп. работ.",
+                                  "אין עבודות נוספות מתוכננות לפרויקט זה."
+                                )}
+                              </td>
+                            </tr>
+                          ) : (
+                            projectAddonPlan.slice(0, 4).map((item, index) => (
+                              <tr key={item.id || `${item.addon_type_id}-${index}`} className="border-t border-border/70">
+                                <td className="px-3 py-2.5 font-medium text-foreground">
+                                  {item.addon_name || item.addon_type_id}
+                                </td>
+                                <td className="px-3 py-2.5 text-right tabular-nums">{formatAmount(Number(item.qty_planned) || 0)}</td>
+                                <td className="px-3 py-2.5 text-right tabular-nums">{formatAmount(Number(item.client_price) || 0)}</td>
+                                <td className="px-3 py-2.5 text-right tabular-nums">{formatAmount(Number(item.installer_price) || 0)}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="max-w-[32rem]">
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                          {copy("Urgency Surcharge", "Срочная надбавка", "תוספת דחיפות")}
+                        </div>
+                        <div className="mt-1 text-[12px] text-muted-foreground">
+                          {copy(
+                            "Separate urgency uplift rows that should stay visible in project commercial review.",
+                            "Отдельные строки срочной надбавки, которые должны быть видимы в коммерческом разборе проекта.",
+                            "שורות תוספת דחיפות נפרדות שצריכות להישאר גלויות בבדיקה המסחרית של הפרויקט."
+                          )}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border/70 bg-background/70 px-3 py-2 text-right text-[12px] text-muted-foreground">
+                        {copy("Rows", "Строки", "שורות")}: {projectUrgencyTotals.rows}
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                          {copy("Order-scoped", "По заказу", "לפי הזמנה")}
+                        </div>
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{projectUrgencyTotals.orderScoped}</div>
+                      </div>
+                      <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                          {copy("Client uplift", "Надбавка клиента", "תוספת לקוח")}
+                        </div>
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{formatAmount(projectUrgencyTotals.client)}</div>
+                      </div>
+                      <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                          {copy("Installer uplift", "Надбавка монтажника", "תוספת מתקין")}
+                        </div>
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{formatAmount(projectUrgencyTotals.installer)}</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 overflow-auto rounded-lg border border-border">
+                      <table className="min-w-[520px] w-full text-[12px] leading-5">
+                        <thead className="bg-muted/40 text-muted-foreground">
+                          <tr>
+                            <th className="px-3 py-2.5 text-left font-medium">{copy("Scope", "Скоуп", "היקף")}</th>
+                            <th className="px-3 py-2.5 text-left font-medium">{copy("Reason", "Причина", "סיבה")}</th>
+                            <th className="px-3 py-2.5 text-right font-medium">{copy("Client", "Клиент", "לקוח")}</th>
+                            <th className="px-3 py-2.5 text-right font-medium">{copy("Installer", "Монтажник", "מתקין")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {projectUrgencySurchargesQuery.isLoading ? (
+                            <tr>
+                              <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                                {copy(
+                                  "Loading urgency surcharge rows...",
+                                  "Загружаем строки срочной надбавки...",
+                                  "טוען שורות תוספת דחיפות..."
+                                )}
+                              </td>
+                            </tr>
+                          ) : projectUrgencySurcharges.length === 0 ? (
+                            <tr>
+                              <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                                {copy(
+                                  "No urgency surcharge rows for this project.",
+                                  "Для этого проекта нет строк срочной надбавки.",
+                                  "אין שורות תוספת דחיפות לפרויקט זה."
+                                )}
+                              </td>
+                            </tr>
+                          ) : (
+                            projectUrgencySurcharges.slice(0, 4).map((item, index) => (
+                              <tr key={item.id || `${item.scope}-${index}`} className="border-t border-border/70">
+                                <td className="px-3 py-2.5">
+                                  {item.scope === "ORDER_NUMBER"
+                                    ? `${copy("Order", "Заказ", "הזמנה")}${item.order_number ? ` • ${item.order_number}` : ""}`
+                                    : copy("Project", "Проект", "פרויקט")}
+                                </td>
+                                <td className="px-3 py-2.5 font-medium text-foreground">{item.reason}</td>
+                                <td className="px-3 py-2.5 text-right tabular-nums">{formatAmount(Number(item.client_amount) || 0)}</td>
+                                <td className="px-3 py-2.5 text-right tabular-nums">{formatAmount(Number(item.installer_amount) || 0)}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -3423,7 +3781,7 @@ export default function ReportsPage() {
                               key={item.reason_id || item.reason_name}
                               className="border-t border-border/70"
                             >
-                              <td className="px-3 py-2 font-medium text-foreground">
+                              <td className="px-3 py-2.5 font-medium text-foreground">
                                 {item.reason_name}
                               </td>
                               <td className="px-3 py-2 text-right">{item.doors}</td>
@@ -3460,7 +3818,7 @@ export default function ReportsPage() {
                         ) : (
                           (projectRiskDrilldown.risky_orders || []).map((item) => (
                             <tr key={item.order_number} className="border-t border-border/70">
-                              <td className="px-3 py-2 font-medium text-foreground">
+                              <td className="px-3 py-2.5 font-medium text-foreground">
                                 {item.order_number}
                               </td>
                               <td className="px-3 py-2 text-right">
@@ -3526,7 +3884,7 @@ export default function ReportsPage() {
                     ) : (
                       topProjectsMargin.map((item) => (
                         <tr key={`top-${item.project_id}`} className="border-t border-border/70">
-                          <td className="px-3 py-2">
+                          <td className="px-3 py-2.5">
                             <div className="font-medium text-foreground">{item.project_name}</div>
                             <div className="text-[11px] text-muted-foreground">
                               {tt("reports.statusIssues")
@@ -3585,7 +3943,7 @@ export default function ReportsPage() {
                     ) : (
                       riskProjectsMargin.map((item) => (
                         <tr key={`risk-${item.project_id}`} className="border-t border-border/70">
-                          <td className="px-3 py-2">
+                          <td className="px-3 py-2.5">
                             <div className="font-medium text-foreground">{item.project_name}</div>
                             <div className="text-[11px] text-muted-foreground">
                               {tt("reports.completionIssues")
@@ -3731,7 +4089,7 @@ export default function ReportsPage() {
                       ) : (
                         (riskConcentration?.projects || []).map((item) => (
                           <tr key={item.project_id} className="border-t border-border/70">
-                            <td className="px-3 py-2">
+                            <td className="px-3 py-2.5">
                               <div className="font-medium text-foreground">{item.project_name}</div>
                               <div className="text-[11px] text-muted-foreground">
                                 Completion {formatPercent(item.completion_pct)}
@@ -3770,7 +4128,7 @@ export default function ReportsPage() {
                       ) : (
                         (riskConcentration?.orders || []).map((item) => (
                           <tr key={item.order_number} className="border-t border-border/70">
-                            <td className="px-3 py-2 font-medium text-foreground">
+                            <td className="px-3 py-2.5 font-medium text-foreground">
                               {item.order_number}
                             </td>
                             <td className="px-3 py-2 text-right">{formatAmount(item.profit_total)}</td>
@@ -3815,13 +4173,13 @@ export default function ReportsPage() {
                                 : "text-[hsl(var(--warning-foreground))] bg-[hsl(var(--warning)/0.12)] border-[hsl(var(--warning)/0.28)]";
                           return (
                             <tr key={item.installer_id} className="border-t border-border/70">
-                              <td className="px-3 py-2">
+                              <td className="px-3 py-2.5">
                                 <div className="font-medium text-foreground">{item.installer_name}</div>
                                 <div className="text-[11px] text-muted-foreground">
                                   Issues {item.open_issues}
                                 </div>
                               </td>
-                              <td className="px-3 py-2">
+                              <td className="px-3 py-2.5">
                                 <span
                                   className={cn(
                                     "inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold",
@@ -3931,7 +4289,7 @@ export default function ReportsPage() {
                           : "text-[hsl(var(--warning-foreground))] bg-[hsl(var(--warning)/0.12)] border-[hsl(var(--warning)/0.28)]";
                     return (
                       <tr key={item.installer_id} className="border-t border-border/70">
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2.5">
                           <div className="font-medium text-foreground">{item.installer_name}</div>
                           <div className="text-[11px] text-muted-foreground">
                             {tt("reports.projectsAddons")
@@ -3939,7 +4297,7 @@ export default function ReportsPage() {
                               .replace("{addons}", formatAmount(item.addons_done_qty))}
                           </div>
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2.5">
                           <span
                             className={cn(
                               "inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold",
@@ -4067,11 +4425,11 @@ export default function ReportsPage() {
                         key={`${item.installer_id}-${item.project_id}`}
                         className="border-t border-border/70"
                       >
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2.5">
                           <div className="font-medium text-foreground">{item.installer_name}</div>
                           <div className="text-[11px] text-muted-foreground">{item.project_name}</div>
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2.5">
                           <span
                             className={cn(
                               "inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold",
@@ -4142,8 +4500,8 @@ export default function ReportsPage() {
               </select>
               <button
                 onClick={() => exportInstallersKpiMutation.mutate()}
-                disabled={!canRunPrivilegedActions || exportInstallersKpiMutation.isPending}
-                title={privilegedActionHint}
+                disabled={!canExportFinancialReports || exportInstallersKpiMutation.isPending}
+                title={ratesScopeHint}
                 className="h-9 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
               >
                 {tt("reports.exportInstallersCsv")}
@@ -4379,7 +4737,7 @@ export default function ReportsPage() {
                         ) : (
                           installerDetails.top_projects.map((item) => (
                             <tr key={item.project_id} className="border-t border-border/70">
-                              <td className="px-3 py-2">
+                              <td className="px-3 py-2.5">
                                 <div className="font-medium text-foreground">{item.project_name}</div>
                                 <div className="text-[11px] text-muted-foreground">
                                   {item.last_installed_at
@@ -4423,7 +4781,7 @@ export default function ReportsPage() {
                         ) : (
                           installerDetails.order_breakdown.map((item) => (
                             <tr key={item.order_number} className="border-t border-border/70">
-                              <td className="px-3 py-2 font-medium text-foreground">
+                              <td className="px-3 py-2.5 font-medium text-foreground">
                                 {item.order_number}
                               </td>
                               <td className="px-3 py-2 text-right">{item.installed_doors}</td>
@@ -4516,8 +4874,8 @@ export default function ReportsPage() {
               </select>
               <button
                 onClick={() => exportOrderNumbersKpiMutation.mutate()}
-                disabled={!canRunPrivilegedActions || exportOrderNumbersKpiMutation.isPending}
-                title={privilegedActionHint}
+                disabled={!canExportFinancialReports || exportOrderNumbersKpiMutation.isPending}
+                title={ratesScopeHint}
                 className="h-9 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
               >
                 {tt("reports.exportOrdersCsv")}
@@ -5372,3 +5730,4 @@ export default function ReportsPage() {
     </DashboardLayout>
   );
 }
+

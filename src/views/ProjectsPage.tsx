@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   AlertCircle,
@@ -7,12 +7,24 @@ import {
   FileSpreadsheet,
   FilterX,
   Layers3,
+  Plus,
   RefreshCw,
   Search,
   Upload,
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -84,6 +96,84 @@ type DoorType = {
   code: string;
   name: string;
   is_active: boolean;
+};
+
+type LibraryProductItem = {
+  id: string;
+  sku: string;
+  name_ru: string;
+  name_he: string;
+  install_type: string;
+  manufacturer: string | null;
+  unit: string;
+  status: string;
+};
+
+type InstallerListItem = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  status: string;
+  is_active: boolean;
+};
+
+type AddonTypeItem = {
+  id: string;
+  name: string;
+  unit: string;
+  status?: string;
+};
+
+type ProjectAddonPlanItem = {
+  id?: string;
+  addon_type_id: string;
+  addon_name?: string | null;
+  qty_planned: string | number;
+  client_price: string | number;
+  installer_price: string | number;
+  notes?: string | null;
+};
+
+type ManualDoorFormState = {
+  product_id: string;
+  door_code: string;
+  unit: string;
+  floor: string;
+  location_code: string;
+  order_number: string;
+  install_type: string;
+  is_critical: boolean;
+  assigned_installer_id: string;
+  planned_install_date: string;
+};
+
+type AdditionalWorkFormState = {
+  addon_type_id: string;
+  qty_planned: string;
+  client_price: string;
+  installer_price: string;
+  notes: string;
+};
+
+type UrgencySurchargeItem = {
+  id?: string;
+  scope: "PROJECT" | "ORDER_NUMBER";
+  order_number?: string | null;
+  reason: string;
+  client_amount: string | number;
+  installer_amount: string | number;
+  effective_date?: string | null;
+  notes?: string | null;
+};
+
+type UrgencySurchargeFormState = {
+  scope: "PROJECT" | "ORDER_NUMBER";
+  order_number: string;
+  reason: string;
+  client_amount: string;
+  installer_amount: string;
+  effective_date: string;
+  notes: string;
 };
 
 type LayoutDoor = {
@@ -282,6 +372,43 @@ type ProjectImportRunItem = {
 type ProjectImportRunsResponse = {
   items: ProjectImportRunItem[];
 };
+
+function emptyManualDoorForm(): ManualDoorFormState {
+  return {
+    product_id: "",
+    door_code: "",
+    unit: "",
+    floor: "",
+    location_code: "",
+    order_number: "",
+    install_type: "",
+    is_critical: false,
+    assigned_installer_id: "",
+    planned_install_date: "",
+  };
+}
+
+function emptyAdditionalWorkForm(): AdditionalWorkFormState {
+  return {
+    addon_type_id: "",
+    qty_planned: "1",
+    client_price: "",
+    installer_price: "",
+    notes: "",
+  };
+}
+
+function emptyUrgencySurchargeForm(): UrgencySurchargeFormState {
+  return {
+    scope: "PROJECT",
+    order_number: "",
+    reason: "",
+    client_amount: "",
+    installer_amount: "",
+    effective_date: "",
+    notes: "",
+  };
+}
 
 type ProjectImportRunDetails = ProjectImportRunItem & {
   errors: Array<{ row: number; message: string }>;
@@ -533,9 +660,55 @@ export default function ProjectsPage() {
   const tt = (key: string) => projectsOverrides[locale]?.[key] ?? t(key);
   const copy = (en: string, ru: string, he: string) =>
     locale === "ru" ? ru : locale === "he" ? he : en;
+  const tokenLabel = (value: string) => {
+    const normalized = value.trim().toUpperCase();
+    switch (normalized) {
+      case "PROBLEM":
+        return copy("PROBLEM", "Проблема", "בעיה");
+      case "OK":
+        return copy("OK", "Норма", "תקין");
+      case "SUCCESS":
+        return copy("SUCCESS", "Успешно", "הצליח");
+      case "FAILED":
+        return copy("FAILED", "Ошибка", "נכשל");
+      case "PARTIAL":
+        return copy("PARTIAL", "Частично", "חלקי");
+      case "ANALYZED":
+        return copy("ANALYZED", "Анализ", "נותח");
+      case "OPEN":
+        return copy("OPEN", "Открыто", "פתוח");
+      case "BLOCKED":
+        return copy("BLOCKED", "Заблокировано", "חסום");
+      case "INSTALLED":
+        return copy("INSTALLED", "Установлено", "הותקן");
+      case "NOT_INSTALLED":
+        return copy("NOT_INSTALLED", "Не установлено", "לא הותקן");
+      case "LOCKED":
+        return copy("LOCKED", "Заблокировано", "נעול");
+      case "READY":
+        return copy("READY", "Готово", "מוכן");
+      case "DONE":
+        return copy("DONE", "Выполнено", "בוצע");
+      case "DANGER":
+        return copy("DANGER", "Опасно", "סכנה");
+      case "WARN":
+        return copy("WARN", "Риск", "אזהרה");
+      case "AT_RISK":
+        return copy("AT_RISK", "Под риском", "בסיכון");
+      case "UNASSIGNED":
+        return copy("UNASSIGNED", "Не назначено", "לא משויך");
+      default:
+        return value;
+    }
+  };
   const searchParams = useSearchParams();
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [doorTypes, setDoorTypes] = useState<DoorType[]>([]);
+  const [libraryProducts, setLibraryProducts] = useState<LibraryProductItem[]>([]);
+  const [installers, setInstallers] = useState<InstallerListItem[]>([]);
+  const [addonTypes, setAddonTypes] = useState<AddonTypeItem[]>([]);
+  const [projectAddonPlan, setProjectAddonPlan] = useState<ProjectAddonPlanItem[]>([]);
+  const [urgencySurcharges, setUrgencySurcharges] = useState<UrgencySurchargeItem[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [projectDetails, setProjectDetails] = useState<ProjectDetailsResponse | null>(null);
   const [layout, setLayout] = useState<ProjectDoorsLayoutResponse | null>(null);
@@ -544,11 +717,25 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadingDoorTypes, setLoadingDoorTypes] = useState(false);
+  const [loadingLibraryProducts, setLoadingLibraryProducts] = useState(false);
+  const [loadingInstallers, setLoadingInstallers] = useState(false);
+  const [loadingAddonTypes, setLoadingAddonTypes] = useState(false);
+  const [loadingProjectAddonPlan, setLoadingProjectAddonPlan] = useState(false);
+  const [loadingUrgencySurcharges, setLoadingUrgencySurcharges] = useState(false);
   const [loadingProjectDetails, setLoadingProjectDetails] = useState(false);
   const [loadingLayout, setLoadingLayout] = useState(false);
   const [loadingProjectPlanFact, setLoadingProjectPlanFact] = useState(false);
   const [loadingProjectRisk, setLoadingProjectRisk] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [manualDoorDialogOpen, setManualDoorDialogOpen] = useState(false);
+  const [manualDoorForm, setManualDoorForm] = useState<ManualDoorFormState>(emptyManualDoorForm());
+  const [manualDoorSubmitting, setManualDoorSubmitting] = useState(false);
+  const [additionalWorkDialogOpen, setAdditionalWorkDialogOpen] = useState(false);
+  const [additionalWorkForm, setAdditionalWorkForm] = useState<AdditionalWorkFormState>(emptyAdditionalWorkForm());
+  const [additionalWorkSubmitting, setAdditionalWorkSubmitting] = useState(false);
+  const [urgencyDialogOpen, setUrgencyDialogOpen] = useState(false);
+  const [urgencyForm, setUrgencyForm] = useState<UrgencySurchargeFormState>(emptyUrgencySurchargeForm());
+  const [urgencySubmitting, setUrgencySubmitting] = useState(false);
 
   const [importFile, setImportFile] = useState<File | null>(null);
   const [defaultDoorTypeId, setDefaultDoorTypeId] = useState("");
@@ -648,6 +835,55 @@ export default function ProjectsPage() {
     () => projects.find((p) => p.id === selectedProjectId) || null,
     [projects, selectedProjectId]
   );
+  const activeLibraryProducts = useMemo(
+    () => libraryProducts.filter((item) => item.status === "ACTIVE"),
+    [libraryProducts]
+  );
+  const activeInstallers = useMemo(
+    () => installers.filter((item) => item.is_active && item.status !== "ARCHIVED"),
+    [installers]
+  );
+  const selectedLibraryProduct = useMemo(
+    () => activeLibraryProducts.find((item) => item.id === manualDoorForm.product_id) || null,
+    [activeLibraryProducts, manualDoorForm.product_id]
+  );
+  const activeAddonTypes = useMemo(
+    () => addonTypes.filter((item) => item.status !== "ARCHIVED"),
+    [addonTypes]
+  );
+  const selectedAddonType = useMemo(
+    () => activeAddonTypes.find((item) => item.id === additionalWorkForm.addon_type_id) || null,
+    [activeAddonTypes, additionalWorkForm.addon_type_id]
+  );
+  const addonPlanTotals = useMemo(() => {
+    return projectAddonPlan.reduce(
+      (acc, item) => {
+        const qty = Number(item.qty_planned) || 0;
+        const client = Number(item.client_price) || 0;
+        const installer = Number(item.installer_price) || 0;
+        acc.rows += 1;
+        acc.qty += qty;
+        acc.client += qty * client;
+        acc.installer += qty * installer;
+        return acc;
+      },
+      { rows: 0, qty: 0, client: 0, installer: 0 }
+    );
+  }, [projectAddonPlan]);
+  const urgencyTotals = useMemo(() => {
+    return urgencySurcharges.reduce(
+      (acc, item) => {
+        acc.rows += 1;
+        acc.client += Number(item.client_amount) || 0;
+        acc.installer += Number(item.installer_amount) || 0;
+        if (item.scope === "ORDER_NUMBER") {
+          acc.orderScoped += 1;
+        }
+        return acc;
+      },
+      { rows: 0, client: 0, installer: 0, orderScoped: 0 }
+    );
+  }, [urgencySurcharges]);
 
   const filteredImportHistory = useMemo(() => {
     return importHistory.filter((run) => {
@@ -1097,6 +1333,50 @@ export default function ProjectsPage() {
     }
   };
 
+  const loadLibraryProducts = async () => {
+    setLoadingLibraryProducts(true);
+    try {
+      const response = await apiFetch<LibraryProductItem[] | { items?: LibraryProductItem[] }>(
+        "/api/v1/admin/library?status=ACTIVE&limit=500"
+      );
+      setLibraryProducts(Array.isArray(response) ? response : response.items || []);
+    } catch {
+      setLibraryProducts([]);
+    } finally {
+      setLoadingLibraryProducts(false);
+    }
+  };
+
+  const loadInstallers = async () => {
+    setLoadingInstallers(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("limit", "500");
+      const response = await apiFetch<InstallerListItem[] | { items?: InstallerListItem[] }>(
+        `/api/v1/admin/installers?${params.toString()}`
+      );
+      setInstallers(Array.isArray(response) ? response : response.items || []);
+    } catch {
+      setInstallers([]);
+    } finally {
+      setLoadingInstallers(false);
+    }
+  };
+
+  const loadAddonTypes = async () => {
+    setLoadingAddonTypes(true);
+    try {
+      const response = await apiFetch<AddonTypeItem[] | { items?: AddonTypeItem[] }>(
+        "/api/v1/admin/addons/types?limit=500"
+      );
+      setAddonTypes(Array.isArray(response) ? response : response.items || []);
+    } catch {
+      setAddonTypes([]);
+    } finally {
+      setLoadingAddonTypes(false);
+    }
+  };
+
   const loadMappingProfiles = async () => {
     setLoadingMappingProfiles(true);
     try {
@@ -1180,6 +1460,34 @@ export default function ProjectsPage() {
     }
   };
 
+  const loadProjectAddonPlan = async (projectId: string) => {
+    setLoadingProjectAddonPlan(true);
+    try {
+      const response = await apiFetch<ProjectAddonPlanItem[] | { items?: ProjectAddonPlanItem[] }>(
+        `/api/v1/admin/projects/${projectId}/addons/plan`
+      );
+      setProjectAddonPlan(Array.isArray(response) ? response : response.items || []);
+    } catch {
+      setProjectAddonPlan([]);
+    } finally {
+      setLoadingProjectAddonPlan(false);
+    }
+  };
+
+  const loadUrgencySurcharges = async (projectId: string) => {
+    setLoadingUrgencySurcharges(true);
+    try {
+      const response = await apiFetch<UrgencySurchargeItem[] | { items?: UrgencySurchargeItem[] }>(
+        `/api/v1/admin/projects/${projectId}/urgency-surcharges`
+      );
+      setUrgencySurcharges(Array.isArray(response) ? response : response.items || []);
+    } catch {
+      setUrgencySurcharges([]);
+    } finally {
+      setLoadingUrgencySurcharges(false);
+    }
+  };
+
   const loadImportHistory = async (projectId: string) => {
     setLoadingImportHistory(true);
     try {
@@ -1252,9 +1560,27 @@ export default function ProjectsPage() {
   useEffect(() => {
     void loadProjects();
     void loadDoorTypes();
+    void loadLibraryProducts();
+    void loadInstallers();
+    void loadAddonTypes();
     void loadMappingProfiles();
     void loadFailedQueue();
   }, []);
+
+  useEffect(() => {
+    if (!selectedLibraryProduct) {
+      return;
+    }
+    setManualDoorForm((prev) => {
+      if (prev.install_type.trim()) {
+        return prev;
+      }
+      return {
+        ...prev,
+        install_type: selectedLibraryProduct.install_type || "",
+      };
+    });
+  }, [selectedLibraryProduct]);
 
   useEffect(() => {
     if (projects.length === 0 || deepLinkApplied) {
@@ -1301,11 +1627,15 @@ export default function ProjectsPage() {
       void loadLayout(selectedProjectId);
       void loadProjectPlanFact(selectedProjectId);
       void loadProjectRisk(selectedProjectId);
+      void loadProjectAddonPlan(selectedProjectId);
+      void loadUrgencySurcharges(selectedProjectId);
       void loadImportHistory(selectedProjectId);
     } else {
       setProjectDetails(null);
       setProjectPlanFact(null);
       setProjectRisk(null);
+      setProjectAddonPlan([]);
+      setUrgencySurcharges([]);
       setImportHistory([]);
       setFocusedImportRunDetails(null);
     }
@@ -1608,6 +1938,186 @@ export default function ProjectsPage() {
     setSelectedProjectId(projectId);
   };
 
+  const openManualDoorDialog = () => {
+    const nextForm = emptyManualDoorForm();
+    setManualDoorForm(nextForm);
+    setManualDoorDialogOpen(true);
+  };
+
+  const handleManualDoorSubmit = async () => {
+    if (!selectedProjectId) {
+      return;
+    }
+    if (!manualDoorForm.product_id || !manualDoorForm.door_code.trim() || !manualDoorForm.unit.trim()) {
+      setError(
+        copy(
+          "Choose a product and fill door code + unit before saving.",
+          "Выберите продукт и заполните код двери и unit перед сохранением.",
+          "בחר מוצר ומלא קוד דלת ו-unit לפני השמירה."
+        )
+      );
+      return;
+    }
+
+    setManualDoorSubmitting(true);
+    setError(null);
+    try {
+      await apiFetch(`/api/v1/admin/projects/${selectedProjectId}/doors`, {
+        method: "POST",
+        body: JSON.stringify({
+          ...manualDoorForm,
+          door_code: manualDoorForm.door_code.trim(),
+          unit: manualDoorForm.unit.trim(),
+          floor: manualDoorForm.floor.trim() || null,
+          location_code: manualDoorForm.location_code.trim() || null,
+          order_number: manualDoorForm.order_number.trim() || null,
+          install_type:
+            manualDoorForm.install_type.trim() ||
+            selectedLibraryProduct?.install_type ||
+            null,
+          assigned_installer_id: manualDoorForm.assigned_installer_id || null,
+          planned_install_date: manualDoorForm.planned_install_date || null,
+        }),
+      });
+      setManualDoorDialogOpen(false);
+      setManualDoorForm(emptyManualDoorForm());
+      await loadProjectDetails(selectedProjectId);
+      await loadLayout(selectedProjectId);
+      await loadProjectPlanFact(selectedProjectId);
+      await loadProjectRisk(selectedProjectId);
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : copy(
+              "Failed to create door.",
+              "Не удалось создать дверь.",
+              "יצירת הדלת נכשלה."
+            )
+      );
+    } finally {
+      setManualDoorSubmitting(false);
+    }
+  };
+
+  const openAdditionalWorkDialog = () => {
+    setAdditionalWorkForm(emptyAdditionalWorkForm());
+    setAdditionalWorkDialogOpen(true);
+  };
+
+  const handleAdditionalWorkSubmit = async () => {
+    if (!selectedProjectId) {
+      return;
+    }
+    if (
+      !additionalWorkForm.addon_type_id ||
+      !additionalWorkForm.qty_planned.trim() ||
+      !additionalWorkForm.client_price.trim() ||
+      !additionalWorkForm.installer_price.trim()
+    ) {
+      setError(
+        copy(
+          "Choose an add-on and fill qty + prices before saving.",
+          "Выберите доп. работу и заполните количество и цены перед сохранением.",
+          "בחר עבודת תוספת ומלא כמות ומחירים לפני השמירה."
+        )
+      );
+      return;
+    }
+
+    setAdditionalWorkSubmitting(true);
+    setError(null);
+    try {
+      await apiFetch(`/api/v1/admin/projects/${selectedProjectId}/addons/plan`, {
+        method: "POST",
+        body: JSON.stringify({
+          addon_type_id: additionalWorkForm.addon_type_id,
+          qty_planned: additionalWorkForm.qty_planned.trim(),
+          client_price: additionalWorkForm.client_price.trim(),
+          installer_price: additionalWorkForm.installer_price.trim(),
+          notes: additionalWorkForm.notes.trim() || null,
+        }),
+      });
+      setAdditionalWorkDialogOpen(false);
+      setAdditionalWorkForm(emptyAdditionalWorkForm());
+      await loadProjectAddonPlan(selectedProjectId);
+      await loadProjectPlanFact(selectedProjectId);
+      await loadProjectRisk(selectedProjectId);
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : copy(
+              "Failed to save additional work plan.",
+              "Не удалось сохранить план доп. работ.",
+              "שמירת תוכנית עבודות נוספות נכשלה."
+            )
+      );
+    } finally {
+      setAdditionalWorkSubmitting(false);
+    }
+  };
+
+  const openUrgencyDialog = () => {
+    setUrgencyForm(emptyUrgencySurchargeForm());
+    setUrgencyDialogOpen(true);
+  };
+
+  const handleUrgencySubmit = async () => {
+    if (!selectedProjectId) {
+      return;
+    }
+    if (
+      !urgencyForm.reason.trim() ||
+      !urgencyForm.client_amount.trim() ||
+      !urgencyForm.installer_amount.trim() ||
+      (urgencyForm.scope === "ORDER_NUMBER" && !urgencyForm.order_number.trim())
+    ) {
+      setError(
+        copy(
+          "Fill reason and both surcharge amounts. Order-scoped surcharge also needs an order number.",
+          "Заполните причину и обе суммы surcharge. Для surcharge по заказу также нужен номер заказа.",
+          "מלא סיבה ושני סכומי surcharge. עבור surcharge לפי הזמנה נדרש גם מספר הזמנה."
+        )
+      );
+      return;
+    }
+
+    setUrgencySubmitting(true);
+    setError(null);
+    try {
+      await apiFetch(`/api/v1/admin/projects/${selectedProjectId}/urgency-surcharges`, {
+        method: "POST",
+        body: JSON.stringify({
+          scope: urgencyForm.scope,
+          order_number: urgencyForm.scope === "ORDER_NUMBER" ? urgencyForm.order_number.trim() : null,
+          reason: urgencyForm.reason.trim(),
+          client_amount: urgencyForm.client_amount.trim(),
+          installer_amount: urgencyForm.installer_amount.trim(),
+          effective_date: urgencyForm.effective_date || null,
+          notes: urgencyForm.notes.trim() || null,
+        }),
+      });
+      setUrgencyDialogOpen(false);
+      setUrgencyForm(emptyUrgencySurchargeForm());
+      await loadUrgencySurcharges(selectedProjectId);
+      await loadProjectPlanFact(selectedProjectId);
+      await loadProjectRisk(selectedProjectId);
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : copy(
+              "Failed to save urgency surcharge.",
+              "Не удалось сохранить urgency surcharge.",
+              "שמירת urgency surcharge נכשלה."
+            )
+      );
+    } finally {
+      setUrgencySubmitting(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="motion-stagger readability-wrap max-w-[1500px] space-y-6 p-6 lg:p-8">
@@ -1628,9 +2138,6 @@ export default function ProjectsPage() {
                 <span className="metric-chip">
                   {tt("projects.selectedLabel")} {bulkSelectedProjectIds.length}
                 </span>
-                {deepLinkedFailedCount > 0 && (
-                  <span className="metric-chip">{tt("projects.failedHandoff")} {deepLinkedFailedCount}</span>
-                )}
               </div>
             </div>
             <div className="surface-subtle min-w-0 max-w-xl space-y-4 p-4 sm:p-5 xl:min-w-[320px]">
@@ -1648,6 +2155,7 @@ export default function ProjectsPage() {
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => {
                     void loadProjects();
                     void loadFailedQueue();
@@ -1664,32 +2172,6 @@ export default function ProjectsPage() {
                   <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
                   {t("common.refresh")}
                 </button>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {tt("common.search")}
-                  </div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">
-                    {search.trim() ? tt("common.filtered") : tt("common.portfolio")}
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {tt("projects.queue")}
-                  </div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">
-                    {failedQueue?.total || 0}
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {tt("common.mode")}
-                  </div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">
-                    {bulkOnlyFailedRuns ? tt("projects.retryFailed") : tt("projects.reconcileAll")}
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -1712,16 +2194,16 @@ export default function ProjectsPage() {
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
           <section className="surface-panel xl:col-span-1">
-            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-              <div>
+            <div className="mb-4">
+              <div className="min-w-0">
                 <div className="page-eyebrow">{tt("projects.projectList")}</div>
                 <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
                   {tt("projects.portfolioNavigator")}
                 </h2>
-              </div>
-              <div className="text-right text-[12px] text-muted-foreground">
-                <div>{tt("projects.filteredCount")} {filteredProjects.length}</div>
-                <div>{tt("projects.selectedCount")} {bulkSelectedProjectIds.length}</div>
+                <p className="mt-2 text-[13px] leading-6 text-muted-foreground">
+                  {tt("projects.filteredCount")} {filteredProjects.length} · {tt("projects.selectedCount")}{" "}
+                  {bulkSelectedProjectIds.length}
+                </p>
               </div>
             </div>
             <div className="relative mb-3">
@@ -1733,34 +2215,38 @@ export default function ProjectsPage() {
                 className="h-11 w-full rounded-xl border border-border/70 bg-background/80 pl-9 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/40"
               />
             </div>
-            <div className="surface-subtle mb-3 space-y-2 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <label className="inline-flex items-center gap-2 text-[12px] text-muted-foreground">
+            <div className="surface-subtle mb-3 space-y-3 p-3">
+              <div className="text-[12px] font-medium text-foreground">{locale === "ru" ? "\u041c\u0430\u0441\u0441\u043e\u0432\u044b\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f" : locale === "he" ? "\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05e8\u05d5\u05d1\u05d5\u05ea" : "Batch actions"}</div>
+              <div className="space-y-3">
+                <label className="inline-flex items-start gap-2 text-[12px] leading-snug text-muted-foreground">
                   <input
                     type="checkbox"
                     checked={allFilteredSelected}
                     onChange={(e) => toggleSelectAllFilteredProjects(e.target.checked)}
+                    className="mt-0.5"
                   />
                   {tt("projects.selectAllFiltered")} ({filteredProjects.length})
                 </label>
-                <div className="flex items-center gap-2">
+                <div className="grid gap-2 sm:grid-cols-2">
                   <button
+                    type="button"
                     onClick={() => {
                       void handleBulkReview();
                     }}
                     disabled={bulkReviewLoading || bulkSelectedProjectIds.length === 0}
-                    className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex min-h-10 items-center justify-center rounded-xl border border-border/70 bg-background/70 px-4 text-center text-[12px] font-medium leading-tight disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {bulkReviewLoading
                       ? tt("projects.reviewing")
                       : `${tt("projects.reviewSelected")} (${bulkSelectedProjectIds.length})`}
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       void handleBulkReconcile();
                     }}
                     disabled={bulkReconcileLoading || bulkSelectedProjectIds.length === 0}
-                    className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex min-h-10 items-center justify-center rounded-xl border border-border/70 bg-background/70 px-4 text-center text-[12px] font-medium leading-tight disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {bulkReconcileLoading
                       ? tt("projects.reconciling")
@@ -1770,14 +2256,16 @@ export default function ProjectsPage() {
                   </button>
                 </div>
               </div>
-              <label className="inline-flex items-center gap-2 text-[12px] text-muted-foreground">
-                <input
-                  type="checkbox"
-                  checked={bulkOnlyFailedRuns}
-                  onChange={(e) => setBulkOnlyFailedRuns(e.target.checked)}
-                />
-                {tt("projects.retryFailedLatestOnly")}
-              </label>
+              <div className="border-t border-border/70 pt-3">
+                <label className="inline-flex items-center gap-2 text-[12px] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={bulkOnlyFailedRuns}
+                    onChange={(e) => setBulkOnlyFailedRuns(e.target.checked)}
+                  />
+                  {tt("projects.retryFailedLatestOnly")}
+                </label>
+              </div>
             </div>
             <div className="space-y-2 max-h-[75vh] overflow-auto pr-1">
               {loadingProjects && (
@@ -1807,15 +2295,19 @@ export default function ProjectsPage() {
                         setFocusedImportRunDetails(null);
                       }}
                       className={cn(
-                        "w-full rounded-xl border px-3 py-3 text-left transition-all duration-200",
+                        "flex min-h-[110px] w-full flex-col justify-between rounded-xl border px-3 py-3 text-left transition-all duration-200",
                         active
                           ? "border-accent/40 bg-[linear-gradient(135deg,hsl(var(--accent)/0.16),hsl(var(--accent)/0.06))] shadow-[0_18px_40px_-26px_hsl(var(--accent)/0.55)]"
                           : "border-border/70 bg-background/75 hover:border-accent/25 hover:bg-[hsl(var(--accent)/0.04)]"
                       )}
                     >
-                      <div className="text-[13px] font-semibold text-card-foreground">{project.name}</div>
-                      <div className="text-[12px] text-muted-foreground mt-0.5">{project.address}</div>
-                      <div className="text-[11px] text-muted-foreground mt-2">{t("projects.statusPrefix")}: {project.status}</div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold text-card-foreground">{project.name}</div>
+                        <div className="mt-0.5 text-[12px] text-muted-foreground">{project.address}</div>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-2">
+                        {t("projects.statusPrefix")}: {tokenLabel(project.status)}
+                      </div>
                     </button>
                   </div>
                 );
@@ -1826,41 +2318,47 @@ export default function ProjectsPage() {
           <section className="xl:col-span-2 space-y-5">
             {selectedProject ? (
               <>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                  <div className="surface-panel">
-                    <div className="text-[12px] text-muted-foreground">{t("projects.projectLabel")}</div>
-                    <div className="text-[14px] font-semibold mt-1">{selectedProject.name}</div>
-                    <div className="text-[12px] text-muted-foreground mt-1">{selectedProject.address}</div>
+                <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="surface-panel flex min-h-[136px] flex-col justify-between">
+                    <div className="flex min-h-[18px] items-center text-[12px] text-muted-foreground">
+                      {t("projects.projectLabel")}
+                    </div>
+                    <div className="mt-3 min-w-0">
+                      <div className="text-[14px] font-semibold">{selectedProject.name}</div>
+                      <div className="mt-1 text-[12px] text-muted-foreground">{selectedProject.address}</div>
+                    </div>
                     {projectDetails?.developer_company ? (
-                      <div className="text-[12px] text-muted-foreground mt-2">
+                      <div className="mt-3 text-[12px] text-muted-foreground">
                         {t("projects.developer")}: {projectDetails.developer_company}
                       </div>
                     ) : null}
                   </div>
-                  <div className="surface-panel">
-                    <div className="text-[12px] text-muted-foreground flex items-center gap-1">
+                  <div className="surface-panel flex min-h-[136px] flex-col justify-between">
+                    <div className="flex min-h-[18px] items-center gap-1 text-[12px] text-muted-foreground">
                       <Building2 className="w-3.5 h-3.5" />
                       {t("projects.totalDoors")}
                     </div>
-                    <div className="text-[22px] font-semibold mt-1">
+                    <div className="mt-3 text-[22px] font-semibold">
                       {layout ? layout.total_doors : "-"}
                     </div>
                   </div>
-                  <div className="surface-panel">
-                    <div className="text-[12px] text-muted-foreground flex items-center gap-1">
+                  <div className="surface-panel flex min-h-[136px] flex-col justify-between">
+                    <div className="flex min-h-[18px] items-center gap-1 text-[12px] text-muted-foreground">
                       <Layers3 className="w-3.5 h-3.5" />
                       {t("projects.layoutBuckets")}
                     </div>
-                    <div className="text-[22px] font-semibold mt-1">
+                    <div className="mt-3 text-[22px] font-semibold">
                       {layout ? layout.buckets.length : "-"}
                     </div>
                   </div>
-                  <div className="surface-panel">
-                    <div className="text-[12px] text-muted-foreground">{t("projects.openBlockers")}</div>
-                    <div className="text-[22px] font-semibold mt-1">
+                  <div className="surface-panel flex min-h-[136px] flex-col justify-between">
+                    <div className="flex min-h-[18px] items-center text-[12px] text-muted-foreground">
+                      {t("projects.openBlockers")}
+                    </div>
+                    <div className="mt-3 text-[22px] font-semibold">
                       {loadingProjectDetails ? "-" : projectDetails?.issues_open?.length || 0}
                     </div>
-                    <div className="text-[12px] text-muted-foreground mt-1">
+                    <div className="mt-3 text-[12px] text-muted-foreground">
                       {projectDetails?.contact_name
                         ? `${t("projects.contact")}: ${projectDetails.contact_name}`
                         : t("projects.noContactAssigned")}
@@ -1868,19 +2366,342 @@ export default function ProjectsPage() {
                   </div>
                 </div>
 
+                <div className="surface-panel space-y-4">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="max-w-2xl">
+                      <div className="page-eyebrow">
+                        {copy("Manual Door Creation", "Ручное создание двери", "יצירה ידנית של דלת")}
+                      </div>
+                      <h3 className="mt-2 text-[15px] font-semibold leading-tight text-foreground">
+                        {copy(
+                          "Add a missing door without waiting for a new import run.",
+                          "Добавьте недостающую дверь без ожидания нового импорта.",
+                          "הוסף דלת חסרה בלי לחכות להרצת ייבוא חדשה."
+                        )}
+                      </h3>
+                      <p className="mt-2 text-[12px] leading-6 text-muted-foreground">
+                        {copy(
+                          "Use a canonical product from Library, assign an installer if needed, and refresh the layout immediately.",
+                          "Используйте канонический продукт из Library, при необходимости назначьте монтажника и сразу обновите раскладку проекта.",
+                          "בחר מוצר קנוני מהספרייה, שיוך מתקין אם צריך, ורענן מיד את פריסת הפרויקט."
+                        )}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                        <span className="metric-chip">
+                          {copy("Library products", "Продукты Library", "מוצרי ספרייה")} {activeLibraryProducts.length}
+                        </span>
+                        <span className="metric-chip">
+                          {copy("Active installers", "Активные монтажники", "מתקינים פעילים")} {activeInstallers.length}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-start gap-2 md:items-end">
+                      <Button
+                        type="button"
+                        onClick={openManualDoorDialog}
+                        className="gap-2"
+                        disabled={loadingLibraryProducts || activeLibraryProducts.length === 0}
+                      >
+                        <Plus className="h-4 w-4" />
+                        {copy("Add door manually", "Добавить дверь вручную", "הוסף דלת ידנית")}
+                      </Button>
+                      <div className="text-[11px] text-muted-foreground">
+                        {loadingLibraryProducts
+                          ? copy("Loading library...", "Загружаем Library...", "טוען ספרייה...")
+                          : activeLibraryProducts.length === 0
+                            ? copy(
+                                "Add active products in Library first.",
+                                "Сначала добавьте активные продукты в Library.",
+                                "קודם הוסף מוצרים פעילים בספרייה."
+                              )
+                            : copy(
+                                "Door will appear after project refresh.",
+                                "Дверь появится после обновления проекта.",
+                                "הדלת תופיע אחרי רענון הפרויקט."
+                              )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="surface-panel space-y-4">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="max-w-2xl">
+                      <div className="page-eyebrow">
+                        {copy("Additional Works", "Дополнительные работы", "עבודות נוספות")}
+                      </div>
+                      <h3 className="mt-2 text-[15px] font-semibold leading-tight text-foreground">
+                        {copy(
+                          "Plan add-on work lines before installers start recording facts.",
+                          "Планируйте строки доп. работ до того, как монтажники начнут фиксировать факты.",
+                          "תכנן שורות עבודות נוספות לפני שהמתקינים מתחילים לרשום ביצוע בפועל."
+                        )}
+                      </h3>
+                      <p className="mt-2 text-[12px] leading-6 text-muted-foreground">
+                        {copy(
+                          "Keep one simple project plan: what add-on is expected, how many units, and both client/install prices.",
+                          "Держите простой план по проекту: какой доп нужен, сколько единиц и обе цены — клиентская и монтажная.",
+                          "שמור תוכנית פרויקט פשוטה: איזה add-on נדרש, כמה יחידות, ומהם מחירי הלקוח והמתקין."
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-start gap-2 md:items-end">
+                      <Button
+                        type="button"
+                        onClick={openAdditionalWorkDialog}
+                        className="gap-2"
+                        disabled={loadingAddonTypes || activeAddonTypes.length === 0}
+                      >
+                        <Plus className="h-4 w-4" />
+                        {copy("Add additional work", "Добавить доп. работу", "הוסף עבודה נוספת")}
+                      </Button>
+                      <div className="text-[11px] text-muted-foreground">
+                        {loadingAddonTypes
+                          ? copy("Loading add-on types...", "Загружаем типы доп. работ...", "טוען סוגי עבודות נוספות...")
+                          : activeAddonTypes.length === 0
+                            ? copy(
+                                "No active add-on types yet.",
+                                "Пока нет активных типов доп. работ.",
+                                "עדיין אין סוגי עבודות נוספות פעילים."
+                              )
+                            : copy(
+                                "Installer facts can land on this plan later.",
+                                "Позже монтажники смогут фиксировать факты по этому плану.",
+                                "בהמשך מתקינים יוכלו לדווח ביצוע בפועל על התוכנית הזו."
+                              )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="surface-subtle flex min-h-[96px] flex-col justify-between rounded-xl p-3.5">
+                      <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                        {copy("Plan rows", "Строк плана", "שורות תוכנית")}
+                      </div>
+                      <div className="text-xl font-semibold tabular-nums text-foreground">{addonPlanTotals.rows}</div>
+                    </div>
+                    <div className="surface-subtle flex min-h-[96px] flex-col justify-between rounded-xl p-3.5">
+                      <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                        {copy("Planned qty", "Плановое кол-во", "כמות מתוכננת")}
+                      </div>
+                      <div className="text-xl font-semibold tabular-nums text-foreground">{addonPlanTotals.qty}</div>
+                    </div>
+                    <div className="surface-subtle flex min-h-[96px] flex-col justify-between rounded-xl p-3.5">
+                      <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                        {copy("Client total", "Сумма клиента", "סה\"כ לקוח")}
+                      </div>
+                      <div className="text-xl font-semibold tabular-nums text-foreground">{formatMoney(addonPlanTotals.client)}</div>
+                    </div>
+                    <div className="surface-subtle flex min-h-[96px] flex-col justify-between rounded-xl p-3.5">
+                      <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                        {copy("Installer total", "Сумма монтажника", "סה\"כ מתקין")}
+                      </div>
+                      <div className="text-xl font-semibold tabular-nums text-foreground">{formatMoney(addonPlanTotals.installer)}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 overflow-auto rounded-xl border border-border/70 bg-background/70">
+                    <table className="min-w-[720px] w-full text-[12px] leading-5">
+                      <thead className="bg-muted/40 text-muted-foreground">
+                        <tr>
+                          <th className="w-[28%] px-3 py-2.5 text-left font-medium">
+                            {copy("Add-on", "Доп. работа", "עבודה נוספת")}
+                          </th>
+                          <th className="px-3 py-2.5 text-left font-medium">
+                            {copy("Unit", "Ед.", "יחידה")}
+                          </th>
+                          <th className="px-3 py-2.5 text-right font-medium">
+                            {copy("Qty planned", "План", "כמות")}
+                          </th>
+                          <th className="px-3 py-2.5 text-right font-medium">
+                            {copy("Client price", "Цена клиента", "מחיר לקוח")}
+                          </th>
+                          <th className="px-3 py-2.5 text-right font-medium">
+                            {copy("Installer price", "Цена монтажника", "מחיר מתקין")}
+                          </th>
+                          <th className="px-3 py-2.5 text-left font-medium">
+                            {copy("Notes", "Примечание", "הערה")}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loadingProjectAddonPlan ? (
+                          <tr>
+                            <td className="px-3 py-4 text-muted-foreground" colSpan={6}>
+                              {copy(
+                                "Loading additional works plan...",
+                                "Загружаем план доп. работ...",
+                                "טוען תוכנית עבודות נוספות..."
+                              )}
+                            </td>
+                          </tr>
+                        ) : projectAddonPlan.length === 0 ? (
+                          <tr>
+                            <td className="px-3 py-4 text-muted-foreground" colSpan={6}>
+                              {copy(
+                                "No additional works planned yet.",
+                                "Пока нет запланированных доп. работ.",
+                                "עדיין אין עבודות נוספות מתוכננות."
+                              )}
+                            </td>
+                          </tr>
+                        ) : (
+                          projectAddonPlan.map((item, index) => {
+                            const addon = activeAddonTypes.find((row) => row.id === item.addon_type_id) || null;
+                            return (
+                              <tr
+                                key={item.id || `${item.addon_type_id}-${index}`}
+                                className="row-hover border-t border-border/70"
+                              >
+                                <td className="px-3 py-2.5 font-medium text-foreground">
+                                  {item.addon_name || addon?.name || item.addon_type_id}
+                                </td>
+                                <td className="px-3 py-2.5 text-muted-foreground">{addon?.unit || "-"}</td>
+                                <td className="px-3 py-2.5 text-right tabular-nums">{item.qty_planned}</td>
+                                <td className="px-3 py-2.5 text-right tabular-nums">{formatMoney(Number(item.client_price) || 0)}</td>
+                                <td className="px-3 py-2.5 text-right tabular-nums">{formatMoney(Number(item.installer_price) || 0)}</td>
+                                <td className="px-3 py-2.5 text-muted-foreground">{item.notes || "-"}</td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="surface-panel space-y-4">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="max-w-2xl">
+                      <div className="page-eyebrow">
+                        {copy("Urgency Surcharge", "Срочная надбавка", "תוספת דחיפות")}
+                      </div>
+                      <h3 className="mt-2 text-[15px] font-semibold leading-tight text-foreground">
+                        {copy(
+                          "Track approved urgency uplift without mixing it into the door list.",
+                          "Фиксируйте утверждённую срочную надбавку отдельно, не смешивая её со списком дверей.",
+                          "עקוב אחרי תוספת דחיפות מאושרת בלי לערבב אותה ברשימת הדלתות."
+                        )}
+                      </h3>
+                      <p className="mt-2 text-[12px] leading-6 text-muted-foreground">
+                        {copy(
+                          "Use project-level or order-level surcharge rows so finance and operations see the same uplift logic.",
+                          "Используйте строки surcharge на уровне проекта или заказа, чтобы финансы и operations видели одну и ту же логику надбавки.",
+                          "השתמש בשורות surcharge ברמת פרויקט או הזמנה כדי שפיננסים ותפעול יראו את אותה לוגיקת תוספת."
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-start gap-2 md:items-end">
+                      <Button type="button" onClick={openUrgencyDialog} className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        {copy("Add urgency surcharge", "Добавить срочную надбавку", "הוסף תוספת דחיפות")}
+                      </Button>
+                      <div className="text-[11px] text-muted-foreground">
+                        {copy(
+                          "Keep surcharge visible and auditable as a separate plan layer.",
+                          "Держите surcharge видимым и аудируемым как отдельный плановый слой.",
+                          "שמור surcharge גלוי וניתן לביקורת כשכבת תכנון נפרדת."
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="surface-subtle flex min-h-[96px] flex-col justify-between rounded-xl p-3.5">
+                      <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                        {copy("Rows", "Строки", "שורות")}
+                      </div>
+                      <div className="text-xl font-semibold tabular-nums text-foreground">{urgencyTotals.rows}</div>
+                    </div>
+                    <div className="surface-subtle flex min-h-[96px] flex-col justify-between rounded-xl p-3.5">
+                      <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                        {copy("Order-scoped", "По заказу", "לפי הזמנה")}
+                      </div>
+                      <div className="text-xl font-semibold tabular-nums text-foreground">{urgencyTotals.orderScoped}</div>
+                    </div>
+                    <div className="surface-subtle flex min-h-[96px] flex-col justify-between rounded-xl p-3.5">
+                      <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                        {copy("Client uplift", "Надбавка клиента", "תוספת לקוח")}
+                      </div>
+                      <div className="text-xl font-semibold tabular-nums text-foreground">{formatMoney(urgencyTotals.client)}</div>
+                    </div>
+                    <div className="surface-subtle flex min-h-[96px] flex-col justify-between rounded-xl p-3.5">
+                      <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                        {copy("Installer uplift", "Надбавка монтажника", "תוספת מתקין")}
+                      </div>
+                      <div className="text-xl font-semibold tabular-nums text-foreground">{formatMoney(urgencyTotals.installer)}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 overflow-auto rounded-xl border border-border/70 bg-background/70">
+                    <table className="min-w-[760px] w-full text-[12px] leading-5">
+                      <thead className="bg-muted/40 text-muted-foreground">
+                        <tr>
+                          <th className="px-3 py-2.5 text-left font-medium">{copy("Scope", "Скоуп", "היקף")}</th>
+                          <th className="px-3 py-2.5 text-left font-medium">{copy("Order", "Заказ", "הזמנה")}</th>
+                          <th className="w-[30%] px-3 py-2.5 text-left font-medium">{copy("Reason", "Причина", "סיבה")}</th>
+                          <th className="px-3 py-2.5 text-right font-medium">{copy("Client", "Клиент", "לקוח")}</th>
+                          <th className="px-3 py-2.5 text-right font-medium">{copy("Installer", "Монтажник", "מתקין")}</th>
+                          <th className="px-3 py-2.5 text-left font-medium">{copy("Effective", "Дата", "תאריך")}</th>
+                          <th className="px-3 py-2.5 text-left font-medium">{copy("Notes", "Примечание", "הערה")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loadingUrgencySurcharges ? (
+                          <tr>
+                            <td className="px-3 py-4 text-muted-foreground" colSpan={7}>
+                              {copy(
+                                "Loading urgency surcharge plan...",
+                                "Загружаем план срочной надбавки...",
+                                "טוען תוכנית תוספת דחיפות..."
+                              )}
+                            </td>
+                          </tr>
+                        ) : urgencySurcharges.length === 0 ? (
+                          <tr>
+                            <td className="px-3 py-4 text-muted-foreground" colSpan={7}>
+                              {copy(
+                                "No urgency surcharge rows yet.",
+                                "Пока нет строк срочной надбавки.",
+                                "עדיין אין שורות תוספת דחיפות."
+                              )}
+                            </td>
+                          </tr>
+                        ) : (
+                          urgencySurcharges.map((item, index) => (
+                            <tr key={item.id || `${item.scope}-${item.order_number || "project"}-${index}`} className="row-hover border-t border-border/70">
+                              <td className="px-3 py-2.5">
+                                {item.scope === "ORDER_NUMBER"
+                                  ? copy("Order", "Заказ", "הזמנה")
+                                  : copy("Project", "Проект", "פרויקט")}
+                              </td>
+                              <td className="px-3 py-2.5">{item.order_number || "-"}</td>
+                              <td className="px-3 py-2.5 font-medium text-foreground">{item.reason}</td>
+                              <td className="px-3 py-2.5 text-right tabular-nums">{formatMoney(Number(item.client_amount) || 0)}</td>
+                              <td className="px-3 py-2.5 text-right tabular-nums">{formatMoney(Number(item.installer_amount) || 0)}</td>
+                              <td className="px-3 py-2.5">{item.effective_date || "-"}</td>
+                              <td className="px-3 py-2.5 text-muted-foreground">{item.notes || "-"}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
                 <div className="surface-panel">
-                  <div className="flex flex-col gap-2 border-b border-border/70 pb-4 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <h3 className="text-[15px] font-semibold">{t("projects.projectFinancialScreen")}</h3>
-                      <p className="mt-1 text-[12px] text-muted-foreground">
+                  <div className="flex flex-col gap-3 border-b border-border/70 pb-4 md:flex-row md:items-start md:justify-between">
+                    <div className="max-w-3xl">
+                      <h3 className="text-[15px] font-semibold leading-tight">{t("projects.projectFinancialScreen")}</h3>
+                      <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
                         {t("projects.projectFinancialSubtitle")}
                       </p>
                     </div>
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="shrink-0 pt-0.5 text-[12px] text-muted-foreground md:text-right">
                       {loadingProjectPlanFact || loadingProjectRisk
                         ? t("projects.refreshingFinancialView")
                         : projectRisk?.generated_at
-                          ? `Updated: ${formatDateTime(projectRisk.generated_at)}`
+                          ? `${copy("Updated", "Обновлено", "עודכן")}: ${formatDateTime(projectRisk.generated_at)}`
                           : t("projects.financialDataReady")}
                     </div>
                   </div>
@@ -1891,77 +2712,77 @@ export default function ProjectsPage() {
                     </div>
                   ) : projectPlanFact && projectRisk ? (
                     <div className="mt-4 space-y-4">
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
-                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                      <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-2 xl:grid-cols-6">
+                        <div className="relative flex min-h-[176px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
                           <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
-                          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                            Completion
+                          <div className="min-h-[2.75rem] text-[11px] uppercase tracking-wider text-muted-foreground">
+                            {copy("Completion", "Готовность", "השלמה")}
                           </div>
-                          <div className="mt-2 text-xl font-semibold">
-                            {formatPct(projectPlanFact.completion_pct)}
-                          </div>
-                          <div className="mt-1 text-[12px] text-muted-foreground">
-                            Installed: {projectPlanFact.installed_doors}/{projectPlanFact.total_doors}
+                          <div className="mt-auto pt-3">
+                            <div className="text-xl font-semibold">{formatPct(projectPlanFact.completion_pct)}</div>
+                            <div className="mt-1 text-[12px] text-muted-foreground">
+                              {copy("Installed", "Установлено", "הותקן")}: {projectPlanFact.installed_doors}/{projectPlanFact.total_doors}
+                            </div>
                           </div>
                         </div>
-                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                        <div className="relative flex min-h-[176px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
                           <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
-                          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                            Actual Margin
+                          <div className="min-h-[2.75rem] text-[11px] uppercase tracking-wider text-muted-foreground">
+                            {copy("Actual Margin", "Фактическая маржа", "מרווח בפועל")}
                           </div>
-                          <div className="mt-2 text-xl font-semibold">
-                            {formatPct(projectRisk.summary.actual_margin_pct)}
-                          </div>
-                          <div className="mt-1 text-[12px] text-muted-foreground">
-                            Profit: {formatMoney(projectRisk.summary.actual_profit_total)}
+                          <div className="mt-auto pt-3">
+                            <div className="text-xl font-semibold">{formatPct(projectRisk.summary.actual_margin_pct)}</div>
+                            <div className="mt-1 text-[12px] text-muted-foreground">
+                              {copy("Profit", "Прибыль", "רווח")}: {formatMoney(projectRisk.summary.actual_profit_total)}
+                            </div>
                           </div>
                         </div>
-                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                        <div className="relative flex min-h-[176px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
                           <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
-                          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                            Revenue Gap
+                          <div className="min-h-[2.75rem] text-[11px] uppercase tracking-wider text-muted-foreground">
+                            {copy("Revenue Gap", "Разрыв по выручке", "פער בהכנסה")}
                           </div>
-                          <div className="mt-2 text-xl font-semibold">
-                            {formatMoney(projectPlanFact.revenue_gap_total)}
-                          </div>
-                          <div className="mt-1 text-[12px] text-muted-foreground">
-                            Delayed: {formatMoney(projectRisk.summary.delayed_revenue_total)}
+                          <div className="mt-auto pt-3">
+                            <div className="text-xl font-semibold">{formatMoney(projectPlanFact.revenue_gap_total)}</div>
+                            <div className="mt-1 text-[12px] text-muted-foreground">
+                              {copy("Delayed", "Задержано", "בעיכוב")}: {formatMoney(projectRisk.summary.delayed_revenue_total)}
+                            </div>
                           </div>
                         </div>
-                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                        <div className="relative flex min-h-[176px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
                           <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
-                          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                            Profit Gap
+                          <div className="min-h-[2.75rem] text-[11px] uppercase tracking-wider text-muted-foreground">
+                            {copy("Profit Gap", "Разрыв по прибыли", "פער ברווח")}
                           </div>
-                          <div className="mt-2 text-xl font-semibold">
-                            {formatMoney(projectPlanFact.profit_gap_total)}
-                          </div>
-                          <div className="mt-1 text-[12px] text-muted-foreground">
-                            Risk: {formatMoney(projectRisk.summary.blocked_issue_profit_at_risk)}
+                          <div className="mt-auto pt-3">
+                            <div className="text-xl font-semibold">{formatMoney(projectPlanFact.profit_gap_total)}</div>
+                            <div className="mt-1 text-[12px] text-muted-foreground">
+                              {copy("Risk", "Риск", "סיכון")}: {formatMoney(projectRisk.summary.blocked_issue_profit_at_risk)}
+                            </div>
                           </div>
                         </div>
-                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                        <div className="relative flex min-h-[176px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
                           <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
-                          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                            Open Issues
+                          <div className="min-h-[2.75rem] text-[11px] uppercase tracking-wider text-muted-foreground">
+                            {copy("Open Issues", "Открытые проблемы", "בעיות פתוחות")}
                           </div>
-                          <div className="mt-2 text-xl font-semibold">
-                            {projectPlanFact.open_issues}
-                          </div>
-                          <div className="mt-1 text-[12px] text-muted-foreground">
-                            Blocked: {projectRisk.summary.blocked_open_issues}
+                          <div className="mt-auto pt-3">
+                            <div className="text-xl font-semibold">{projectPlanFact.open_issues}</div>
+                            <div className="mt-1 text-[12px] text-muted-foreground">
+                              {copy("Blocked", "Заблокировано", "חסום")}: {projectRisk.summary.blocked_open_issues}
+                            </div>
                           </div>
                         </div>
-                        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
+                        <div className="relative flex min-h-[176px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.92),hsl(var(--accent)/0.08))] p-4">
                           <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.7),transparent)]" />
-                          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                            Data Risk
+                          <div className="min-h-[2.75rem] text-[11px] uppercase tracking-wider text-muted-foreground">
+                            {copy("Data Risk", "Риск данных", "סיכון נתונים")}
                           </div>
-                          <div className="mt-2 text-xl font-semibold">
-                            {projectPlanFact.missing_actual_rates_doors}
-                          </div>
-                          <div className="mt-1 text-[12px] text-muted-foreground">
-                            Add-on gaps: {projectPlanFact.missing_addon_plans_facts}
+                          <div className="mt-auto pt-3">
+                            <div className="text-xl font-semibold">{projectPlanFact.missing_actual_rates_doors}</div>
+                            <div className="mt-1 text-[12px] text-muted-foreground">
+                              {copy("Add-on gaps", "Пробелы add-on", "פערי add-on")}: {projectPlanFact.missing_addon_plans_facts}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1978,7 +2799,7 @@ export default function ProjectsPage() {
                             </span>
                           </div>
                           <div className="overflow-auto rounded-xl border border-border/70 bg-background/70">
-                            <table className="w-full text-[12px]">
+                            <table className="min-w-[760px] w-full text-[12px] leading-5">
                               <thead className="bg-[linear-gradient(180deg,hsl(var(--muted)/0.65),hsl(var(--muted)/0.35))] text-muted-foreground">
                                 <tr>
                                   <th className="px-3 py-2 text-left font-medium">{t("projects.metric")}</th>
@@ -2040,7 +2861,7 @@ export default function ProjectsPage() {
                                         riskTone(driver.severity)
                                       )}
                                     >
-                                      {driver.severity}
+                                      {tokenLabel(driver.severity)}
                                     </span>
                                     <div className="mt-1 text-[12px] text-muted-foreground">
                                       {driver.code.includes("ISSUE") ? driver.value : formatMoney(driver.value)}
@@ -2061,7 +2882,7 @@ export default function ProjectsPage() {
                         <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-5">
                           <h4 className="text-[14px] font-semibold">{t("projects.topDelayReasons")}</h4>
                           <div className="mt-3 overflow-auto rounded-xl border border-border/70 bg-background/70">
-                            <table className="w-full text-[12px]">
+                            <table className="min-w-[760px] w-full text-[12px] leading-5">
                               <thead className="bg-[linear-gradient(180deg,hsl(var(--muted)/0.65),hsl(var(--muted)/0.35))] text-muted-foreground">
                                 <tr>
                                   <th className="px-3 py-2 text-left font-medium">{t("projects.reason")}</th>
@@ -2098,10 +2919,12 @@ export default function ProjectsPage() {
                         <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] p-5">
                           <h4 className="text-[14px] font-semibold">{t("projects.ordersAtRisk")}</h4>
                           <div className="mt-3 overflow-auto rounded-xl border border-border/70 bg-background/70">
-                            <table className="w-full text-[12px]">
+                            <table className="min-w-[760px] w-full text-[12px] leading-5">
                               <thead className="bg-[linear-gradient(180deg,hsl(var(--muted)/0.65),hsl(var(--muted)/0.35))] text-muted-foreground">
                                 <tr>
-                                  <th className="px-3 py-2 text-left font-medium">{t("projects.orderNumber")}</th>
+                                  <th className="px-3 py-2 text-left font-medium">
+                                    {copy("Order Number", "Номер заказа", "מספר הזמנה")}
+                                  </th>
                                   <th className="px-3 py-2 text-left font-medium">{t("projects.completion")}</th>
                                   <th className="px-3 py-2 text-left font-medium">{t("projects.issues")}</th>
                                   <th className="px-3 py-2 text-left font-medium">{t("projects.gap")}</th>
@@ -2148,7 +2971,7 @@ export default function ProjectsPage() {
                       </div>
                     </div>
                     <div className="overflow-auto rounded-xl border border-border/70 bg-background/70">
-                      <table className="w-full text-[12px]">
+                      <table className="min-w-[760px] w-full text-[12px] leading-5">
                         <thead className="bg-muted/40 text-muted-foreground">
                           <tr>
                             <th className="text-left px-2 py-2 font-medium">{t("common.project")}</th>
@@ -2191,7 +3014,7 @@ export default function ProjectsPage() {
                       </div>
                     </div>
                     <div className="overflow-auto rounded-xl border border-border/70 bg-background/70">
-                      <table className="w-full text-[12px]">
+                      <table className="min-w-[760px] w-full text-[12px] leading-5">
                         <thead className="bg-muted/40 text-muted-foreground">
                           <tr>
                             <th className="text-left px-2 py-2 font-medium">{t("common.project")}</th>
@@ -2366,7 +3189,7 @@ export default function ProjectsPage() {
                   )}
 
                   <div className="overflow-auto rounded-lg border border-border">
-                    <table className="w-full text-[12px]">
+                    <table className="min-w-[760px] w-full text-[12px] leading-5">
                       <thead className="bg-muted/40 text-muted-foreground">
                         <tr>
                           <th className="text-left px-2 py-2 font-medium">
@@ -2818,7 +3641,7 @@ export default function ProjectsPage() {
                                       run.status === "ANALYZED" && "bg-muted text-muted-foreground"
                                     )}
                                   >
-                                    {run.status}
+                                    {tokenLabel(run.status)}
                                   </span>
                                 </td>
                                 <td className="px-2 py-1.5">
@@ -2894,7 +3717,7 @@ export default function ProjectsPage() {
                           </div>
                           <div className="rounded-md border border-border bg-muted/30 px-2 py-2">
                             <div className="text-muted-foreground">{t("common.status")}</div>
-                            <div className="font-medium mt-0.5">{focusedImportRunDetails.status}</div>
+                            <div className="font-medium mt-0.5">{tokenLabel(focusedImportRunDetails.status)}</div>
                           </div>
                           <div className="rounded-md border border-border bg-muted/30 px-2 py-2">
                             <div className="text-muted-foreground">{t("projects.file")}</div>
@@ -3331,7 +4154,7 @@ export default function ProjectsPage() {
                                                               statusTone(door.status)
                                                             )}
                                                           >
-                                                            {door.status}
+                                                            {tokenLabel(door.status)}
                                                           </span>
                                                         </div>
                                                         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
@@ -3402,10 +4225,12 @@ export default function ProjectsPage() {
                         {t("projects.rowsCount").replace("{count}", String(filteredMatrixRows.length))}
                       </div>
                     </div>
-                    <table className="w-full text-[12px]">
+                    <table className="min-w-[760px] w-full text-[12px] leading-5">
                       <thead className="bg-muted/40 text-muted-foreground">
                         <tr>
-                          <th className="text-left px-2 py-2 font-medium">{t("projects.orderNumber")}</th>
+                          <th className="text-left px-2 py-2 font-medium">
+                            {copy("Order Number", "Номер заказа", "מספר הזמנה")}
+                          </th>
                           <th className="text-left px-2 py-2 font-medium">{t("projects.houseLabel")}</th>
                           <th className="text-left px-2 py-2 font-medium">{t("projects.floorLabel")}</th>
                           <th className="text-left px-2 py-2 font-medium">{t("projects.apt")}</th>
@@ -3421,7 +4246,11 @@ export default function ProjectsPage() {
                         {filteredMatrixRows.length === 0 ? (
                           <tr>
                             <td className="px-2 py-4 text-muted-foreground" colSpan={10}>
-                              No doors for selected filters.
+                              {copy(
+                                "No doors for selected filters.",
+                                "Нет дверей для выбранных фильтров.",
+                                "אין דלתות עבור המסננים שנבחרו."
+                              )}
                             </td>
                           </tr>
                         ) : (
@@ -3442,7 +4271,7 @@ export default function ProjectsPage() {
                                     statusTone(row.status)
                                   )}
                                 >
-                                  {row.status}
+                                  {tokenLabel(row.status)}
                                 </span>
                               </td>
                               <td className="px-2 py-1.5">
@@ -3487,7 +4316,7 @@ export default function ProjectsPage() {
                             <div className="flex items-start justify-between gap-2">
                               <div>
                                 <div className="text-[12px] text-muted-foreground">
-                                  {t("projects.orderNumber")} {bucket.order_number || "-"} | {t("projects.houseLabel")} {bucket.house_number || "-"}
+                                  {copy("Order Number", "Номер заказа", "מספר הזמנה")} {bucket.order_number || "-"} | {t("projects.houseLabel")} {bucket.house_number || "-"}
                                 </div>
                                 <div className="text-[13px] font-semibold mt-0.5">
                                   {(bucket.location_code || "unknown").toUpperCase()}
@@ -3508,13 +4337,13 @@ export default function ProjectsPage() {
                                     STATUS_CLASS[status] || "bg-muted text-muted-foreground"
                                   )}
                                 >
-                                  {status}: {count}
+                                  {tokenLabel(status)}: {count}
                                 </span>
                               ))}
                             </div>
 
                             <div className="mt-3 overflow-hidden rounded-md border border-border">
-                              <table className="w-full text-[12px]">
+                              <table className="min-w-[760px] w-full text-[12px] leading-5">
                                 <thead className="bg-muted/50 text-muted-foreground">
                                   <tr>
                                     <th className="text-left px-2 py-1.5 font-medium">{t("projects.apt")}</th>
@@ -3534,7 +4363,7 @@ export default function ProjectsPage() {
                                             STATUS_CLASS[door.status] || "bg-muted text-muted-foreground"
                                           )}
                                         >
-                                          {door.status}
+                                          {tokenLabel(door.status)}
                                         </span>
                                       </td>
                                     </tr>
@@ -3556,7 +4385,430 @@ export default function ProjectsPage() {
           </section>
         </div>
       </div>
+
+      <Dialog open={urgencyDialogOpen} onOpenChange={setUrgencyDialogOpen}>
+        <DialogContent className="max-w-[760px]">
+          <DialogHeader>
+            <DialogTitle>
+              {copy("Add urgency surcharge", "Добавить срочную надбавку", "הוסף תוספת דחיפות")}
+            </DialogTitle>
+            <DialogDescription>
+              {copy(
+                "Record one approved urgency uplift row for this project or for a specific order number.",
+                "Зафиксируйте одну утверждённую строку срочной надбавки для проекта или конкретного номера заказа.",
+                "רשום שורת תוספת דחיפות מאושרת אחת לפרויקט או למספר הזמנה מסוים."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="urgency-scope">{copy("Scope", "Скоуп", "היקף")}</Label>
+              <select
+                id="urgency-scope"
+                value={urgencyForm.scope}
+                onChange={(event) =>
+                  setUrgencyForm((prev) => ({
+                    ...prev,
+                    scope: event.target.value === "ORDER_NUMBER" ? "ORDER_NUMBER" : "PROJECT",
+                    order_number: event.target.value === "ORDER_NUMBER" ? prev.order_number : "",
+                  }))
+                }
+                className="control-input"
+              >
+                <option value="PROJECT">{copy("Project", "Проект", "פרויקט")}</option>
+                <option value="ORDER_NUMBER">{copy("Order number", "Номер заказа", "מספר הזמנה")}</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="urgency-order">{copy("Order number", "Номер заказа", "מספר הזמנה")}</Label>
+              <Input
+                id="urgency-order"
+                value={urgencyForm.order_number}
+                onChange={(event) =>
+                  setUrgencyForm((prev) => ({ ...prev, order_number: event.target.value }))
+                }
+                disabled={urgencyForm.scope !== "ORDER_NUMBER"}
+                placeholder="AZ-5001"
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="urgency-reason">{copy("Reason", "Причина", "סיבה")}</Label>
+              <Input
+                id="urgency-reason"
+                value={urgencyForm.reason}
+                onChange={(event) =>
+                  setUrgencyForm((prev) => ({ ...prev, reason: event.target.value }))
+                }
+                placeholder={copy("Late-night urgent install", "Срочный ночной монтаж", "התקנה דחופה בלילה")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="urgency-client">{copy("Client amount", "Сумма клиента", "סכום לקוח")}</Label>
+              <Input
+                id="urgency-client"
+                value={urgencyForm.client_amount}
+                onChange={(event) =>
+                  setUrgencyForm((prev) => ({ ...prev, client_amount: event.target.value }))
+                }
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="urgency-installer">{copy("Installer amount", "Сумма монтажника", "סכום מתקין")}</Label>
+              <Input
+                id="urgency-installer"
+                value={urgencyForm.installer_amount}
+                onChange={(event) =>
+                  setUrgencyForm((prev) => ({ ...prev, installer_amount: event.target.value }))
+                }
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="urgency-effective">{copy("Effective date", "Дата действия", "תאריך תחולה")}</Label>
+              <Input
+                id="urgency-effective"
+                type="date"
+                value={urgencyForm.effective_date}
+                onChange={(event) =>
+                  setUrgencyForm((prev) => ({ ...prev, effective_date: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="urgency-notes">{copy("Notes", "Примечание", "הערה")}</Label>
+              <Input
+                id="urgency-notes"
+                value={urgencyForm.notes}
+                onChange={(event) =>
+                  setUrgencyForm((prev) => ({ ...prev, notes: event.target.value }))
+                }
+                placeholder={copy("Approval note", "Комментарий по согласованию", "הערת אישור")}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUrgencyDialogOpen(false)} disabled={urgencySubmitting}>
+              {copy("Cancel", "Отмена", "ביטול")}
+            </Button>
+            <Button onClick={() => void handleUrgencySubmit()} disabled={urgencySubmitting}>
+              {urgencySubmitting
+                ? copy("Saving...", "Сохраняем...", "שומר...")
+                : copy("Save surcharge", "Сохранить надбавку", "שמור תוספת")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={additionalWorkDialogOpen} onOpenChange={setAdditionalWorkDialogOpen}>
+        <DialogContent className="max-w-[760px]">
+          <DialogHeader>
+            <DialogTitle>
+              {copy("Add additional work", "Добавить доп. работу", "הוסף עבודה נוספת")}
+            </DialogTitle>
+            <DialogDescription>
+              {copy(
+                "Create one planned add-on line for the selected project. Installers will later record facts against this plan.",
+                "Создайте одну плановую строку доп. работ для выбранного проекта. Позже монтажники будут фиксировать факты по этому плану.",
+                "צור שורת add-on מתוכננת אחת לפרויקט הנבחר. בהמשך מתקינים ידווחו ביצוע בפועל מול התוכנית הזו."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="additional-work-type">
+                {copy("Add-on type", "Тип доп. работы", "סוג עבודה נוספת")}
+              </Label>
+              <select
+                id="additional-work-type"
+                value={additionalWorkForm.addon_type_id}
+                onChange={(event) =>
+                  setAdditionalWorkForm((prev) => ({ ...prev, addon_type_id: event.target.value }))
+                }
+                className="control-input"
+              >
+                <option value="">{copy("Choose add-on", "Выберите доп. работу", "בחר עבודה נוספת")}</option>
+                {activeAddonTypes.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} {item.unit ? `(${item.unit})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="additional-work-qty">
+                {copy("Qty planned", "Плановое количество", "כמות מתוכננת")}
+              </Label>
+              <Input
+                id="additional-work-qty"
+                value={additionalWorkForm.qty_planned}
+                onChange={(event) =>
+                  setAdditionalWorkForm((prev) => ({ ...prev, qty_planned: event.target.value }))
+                }
+                placeholder="1"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="additional-work-client-price">
+                {copy("Client price", "Цена клиента", "מחיר לקוח")}
+              </Label>
+              <Input
+                id="additional-work-client-price"
+                value={additionalWorkForm.client_price}
+                onChange={(event) =>
+                  setAdditionalWorkForm((prev) => ({ ...prev, client_price: event.target.value }))
+                }
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="additional-work-installer-price">
+                {copy("Installer price", "Цена монтажника", "מחיר מתקין")}
+              </Label>
+              <Input
+                id="additional-work-installer-price"
+                value={additionalWorkForm.installer_price}
+                onChange={(event) =>
+                  setAdditionalWorkForm((prev) => ({ ...prev, installer_price: event.target.value }))
+                }
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="additional-work-notes">
+                {copy("Notes", "Примечание", "הערה")}
+              </Label>
+              <Input
+                id="additional-work-notes"
+                value={additionalWorkForm.notes}
+                onChange={(event) =>
+                  setAdditionalWorkForm((prev) => ({ ...prev, notes: event.target.value }))
+                }
+                placeholder={copy("Optional planning note", "Необязательная заметка", "הערת תכנון אופציונלית")}
+              />
+            </div>
+          </div>
+
+          <div className="text-[12px] text-muted-foreground">
+            {selectedAddonType
+              ? copy(
+                  `Selected unit: ${selectedAddonType.unit || "-"}`,
+                  `Выбранная единица: ${selectedAddonType.unit || "-"}`,
+                  `יחידת המדידה שנבחרה: ${selectedAddonType.unit || "-"}`
+                )
+              : copy(
+                  "Select an add-on type to confirm unit and pricing row.",
+                  "Выберите тип доп. работы, чтобы подтвердить единицу и ценовую строку.",
+                  "בחר סוג עבודה נוספת כדי לאשר יחידה ושורת תמחור."
+                )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAdditionalWorkDialogOpen(false)}
+              disabled={additionalWorkSubmitting}
+            >
+              {copy("Cancel", "Отмена", "ביטול")}
+            </Button>
+            <Button onClick={() => void handleAdditionalWorkSubmit()} disabled={additionalWorkSubmitting}>
+              {additionalWorkSubmitting
+                ? copy("Saving...", "Сохраняем...", "שומר...")
+                : copy("Save additional work", "Сохранить доп. работу", "שמור עבודה נוספת")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={manualDoorDialogOpen} onOpenChange={setManualDoorDialogOpen}>
+        <DialogContent className="max-w-[840px]">
+          <DialogHeader>
+            <DialogTitle>
+              {copy("Add door manually", "Добавить дверь вручную", "הוסף דלת ידנית")}
+            </DialogTitle>
+            <DialogDescription>
+              {copy(
+                "Create one operational door row directly in the selected project using a product from Library.",
+                "Создайте одну рабочую строку двери прямо в выбранном проекте, используя продукт из Library.",
+                "צור רשומת דלת תפעולית ישירות בפרויקט הנבחר בעזרת מוצר מהספרייה."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="manual-door-product">
+                {copy("Library product", "Продукт Library", "מוצר ספרייה")}
+              </Label>
+              <select
+                id="manual-door-product"
+                value={manualDoorForm.product_id}
+                onChange={(event) =>
+                  setManualDoorForm((prev) => ({
+                    ...prev,
+                    product_id: event.target.value,
+                    install_type:
+                      activeLibraryProducts.find((item) => item.id === event.target.value)?.install_type ||
+                      prev.install_type,
+                  }))
+                }
+                className="control-input"
+              >
+                <option value="">{copy("Choose a product", "Выберите продукт", "בחר מוצר")}</option>
+                {activeLibraryProducts.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.sku} - {locale === "he" ? item.name_he || item.name_ru : item.name_ru || item.name_he}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-door-code">
+                {copy("Door code", "Код двери", "קוד דלת")}
+              </Label>
+              <Input
+                id="manual-door-code"
+                value={manualDoorForm.door_code}
+                onChange={(event) =>
+                  setManualDoorForm((prev) => ({ ...prev, door_code: event.target.value }))
+                }
+                placeholder={copy("D-1201", "D-1201", "D-1201")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-door-unit">
+                {copy("Unit / apartment", "Unit / квартира", "Unit / דירה")}
+              </Label>
+              <Input
+                id="manual-door-unit"
+                value={manualDoorForm.unit}
+                onChange={(event) =>
+                  setManualDoorForm((prev) => ({ ...prev, unit: event.target.value }))
+                }
+                placeholder={copy("12-04", "12-04", "12-04")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-door-floor">
+                {copy("Floor", "Этаж", "קומה")}
+              </Label>
+              <Input
+                id="manual-door-floor"
+                value={manualDoorForm.floor}
+                onChange={(event) =>
+                  setManualDoorForm((prev) => ({ ...prev, floor: event.target.value }))
+                }
+                placeholder={copy("12", "12", "12")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-door-location">
+                {copy("Location code", "Код локации", "קוד מיקום")}
+              </Label>
+              <Input
+                id="manual-door-location"
+                value={manualDoorForm.location_code}
+                onChange={(event) =>
+                  setManualDoorForm((prev) => ({ ...prev, location_code: event.target.value }))
+                }
+                placeholder={copy("dira", "dira", "dira")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-door-order">
+                {copy("Order number", "Номер заказа", "מספר הזמנה")}
+              </Label>
+              <Input
+                id="manual-door-order"
+                value={manualDoorForm.order_number}
+                onChange={(event) =>
+                  setManualDoorForm((prev) => ({ ...prev, order_number: event.target.value }))
+                }
+                placeholder={copy("AZ-5001", "AZ-5001", "AZ-5001")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-door-install-type">
+                {copy("Install type", "Тип монтажа", "סוג התקנה")}
+              </Label>
+              <Input
+                id="manual-door-install-type"
+                value={manualDoorForm.install_type}
+                onChange={(event) =>
+                  setManualDoorForm((prev) => ({ ...prev, install_type: event.target.value }))
+                }
+                placeholder={copy("service", "service", "service")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-door-installer">
+                {copy("Assigned installer", "Назначенный монтажник", "מתקין משויך")}
+              </Label>
+              <select
+                id="manual-door-installer"
+                value={manualDoorForm.assigned_installer_id}
+                onChange={(event) =>
+                  setManualDoorForm((prev) => ({ ...prev, assigned_installer_id: event.target.value }))
+                }
+                className="control-input"
+              >
+                <option value="">{copy("Leave unassigned", "Оставить без назначения", "השאר ללא שיוך")}</option>
+                {activeInstallers.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.full_name}
+                    {item.email ? ` - ${item.email}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-door-date">
+                {copy("Planned install date", "Плановая дата монтажа", "תאריך התקנה מתוכנן")}
+              </Label>
+              <Input
+                id="manual-door-date"
+                type="date"
+                value={manualDoorForm.planned_install_date}
+                onChange={(event) =>
+                  setManualDoorForm((prev) => ({ ...prev, planned_install_date: event.target.value }))
+                }
+              />
+            </div>
+          </div>
+
+          <label className="mt-3 inline-flex items-center gap-2 text-[13px] text-foreground">
+            <input
+              type="checkbox"
+              checked={manualDoorForm.is_critical}
+              onChange={(event) =>
+                setManualDoorForm((prev) => ({ ...prev, is_critical: event.target.checked }))
+              }
+            />
+            {copy("Mark as critical door", "Отметить как критичную дверь", "סמן כדלת קריטית")}
+          </label>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setManualDoorDialogOpen(false)}
+              disabled={manualDoorSubmitting}
+            >
+              {copy("Cancel", "Отмена", "ביטול")}
+            </Button>
+            <Button onClick={() => void handleManualDoorSubmit()} disabled={manualDoorSubmitting}>
+              {manualDoorSubmitting
+                ? copy("Saving...", "Сохраняем...", "שומר...")
+                : copy("Create door", "Создать дверь", "צור דלת")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
+
+
 

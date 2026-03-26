@@ -1,4 +1,4 @@
-import {
+﻿import {
   AlertTriangle,
   ArrowRight,
   CalendarDays,
@@ -118,37 +118,37 @@ export function DispatcherBoard({
   return (
     <div
       data-testid="dispatcher-board"
-      className="glass-card card-lift rounded-xl p-5 animate-fade-in mb-6"
+      className="glass-card card-lift mb-6 rounded-[1.2rem] p-5 animate-fade-in"
     >
       <div className="flex flex-col gap-4 border-b border-border/70 pb-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/[0.06] px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-accent/80">
             Dispatcher Board
           </div>
-          <h3 className="mt-3 text-lg font-semibold text-card-foreground">
+          <h3 className="mt-3 text-lg font-semibold tracking-tight text-card-foreground">
             Live operator control for doors, blockers and crew load
           </h3>
-          <p className="mt-1 max-w-3xl text-[13px] text-muted-foreground">
+          <p className="mt-1 max-w-3xl text-[13px] leading-6 text-muted-foreground">
             Use this board to decide which project needs crew now, where blockers are growing,
             and which installer can absorb the next assignment.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2.5">
           <button
             onClick={onOpenProjects}
-            className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
+            className="btn-premium rounded-xl border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
           >
             Open projects
           </button>
           <button
             onClick={onOpenInstallers}
-            className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
+            className="btn-premium rounded-xl border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
           >
             Open installers
           </button>
           <button
             onClick={onOpenCalendar}
-            className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
+            className="btn-premium rounded-xl border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
           >
             Open calendar
           </button>
@@ -156,77 +156,45 @@ export function DispatcherBoard({
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-            Projects
-          </div>
-          <div className="mt-2 text-xl font-semibold text-card-foreground">
-            {summary.total_projects}
-          </div>
-          <div className="mt-1 text-[12px] text-muted-foreground">
-            Needs dispatch: {summary.projects_needing_dispatch}
-          </div>
+        <div className="metric-tile">
+          <div className="metric-label">Projects</div>
+          <div className="metric-value text-[1.75rem]">{summary.total_projects}</div>
+          <div className="metric-subtext">Needs dispatch: {summary.projects_needing_dispatch}</div>
         </div>
-        <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Doors</div>
-          <div className="mt-2 text-xl font-semibold text-card-foreground">{summary.total_doors}</div>
-          <div className="mt-1 text-[12px] text-muted-foreground">
-            Pending: {summary.pending_doors}
-          </div>
+        <div className="metric-tile">
+          <div className="metric-label">Doors</div>
+          <div className="metric-value text-[1.75rem]">{summary.total_doors}</div>
+          <div className="metric-subtext">Pending: {summary.pending_doors}</div>
         </div>
-        <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-            Installed
-          </div>
-          <div className="mt-2 text-xl font-semibold text-card-foreground">
-            {summary.installed_doors}
-          </div>
-          <div className="mt-1 text-[12px] text-muted-foreground">
-            Unassigned: {summary.unassigned_doors}
-          </div>
+        <div className="metric-tile-success">
+          <div className="metric-label">Installed</div>
+          <div className="metric-value text-[1.75rem]">{summary.installed_doors}</div>
+          <div className="metric-subtext">Unassigned: {summary.unassigned_doors}</div>
         </div>
-        <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-            Issues
-          </div>
-          <div className="mt-2 text-xl font-semibold text-card-foreground">
-            {summary.open_issues}
-          </div>
-          <div className="mt-1 text-[12px] text-muted-foreground">
-            Blocked: {summary.blocked_issues}
-          </div>
+        <div className="metric-tile-danger">
+          <div className="metric-label">Issues</div>
+          <div className="metric-value text-[1.75rem]">{summary.open_issues}</div>
+          <div className="metric-subtext">Blocked: {summary.blocked_issues}</div>
         </div>
-        <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-            Available Crew
-          </div>
-          <div className="mt-2 text-xl font-semibold text-card-foreground">
-            {summary.available_installers}
-          </div>
-          <div className="mt-1 text-[12px] text-muted-foreground">
-            Busy: {summary.busy_installers}
-          </div>
+        <div className="metric-tile-soft">
+          <div className="metric-label">Available Crew</div>
+          <div className="metric-value text-[1.75rem]">{summary.available_installers}</div>
+          <div className="metric-subtext">Busy: {summary.busy_installers}</div>
         </div>
-        <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-            Next 7d Visits
-          </div>
-          <div className="mt-2 text-xl font-semibold text-card-foreground">
-            {summary.scheduled_visits_7d}
-          </div>
-          <div className="mt-1 text-[12px] text-muted-foreground">
-            Installation schedule
-          </div>
+        <div className="metric-tile-warning">
+          <div className="metric-label">Next 7d Visits</div>
+          <div className="metric-value text-[1.75rem]">{summary.scheduled_visits_7d}</div>
+          <div className="metric-subtext">Installation schedule</div>
         </div>
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-5">
         <div className="xl:col-span-3">
-          <div className="rounded-xl border border-border/70 bg-card/60 p-4">
+          <div className="surface-panel panel-pad-sm">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h4 className="text-sm font-semibold text-card-foreground">Projects needing dispatch</h4>
-                <p className="mt-1 text-[12px] text-muted-foreground">
+                <p className="mt-1 text-[12px] leading-6 text-muted-foreground">
                   Prioritized by blockers, unassigned doors and pending backlog.
                 </p>
               </div>
@@ -236,10 +204,7 @@ export function DispatcherBoard({
             <div className="space-y-3">
               {projects.length > 0 ? (
                 projects.map((project) => (
-                  <div
-                    key={project.project_id}
-                    className="rounded-xl border border-border/70 bg-background/50 p-4"
-                  >
+                  <div key={project.project_id} className="rounded-[1.1rem] border border-border/70 bg-background/50 p-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -254,7 +219,7 @@ export function DispatcherBoard({
                             {project.dispatch_status}
                           </span>
                         </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-3 text-[12px] text-muted-foreground">
+                        <div className="mt-1 flex flex-wrap items-center gap-3 text-[12px] leading-6 text-muted-foreground">
                           <span className="inline-flex items-center gap-1">
                             <MapPinned className="h-3.5 w-3.5" strokeWidth={1.7} />
                             {project.address}
@@ -265,7 +230,7 @@ export function DispatcherBoard({
                       </div>
                       <button
                         onClick={() => onOpenProject?.(project.project_id)}
-                        className="btn-premium inline-flex items-center gap-2 self-start rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
+                        className="btn-premium inline-flex items-center gap-2 self-start rounded-xl border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
                       >
                         Open project
                         <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.7} />
@@ -317,7 +282,7 @@ export function DispatcherBoard({
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-accent">
                         <CalendarDays className="h-3.5 w-3.5" strokeWidth={1.7} />
-                        {project.next_visit_title || "No scheduled visit"} ·{" "}
+                        {project.next_visit_title || "No scheduled visit"}{" / "}
                         {formatDateTime(project.next_visit_at)}
                       </span>
                     </div>
@@ -345,9 +310,9 @@ export function DispatcherBoard({
                                   {installer.availability_band}
                                 </span>
                               </div>
-                              <div className="mt-1 text-[11px] text-muted-foreground">
-                                Projects: {installer.active_projects} · Doors:{" "}
-                                {installer.assigned_open_doors} · Issues: {installer.open_issues}
+                              <div className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                                Projects: {installer.active_projects}{" / Doors: "}
+                                {installer.assigned_open_doors}{" / Issues: "} {installer.open_issues}
                               </div>
                             </div>
                           ))}
@@ -370,11 +335,11 @@ export function DispatcherBoard({
         </div>
 
         <div className="xl:col-span-2">
-          <div className="rounded-xl border border-border/70 bg-card/60 p-4 h-full">
+          <div className="surface-panel panel-pad-sm h-full">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h4 className="text-sm font-semibold text-card-foreground">Crew availability</h4>
-                <p className="mt-1 text-[12px] text-muted-foreground">
+                <p className="mt-1 text-[12px] leading-6 text-muted-foreground">
                   Who can absorb more work right now.
                 </p>
               </div>
@@ -402,8 +367,8 @@ export function DispatcherBoard({
                             {installer.availability_band}
                           </span>
                         </div>
-                        <div className="mt-1 text-[11px] text-muted-foreground">
-                          {installer.phone || installer.email || "No contact data"} · Status:{" "}
+                        <div className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                          {installer.phone || installer.email || "No contact data"}{" / Status: "}
                           {installer.status || "ACTIVE"}
                         </div>
                       </div>
@@ -436,12 +401,12 @@ export function DispatcherBoard({
                       </div>
                     </div>
 
-                    <div className="mt-3 rounded-lg border border-accent/15 bg-accent/[0.05] px-3 py-2 text-[12px] text-muted-foreground">
+                    <div className="mt-3 rounded-lg border border-accent/15 bg-accent/[0.05] px-3 py-2 text-[12px] leading-6 text-muted-foreground">
                       Next slot:{" "}
                       <span className="font-medium text-card-foreground">
                         {installer.next_event_title || "No scheduled event"}
                       </span>
-                      {" · "}
+                      {" / "}
                       {formatDateTime(installer.next_event_at)}
                     </div>
                   </div>
@@ -458,3 +423,4 @@ export function DispatcherBoard({
     </div>
   );
 }
+

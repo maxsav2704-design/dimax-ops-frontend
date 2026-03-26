@@ -60,48 +60,49 @@ export function KpiCard({
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="glass-card rounded-xl p-5 text-left w-full group animate-fade-in cursor-pointer relative overflow-hidden"
+      className="glass-card group relative w-full cursor-pointer overflow-hidden rounded-[1.2rem] p-5 text-left animate-fade-in"
       style={{
         transform: transform || undefined,
-        transition: "transform 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1)",
+        transition: "transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1)",
         boxShadow: isHovered
-          ? "0 16px 40px -12px hsl(var(--accent) / 0.12), 0 6px 16px -4px hsl(var(--foreground) / 0.08), 0 0 0 1px hsl(var(--accent) / 0.08)"
+          ? "0 18px 40px -22px hsl(var(--accent) / 0.16), 0 10px 24px -18px hsl(var(--foreground) / 0.1), 0 0 0 1px hsl(var(--accent) / 0.08)"
           : undefined,
       }}
     >
-      {/* Light sheen overlay */}
       <div
-        className="pointer-events-none absolute inset-0 rounded-xl"
+        className="pointer-events-none absolute inset-0 rounded-[1.2rem]"
         style={{
           background: isHovered
-            ? `radial-gradient(ellipse 280px 180px at ${sheenPos.x}% ${sheenPos.y}%, hsl(var(--accent) / 0.07), transparent 70%)`
+            ? `radial-gradient(ellipse 280px 180px at ${sheenPos.x}% ${sheenPos.y}%, hsl(var(--accent) / 0.05), transparent 72%)`
             : "none",
           transition: "opacity 300ms ease-out",
           opacity: isHovered ? 1 : 0,
         }}
       />
 
-      <div className="relative z-10">
-        <div className="flex items-start justify-between mb-3">
-          <p className="text-[13px] font-medium text-muted-foreground transition-colors duration-200 group-hover:text-foreground/70">
+      <div className="relative z-10 flex min-h-[148px] flex-col">
+        <div className="flex items-start justify-between gap-4">
+          <p className="max-w-[60%] text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-200 group-hover:text-foreground/70">
             {title}
           </p>
-          <span className="text-2xl font-semibold text-card-foreground tabular-nums">{value}</span>
+          <span className="text-[1.95rem] font-semibold leading-none tracking-tight text-card-foreground tabular-nums">
+            {value}
+          </span>
         </div>
 
-        <div className="w-full h-1.5 rounded-full bg-secondary mb-2.5 overflow-hidden">
+        <div className="mt-4 w-full overflow-hidden rounded-full bg-secondary/90">
           <div
             className={cn(
-              "h-full rounded-full transition-all duration-500 progress-glow",
+              "kpi-progress rounded-full transition-all duration-500 progress-glow",
               progressColorMap[progressColor]
             )}
             style={{ width: `${Math.min(progress, 100)}%` }}
           />
         </div>
 
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] text-muted-foreground">{subtitle}</p>
-          {detail && <p className="text-[11px] text-muted-foreground">{detail}</p>}
+        <div className="mt-auto flex items-end justify-between gap-3 pt-4">
+          <p className="min-w-0 text-[12px] leading-6 text-muted-foreground">{subtitle}</p>
+          {detail && <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{detail}</p>}
         </div>
       </div>
     </button>
