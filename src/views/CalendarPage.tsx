@@ -12,7 +12,9 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
+import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type EventType = "installation" | "delivery" | "meeting" | "consultation" | "inspection";
@@ -145,6 +147,7 @@ function eventToForm(event: CalendarEvent): EventFormState {
 
 export default function CalendarPage() {
   const queryClient = useQueryClient();
+  const { locale } = useI18n();
   const [weekStartDate, setWeekStartDate] = useState<Date>(startOfWeek(new Date()));
   const [filterType, setFilterType] = useState<EventType | "all">("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -325,10 +328,18 @@ export default function CalendarPage() {
   const hasActionError =
     createMutation.isError || updateMutation.isError || deleteMutation.isError;
   const actionErrorMessage =
-    (createMutation.error instanceof Error && createMutation.error.message) ||
-    (updateMutation.error instanceof Error && updateMutation.error.message) ||
-    (deleteMutation.error instanceof Error && deleteMutation.error.message) ||
+    (createMutation.error &&
+      readableApiError(createMutation.error, locale, "Calendar action failed.")) ||
+    (updateMutation.error &&
+      readableApiError(updateMutation.error, locale, "Calendar action failed.")) ||
+    (deleteMutation.error &&
+      readableApiError(deleteMutation.error, locale, "Calendar action failed.")) ||
     "Calendar action failed.";
+  const loadErrorMessage = readableApiError(
+    eventsQuery.error || installersQuery.error || projectsQuery.error,
+    locale,
+    "Failed to load calendar data."
+  );
   const isInvalidTimeRange = form.ends_at_hhmm <= form.starts_at_hhmm;
 
   return (
@@ -436,7 +447,7 @@ export default function CalendarPage() {
 
         {hasLoadError && (
           <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
-            Failed to load calendar data.
+            {loadErrorMessage}
           </div>
         )}
         {hasActionError && (

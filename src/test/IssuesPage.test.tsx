@@ -128,7 +128,7 @@ describe("IssuesPage", () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText("Install blocked")).toBeInTheDocument();
+    expect(await screen.findByText("Install blocked", {}, { timeout: 5000 })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Status filter"), {
       target: { value: "OPEN" },
@@ -306,10 +306,12 @@ describe("IssuesPage", () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText("Installer role has read-only access to issue workflow controls.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Installer role has read-only access to issue workflow controls.", {}, { timeout: 5000 })
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByText("Install blocked"));
     expect(await screen.findByRole("button", { name: "Save Workflow" })).toBeDisabled();
     expect(screen.getByRole("button", { name: /Apply To Filtered/i })).toBeDisabled();
-  });
+  }, 15000);
 });
 

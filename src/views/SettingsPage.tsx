@@ -12,7 +12,9 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
+import { readableApiError } from "@/lib/api-error-display";
 import { canAccessAdminModule } from "@/lib/admin-access";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type CompanySettings = {
@@ -104,6 +106,7 @@ function BoolBadge({ value }: { value: boolean }) {
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
+  const { locale } = useI18n();
   const [companyName, setCompanyName] = useState("");
   const [emailTestRecipient, setEmailTestRecipient] = useState("ops@example.com");
   const [whatsappTestRecipient, setWhatsappTestRecipient] = useState("+972500000000");
@@ -162,7 +165,7 @@ export default function SettingsPage() {
       await integrationsHealthQuery.refetch();
     },
     onError: (error) => {
-      setTestFeedback(error instanceof Error ? error.message : "Email test send failed");
+      setTestFeedback(readableApiError(error, locale, "Email test send failed"));
     },
   });
 
@@ -181,7 +184,7 @@ export default function SettingsPage() {
       await integrationsHealthQuery.refetch();
     },
     onError: (error) => {
-      setTestFeedback(error instanceof Error ? error.message : "WhatsApp test send failed");
+      setTestFeedback(readableApiError(error, locale, "WhatsApp test send failed"));
     },
   });
 
@@ -192,6 +195,11 @@ export default function SettingsPage() {
   const company = companyQuery.data;
   const integrations = integrationsQuery.data;
   const integrationsHealth = integrationsHealthQuery.data;
+  const loadErrorMessage = readableApiError(
+    companyQuery.error || integrationsQuery.error || integrationsHealthQuery.error,
+    locale,
+    "Failed to load settings. Verify auth and backend availability."
+  );
 
   return (
     <DashboardLayout>
@@ -248,7 +256,7 @@ export default function SettingsPage() {
 
         {isError && (
           <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
-            Failed to load settings. Verify auth and backend availability.
+            {loadErrorMessage}
           </div>
         )}
         {!canManageSettings && (

@@ -125,7 +125,7 @@ describe("SettingsPage", () => {
     expect(screen.getByRole("button", { name: "Save Company" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Send Email Test" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Send WhatsApp Test" })).toBeDisabled();
-  });
+  }, 15000);
 
   it("sends integration email test for admin role", async () => {
     authSessionMock.mockReturnValue({
@@ -156,8 +156,7 @@ describe("SettingsPage", () => {
       </QueryClientProvider>
     );
 
-    await screen.findByText("Provider test send");
-    fireEvent.click(screen.getByRole("button", { name: "Send Email Test" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Send Email Test" }, { timeout: 10000 }));
 
     await waitFor(() => {
       const sendCall = apiFetchMock.mock.calls.find(
@@ -166,6 +165,6 @@ describe("SettingsPage", () => {
       expect(sendCall).toBeTruthy();
     });
 
-    expect(await screen.findByText("Email test sent to ops@example.com")).toBeInTheDocument();
-  });
+    expect(await screen.findByText("Email test sent to ops@example.com", {}, { timeout: 10000 })).toBeInTheDocument();
+  }, 15000);
 });

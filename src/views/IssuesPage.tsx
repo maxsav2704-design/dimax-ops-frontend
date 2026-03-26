@@ -13,6 +13,7 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
+import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -286,7 +287,7 @@ export default function IssuesPage() {
     },
     onError: (error) => {
       setSaveNote(null);
-      setFormError(error instanceof Error ? error.message : "Failed to save workflow");
+      setFormError(readableApiError(error, locale, "Failed to save workflow"));
     },
   });
 
@@ -382,7 +383,7 @@ export default function IssuesPage() {
     },
     onError: (error) => {
       setSaveNote(null);
-      setFormError(error instanceof Error ? error.message : "Failed to apply bulk update");
+      setFormError(readableApiError(error, locale, "Failed to apply bulk update"));
     },
   });
 
@@ -535,9 +536,7 @@ export default function IssuesPage() {
           <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>
-              {issuesQuery.error instanceof Error
-                ? issuesQuery.error.message
-                : t("issues.failedToLoad")}
+              {readableApiError(issuesQuery.error, locale, t("issues.failedToLoad"))}
             </span>
           </div>
         )}

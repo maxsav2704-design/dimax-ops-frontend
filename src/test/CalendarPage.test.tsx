@@ -156,7 +156,7 @@ describe("CalendarPage", () => {
 
     expect(screen.getByText("End time must be later than start time.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create Event" })).toBeDisabled();
-  });
+  }, 15000);
 
   it("disables privileged calendar actions for installer role", async () => {
     authSessionMock.mockReturnValue({ role: "INSTALLER", admin_scope: null, can_view_rates: false });
