@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Wrench } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
+import { readableApiError } from "@/lib/api-error-display";
 import { useI18n, type Locale } from "@/lib/i18n";
 
 const projectOverrides: Partial<Record<Locale, Record<string, string>>> = {
@@ -400,7 +401,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
       });
     },
     onError: (error) => {
-      setActionError(error instanceof Error ? error.message : "Install action failed.");
+      setActionError(readableApiError(error, locale, "Install action failed."));
     },
   });
 
@@ -421,7 +422,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
     },
     onError: (error) => {
       setActionError(
-        error instanceof Error ? error.message : "Not-installed action failed."
+        readableApiError(error, locale, "Not-installed action failed.")
       );
     },
   });
@@ -445,7 +446,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
       });
     },
     onError: (error) => {
-      setActionError(error instanceof Error ? error.message : "Add-on fact action failed.");
+      setActionError(readableApiError(error, locale, "Add-on fact action failed."));
     },
   });
 
@@ -631,7 +632,7 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
       {detailsQuery.isError && (
         <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span>{t("installerProject.error")}</span>
+            <span>{readableApiError(detailsQuery.error, locale, t("installerProject.error"))}</span>
             <button
               type="button"
               onClick={() => {

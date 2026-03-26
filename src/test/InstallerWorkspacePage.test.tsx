@@ -159,7 +159,7 @@ describe("InstallerWorkspacePage", () => {
     );
 
     expect(
-      await screen.findByText("Failed to load installer workspace. Check API availability and role mapping.")
+      await screen.findByText("network down")
     ).toBeInTheDocument();
 
     shouldFail = false;

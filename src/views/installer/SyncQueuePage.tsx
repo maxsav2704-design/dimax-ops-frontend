@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
+import { readableApiError, readableConflictCode } from "@/lib/api-error-display";
 import { fetchInstallerSyncQueue } from "@/lib/installer-api";
 import { useI18n } from "@/lib/i18n";
 
@@ -89,10 +90,14 @@ export default function InstallerSyncQueuePage() {
 
       {syncQuery.isError && (
         <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
-          {copy(
-            "Failed to load sync queue.",
-            "Не удалось загрузить очередь синка.",
-            "לא ניתן לטעון את תור הסנכרון."
+          {readableApiError(
+            syncQuery.error,
+            locale,
+            copy(
+              "Failed to load sync queue.",
+              "Не удалось загрузить очередь синка.",
+              "לא ניתן לטעון את תור הסנכרון."
+            )
           )}
         </div>
       )}
@@ -170,7 +175,14 @@ export default function InstallerSyncQueuePage() {
                   </div>
                   <div>
                     <span className="font-medium text-foreground">{copy("Conflict", "Конфликт", "קונפליקט")}: </span>
-                    {item.conflict_code || copy("None", "Нет", "אין")}
+                    {item.conflict_code ? (
+                      <>
+                        {readableConflictCode(item.conflict_code, locale)}
+                        <span className="text-[11px] text-muted-foreground"> ({item.conflict_code})</span>
+                      </>
+                    ) : (
+                      copy("None", "Нет", "אין")
+                    )}
                   </div>
                 </div>
               </div>

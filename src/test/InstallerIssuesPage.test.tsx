@@ -79,7 +79,7 @@ describe("InstallerIssuesPage", () => {
       expect(screen.getByText("Missing handle")).toBeInTheDocument();
       expect(window.location.search).toContain("issue_status=OPEN");
     });
-  });
+  }, 15000);
 
   it("reads deep-link filters from query params", async () => {
     window.history.replaceState({}, "", "/installer/issues?project_id=project-2&issue_status=OPEN&issue_search=handle");

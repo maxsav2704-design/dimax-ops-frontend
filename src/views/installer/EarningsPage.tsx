@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
+import { readableApiError } from "@/lib/api-error-display";
 import { fetchInstallerEarningsSummary } from "@/lib/installer-api";
 import { useI18n } from "@/lib/i18n";
 
@@ -84,10 +85,14 @@ export default function InstallerEarningsPage() {
 
       {earningsQuery.isError && (
         <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
-          {copy(
-            "Failed to load earnings summary.",
-            "Не удалось загрузить заработок.",
-            "לא ניתן לטעון את סיכום הרווחים."
+          {readableApiError(
+            earningsQuery.error,
+            locale,
+            copy(
+              "Failed to load earnings summary.",
+              "Не удалось загрузить заработок.",
+              "לא ניתן לטעון את סיכום הרווחים."
+            )
           )}
         </div>
       )}

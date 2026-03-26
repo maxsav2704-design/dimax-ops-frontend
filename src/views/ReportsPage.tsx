@@ -2373,14 +2373,14 @@ export default function ReportsPage() {
                           onClick={() => router.push("/operations?actionable=1")}
                           className="h-10 rounded-xl border border-border/70 bg-background/70 px-4 text-[13px] font-medium text-foreground"
                         >
-                          {copy("Open actionable queue", "?????????????? ???????????????? ????????????", "?????? ?????? ????????")}
+                          {copy("Open actionable queue", "Открыть очередь действий", "פתח תור פעולות")}
                         </button>
                         <button
                           type="button"
                           onClick={() => router.push("/operations")}
                           className="h-10 rounded-xl border border-border/70 bg-background/70 px-4 text-[13px] font-medium text-foreground"
                         >
-                          {copy("Go to operations", "?????????????? ?? ????????????????", "???????? ??????????????????")}
+                          {copy("Go to operations", "Перейти в операции", "עבור לאופרציות")}
                         </button>
                       </>
                     ) : null}

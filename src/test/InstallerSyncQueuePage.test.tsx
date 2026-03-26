@@ -68,7 +68,9 @@ describe("InstallerSyncQueuePage", () => {
     expect(await screen.findByText("Installer sync queue")).toBeInTheDocument();
     expect(await screen.findByText("set_status")).toBeInTheDocument();
     expect(await screen.findByText("add_comment")).toBeInTheDocument();
-    expect(await screen.findByText("CONFLICT_ASSIGNMENT_CHANGED")).toBeInTheDocument();
+    expect(
+      await screen.findByText((content) => content.includes("CONFLICT_ASSIGNMENT_CHANGED"))
+    ).toBeInTheDocument();
     expect(await screen.findAllByText("2")).not.toHaveLength(0);
   });
 

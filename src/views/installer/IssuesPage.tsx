@@ -7,6 +7,7 @@ import { RefreshCcw } from "lucide-react";
 
 import { fetchInstallerIssues, updateInstallerIssue } from "@/lib/installer-api";
 import { useI18n } from "@/lib/i18n";
+import { readableApiError } from "@/lib/api-error-display";
 
 export default function InstallerIssuesPage() {
   const { locale } = useI18n();
@@ -41,13 +42,15 @@ export default function InstallerIssuesPage() {
     },
     onError: (error) => {
       setActionError(
-        error instanceof Error
-          ? error.message
-          : copy(
-              "Failed to update issue note.",
-              "Не удалось обновить заметку по проблеме.",
-              "?? ???? ????? ?? ????? ?????."
-            )
+        readableApiError(
+          error,
+          locale,
+          copy(
+            "Failed to update issue note.",
+            "Не удалось обновить заметку по проблеме.",
+            "לא ניתן לעדכן את ההערה לבעיה."
+          )
+        )
       );
     },
   });
@@ -154,15 +157,15 @@ export default function InstallerIssuesPage() {
         <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
         <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
-            <div className="page-eyebrow">{copy("Issues", "Проблемы", "?????")}</div>
+            <div className="page-eyebrow">{copy("Issues", "Проблемы", "בעיות")}</div>
             <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.04em]">
-              {copy("Installer issues", "Проблемы монтажника", "????? ??????")}
+              {copy("Installer issues", "Проблемы монтажника", "בעיות המתקין")}
             </h1>
             <p className="mt-3 text-sm leading-7 text-muted-foreground">
               {copy(
                 "One simple list for blocked, open and project-linked issues.",
                 "Один простой список для заблокированных, открытых и привязанных к проекту проблем.",
-                "????? ????? ??? ?????? ??????, ?????? ???????? ???????."
+                "רשימה פשוטה אחת לבעיות חסומות, פתוחות ומקושרות לפרויקט."
               )}
             </p>
           </div>
@@ -171,7 +174,7 @@ export default function InstallerIssuesPage() {
               href="/installer"
               className="inline-flex h-11 items-center justify-center rounded-xl border border-border/70 bg-background/75 px-4 text-sm font-medium transition-colors hover:bg-muted"
             >
-              {copy("Back to workspace", "Назад в рабочее место", "???? ????? ??????")}
+              {copy("Back to workspace", "Назад в рабочее место", "חזרה למרחב העבודה")}
             </Link>
             <button
               type="button"
@@ -180,7 +183,7 @@ export default function InstallerIssuesPage() {
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
             >
               <RefreshCcw className="h-4 w-4" />
-              {issuesQuery.isFetching ? copy("Refreshing...", "Обновляем...", "?????...") : copy("Refresh", "Обновить", "????")}
+              {issuesQuery.isFetching ? copy("Refreshing...", "Обновляем...", "מרענן...") : copy("Refresh", "Обновить", "רענן")}
             </button>
           </div>
         </div>
@@ -192,15 +195,15 @@ export default function InstallerIssuesPage() {
           <div className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-foreground tabular-nums">{stats.total}</div>
         </div>
         <div className="metric-tile">
-          <div className="metric-label">{copy("Blocked", "Заблокированы", "??????")}</div>
+          <div className="metric-label">{copy("Blocked", "Заблокированы", "חסומות")}</div>
           <div className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-foreground tabular-nums">{stats.blocked}</div>
         </div>
         <div className="metric-tile">
-          <div className="metric-label">{copy("Visible", "Видно", "??????")}</div>
+          <div className="metric-label">{copy("Visible", "Видно", "גלויות")}</div>
           <div className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-foreground tabular-nums">{stats.visible}</div>
         </div>
         <div className="metric-tile">
-          <div className="metric-label">{copy("Projects", "Проекты", "????????")}</div>
+          <div className="metric-label">{copy("Projects", "Проекты", "פרויקטים")}</div>
           <div className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-foreground tabular-nums">{stats.projects}</div>
         </div>
       </div>
@@ -208,14 +211,14 @@ export default function InstallerIssuesPage() {
       <section className="surface-panel space-y-4">
         <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr_1.2fr_auto]">
           <label className="field-stack">
-            <span className="text-sm text-muted-foreground">{copy("Project", "Проект", "??????")}</span>
+            <span className="text-sm text-muted-foreground">{copy("Project", "Проект", "פרויקט")}</span>
             <select
-              aria-label={copy("Project", "Проект", "??????")}
+              aria-label={copy("Project", "Проект", "פרויקט")}
               value={projectFilter}
               onChange={(event) => setProjectFilter(event.target.value)}
               className="control-input"
             >
-              <option value="ALL">{copy("All projects", "Все проекты", "?? ?????????")}</option>
+              <option value="ALL">{copy("All projects", "Все проекты", "כל הפרויקטים")}</option>
               {projectOptions.map((projectId) => (
                 <option key={projectId} value={projectId}>
                   {projectId}
@@ -224,14 +227,14 @@ export default function InstallerIssuesPage() {
             </select>
           </label>
           <label className="field-stack">
-            <span className="text-sm text-muted-foreground">{copy("Status", "Статус", "?????")}</span>
+            <span className="text-sm text-muted-foreground">{copy("Status", "Статус", "סטטוס")}</span>
             <select
-              aria-label={copy("Status", "Статус", "?????")}
+              aria-label={copy("Status", "Статус", "סטטוס")}
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
               className="control-input"
             >
-              <option value="ALL">{copy("All statuses", "Все статусы", "?? ????????")}</option>
+              <option value="ALL">{copy("All statuses", "Все статусы", "כל הסטטוסים")}</option>
               {statusOptions.map((status) => (
                 <option key={status} value={status}>
                   {status}
@@ -240,12 +243,12 @@ export default function InstallerIssuesPage() {
             </select>
           </label>
           <label className="field-stack">
-            <span className="text-sm text-muted-foreground">{copy("Search", "Поиск", "?????")}</span>
+            <span className="text-sm text-muted-foreground">{copy("Search", "Поиск", "חיפוש")}</span>
             <input
-              aria-label={copy("Issue search", "Поиск проблемы", "????? ????")}
+              aria-label={copy("Issue search", "Поиск проблемы", "חיפוש בעיה")}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder={copy("Door, title, details, priority", "Дверь, заголовок, детали, приоритет", "???, ?????, ?????, ??????")}
+              placeholder={copy("Door, title, details, priority", "Дверь, заголовок, детали, приоритет", "דלת, כותרת, פרטים, עדיפות")}
               className="control-input"
             />
           </label>
@@ -256,7 +259,7 @@ export default function InstallerIssuesPage() {
               disabled={!hasActiveFilters}
               className="inline-flex h-11 items-center justify-center rounded-xl border border-border/70 bg-background/75 px-4 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {copy("Reset filters", "Сбросить фильтры", "??? ??????")}
+              {copy("Reset filters", "Сбросить фильтры", "אפס מסננים")}
             </button>
           </div>
         </div>
@@ -264,10 +267,14 @@ export default function InstallerIssuesPage() {
 
       {issuesQuery.isError && (
         <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
-          {copy(
-            "Failed to load installer issues.",
-            "Не удалось загрузить проблемы монтажника.",
-            "?? ???? ????? ?? ????? ??????."
+          {readableApiError(
+            issuesQuery.error,
+            locale,
+            copy(
+              "Failed to load installer issues.",
+              "Не удалось загрузить проблемы монтажника.",
+              "לא ניתן לטעון את בעיות המתקין."
+            )
           )}
         </div>
       )}
@@ -280,19 +287,19 @@ export default function InstallerIssuesPage() {
 
       {issuesQuery.isLoading && (
         <div className="surface-panel text-sm text-muted-foreground">
-          {copy("Loading issues...", "Загружаем проблемы...", "???? ?????...")}
+          {copy("Loading issues...", "Загружаем проблемы...", "טוען בעיות...")}
         </div>
       )}
 
       {!issuesQuery.isLoading && issues.length === 0 && (
         <div className="surface-panel text-sm text-muted-foreground">
-          {copy("No issues assigned right now.", "Сейчас нет назначенных проблем.", "???? ??? ????? ???????.")}
+          {copy("No issues assigned right now.", "Сейчас нет назначенных проблем.", "כרגע אין בעיות משויכות.")}
         </div>
       )}
 
       {!issuesQuery.isLoading && issues.length > 0 && filteredIssues.length === 0 && (
         <div className="surface-panel text-sm text-muted-foreground">
-          {copy("No issues match current filters.", "Нет проблем под текущие фильтры.", "??? ????? ??????? ????????.")}
+          {copy("No issues match current filters.", "Нет проблем под текущие фильтры.", "אין בעיות שמתאימות למסננים הנוכחיים.")}
         </div>
       )}
 
@@ -303,10 +310,10 @@ export default function InstallerIssuesPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="text-base font-semibold text-foreground">
-                    {issue.title || copy("Issue", "Проблема", "????")}
+                    {issue.title || copy("Issue", "Проблема", "בעיה")}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {issue.project_id || copy("No project", "Без проекта", "??? ??????")}
+                    {issue.project_id || copy("No project", "Без проекта", "ללא פרויקט")}
                     {issue.door_id ? ` • ${issue.door_id}` : ""}
                     {issue.priority ? ` • ${issue.priority}` : ""}
                   </div>
@@ -316,13 +323,13 @@ export default function InstallerIssuesPage() {
                 </span>
               </div>
               <div className="text-sm text-muted-foreground">
-                {issue.description || issue.details || copy("No details yet.", "Пока нет деталей.", "????? ??? ?????.")}
+                {issue.description || issue.details || copy("No details yet.", "Пока нет деталей.", "עדיין אין פרטים.")}
               </div>
               <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
                 <label className="field-stack">
-                  <span className="text-xs text-muted-foreground">{copy("Field note", "Заметка с объекта", "???? ???")}</span>
+                  <span className="text-xs text-muted-foreground">{copy("Field note", "Заметка с объекта", "הערת שטח")}</span>
                   <textarea
-                    aria-label={`${copy("Field note", "Заметка с объекта", "???? ???")} ${issue.id}`}
+                    aria-label={`${copy("Field note", "Заметка с объекта", "הערת שטח")} ${issue.id}`}
                     value={draftComments[issue.id] ?? issue.comment ?? ""}
                     onChange={(event) =>
                       setDraftComments((current) => ({
@@ -335,13 +342,13 @@ export default function InstallerIssuesPage() {
                     placeholder={copy(
                       "Add a short installer note for admin and office follow-up.",
                       "Добавь короткую заметку для админа и дальнейшей обработки.",
-                      "???? ???? ???? ????? ????? ?? ?????."
+                      "הוסף הערה קצרה למנהל ולהמשך טיפול במשרד."
                     )}
                   />
                 </label>
                 <div className="flex flex-col justify-between gap-2">
                   <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2 text-xs text-muted-foreground">
-                    {copy("Media", "Медиа", "????")}: <span className="font-medium text-foreground">{issue.media_count ?? 0}</span>
+                    {copy("Media", "Медиа", "מדיה")}: <span className="font-medium text-foreground">{issue.media_count ?? 0}</span>
                   </div>
                   <button
                     type="button"
@@ -355,8 +362,8 @@ export default function InstallerIssuesPage() {
                     className="inline-flex h-11 items-center justify-center rounded-xl border border-border/70 bg-background/75 px-4 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {updateIssueMutation.isPending
-                      ? copy("Saving...", "Сохраняем...", "????...")
-                      : copy("Save note", "Сохранить заметку", "???? ????")}
+                      ? copy("Saving...", "Сохраняем...", "שומר...")
+                      : copy("Save note", "Сохранить заметку", "שמור הערה")}
                   </button>
                 </div>
               </div>
@@ -366,7 +373,7 @@ export default function InstallerIssuesPage() {
                     href={`/installer/projects/${issue.project_id}`}
                     className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                   >
-                    {copy("Open project", "Открыть проект", "??? ??????")}
+                    {copy("Open project", "Открыть проект", "פתח פרויקט")}
                   </Link>
                 )}
               </div>

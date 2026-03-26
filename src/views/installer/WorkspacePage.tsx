@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
 import { fetchInstallerWorkspace } from "@/lib/installer-api";
+import { readableApiError } from "@/lib/api-error-display";
 import { useI18n } from "@/lib/i18n";
 import { buildInstallerIssuesHref } from "@/views/installer/issue-links";
 
@@ -446,7 +447,7 @@ export default function InstallerWorkspacePage() {
 
       {workspaceQuery.isError && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
-          <span>{t("installerWorkspace.error")}</span>
+          <span>{readableApiError(workspaceQuery.error, locale, t("installerWorkspace.error"))}</span>
           <button
             type="button"
             onClick={() => {

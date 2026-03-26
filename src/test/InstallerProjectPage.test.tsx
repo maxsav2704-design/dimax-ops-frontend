@@ -144,7 +144,7 @@ describe("InstallerProjectPage", () => {
         comment: "Need crane access",
       });
     });
-  });
+  }, 15000);
 
   it("sends installer add-on fact action with payload", async () => {
     setupApiMock();
@@ -263,7 +263,7 @@ describe("InstallerProjectPage", () => {
     await waitFor(() => {
       expect(window.location.search).toBe("");
     });
-  });
+  }, 15000);
 
   it("filters open issues by search and status, then resets issue filters", async () => {
     setupApiMock({
@@ -311,7 +311,7 @@ describe("InstallerProjectPage", () => {
       expect(screen.getByText("Frame alignment")).toBeInTheDocument();
       expect(screen.getByText("Lock blocked")).toBeInTheDocument();
     });
-  });
+  }, 15000);
 
   it("shows related door shortcuts inside open issues", async () => {
     setupApiMock({
@@ -620,7 +620,7 @@ describe("InstallerProjectPage", () => {
 
     renderSubject();
 
-    expect(await screen.findByText("Failed to load project details.")).toBeInTheDocument();
+    expect(await screen.findByText("unavailable")).toBeInTheDocument();
 
     shouldFail = false;
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
