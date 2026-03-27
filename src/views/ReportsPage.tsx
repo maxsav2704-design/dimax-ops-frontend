@@ -5,6 +5,7 @@ import {
   AlertCircle,
   AlertTriangle,
   BellRing,
+  CheckCircle2,
   CheckCheck,
   Mail,
   MessageSquare,
@@ -1476,6 +1477,7 @@ export default function ReportsPage() {
   const [savedPresets, setSavedPresets] = useState<ReportsPreset[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState("");
   const [presetNotice, setPresetNotice] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const activeFocus = parseReportsFocus(searchParams?.get("focus") || null);
   const activeOpsPreset = parseReportsOpsPreset(searchParams?.get("ops_preset") || null);
   const scopedProjectId = searchParams?.get("project_id") || null;
@@ -1800,6 +1802,13 @@ export default function ReportsPage() {
         body: JSON.stringify({}),
       }),
     onSuccess: async () => {
+      setActionNotice(
+        copy(
+          "Alerts marked as read.",
+          "Алерты отмечены как прочитанные.",
+          "ההתראות סומנו כנקראו."
+        )
+      );
       await queryClient.invalidateQueries({ queryKey: ["limit-alerts"] });
       await queryClient.invalidateQueries({ queryKey: ["limit-alerts-unread"] });
     },
@@ -1812,6 +1821,13 @@ export default function ReportsPage() {
         body: JSON.stringify({ reason: "manual retry from reports" }),
       }),
     onSuccess: async () => {
+      setActionNotice(
+        copy(
+          "Delivery retry started and reports were refreshed.",
+          "Повтор доставки запущен, а отчёты обновлены.",
+          "ניסיון המשלוח הופעל מחדש והדוחות רועננו."
+        )
+      );
       await queryClient.invalidateQueries({ queryKey: ["outbox-summary"] });
       await queryClient.invalidateQueries({ queryKey: ["outbox-failed"] });
       await queryClient.invalidateQueries({ queryKey: ["reports-delivery"] });
@@ -1831,6 +1847,15 @@ export default function ReportsPage() {
         })}`,
         "audit_catalogs.csv"
       ),
+    onSuccess: () => {
+      setActionNotice(
+        copy(
+          "Catalog audit export is ready.",
+          "Экспорт аудита каталога готов.",
+          "ייצוא ביקורת הקטלוג מוכן."
+        )
+      );
+    },
   });
 
   const exportIssueAuditMutation = useMutation({
@@ -1847,6 +1872,15 @@ export default function ReportsPage() {
         })}`,
         "audit_issues.csv"
       ),
+    onSuccess: () => {
+      setActionNotice(
+        copy(
+          "Issue audit export is ready.",
+          "Экспорт аудита проблем готов.",
+          "ייצוא ביקורת התקלות מוכן."
+        )
+      );
+    },
   });
 
   const exportInstallersKpiMutation = useMutation({
@@ -1859,6 +1893,15 @@ export default function ReportsPage() {
       return downloadCsvExport(
         `/api/v1/admin/reports/installers-kpi/export?${params.toString()}`,
         "installers_kpi.csv"
+      );
+    },
+    onSuccess: () => {
+      setActionNotice(
+        copy(
+          "Installer KPI export is ready.",
+          "Экспорт KPI монтажников готов.",
+          "ייצוא KPI למתקינים מוכן."
+        )
       );
     },
   });
@@ -1881,6 +1924,15 @@ export default function ReportsPage() {
         "order_numbers_kpi.csv"
       );
     },
+    onSuccess: () => {
+      setActionNotice(
+        copy(
+          "Order numbers export is ready.",
+          "Экспорт по номерам заказов готов.",
+          "ייצוא מספרי ההזמנות מוכן."
+        )
+      );
+    },
   });
 
   const exportExecutiveMutation = useMutation({
@@ -1895,6 +1947,15 @@ export default function ReportsPage() {
       return downloadCsvExport(
         `/api/v1/admin/reports/executive/export?${params.toString()}`,
         "reports_executive_snapshot.csv"
+      );
+    },
+    onSuccess: () => {
+      setActionNotice(
+        copy(
+          "Executive export is ready.",
+          "Executive-экспорт готов.",
+          "ייצוא הנהלה מוכן."
+        )
       );
     },
   });
@@ -2165,6 +2226,14 @@ export default function ReportsPage() {
     const timer = window.setTimeout(() => setPresetNotice(null), 2500);
     return () => window.clearTimeout(timer);
   }, [presetNotice]);
+
+  useEffect(() => {
+    if (!actionNotice) {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setActionNotice(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [actionNotice]);
 
   useEffect(() => {
     if (!activeFocus) {
@@ -2490,6 +2559,12 @@ export default function ReportsPage() {
           <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{exportErrorMessage}</span>
+          </div>
+        )}
+        {actionNotice && (
+          <div className="rounded-lg border border-[hsl(var(--success)/0.35)] bg-[hsl(var(--success)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--success))] flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>{actionNotice}</span>
           </div>
         )}
         {presetNotice && (
