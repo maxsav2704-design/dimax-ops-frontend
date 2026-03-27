@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
-﻿import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, CheckCheck, Pencil, Plus, Search } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -76,14 +77,36 @@ function formatDateTime(value?: string): string {
 
 export default function LibraryPage() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | LibraryStatus>("all");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialSearch = (searchParams?.get("q") || "").trim();
+  const initialStatus = searchParams?.get("status") === "ACTIVE" || searchParams?.get("status") === "ARCHIVED"
+    ? (searchParams?.get("status") as LibraryStatus)
+    : "all";
+  const [search, setSearch] = useState(initialSearch);
+  const [statusFilter, setStatusFilter] = useState<"all" | LibraryStatus>(initialStatus);
   const [message, setMessage] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [form, setForm] = useState<ProductLibraryForm>(emptyForm());
   const [editingItem, setEditingItem] = useState<ProductLibraryItem | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [deepLinkHandled, setDeepLinkHandled] = useState(false);
+  const returnTo = (searchParams?.get("return_to") || "").trim();
+
+  const buildProjectFlowHref = (product?: Pick<ProductLibraryItem, "id" | "install_type">) => {
+    if (!returnTo) {
+      return "";
+    }
+    const [pathname, queryString = ""] = returnTo.split("?");
+    const params = new URLSearchParams(queryString);
+    if (product) {
+      params.set("library_product_id", product.id);
+      params.set("library_install_type", product.install_type);
+    }
+    const suffix = params.toString();
+    return suffix ? `${pathname}?${suffix}` : pathname;
+  };
 
   const listQuery = useQuery({
     queryKey: ["library", search, statusFilter],
@@ -102,6 +125,24 @@ export default function LibraryPage() {
     },
     refetchInterval: 30_000,
   });
+
+  useEffect(() => {
+    if (deepLinkHandled || searchParams?.get("open") !== "create") {
+      return;
+    }
+
+    setDeepLinkHandled(true);
+    setMessage(null);
+    setErrorMessage(null);
+    setEditingItem(null);
+    setForm({
+      ...emptyForm(),
+      sku: (searchParams?.get("sku") || "").trim(),
+      install_type: (searchParams?.get("install_type") || "").trim(),
+      status: "ACTIVE",
+    });
+    setIsCreateOpen(true);
+  }, [deepLinkHandled, searchParams]);
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -226,6 +267,15 @@ export default function LibraryPage() {
                 </div>
               </div>
               <div className="toolbar-row">
+                {returnTo ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(buildProjectFlowHref())}
+                  >
+                    Back to project flow
+                  </Button>
+                ) : null}
                 <Button size="sm" onClick={openCreateDialog}>
                   <Plus className="h-3.5 w-3.5" />
                   Add product
@@ -318,6 +368,16 @@ export default function LibraryPage() {
                     <TableCell className="text-muted-foreground">{formatDateTime(item.updated_at)}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1.5">
+                        {returnTo ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push(buildProjectFlowHref(item))}
+                            className="px-2.5"
+                          >
+                            Use in project flow
+                          </Button>
+                        ) : null}
                         <Button variant="outline" size="sm" onClick={() => openEditDialog(item)} className="px-2.5" aria-label={`Edit ${item.sku}`}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -429,3 +489,4 @@ function LibraryForm({
     </div>
   );
 }
+

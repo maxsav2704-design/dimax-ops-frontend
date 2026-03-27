@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   Link2,
@@ -298,6 +299,8 @@ function InstallerBaseForm({
 
 export default function InstallersPage() {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
@@ -309,6 +312,7 @@ export default function InstallersPage() {
   const [editingInstaller, setEditingInstaller] = useState<Installer | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [deepLinkApplied, setDeepLinkApplied] = useState(false);
   const session = useAuthSession();
   const canManageInstallers = canRunPrivilegedAdminActions(session);
   const canManageRates = canViewRates(session);
@@ -317,6 +321,7 @@ export default function InstallersPage() {
     ? undefined
     : "Installer role is read-only in installers";
   const rateActionHint = canManageRates ? undefined : "Rate access is restricted for your scope";
+  const deepLinkInstallerId = (searchParams?.get("installer_id") || "").trim();
 
   const [linkUserId, setLinkUserId] = useState("");
   const [newRateDoorTypeId, setNewRateDoorTypeId] = useState("");
@@ -527,6 +532,39 @@ export default function InstallersPage() {
   });
 
   const installers = installersQuery.data || [];
+
+  useEffect(() => {
+    if (!deepLinkInstallerId || deepLinkApplied || installersQuery.isLoading) {
+      return;
+    }
+
+    const matchedInstaller = installers.find((installer) => installer.id === deepLinkInstallerId) || null;
+    setDeepLinkApplied(true);
+    if (!matchedInstaller || !canOpenInstallerDetails) {
+      return;
+    }
+
+    setActionError(null);
+    setNotice(null);
+    setEditingInstaller(matchedInstaller);
+    setForm({
+      full_name: matchedInstaller.full_name,
+      phone: matchedInstaller.phone || "",
+      email: matchedInstaller.email || "",
+      address: "",
+      passport_id: "",
+      notes: "",
+      status: matchedInstaller.status || "ACTIVE",
+      is_active: matchedInstaller.is_active,
+    });
+    setIsEditOpen(true);
+  }, [
+    canOpenInstallerDetails,
+    deepLinkApplied,
+    deepLinkInstallerId,
+    installers,
+    installersQuery.isLoading,
+  ]);
   const doorTypes = doorTypesQuery.data || [];
   const rates = ratesQuery.data || [];
 
@@ -787,6 +825,17 @@ export default function InstallersPage() {
               <div className="text-[12px] leading-6 text-muted-foreground">
                 Current linked user: {editingInstaller?.user_id || "none"}
               </div>
+              {editingInstaller && (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/reports?installer_id=${editingInstaller.id}`)}
+                    className="inline-flex h-9 items-center rounded-xl border border-border/70 bg-background/80 px-3 text-[12px] font-medium transition-colors hover:border-accent/35 hover:text-accent"
+                  >
+                    Open KPI report
+                  </button>
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <input
                   value={linkUserId}

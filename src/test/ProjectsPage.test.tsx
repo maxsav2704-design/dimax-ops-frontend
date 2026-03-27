@@ -7,6 +7,10 @@ import ProjectsPage from "@/views/ProjectsPage";
 const { apiFetchMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
 }));
+const { pushMock, searchParamsMock } = vi.hoisted(() => ({
+  pushMock: vi.fn(),
+  searchParamsMock: vi.fn(() => new URLSearchParams("")),
+}));
 
 vi.mock("@/components/DashboardLayout", () => ({
   DashboardLayout: ({ children }: { children: ReactNode }) => (
@@ -19,13 +23,17 @@ vi.mock("@/lib/api", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams(""),
+  useRouter: () => ({ push: pushMock }),
+  useSearchParams: () => searchParamsMock(),
 }));
 
 describe("ProjectsPage", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     apiFetchMock.mockReset();
+    pushMock.mockReset();
+    searchParamsMock.mockReset();
+    searchParamsMock.mockReturnValue(new URLSearchParams(""));
   });
 
   afterEach(() => {
@@ -494,6 +502,8 @@ describe("ProjectsPage", () => {
     expect(screen.getByText("Site access blocked")).toBeInTheDocument();
     expect(screen.getAllByText("AZ-5001").length).toBeGreaterThan(0);
     expect(screen.getByText("DANGER")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open project report" }));
+    expect(pushMock).toHaveBeenCalledWith("/reports?project_id=project-1");
   }, 20000);
 
   it("creates a manual door for the selected project using library products", async () => {
@@ -658,6 +668,11 @@ describe("ProjectsPage", () => {
 
     render(<ProjectsPage />);
 
+    fireEvent.click(await screen.findByRole("button", { name: "Open Library" }));
+    expect(pushMock).toHaveBeenCalledWith(
+      "/library?open=create&return_to=%2Fprojects%3Fproject_id%3Dproject-1%26focus_section%3Ddoors"
+    );
+
     const addDoorButton = await screen.findByRole("button", { name: "Add door manually" });
     fireEvent.click(addDoorButton);
 
@@ -701,6 +716,158 @@ describe("ProjectsPage", () => {
     expect(
       await screen.findByText("Door D-1201 was added. The project matrix is now filtered to that door.")
     ).toBeInTheDocument();
+  }, 20000);
+
+  it("opens manual door flow from library deep-link with the selected product", async () => {
+    searchParamsMock.mockReturnValue(
+      new URLSearchParams(
+        "project_id=project-1&focus_section=doors&library_product_id=product-1&library_install_type=INSTALL"
+      )
+    );
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [{ id: "door-type-1", code: "entrance", name: "Entrance", is_active: true }];
+      }
+
+      if (url.endsWith("/api/v1/admin/projects")) {
+        return {
+          items: [{ id: "project-1", name: "Project A", address: "Address A", status: "ACTIVE" }],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/library?status=ACTIVE")) {
+        return {
+          items: [
+            {
+              id: "product-1",
+              sku: "LIB-001",
+              name_ru: "Входная дверь",
+              name_he: "דלת כניסה",
+              install_type: "INSTALL",
+              manufacturer: "DIMAX",
+              unit: "piece",
+              status: "ACTIVE",
+            },
+          ],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/installers?")) {
+        return {
+          items: [
+            {
+              id: "installer-1",
+              full_name: "Alex Installer",
+              email: "installer@dimax.dev",
+              status: "ACTIVE",
+              is_active: true,
+            },
+          ],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
+        return { default_code: "auto_v1", items: [] };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1") && !url.includes("/doors/")) {
+        return {
+          id: "project-1",
+          name: "Project A",
+          address: "Address A",
+          status: "ACTIVE",
+          developer_company: "DIMAX Dev Co",
+          contact_name: "Eyal Cohen",
+          issues_open: [],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1/doors/layout")) {
+        return {
+          project_id: "project-1",
+          total_doors: 0,
+          buckets: [],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/reports/project-plan-fact/project-1")) {
+        return {
+          project_id: "project-1",
+          total_doors: 0,
+          installed_doors: 0,
+          not_installed_doors: 0,
+          completion_pct: 0,
+          open_issues: 0,
+          planned_revenue_total: 0,
+          actual_revenue_total: 0,
+          revenue_gap_total: 0,
+          planned_payroll_total: 0,
+          actual_payroll_total: 0,
+          payroll_gap_total: 0,
+          planned_profit_total: 0,
+          actual_profit_total: 0,
+          profit_gap_total: 0,
+          planned_addons_qty: 0,
+          actual_addons_qty: 0,
+          missing_planned_rates_doors: 0,
+          missing_actual_rates_doors: 0,
+          missing_addon_plans_facts: 0,
+        };
+      }
+
+      if (url.includes("/api/v1/admin/reports/project-risk-drilldown/project-1")) {
+        return {
+          generated_at: "2026-03-02T10:00:00Z",
+          project_id: "project-1",
+          project_name: "Project A",
+          summary: {
+            total_doors: 0,
+            installed_doors: 0,
+            not_installed_doors: 0,
+            completion_pct: 0,
+            open_issues: 0,
+            blocked_open_issues: 0,
+            planned_revenue_total: 0,
+            actual_revenue_total: 0,
+            revenue_gap_total: 0,
+            planned_profit_total: 0,
+            actual_profit_total: 0,
+            profit_gap_total: 0,
+            actual_margin_pct: 0,
+            delayed_revenue_total: 0,
+            delayed_profit_total: 0,
+            blocked_issue_profit_at_risk: 0,
+            addon_revenue_total: 0,
+            addon_profit_total: 0,
+            missing_planned_rates_doors: 0,
+            missing_actual_rates_doors: 0,
+            missing_addon_plans_facts: 0,
+          },
+          drivers: [],
+          top_reasons: [],
+          risky_orders: [],
+        };
+      }
+
+      if (url.includes("/doors/import-history")) {
+        return { items: [] };
+      }
+
+      if (url.includes("/import-runs/failed-queue")) {
+        return { items: [], total: 0, limit: 10, offset: 0 };
+      }
+
+      return {};
+    });
+
+    render(<ProjectsPage />);
+
+    expect(await screen.findByText("Add door manually")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Library product")).toHaveValue("product-1");
+    expect(screen.getByLabelText("Install type")).toHaveValue("INSTALL");
   }, 20000);
 
   it("blocks duplicate manual door codes before sending create request", async () => {

@@ -964,7 +964,31 @@ describe("ReportsPage", () => {
     });
     expect(await screen.findByText("Additional Works Plan")).toBeInTheDocument();
     expect(await screen.findByText("Urgency Surcharge")).toBeInTheDocument();
+    expect(await screen.findByText("Commercial Adjustments")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open pricing flow" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open urgency rows" })
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Open installer card" })
+    ).toBeInTheDocument();
     expect(await screen.findByText("Handle Upgrade")).toBeInTheDocument();
+    expect(screen.getAllByText("Client uplift").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Installer uplift").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Open pricing flow" }));
+    expect(pushMock).toHaveBeenCalledWith(
+      "/projects?project_id=57f6df22-fe4b-47db-af44-198ab5f5a462&focus_section=addons"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Open urgency rows" }));
+    expect(pushMock).toHaveBeenCalledWith(
+      "/projects?project_id=57f6df22-fe4b-47db-af44-198ab5f5a462&focus_section=urgency"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Open installer card" }));
+    expect(pushMock).toHaveBeenCalledWith(
+      "/installers?installer_id=6ac2c77d-f5f2-45d8-b0a3-6382dbd95fbf"
+    );
     await waitFor(() => {
       const hasProjectAddonPlanCall = apiFetchMock.mock.calls.some((call) => {
         const url = String(call[0]);

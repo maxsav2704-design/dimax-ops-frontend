@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { Button } from "@/components/ui/button";
 import { apiBaseUrl, apiFetch, getAccessToken } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -1981,6 +1982,10 @@ export default function ReportsPage() {
   const projectPlanFact = projectPlanFactQuery.data;
   const projectAddonPlan = projectAddonPlanQuery.data || [];
   const projectUrgencySurcharges = projectUrgencySurchargesQuery.data || [];
+  const selectedProjectPlanFact = useMemo(
+    () => projectOptions.find((project) => project.id === projectPlanFactProjectId) || null,
+    [projectOptions, projectPlanFactProjectId]
+  );
   const projectAddonPlanTotals = useMemo(
     () =>
       projectAddonPlan.reduce(
@@ -2013,6 +2018,14 @@ export default function ReportsPage() {
         { rows: 0, client: 0, installer: 0, orderScoped: 0 }
       ),
     [projectUrgencySurcharges]
+  );
+  const projectCommercialAdjustments = useMemo(
+    () => ({
+      rows: projectAddonPlanTotals.rows + projectUrgencyTotals.rows,
+      client: projectAddonPlanTotals.client + projectUrgencyTotals.client,
+      installer: projectAddonPlanTotals.installer + projectUrgencyTotals.installer,
+    }),
+    [projectAddonPlanTotals, projectUrgencyTotals]
   );
   const projectRiskDrilldown = projectRiskDrilldownQuery.data;
   const topProjectsMargin = topProjectsMarginQuery.data?.items || [];
@@ -3415,6 +3428,88 @@ export default function ReportsPage() {
             !projectPlanFactQuery.isError &&
             projectPlanFact && (
               <div className="p-4 space-y-4">
+                <div className="rounded-xl border border-border/70 bg-background/70 p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="max-w-3xl">
+                      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {copy("Commercial Adjustments", "Коммерческие корректировки", "התאמות מסחריות")}
+                      </div>
+                      <div className="mt-1 text-[13px] text-muted-foreground">
+                        {copy(
+                          `Cross-check add-on plans and urgency uplift for ${selectedProjectPlanFact?.name || "the selected project"} before drilling deeper into margin risk.`,
+                          `Сверьте план доп. работ и срочную надбавку для ${selectedProjectPlanFact?.name || "выбранного проекта"} до детального разбора маржи и рисков.`,
+                          `בדוק את תוכנית העבודות הנוספות ותוספת הדחיפות עבור ${selectedProjectPlanFact?.name || "הפרויקט הנבחר"} לפני ירידה עמוקה יותר לסיכון המרווח.`
+                        )}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-card px-3 py-2 text-[12px] text-muted-foreground">
+                      {copy("Plan rows", "Строк плана", "שורות תוכנית")}: {projectCommercialAdjustments.rows}
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-lg border border-border/70 bg-card p-3">
+                      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {copy("Client uplift", "Надбавка клиента", "תוספת לקוח")}
+                      </div>
+                      <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+                        {formatAmount(projectCommercialAdjustments.client)}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-card p-3">
+                      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {copy("Installer uplift", "Надбавка монтажника", "תוספת מתקין")}
+                      </div>
+                      <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+                        {formatAmount(projectCommercialAdjustments.installer)}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-card p-3">
+                      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {copy("Unreconciled add-on facts", "Несведённые add-on факты", "ביצועי add-on לא מותאמים")}
+                      </div>
+                      <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+                        {projectPlanFact.missing_addon_plans_facts}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-card p-3">
+                      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {copy("Order-level urgency", "Срочность по заказам", "דחיפות ברמת הזמנה")}
+                      </div>
+                      <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+                        {projectUrgencyTotals.orderScoped}
+                      </div>
+                    </div>
+                  </div>
+                  {selectedProjectPlanFact && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9"
+                        onClick={() =>
+                          router.push(
+                            `/projects?project_id=${selectedProjectPlanFact.id}&focus_section=addons`
+                          )
+                        }
+                      >
+                        {copy("Open pricing flow", "Открыть блок цен", "פתח את בלוק התמחור")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9"
+                        onClick={() =>
+                          router.push(
+                            `/projects?project_id=${selectedProjectPlanFact.id}&focus_section=urgency`
+                          )
+                        }
+                      >
+                        {copy("Open urgency rows", "Открыть срочные надбавки", "פתח שורות דחיפות")}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -4714,6 +4809,16 @@ export default function ReportsPage() {
             !installerDetailsQuery.isError &&
             installerDetails && (
               <div className="p-4 space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9"
+                    onClick={() => router.push(`/installers?installer_id=${installerDetails.installer_id}`)}
+                  >
+                    {copy("Open installer card", "Открыть карточку монтажника", "פתח כרטיס מתקין")}
+                  </Button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">

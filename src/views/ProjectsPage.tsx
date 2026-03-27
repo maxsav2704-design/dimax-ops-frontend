@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   Building2,
@@ -702,6 +702,7 @@ export default function ProjectsPage() {
         return value;
     }
   };
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [doorTypes, setDoorTypes] = useState<DoorType[]>([]);
@@ -781,6 +782,7 @@ export default function ProjectsPage() {
     useState<ProjectImportRunDetails | null>(null);
   const [loadingImportRunDetails, setLoadingImportRunDetails] = useState(false);
   const [deepLinkApplied, setDeepLinkApplied] = useState(false);
+  const [deepLinkFocusApplied, setDeepLinkFocusApplied] = useState(false);
   const [matrixHouse, setMatrixHouse] = useState("all");
   const [matrixOrderNumber, setMatrixOrderNumber] = useState("all");
   const [matrixFloor, setMatrixFloor] = useState("all");
@@ -791,11 +793,16 @@ export default function ProjectsPage() {
   const [matrixMarkingSearch, setMatrixMarkingSearch] = useState("");
 
   const deepLinkProjectId = (searchParams?.get("project_id") || "").trim();
+  const deepLinkFocusSection = (searchParams?.get("focus_section") || "").trim().toLowerCase();
+  const deepLinkOrderNumber = (searchParams?.get("order_number") || "").trim();
+  const deepLinkLibraryProductId = (searchParams?.get("library_product_id") || "").trim();
+  const deepLinkLibraryInstallType = (searchParams?.get("library_install_type") || "").trim();
   const deepLinkFailedIds = useMemo(
     () => parseIdsCsv(searchParams?.get("failed_project_ids") || null),
     [searchParams]
   );
   const deepLinkOnlyFailed = searchParams?.get("only_failed_runs") === "1";
+  const [deepLinkDoorFlowApplied, setDeepLinkDoorFlowApplied] = useState(false);
   const failedQueueCanPrev = failedQueueOffset > 0;
   const failedQueueCanNext =
     (failedQueueOffset + FAILED_QUEUE_PAGE_SIZE) < (failedQueue?.total || 0);
@@ -1631,6 +1638,92 @@ export default function ProjectsPage() {
     deepLinkApplied,
     deepLinkFailedIds,
     deepLinkOnlyFailed,
+    deepLinkProjectId,
+    selectedProjectId,
+  ]);
+
+  useEffect(() => {
+    if (deepLinkFocusApplied || !selectedProjectId || selectedProjectId !== deepLinkProjectId) {
+      return;
+    }
+
+    const targetSectionId =
+      deepLinkFocusSection === "doors"
+        ? "project-door-matrix"
+        : deepLinkFocusSection === "addons"
+          ? "project-additional-works"
+          : deepLinkFocusSection === "urgency"
+            ? "project-urgency-surcharge"
+            : null;
+
+    if (deepLinkOrderNumber) {
+      setMatrixOrderNumber(deepLinkOrderNumber);
+    }
+
+    if (!targetSectionId && !deepLinkOrderNumber) {
+      return;
+    }
+
+    setDeepLinkFocusApplied(true);
+    window.setTimeout(() => {
+      document.getElementById(targetSectionId || "project-door-matrix")?.scrollIntoView?.({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
+  }, [
+    deepLinkFocusApplied,
+    deepLinkFocusSection,
+    deepLinkOrderNumber,
+    deepLinkProjectId,
+    selectedProjectId,
+  ]);
+
+  useEffect(() => {
+    if (deepLinkDoorFlowApplied || !selectedProjectId || selectedProjectId !== deepLinkProjectId) {
+      return;
+    }
+    if (deepLinkFocusSection !== "doors") {
+      return;
+    }
+    if (!deepLinkLibraryProductId && !deepLinkLibraryInstallType) {
+      return;
+    }
+
+    if (deepLinkLibraryProductId && activeLibraryProducts.length > 0) {
+      const matchedProduct = activeLibraryProducts.find((item) => item.id === deepLinkLibraryProductId);
+      if (!matchedProduct && !deepLinkLibraryInstallType) {
+        setDeepLinkDoorFlowApplied(true);
+        return;
+      }
+      setManualDoorForm({
+        ...emptyManualDoorForm(),
+        product_id: matchedProduct?.id || "",
+        install_type: matchedProduct?.install_type || deepLinkLibraryInstallType,
+      });
+      setProjectFlowNotice(null);
+      setError(null);
+      setManualDoorDialogOpen(true);
+      setDeepLinkDoorFlowApplied(true);
+      return;
+    }
+
+    if (!deepLinkLibraryProductId && deepLinkLibraryInstallType) {
+      setManualDoorForm({
+        ...emptyManualDoorForm(),
+        install_type: deepLinkLibraryInstallType,
+      });
+      setProjectFlowNotice(null);
+      setError(null);
+      setManualDoorDialogOpen(true);
+      setDeepLinkDoorFlowApplied(true);
+    }
+  }, [
+    activeLibraryProducts,
+    deepLinkDoorFlowApplied,
+    deepLinkFocusSection,
+    deepLinkLibraryInstallType,
+    deepLinkLibraryProductId,
     deepLinkProjectId,
     selectedProjectId,
   ]);
@@ -2529,15 +2622,30 @@ export default function ProjectsPage() {
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-start gap-2 md:items-end">
-                      <Button
-                        type="button"
-                        onClick={openManualDoorDialog}
-                        className="gap-2"
-                        disabled={loadingLibraryProducts || activeLibraryProducts.length === 0}
-                      >
-                        <Plus className="h-4 w-4" />
-                        {copy("Add door manually", "Добавить дверь вручную", "הוסף דלת ידנית")}
-                      </Button>
+                      <div className="flex flex-wrap gap-2 md:justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() =>
+                            router.push(
+                              `/library?open=create&return_to=${encodeURIComponent(
+                                `/projects?project_id=${selectedProjectId || ""}&focus_section=doors`
+                              )}`
+                            )
+                          }
+                        >
+                          {copy("Open Library", "Открыть Library", "פתח ספרייה")}
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={openManualDoorDialog}
+                          className="gap-2"
+                          disabled={loadingLibraryProducts || activeLibraryProducts.length === 0}
+                        >
+                          <Plus className="h-4 w-4" />
+                          {copy("Add door manually", "Добавить дверь вручную", "הוסף דלת ידנית")}
+                        </Button>
+                      </div>
                       <div className="text-[11px] text-muted-foreground">
                         {loadingLibraryProducts
                           ? copy("Loading library...", "Загружаем Library...", "טוען ספרייה...")
@@ -2830,12 +2938,30 @@ export default function ProjectsPage() {
                         {t("projects.projectFinancialSubtitle")}
                       </p>
                     </div>
-                    <div className="shrink-0 pt-0.5 text-[12px] text-muted-foreground md:text-right">
-                      {loadingProjectPlanFact || loadingProjectRisk
-                        ? t("projects.refreshingFinancialView")
-                        : projectRisk?.generated_at
-                          ? `${copy("Updated", "Обновлено", "עודכן")}: ${formatDateTime(projectRisk.generated_at)}`
-                          : t("projects.financialDataReady")}
+                    <div className="flex shrink-0 flex-col gap-2 md:items-end">
+                      <div className="pt-0.5 text-[12px] text-muted-foreground md:text-right">
+                        {loadingProjectPlanFact || loadingProjectRisk
+                          ? t("projects.refreshingFinancialView")
+                          : projectRisk?.generated_at
+                            ? `${copy("Updated", "Обновлено", "עודכן")}: ${formatDateTime(projectRisk.generated_at)}`
+                            : t("projects.financialDataReady")}
+                      </div>
+                      {selectedProjectId ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-9"
+                          onClick={() =>
+                            router.push(`/reports?project_id=${encodeURIComponent(selectedProjectId)}`)
+                          }
+                        >
+                          {copy(
+                            "Open project report",
+                            "Открыть отчёт по проекту",
+                            "פתח דוח פרויקט"
+                          )}
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
 

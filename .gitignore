@@ -14,6 +14,8 @@ dist-ssr
 .next
 .next-*.log
 .preview-web.*
+installer-calendar-preview.png
+installer-workspace-preview.png
 tmp-*.cjs
 visual-audit/
 tsconfig.tsbuildinfo
