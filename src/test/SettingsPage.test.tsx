@@ -167,4 +167,47 @@ describe("SettingsPage", () => {
 
     expect(await screen.findByText("Email test sent to ops@example.com", {}, { timeout: 10000 })).toBeInTheDocument();
   }, 15000);
+
+  it("saves company details for admin role with readable success notice", async () => {
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "OWNER",
+      can_view_rates: true,
+    });
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path === "/api/v1/admin/settings/company" && init?.method === "PATCH") {
+        return {
+          id: "company-1",
+          name: "DIMAX Prime",
+          is_active: true,
+          created_at: "2026-02-20T10:00:00Z",
+          updated_at: "2026-02-22T10:00:00Z",
+        };
+      }
+      return buildBaseSettingsApi()(path);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SettingsPage />
+      </QueryClientProvider>
+    );
+
+    const companyInput = await screen.findByDisplayValue("DIMAX");
+    fireEvent.change(companyInput, { target: { value: "DIMAX Prime" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save Company" }));
+
+    await waitFor(() => {
+      const saveCall = apiFetchMock.mock.calls.find(
+        (call) => call[0] === "/api/v1/admin/settings/company" && call[1]?.method === "PATCH"
+      );
+      expect(saveCall).toBeTruthy();
+    });
+
+    expect(await screen.findByText("Company details saved.")).toBeInTheDocument();
+  }, 15000);
 });

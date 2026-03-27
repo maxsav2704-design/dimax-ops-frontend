@@ -111,7 +111,7 @@ export default function SettingsPage() {
   const [emailTestRecipient, setEmailTestRecipient] = useState("ops@example.com");
   const [whatsappTestRecipient, setWhatsappTestRecipient] = useState("+972500000000");
   const [testMessage, setTestMessage] = useState("DIMAX delivery channel test");
-  const [testFeedback, setTestFeedback] = useState("");
+  const [feedback, setFeedback] = useState<{ tone: "success" | "error"; message: string } | null>(null);
   const session = useAuthSession();
   const canManageSettings = canAccessAdminModule(session, "settings");
   const privilegedActionHint = canManageSettings
@@ -139,6 +139,14 @@ export default function SettingsPage() {
     }
   }, [companyQuery.data?.name]);
 
+  useEffect(() => {
+    if (!feedback || feedback.tone === "error") {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setFeedback(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [feedback]);
+
   const updateCompanyMutation = useMutation({
     mutationFn: (name: string) =>
       apiFetch<CompanySettings>("/api/v1/admin/settings/company", {
@@ -146,7 +154,22 @@ export default function SettingsPage() {
         body: JSON.stringify({ name }),
       }),
     onSuccess: async () => {
+      setFeedback({
+        tone: "success",
+        message:
+          locale === "ru"
+            ? "Данные компании сохранены."
+            : locale === "he"
+              ? "פרטי החברה נשמרו."
+              : "Company details saved.",
+      });
       await queryClient.invalidateQueries({ queryKey: ["settings-company"] });
+    },
+    onError: (error) => {
+      setFeedback({
+        tone: "error",
+        message: readableApiError(error, locale, "Failed to save company details"),
+      });
     },
   });
 
@@ -161,11 +184,22 @@ export default function SettingsPage() {
         }),
       }),
     onSuccess: async (result) => {
-      setTestFeedback(`Email test sent to ${result.recipient}`);
+      setFeedback({
+        tone: "success",
+        message:
+          locale === "ru"
+            ? `Тестовое email-сообщение отправлено на ${result.recipient}`
+            : locale === "he"
+              ? `מייל בדיקה נשלח אל ${result.recipient}`
+              : `Email test sent to ${result.recipient}`,
+      });
       await integrationsHealthQuery.refetch();
     },
     onError: (error) => {
-      setTestFeedback(readableApiError(error, locale, "Email test send failed"));
+      setFeedback({
+        tone: "error",
+        message: readableApiError(error, locale, "Email test send failed"),
+      });
     },
   });
 
@@ -180,11 +214,22 @@ export default function SettingsPage() {
       }),
     onSuccess: async (result) => {
       const providerId = result.provider_message_id ? ` (${result.provider_message_id})` : "";
-      setTestFeedback(`WhatsApp test sent to ${result.recipient}${providerId}`);
+      setFeedback({
+        tone: "success",
+        message:
+          locale === "ru"
+            ? `Тестовое WhatsApp-сообщение отправлено на ${result.recipient}${providerId}`
+            : locale === "he"
+              ? `הודעת בדיקה ב-WhatsApp נשלחה אל ${result.recipient}${providerId}`
+              : `WhatsApp test sent to ${result.recipient}${providerId}`,
+      });
       await integrationsHealthQuery.refetch();
     },
     onError: (error) => {
-      setTestFeedback(readableApiError(error, locale, "WhatsApp test send failed"));
+      setFeedback({
+        tone: "error",
+        message: readableApiError(error, locale, "WhatsApp test send failed"),
+      });
     },
   });
 
@@ -264,9 +309,16 @@ export default function SettingsPage() {
             Installer role has read-only access to company settings.
           </div>
         )}
-        {testFeedback && (
-          <div className="rounded-xl border border-border/70 bg-card/80 px-4 py-3 text-[13px] text-foreground">
-            {testFeedback}
+        {feedback && (
+          <div
+            className={cn(
+              "rounded-xl px-4 py-3 text-[13px]",
+              feedback.tone === "error"
+                ? "border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] text-[hsl(var(--destructive))]"
+                : "border border-[hsl(var(--success)/0.35)] bg-[hsl(var(--success)/0.08)] text-[hsl(var(--success))]"
+            )}
+          >
+            {feedback.message}
           </div>
         )}
 

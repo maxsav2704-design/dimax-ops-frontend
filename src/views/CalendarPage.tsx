@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
@@ -154,6 +154,7 @@ export default function CalendarPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [form, setForm] = useState<EventFormState>(makeDefaultForm(weekStartDate));
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const session = useAuthSession();
   const canManageCalendar = canRunPrivilegedAdminActions(session);
   const privilegedActionHint = canManageCalendar
@@ -204,6 +205,9 @@ export default function CalendarPage() {
     onSuccess: async () => {
       setIsCreateOpen(false);
       setForm(makeDefaultForm(weekStartDate));
+      setActionNotice(
+        locale === "ru" ? "Событие создано." : locale === "he" ? "האירוע נוצר." : "Event created."
+      );
       await queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
     },
   });
@@ -230,6 +234,9 @@ export default function CalendarPage() {
     onSuccess: async () => {
       setIsEditOpen(false);
       setEditingEvent(null);
+      setActionNotice(
+        locale === "ru" ? "Событие обновлено." : locale === "he" ? "האירוע עודכן." : "Event updated."
+      );
       await queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
     },
   });
@@ -240,9 +247,20 @@ export default function CalendarPage() {
         method: "DELETE",
       }),
     onSuccess: async () => {
+      setActionNotice(
+        locale === "ru" ? "Событие удалено." : locale === "he" ? "האירוע נמחק." : "Event deleted."
+      );
       await queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
     },
   });
+
+  useEffect(() => {
+    if (!actionNotice) {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setActionNotice(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [actionNotice]);
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
@@ -298,12 +316,14 @@ export default function CalendarPage() {
 
   const onOpenCreate = () => {
     setForm(makeDefaultForm(weekStartDate));
+    setActionNotice(null);
     setIsCreateOpen(true);
   };
 
   const onOpenEdit = (event: CalendarEvent) => {
     setEditingEvent(event);
     setForm(eventToForm(event));
+    setActionNotice(null);
     setIsEditOpen(true);
   };
 
@@ -453,6 +473,11 @@ export default function CalendarPage() {
         {hasActionError && (
           <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
             {actionErrorMessage}
+          </div>
+        )}
+        {actionNotice && (
+          <div className="rounded-xl border border-[hsl(var(--success)/0.35)] bg-[hsl(var(--success)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--success))]">
+            {actionNotice}
           </div>
         )}
         {!canManageCalendar && (
@@ -725,5 +750,6 @@ export default function CalendarPage() {
     </DashboardLayout>
   );
 }
+
 
 

@@ -110,6 +110,8 @@ describe("CalendarPage", () => {
       expect(payload.project_id).toBe("project-1");
       expect(payload.installer_ids).toEqual(["installer-1"]);
     });
+
+    expect(await screen.findByText("Event created.")).toBeInTheDocument();
   }, 20000);
 
   it("blocks invalid event time range locally", async () => {
