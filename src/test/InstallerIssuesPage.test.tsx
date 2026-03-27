@@ -1,6 +1,6 @@
 ﻿import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import InstallerIssuesPage from "@/views/installer/IssuesPage";
 
@@ -23,6 +23,10 @@ describe("InstallerIssuesPage", () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
     window.history.replaceState({}, "", "/installer/issues");
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("renders installer issues with filters and project links", async () => {
@@ -169,6 +173,70 @@ describe("InstallerIssuesPage", () => {
         method: "PATCH",
         body: JSON.stringify({ comment: "Updated field note" }),
       });
+    });
+  });
+
+  it("loads media details and opens issue media in a new tab", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path === "/api/v1/installer/issues" && !init) {
+        return {
+          items: [
+            {
+              id: "issue-1",
+              project_id: "project-1",
+              door_id: "door-1",
+              status: "BLOCKED",
+              priority: "P1",
+              title: "Blocked lock",
+              description: "Lock jammed on site",
+              media_count: 1,
+            },
+          ],
+        };
+      }
+      if (path === "/api/v1/installer/issues/issue-1/media") {
+        return {
+          items: [
+            {
+              id: "media-1",
+              file_name: "lock-photo.jpg",
+              content_type: "image/jpeg",
+              created_at: "2026-03-21T10:00:00Z",
+            },
+          ],
+        };
+      }
+      if (path === "/api/v1/media/media-1/url") {
+        return { url: "https://files.dimax.test/lock-photo.jpg" };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallerIssuesPage />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Blocked lock")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Show media" }));
+
+    expect(await screen.findByText("lock-photo.jpg")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open media" }));
+
+    await waitFor(() => {
+      expect(apiFetchMock).toHaveBeenCalledWith("/api/v1/media/media-1/url");
+      expect(openSpy).toHaveBeenCalledWith(
+        "https://files.dimax.test/lock-photo.jpg",
+        "_blank",
+        "noopener,noreferrer"
+      );
     });
   });
 });

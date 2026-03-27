@@ -5,14 +5,165 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
-import { fetchInstallerIssues, updateInstallerIssue } from "@/lib/installer-api";
-import { useI18n } from "@/lib/i18n";
+import {
+  fetchInstallerIssueMedia,
+  fetchInstallerIssues,
+  fetchInstallerMediaUrl,
+  type InstallerIssueMediaAsset,
+  updateInstallerIssue,
+} from "@/lib/installer-api";
+import { type Locale, useI18n } from "@/lib/i18n";
 import { readableApiError } from "@/lib/api-error-display";
+
+type CopyFn = (en: string, ru: string, he: string) => string;
+
+function IssueMediaPanel({
+  issueId,
+  mediaCount,
+  locale,
+  copy,
+}: {
+  issueId: string;
+  mediaCount: number;
+  locale: Locale;
+  copy: CopyFn;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [openError, setOpenError] = useState<string | null>(null);
+
+  const mediaQuery = useQuery({
+    queryKey: ["installer-issue-media", issueId],
+    queryFn: () => fetchInstallerIssueMedia(issueId),
+    enabled: isOpen && mediaCount > 0,
+    staleTime: 30_000,
+  });
+
+  const openMediaMutation = useMutation({
+    mutationFn: async (media: InstallerIssueMediaAsset) => {
+      const url = await fetchInstallerMediaUrl(media.id);
+      return { url, media };
+    },
+    onSuccess: ({ url }) => {
+      setOpenError(null);
+      if (typeof window !== "undefined") {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    },
+    onError: (error) => {
+      setOpenError(
+        readableApiError(
+          error,
+          locale,
+          copy(
+            "Failed to open media file.",
+            "Не удалось открыть медиафайл.",
+            "לא ניתן לפתוח את קובץ המדיה."
+          )
+        )
+      );
+    },
+  });
+
+  if (mediaCount <= 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-2 rounded-xl border border-border/70 bg-background/55 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
+          {copy("Issue media", "Медиа по проблеме", "מדיה לבעיה")}
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsOpen((current) => !current)}
+          className="inline-flex h-8 items-center justify-center rounded-lg border border-border/70 bg-background/80 px-3 text-xs font-medium transition-colors hover:bg-muted"
+        >
+          {isOpen
+            ? copy("Hide media", "Скрыть медиа", "הסתר מדיה")
+            : copy("Show media", "Показать медиа", "הצג מדיה")}
+        </button>
+      </div>
+
+      {isOpen && mediaQuery.isLoading && (
+        <div className="text-xs text-muted-foreground">
+          {copy("Loading media...", "Загружаем медиа...", "טוען מדיה...")}
+        </div>
+      )}
+
+      {isOpen && mediaQuery.isError && (
+        <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-3 py-2 text-xs text-[hsl(var(--destructive))]">
+          {readableApiError(
+            mediaQuery.error,
+            locale,
+            copy(
+              "Failed to load media details.",
+              "Не удалось загрузить детали медиа.",
+              "לא ניתן לטעון את פרטי המדיה."
+            )
+          )}
+        </div>
+      )}
+
+      {isOpen && openError && (
+        <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-3 py-2 text-xs text-[hsl(var(--destructive))]">
+          {openError}
+        </div>
+      )}
+
+      {isOpen && !mediaQuery.isLoading && !mediaQuery.isError && mediaQuery.data?.length === 0 && (
+        <div className="text-xs text-muted-foreground">
+          {copy(
+            "Media count exists, but details are not available yet.",
+            "Количество медиа есть, но детали пока недоступны.",
+            "מספר המדיה קיים, אך הפרטים עדיין לא זמינים."
+          )}
+        </div>
+      )}
+
+      {isOpen && !!mediaQuery.data?.length && (
+        <div className="space-y-2">
+          {mediaQuery.data.map((media, index) => (
+            <div
+              key={media.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/70 bg-background/75 px-3 py-2"
+            >
+              <div className="min-w-0 space-y-1">
+                <div className="truncate text-sm font-medium text-foreground">
+                  {media.file_name ||
+                    copy(
+                      `Media file ${index + 1}`,
+                      `Медиафайл ${index + 1}`,
+                      `קובץ מדיה ${index + 1}`
+                    )}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {[media.content_type, media.created_at].filter(Boolean).join(" • ") ||
+                    copy("Attachment", "Вложение", "קובץ מצורף")}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => openMediaMutation.mutate(media)}
+                disabled={openMediaMutation.isPending}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-border/70 bg-background px-3 text-xs font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {openMediaMutation.isPending
+                  ? copy("Opening...", "Открываем...", "פותח...")
+                  : copy("Open media", "Открыть медиа", "פתח מדיה")}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function InstallerIssuesPage() {
   const { locale } = useI18n();
   const queryClient = useQueryClient();
-  const copy = (en: string, ru: string, he: string) => {
+  const copy: CopyFn = (en: string, ru: string, he: string) => {
     if (locale === "ru") return ru;
     if (locale === "he") return he;
     return en;
@@ -191,7 +342,7 @@ export default function InstallerIssuesPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="metric-tile">
-          <div className="metric-label">{copy("Total", "Всего", "??\"?")}</div>
+          <div className="metric-label">{copy("Total", "Всего", "סך הכול")}</div>
           <div className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-foreground tabular-nums">{stats.total}</div>
         </div>
         <div className="metric-tile">
@@ -367,6 +518,12 @@ export default function InstallerIssuesPage() {
                   </button>
                 </div>
               </div>
+              <IssueMediaPanel
+                issueId={issue.id}
+                mediaCount={issue.media_count ?? 0}
+                locale={locale}
+                copy={copy}
+              />
               <div className="flex flex-wrap gap-2">
                 {issue.project_id && (
                   <Link

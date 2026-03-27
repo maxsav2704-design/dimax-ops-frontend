@@ -32,6 +32,13 @@ export type InstallerIssueSummary = {
   media_count?: number | null;
 };
 
+export type InstallerIssueMediaAsset = {
+  id: string;
+  file_name?: string | null;
+  content_type?: string | null;
+  created_at?: string | null;
+};
+
 export type InstallerEarningsInstallType = {
   install_type: string;
   amount: number | string;
@@ -84,6 +91,10 @@ type InstallerIssuesResponse = {
   items: InstallerIssueSummary[];
 };
 
+type InstallerIssueMediaResponse = {
+  items: InstallerIssueMediaAsset[];
+};
+
 type InstallerWorkspaceResponse = {
   projects?: InstallerProjectListItem[];
   events?: InstallerCalendarEvent[];
@@ -126,6 +137,21 @@ export async function updateInstallerIssue(
       comment: payload.comment,
     }),
   });
+}
+
+export async function fetchInstallerIssueMedia(issueId: string): Promise<InstallerIssueMediaAsset[]> {
+  const response = await safeOptionalFetch<InstallerIssueMediaResponse>(
+    `/api/v1/installer/issues/${issueId}/media`
+  );
+  return response?.items || [];
+}
+
+export async function fetchInstallerMediaUrl(mediaId: string): Promise<string> {
+  const response = await safeOptionalFetch<{ url?: string | null }>(`/api/v1/media/${mediaId}/url`);
+  if (response?.url) {
+    return response.url;
+  }
+  throw new Error("Media file is not ready.");
 }
 
 export async function fetchInstallerEarningsSummary(): Promise<InstallerEarningsSummary | null> {
