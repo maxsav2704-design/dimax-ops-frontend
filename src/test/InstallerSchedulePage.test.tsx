@@ -63,6 +63,10 @@ describe("InstallerSchedulePage", () => {
       "href",
       "/installer/earnings?project_id=project-1"
     );
+    expect(screen.getByRole("link", { name: "Open sync queue" })).toHaveAttribute(
+      "href",
+      "/installer/sync-queue?project_id=project-1"
+    );
   });
 
   it("applies project query filter and event-type filter", async () => {

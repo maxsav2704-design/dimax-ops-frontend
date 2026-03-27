@@ -237,6 +237,12 @@ export default function InstallerEarningsPage() {
                           >
                             {copy("Open calendar", "Открыть календарь", "פתח יומן")}
                           </Link>
+                          <Link
+                            href={`/installer/sync-queue?project_id=${row.project_id}`}
+                            className="inline-flex items-center rounded-lg border border-border/70 bg-background/80 px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted"
+                          >
+                            {copy("Open sync queue", "Открыть очередь синка", "פתח תור סנכרון")}
+                          </Link>
                         </div>
                       ) : null}
                     </div>

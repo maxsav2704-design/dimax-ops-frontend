@@ -125,5 +125,9 @@ describe("InstallerEarningsPage", () => {
       "href",
       "/installer/calendar?project_id=p1"
     );
+    expect(screen.getByRole("link", { name: "Open sync queue" })).toHaveAttribute(
+      "href",
+      "/installer/sync-queue?project_id=p1"
+    );
   });
 });

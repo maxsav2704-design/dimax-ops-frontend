@@ -6,37 +6,13 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
-import { useI18n, type Locale } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import { buildInstallerIssuesHref } from "@/views/installer/issue-links";
 import {
   buildScheduleCsv,
   downloadScheduleCsv,
   scheduleExportFilename,
 } from "@/views/installer/schedule-export";
-
-const scheduleOverrides: Partial<Record<Locale, Record<string, string>>> = {
-  en: {
-    "installerSchedule.eventsMetric": "Events {count}",
-    "installerSchedule.visibleMetric": "Visible {count}",
-    "installerSchedule.presetMetric": "Preset {preset}",
-    "installerSchedule.loading": "Loading schedule...",
-    "installerSchedule.emptySelectedRange": "No events in selected range.",
-  },
-  ru: {
-    "installerSchedule.eventsMetric": "События {count}",
-    "installerSchedule.visibleMetric": "Видно {count}",
-    "installerSchedule.presetMetric": "Пресет {preset}",
-    "installerSchedule.loading": "Загрузка расписания...",
-    "installerSchedule.emptySelectedRange": "В выбранном диапазоне событий нет.",
-  },
-  he: {
-    "installerSchedule.eventsMetric": "אירועים {count}",
-    "installerSchedule.visibleMetric": "מוצגים {count}",
-    "installerSchedule.presetMetric": "Preset {preset}",
-    "installerSchedule.loading": "טוען לוח זמנים...",
-    "installerSchedule.emptySelectedRange": "אין אירועים בטווח שנבחר.",
-  },
-};
 
 type CalendarEvent = {
   id: string;
@@ -89,10 +65,11 @@ function getScheduleIssueSearchPreset(eventType: string, title: string) {
 
 export default function InstallerSchedulePage() {
   const { locale, t } = useI18n();
-  const normalizeReadableText = (value: string, fallback: string) =>
-    /(\?{3,}|Р\S|Ч\S|вЂ)/.test(value) ? fallback : value;
-  const tt = (key: string) =>
-    normalizeReadableText(scheduleOverrides[locale]?.[key] ?? t(key), t(key));
+  const copy = (en: string, ru: string, he: string) => {
+    if (locale === "ru") return ru;
+    if (locale === "he") return he;
+    return en;
+  };
   const rangePresetLabels: Record<RangePreset, string> = {
     today: t("common.today"),
     "7d": t("installerSchedule.next7Days"),
@@ -238,51 +215,28 @@ export default function InstallerSchedulePage() {
               {t("installerSchedule.subtitle")}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className="metric-chip">{tt("installerSchedule.eventsMetric").replace("{count}", String(events.length))}</span>
-              <span className="metric-chip">{tt("installerSchedule.visibleMetric").replace("{count}", String(filteredEvents.length))}</span>
-              <span className="metric-chip">{tt("installerSchedule.presetMetric").replace("{preset}", preset.toUpperCase())}</span>
+              <span className="metric-chip">{copy("Events", "События", "אירועים")} {events.length}</span>
+              <span className="metric-chip">{copy("Visible", "Видно", "מוצגים")} {filteredEvents.length}</span>
+              <span className="metric-chip">{copy("Preset", "Пресет", "טווח")} {preset.toUpperCase()}</span>
               <span className="metric-chip">
                 {overdueOnly ? t("installerSchedule.overdueFocus") : t("installerSchedule.mixedQueue")}
               </span>
             </div>
             {projectFilter !== "ALL" && projectFilter !== "NONE" ? (
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="metric-chip">
-                  {normalizeReadableText(
-                    locale === "ru"
-                      ? `Фокус проекта ${projectFilter}`
-                      : locale === "he"
-                        ? `מיקוד פרויקט ${projectFilter}`
-                        : `Focused project ${projectFilter}`,
-                    `Focused project ${projectFilter}`
-                  )}
-                </span>
+                <span className="metric-chip">{copy("Focused project", "Фокус на проекте", "פרויקט במיקוד")} {projectFilter}</span>
                 <Link
                   href="/installer/calendar"
                   className="inline-flex items-center rounded-lg border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
-                  {normalizeReadableText(
-                    locale === "ru"
-                      ? "Показать весь календарь"
-                      : locale === "he"
-                        ? "הצג את כל היומן"
-                        : "Show full calendar",
-                    "Show full calendar"
-                  )}
+                  {copy("Show full calendar", "Показать весь календарь", "הצג את כל היומן")}
                 </Link>
               </div>
             ) : null}
           </div>
           <div className="surface-subtle max-w-3xl space-y-4 p-4 sm:p-5">
             <div className="text-[12px] leading-5 text-muted-foreground">
-              {normalizeReadableText(
-                locale === "ru"
-                  ? "\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0432\u044b\u0431\u0435\u0440\u0438 \u0434\u0435\u043d\u044c, \u0437\u0430\u0442\u0435\u043c \u043e\u0442\u043a\u0440\u043e\u0439 \u043d\u0443\u0436\u043d\u043e\u0435 \u0441\u043e\u0431\u044b\u0442\u0438\u0435 \u0438 \u043f\u0435\u0440\u0435\u0439\u0434\u0438 \u0432 \u043f\u0440\u043e\u0435\u043a\u0442."
-                  : locale === "he"
-                    ? "\u05d1\u05d7\u05e8 \u05e7\u05d5\u05d3\u05dd \u05d8\u05d5\u05d5\u05d7 \u05d6\u05de\u05df, \u05d0\u05d6 \u05e4\u05ea\u05d7 \u05d0\u05d9\u05e8\u05d5\u05e2 \u05d5\u05d4\u05de\u05e9\u05da \u05dc\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8."
-                    : "Choose the day range first, then open the event you need and continue to the project.",
-                "Choose the day range first, then open the event you need and continue to the project."
-              )}
+              {copy("Choose the day range first, then open the event you need and continue to the project.", "Сначала выбери диапазон, затем открой нужное событие и перейди в проект.", "בחר קודם טווח זמן, אחר כך פתח את האירוע הדרוש והמשך לפרויקט.")}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div
@@ -387,14 +341,7 @@ export default function InstallerSchedulePage() {
           <div>
             <div className="page-eyebrow">{t("installerSchedule.eyebrow")}</div>
             <h2 className="mt-2 text-lg font-semibold">
-              {normalizeReadableText(
-                locale === "ru"
-                  ? "\u0421\u043e\u0431\u044b\u0442\u0438\u044f \u0432 \u0440\u0430\u0431\u043e\u0442\u0435"
-                  : locale === "he"
-                    ? "\u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc"
-                    : "Events in focus",
-                "Events in focus"
-              )}
+              {copy("Events in focus", "События в работе", "אירועים בטיפול")}
             </h2>
           </div>
           <button
@@ -428,13 +375,13 @@ export default function InstallerSchedulePage() {
 
       {eventsQuery.isLoading && (
         <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-          {tt("installerSchedule.loading")}
+          {copy("Loading schedule...", "Загрузка расписания...", "טוען לוח זמנים...")}
         </div>
       )}
 
       {!eventsQuery.isLoading && events.length === 0 && (
         <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-          {tt("installerSchedule.emptySelectedRange")}
+          {copy("No events in selected range.", "В выбранном диапазоне событий нет.", "אין אירועים בטווח שנבחר.")}
         </div>
       )}
       {!eventsQuery.isLoading && events.length > 0 && filteredEvents.length === 0 && (
@@ -483,7 +430,7 @@ export default function InstallerSchedulePage() {
                     href={`/installer/projects/${event.project_id}`}
                     className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
                   >
-                    Open project
+                    {copy("Open project", "Открыть проект", "פתח פרויקט")}
                   </Link>
                   <Link
                     href={buildInstallerIssuesHref(event.project_id, {
@@ -492,16 +439,22 @@ export default function InstallerSchedulePage() {
                     })}
                     className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
                   >
-                    Open issues
+                    {copy("Open issues", "Открыть проблемы", "פתח תקלות")}
                   </Link>
-                  <Link
-                    href={`/installer/earnings?project_id=${event.project_id}`}
-                    className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
-                  >
-                    Open earnings
-                  </Link>
-                </>
-              )}
+                <Link
+                  href={`/installer/earnings?project_id=${event.project_id}`}
+                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                >
+                  {copy("Open earnings", "Открыть заработок", "פתח רווחים")}
+                </Link>
+                <Link
+                  href={`/installer/sync-queue?project_id=${event.project_id}`}
+                  className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                >
+                  {copy("Open sync queue", "Открыть очередь синка", "פתח תור סנכרון")}
+                </Link>
+              </>
+            )}
               {event.waze_url && (
                 <a
                   href={event.waze_url}
@@ -509,7 +462,7 @@ export default function InstallerSchedulePage() {
                   rel="noreferrer"
                   className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
                 >
-                  Open Waze
+                  {copy("Open Waze", "Открыть Waze", "פתח Waze")}
                 </a>
               )}
             </div>
