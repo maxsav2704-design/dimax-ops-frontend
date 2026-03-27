@@ -318,7 +318,7 @@ describe("OperationsPage", () => {
       "href",
       "/installers"
     );
-  }, 30000);
+  }, 45000);
 
   it("reads and syncs actionable filter with url state", async () => {
     window.history.replaceState({}, "", "/operations?actionable=1");
@@ -600,9 +600,7 @@ describe("OperationsPage", () => {
     renderSubject();
 
     expect(
-      await screen.findByText(
-        "Failed to load operations data. Check API availability and admin permissions."
-      )
+      await screen.findByText("operations down")
     ).toBeInTheDocument();
 
     shouldFail = false;

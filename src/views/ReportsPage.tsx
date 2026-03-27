@@ -15,6 +15,7 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { apiBaseUrl, apiFetch, getAccessToken } from "@/lib/api";
+import { readableApiError } from "@/lib/api-error-display";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { canAccessAdminModule, canViewRates } from "@/lib/admin-access";
 import { useI18n, type Locale } from "@/lib/i18n";
@@ -1235,10 +1236,6 @@ function downloadBlob(blob: Blob, filename: string): void {
   }
 }
 
-function errorMessageFromUnknown(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
-}
-
 async function downloadCsvExport(pathWithQuery: string, fallbackFilename: string): Promise<void> {
   const token = getAccessToken();
   const headers = new Headers();
@@ -1398,6 +1395,8 @@ function SectionMessage({
 
 export default function ReportsPage() {
   const { locale, t } = useI18n();
+  const readError = (error: unknown, fallback: string) =>
+    readableApiError(error, locale, fallback);
   const tt = (key: string) => reportsOverrides[locale]?.[key] ?? t(key);
   const copy = (en: string, ru: string, he: string) => {
     if (locale === "ru") return ru;
@@ -2138,18 +2137,18 @@ export default function ReportsPage() {
 
   const exportErrorMessage =
     (exportAuditMutation.isError &&
-      errorMessageFromUnknown(exportAuditMutation.error, t("reports.catalogAuditExportFailed"))) ||
+      readError(exportAuditMutation.error, t("reports.catalogAuditExportFailed"))) ||
     (exportIssueAuditMutation.isError &&
-      errorMessageFromUnknown(exportIssueAuditMutation.error, t("reports.issueAuditExportFailed"))) ||
+      readError(exportIssueAuditMutation.error, t("reports.issueAuditExportFailed"))) ||
     (exportInstallersKpiMutation.isError &&
-      errorMessageFromUnknown(exportInstallersKpiMutation.error, t("reports.installersKpiExportFailed"))) ||
+      readError(exportInstallersKpiMutation.error, t("reports.installersKpiExportFailed"))) ||
     (exportOrderNumbersKpiMutation.isError &&
-      errorMessageFromUnknown(
+      readError(
         exportOrderNumbersKpiMutation.error,
         t("reports.orderNumbersKpiExportFailed")
       )) ||
     (exportExecutiveMutation.isError &&
-      errorMessageFromUnknown(
+      readError(
         exportExecutiveMutation.error,
         t("reports.executiveExportFailed")
       )) ||
@@ -2483,9 +2482,7 @@ export default function ReportsPage() {
           <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>
-              {alertsQuery.error instanceof Error
-                ? alertsQuery.error.message
-                : t("reports.failedAlerts")}
+              {readError(alertsQuery.error, t("reports.failedAlerts"))}
             </span>
           </div>
         )}
@@ -2742,9 +2739,7 @@ export default function ReportsPage() {
             <div className="text-[13px] text-muted-foreground">{tt("reports.loadingSlaMetrics")}</div>
           ) : operationsSlaQuery.isError ? (
             <div className="text-[13px] text-[hsl(var(--destructive))]">
-              {operationsSlaQuery.error instanceof Error
-                ? operationsSlaQuery.error.message
-                : "Failed to load SLA metrics"}
+              {readError(operationsSlaQuery.error, "Failed to load SLA metrics")}
             </div>
           ) : (
             <>
@@ -2845,9 +2840,10 @@ export default function ReportsPage() {
                   </div>
                 ) : operationsSlaHistoryQuery.isError ? (
                   <div className="text-[12px] text-[hsl(var(--destructive))]">
-                    {operationsSlaHistoryQuery.error instanceof Error
-                      ? operationsSlaHistoryQuery.error.message
-                      : copy("Failed to load SLA trend", "Не удалось загрузить тренд SLA", "טעינת מגמת SLA נכשלה")}
+                    {readError(
+                      operationsSlaHistoryQuery.error,
+                      copy("Failed to load SLA trend", "Не удалось загрузить тренд SLA", "טעינת מגמת SLA נכשלה")
+                    )}
                   </div>
                 ) : (
                   <>
@@ -2942,9 +2938,7 @@ export default function ReportsPage() {
             <div className="text-[13px] text-muted-foreground">{tt("reports.loadingIssuesAnalytics")}</div>
           ) : issuesAnalyticsQuery.isError ? (
             <div className="text-[13px] text-[hsl(var(--destructive))]">
-              {issuesAnalyticsQuery.error instanceof Error
-                ? issuesAnalyticsQuery.error.message
-                : tt("reports.failedIssuesAnalytics")}
+              {readError(issuesAnalyticsQuery.error, tt("reports.failedIssuesAnalytics"))}
             </div>
           ) : (
             <>
@@ -3084,9 +3078,7 @@ export default function ReportsPage() {
             <div className="text-[13px] text-muted-foreground">{tt("reports.loadingMarginLeakage")}</div>
           ) : issuesAddonsImpactQuery.isError ? (
             <div className="text-[13px] text-[hsl(var(--destructive))]">
-              {issuesAddonsImpactQuery.error instanceof Error
-                ? issuesAddonsImpactQuery.error.message
-                : tt("reports.failedMarginLeakage")}
+              {readError(issuesAddonsImpactQuery.error, tt("reports.failedMarginLeakage"))}
             </div>
           ) : (
             <>
@@ -3341,9 +3333,7 @@ export default function ReportsPage() {
           )}
           {projectPlanFactQuery.isError && projectPlanFactProjectId && (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
-              {projectPlanFactQuery.error instanceof Error
-                ? projectPlanFactQuery.error.message
-                : tt("reports.failedProjectPlanFact")}
+              {readError(projectPlanFactQuery.error, tt("reports.failedProjectPlanFact"))}
             </div>
           )}
           {!projectPlanFactQuery.isLoading &&
@@ -3662,9 +3652,7 @@ export default function ReportsPage() {
           )}
           {projectRiskDrilldownQuery.isError && projectRiskProjectId && (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
-              {projectRiskDrilldownQuery.error instanceof Error
-                ? projectRiskDrilldownQuery.error.message
-                : tt("reports.failedProjectRisk")}
+              {readError(projectRiskDrilldownQuery.error, tt("reports.failedProjectRisk"))}
             </div>
           )}
           {!projectsQuery.isLoading && projectOptions.length > 0 && !projectRiskProjectId && (
@@ -3860,9 +3848,7 @@ export default function ReportsPage() {
                 </div>
               ) : topProjectsMarginQuery.isError ? (
                 <div className="px-3 py-4 text-[13px] text-[hsl(var(--destructive))]">
-                  {topProjectsMarginQuery.error instanceof Error
-                    ? topProjectsMarginQuery.error.message
-                    : tt("reports.failedTopMarginProjects")}
+                  {readError(topProjectsMarginQuery.error, tt("reports.failedTopMarginProjects"))}
                 </div>
               ) : (
                 <table className="w-full text-[12px]">
@@ -3919,9 +3905,7 @@ export default function ReportsPage() {
                 </div>
               ) : riskProjectsMarginQuery.isError ? (
                 <div className="px-3 py-4 text-[13px] text-[hsl(var(--destructive))]">
-                  {riskProjectsMarginQuery.error instanceof Error
-                    ? riskProjectsMarginQuery.error.message
-                    : tt("reports.failedLowMarginProjects")}
+                  {readError(riskProjectsMarginQuery.error, tt("reports.failedLowMarginProjects"))}
                 </div>
               ) : (
                 <table className="w-full text-[12px]">
@@ -3993,9 +3977,7 @@ export default function ReportsPage() {
             </div>
           ) : riskConcentrationQuery.isError ? (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
-              {riskConcentrationQuery.error instanceof Error
-                ? riskConcentrationQuery.error.message
-                : tt("reports.failedRiskConcentration")}
+              {readError(riskConcentrationQuery.error, tt("reports.failedRiskConcentration"))}
             </div>
           ) : (
             <div className="p-4 space-y-4">
@@ -4247,13 +4229,14 @@ export default function ReportsPage() {
             </div>
           ) : installerProfitabilityMatrixQuery.isError ? (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
-              {installerProfitabilityMatrixQuery.error instanceof Error
-                ? installerProfitabilityMatrixQuery.error.message
-                : copy(
-                    "Failed to load installer profitability matrix",
-                    "Не удалось загрузить матрицу прибыльности монтажников",
-                    "טעינת מטריצת רווחיות המתקינים נכשלה"
-                  )}
+              {readError(
+                installerProfitabilityMatrixQuery.error,
+                copy(
+                  "Failed to load installer profitability matrix",
+                  "Не удалось загрузить матрицу прибыльности монтажников",
+                  "טעינת מטריצת רווחיות המתקינים נכשלה"
+                )
+              )}
             </div>
           ) : installerProfitabilityMatrix.length === 0 ? (
             <div className="px-4 py-6 text-[13px] text-muted-foreground">
@@ -4371,13 +4354,14 @@ export default function ReportsPage() {
             </div>
           ) : installerProjectProfitabilityQuery.isError ? (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
-              {installerProjectProfitabilityQuery.error instanceof Error
-                ? installerProjectProfitabilityQuery.error.message
-                : copy(
-                    "Failed to load installer-project cross-view",
-                    "Не удалось загрузить cross-view по монтажникам и проектам",
-                    "טעינת cross-view למתקינים ופרויקטים נכשלה"
-                  )}
+              {readError(
+                installerProjectProfitabilityQuery.error,
+                copy(
+                  "Failed to load installer-project cross-view",
+                  "Не удалось загрузить cross-view по монтажникам и проектам",
+                  "טעינת cross-view למתקינים ופרויקטים נכשלה"
+                )
+              )}
             </div>
           ) : installerProjectProfitability.length === 0 ? (
             <div className="px-4 py-6">
@@ -4525,13 +4509,14 @@ export default function ReportsPage() {
           )}
           {installersKpiQuery.isError && (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
-              {installersKpiQuery.error instanceof Error
-                ? installersKpiQuery.error.message
-                : copy(
-                    "Failed to load installers KPI",
-                    "Не удалось загрузить KPI монтажников",
-                    "טעינת KPI המתקינים נכשלה"
-                  )}
+              {readError(
+                installersKpiQuery.error,
+                copy(
+                  "Failed to load installers KPI",
+                  "Не удалось загрузить KPI монтажников",
+                  "טעינת KPI המתקינים נכשלה"
+                )
+              )}
             </div>
           )}
           {!installersKpiQuery.isLoading &&
@@ -4647,9 +4632,7 @@ export default function ReportsPage() {
           )}
           {installerDetailsQuery.isError && installerDetailsId && (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
-              {installerDetailsQuery.error instanceof Error
-                ? installerDetailsQuery.error.message
-                : tt("reports.failedInstallerDetails")}
+              {readError(installerDetailsQuery.error, tt("reports.failedInstallerDetails"))}
             </div>
           )}
           {!installerDetailsQuery.isLoading &&
@@ -4906,13 +4889,14 @@ export default function ReportsPage() {
           )}
           {orderNumbersKpiQuery.isError && (
             <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
-              {orderNumbersKpiQuery.error instanceof Error
-                ? orderNumbersKpiQuery.error.message
-                : copy(
-                    "Failed to load order numbers KPI",
-                    "Не удалось загрузить KPI по номерам заказов",
-                    "טעינת KPI למספרי הזמנות נכשלה"
-                  )}
+              {readError(
+                orderNumbersKpiQuery.error,
+                copy(
+                  "Failed to load order numbers KPI",
+                  "Не удалось загрузить KPI по номерам заказов",
+                  "טעינת KPI למספרי הזמנות נכשלה"
+                )
+              )}
             </div>
           )}
           {!orderNumbersKpiQuery.isLoading &&

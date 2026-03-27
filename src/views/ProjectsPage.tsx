@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api";
+import { readableApiError } from "@/lib/api-error-display";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -1313,7 +1314,7 @@ export default function ProjectsPage() {
         setSelectedProjectId(null);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("projects.failedLoadProjects"));
+      setError(readableApiError(e, locale, t("projects.failedLoadProjects")));
     } finally {
       setLoadingProjects(false);
     }
@@ -1327,7 +1328,7 @@ export default function ProjectsPage() {
       setDoorTypes(response || []);
     } catch (e) {
       setDoorTypes([]);
-      setError(e instanceof Error ? e.message : t("projects.failedLoadDoorTypes"));
+      setError(readableApiError(e, locale, t("projects.failedLoadDoorTypes")));
     } finally {
       setLoadingDoorTypes(false);
     }
@@ -1422,7 +1423,7 @@ export default function ProjectsPage() {
       setLayout(response);
     } catch (e) {
       setLayout(null);
-      setError(e instanceof Error ? e.message : t("projects.failedLoadLayout"));
+      setError(readableApiError(e, locale, t("projects.failedLoadLayout")));
     } finally {
       setLoadingLayout(false);
     }
@@ -1706,7 +1707,7 @@ export default function ProjectsPage() {
       }
       await loadImportHistory(selectedProjectId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("projects.failedImportFile"));
+      setError(readableApiError(e, locale, t("projects.failedImportFile")));
     } finally {
       setImportLoading(false);
       setImportAction(null);
@@ -1733,7 +1734,7 @@ export default function ProjectsPage() {
       await loadProjectRisk(targetProjectId);
       await loadImportHistory(targetProjectId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("projects.failedRetryImportRun"));
+      setError(readableApiError(e, locale, t("projects.failedRetryImportRun")));
     } finally {
       setRetryingRunId(null);
     }
@@ -1793,7 +1794,7 @@ export default function ProjectsPage() {
         await loadImportHistory(selectedProjectId);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("projects.failedReconcileProjects"));
+      setError(readableApiError(e, locale, t("projects.failedReconcileProjects")));
     } finally {
       setBulkReconcileLoading(false);
     }
@@ -1818,7 +1819,7 @@ export default function ProjectsPage() {
       );
       setBulkReviewResult(response);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("projects.failedReviewProjects"));
+      setError(readableApiError(e, locale, t("projects.failedReviewProjects")));
     } finally {
       setBulkReviewLoading(false);
     }
@@ -1913,7 +1914,7 @@ export default function ProjectsPage() {
         await loadImportHistory(selectedProjectId);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("projects.failedRetryQueueRuns"));
+      setError(readableApiError(e, locale, t("projects.failedRetryQueueRuns")));
     } finally {
       setRetryFailedProgress((prev) =>
         prev
@@ -1987,13 +1988,15 @@ export default function ProjectsPage() {
       await loadProjectRisk(selectedProjectId);
     } catch (e) {
       setError(
-        e instanceof Error
-          ? e.message
-          : copy(
-              "Failed to create door.",
-              "Не удалось создать дверь.",
-              "יצירת הדלת נכשלה."
-            )
+        readableApiError(
+          e,
+          locale,
+          copy(
+            "Failed to create door.",
+            "Не удалось создать дверь.",
+            "יצירת הדלת נכשלה."
+          )
+        )
       );
     } finally {
       setManualDoorSubmitting(false);
@@ -2045,13 +2048,15 @@ export default function ProjectsPage() {
       await loadProjectRisk(selectedProjectId);
     } catch (e) {
       setError(
-        e instanceof Error
-          ? e.message
-          : copy(
-              "Failed to save additional work plan.",
-              "Не удалось сохранить план доп. работ.",
-              "שמירת תוכנית עבודות נוספות נכשלה."
-            )
+        readableApiError(
+          e,
+          locale,
+          copy(
+            "Failed to save additional work plan.",
+            "Не удалось сохранить план доп. работ.",
+            "שמירת תוכנית עבודות נוספות נכשלה."
+          )
+        )
       );
     } finally {
       setAdditionalWorkSubmitting(false);
@@ -2105,13 +2110,15 @@ export default function ProjectsPage() {
       await loadProjectRisk(selectedProjectId);
     } catch (e) {
       setError(
-        e instanceof Error
-          ? e.message
-          : copy(
-              "Failed to save urgency surcharge.",
-              "Не удалось сохранить urgency surcharge.",
-              "שמירת urgency surcharge נכשלה."
-            )
+        readableApiError(
+          e,
+          locale,
+          copy(
+            "Failed to save urgency surcharge.",
+            "Не удалось сохранить urgency surcharge.",
+            "שמירת urgency surcharge נכשלה."
+          )
+        )
       );
     } finally {
       setUrgencySubmitting(false);

@@ -20,6 +20,7 @@ import {
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
+import { readableApiError } from "@/lib/api-error-display";
 import { useI18n, type Locale } from "@/lib/i18n";
 
 const operationsOverrides: Record<Locale, Record<string, string>> = {
@@ -616,6 +617,17 @@ export default function OperationsPage() {
   const webhookSummary = webhookSummaryQuery.data;
   const webhookSignals = webhookSignalsQuery.data?.items || [];
   const retryAudits = retryAuditsQuery.data?.items || [];
+  const loadErrorMessage = readableApiError(
+    syncQuery.error ||
+      outboxSummaryQuery.error ||
+      outboxFailedQuery.error ||
+      failedImportsQuery.error ||
+      webhookSummaryQuery.error ||
+      webhookSignalsQuery.error ||
+      retryAuditsQuery.error,
+    locale,
+    t("operations.error")
+  );
   const freshnessTimestamp = useMemo(() => {
     const timestamps = [
       syncQuery.dataUpdatedAt,
@@ -874,7 +886,7 @@ export default function OperationsPage() {
     } catch (error) {
       setActionFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to retry import run",
+        message: readableApiError(error, locale, "Failed to retry import run"),
       });
     } finally {
       setBusyAction("");
@@ -902,7 +914,7 @@ export default function OperationsPage() {
     } catch (error) {
       setActionFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to retry outbox item",
+        message: readableApiError(error, locale, "Failed to retry outbox item"),
       });
     } finally {
       setBusyAction("");
@@ -944,7 +956,7 @@ export default function OperationsPage() {
     } catch (error) {
       setActionFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to retry actionable imports",
+        message: readableApiError(error, locale, "Failed to retry actionable imports"),
       });
     } finally {
       setBusyAction("");
@@ -988,8 +1000,7 @@ export default function OperationsPage() {
     } catch (error) {
       setActionFeedback({
         tone: "error",
-        message:
-          error instanceof Error ? error.message : "Failed to reconcile actionable projects",
+        message: readableApiError(error, locale, "Failed to reconcile actionable projects"),
       });
     } finally {
       setBusyAction("");
@@ -1033,7 +1044,7 @@ export default function OperationsPage() {
     } catch (error) {
       setActionFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to retry actionable delivery",
+        message: readableApiError(error, locale, "Failed to retry actionable delivery"),
       });
     } finally {
       setBusyAction("");
@@ -1185,7 +1196,7 @@ export default function OperationsPage() {
 
         {hasError && (
           <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))]">
-            {t("operations.error")}
+            {loadErrorMessage}
           </div>
         )}
         {actionFeedback && (

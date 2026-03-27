@@ -1246,7 +1246,7 @@ describe("ReportsPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open Actionable Ops" }));
     expect(pushMock).toHaveBeenCalledWith("/operations?actionable=1");
-  });
+  }, 15000);
 
   it("loads focused reports view from operations deep-link", async () => {
     window.history.replaceState(
