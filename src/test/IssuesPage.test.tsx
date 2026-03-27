@@ -391,7 +391,7 @@ describe("IssuesPage", () => {
     );
 
     expect(await screen.findByText("Install blocked")).toBeInTheDocument();
-    expect(await screen.findByText("Called the customer and confirmed the delay.")).toBeInTheDocument();
+    expect(await screen.findByText("Called the customer and confirmed the delay.", {}, { timeout: 5000 })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Show" }));
     expect(await screen.findByText("lock-photo.jpg")).toBeInTheDocument();

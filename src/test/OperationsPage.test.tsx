@@ -714,7 +714,7 @@ describe("OperationsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry import" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Import run run-1 moved back to processing.")).toBeInTheDocument();
+      expect(screen.getByText("Import run run-1 is back in processing.")).toBeInTheDocument();
     });
 
     const importRetryCall = apiFetchMock.mock.calls.find(
@@ -725,7 +725,7 @@ describe("OperationsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry delivery" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Outbox item outbox-1 moved back to queue.")).toBeInTheDocument();
+      expect(screen.getByText("Delivery item outbox-1 is back in queue.")).toBeInTheDocument();
     });
 
     const outboxRetryCall = apiFetchMock.mock.calls.find(
@@ -862,7 +862,7 @@ describe("OperationsPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Bulk import retry finished: success 2 | failed 0 | skipped 0.")
+        screen.getByText("Import retry finished: 2 succeeded, 0 failed, 0 skipped.")
       ).toBeInTheDocument();
     });
     expect(screen.getByText("Last Batch Result")).toBeInTheDocument();
@@ -1006,7 +1006,7 @@ describe("OperationsPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Bulk reconcile finished: success 1 | failed 0 | skipped 1.")
+        screen.getByText("Project reconcile finished: 1 updated, 0 failed, 1 skipped.")
       ).toBeInTheDocument();
     });
     expect(screen.getByText("Last Batch Result")).toBeInTheDocument();
@@ -1141,7 +1141,7 @@ describe("OperationsPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Bulk delivery retry finished: success 1 | failed 0 | skipped 1.")
+        screen.getByText("Delivery retry finished: 1 succeeded, 0 failed, 1 skipped.")
       ).toBeInTheDocument();
     });
     expect(screen.getByText("Last Batch Result")).toBeInTheDocument();
@@ -1267,7 +1267,7 @@ describe("OperationsPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Bulk delivery retry finished: success 1 | failed 0 | skipped 0.")
+        screen.getByText("Delivery retry finished: 1 succeeded, 0 failed, 0 skipped.")
       ).toBeInTheDocument();
     });
 

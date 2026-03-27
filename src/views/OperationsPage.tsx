@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw, ServerCrash, ShieldAlert, Siren, TimerReset } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -546,6 +546,14 @@ export default function OperationsPage() {
     message: string;
   } | null>(null);
 
+  useEffect(() => {
+    if (!actionFeedback || actionFeedback.tone !== "success") {
+      return;
+    }
+    const timeout = window.setTimeout(() => setActionFeedback(null), 3200);
+    return () => window.clearTimeout(timeout);
+  }, [actionFeedback]);
+
   const syncQuery = useQuery({
     queryKey: ["operations-sync-health"],
     queryFn: () => apiFetch<SyncHealthSummaryResponse>("/api/v1/admin/sync/health/summary"),
@@ -881,7 +889,7 @@ export default function OperationsPage() {
       await refetchAll();
       setActionFeedback({
         tone: "success",
-        message: `Import run ${runId} moved back to processing.`,
+        message: copy(`Import run ${runId} is back in processing.`, "\u0418\u043c\u043f\u043e\u0440\u0442 ${runId} \u0441\u043d\u043e\u0432\u0430 \u0432 \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u043a\u0435.", "\u05d9\u05d9\u05d1\u05d5\u05d0 ${runId} \u05d7\u05d6\u05e8 \u05dc\u05e2\u05d9\u05d1\u05d5\u05d3.")
       });
     } catch (error) {
       setActionFeedback({
@@ -909,7 +917,7 @@ export default function OperationsPage() {
       await refetchAll();
       setActionFeedback({
         tone: "success",
-        message: `Outbox item ${outboxId} moved back to queue.`,
+        message: copy(`Delivery item ${outboxId} is back in queue.`, "\u042d\u043b\u0435\u043c\u0435\u043d\u0442 \u0434\u043e\u0441\u0442\u0430\u0432\u043a\u0438 ${outboxId} \u0441\u043d\u043e\u0432\u0430 \u0432 \u043e\u0447\u0435\u0440\u0435\u0434\u0438.", "\u05e4\u05e8\u05d9\u05d8 \u05d4\u05de\u05e9\u05dc\u05d5\u05d7 ${outboxId} \u05d7\u05d6\u05e8 \u05dc\u05ea\u05d5\u05e8.")
       });
     } catch (error) {
       setActionFeedback({
@@ -949,9 +957,11 @@ export default function OperationsPage() {
       });
       setActionFeedback({
         tone: response.failed_runs > 0 ? "error" : "success",
-        message:
-          `Bulk import retry finished: success ${response.successful_runs} | ` +
-          `failed ${response.failed_runs} | skipped ${response.skipped_runs}.`,
+        message: copy(
+          `Import retry finished: ${response.successful_runs} succeeded, ${response.failed_runs} failed, ${response.skipped_runs} skipped.`,
+          "\u041f\u043e\u0432\u0442\u043e\u0440 \u0438\u043c\u043f\u043e\u0440\u0442\u0430 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d: \u0443\u0441\u043f\u0435\u0448\u043d\u043e ${response.successful_runs}, \u043e\u0448\u0438\u0431\u043e\u043a ${response.failed_runs}, \u043f\u0440\u043e\u043f\u0443\u0449\u0435\u043d\u043e ${response.skipped_runs}.",
+          "\u05e0\u05d9\u05e1\u05d9\u05d5\u05df \u05d4\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d4\u05e1\u05ea\u05d9\u05d9\u05dd: ${response.successful_runs} \u05d4\u05e6\u05dc\u05d9\u05d7\u05d5, ${response.failed_runs} \u05e0\u05db\u05e9\u05dc\u05d5, ${response.skipped_runs} \u05d3\u05d5\u05dc\u05d2\u05d5."
+        ),
       });
     } catch (error) {
       setActionFeedback({
@@ -993,9 +1003,11 @@ export default function OperationsPage() {
       });
       setActionFeedback({
         tone: response.failed_projects > 0 ? "error" : "success",
-        message:
-          `Bulk reconcile finished: success ${response.successful_projects} | ` +
-          `failed ${response.failed_projects} | skipped ${response.skipped_projects}.`,
+        message: copy(
+          `Project reconcile finished: ${response.successful_projects} updated, ${response.failed_projects} failed, ${response.skipped_projects} skipped.`,
+          "\u0421\u0432\u0435\u0440\u043a\u0430 \u043f\u0440\u043e\u0435\u043a\u0442\u043e\u0432 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u0430: \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u043e ${response.successful_projects}, \u043e\u0448\u0438\u0431\u043e\u043a ${response.failed_projects}, \u043f\u0440\u043e\u043f\u0443\u0449\u0435\u043d\u043e ${response.skipped_projects}.",
+          "\u05d4\u05ea\u05d0\u05de\u05ea \u05d4\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8\u05d9\u05dd \u05d4\u05e1\u05ea\u05d9\u05d9\u05de\u05d4: ${response.successful_projects} \u05e2\u05d5\u05d3\u05db\u05e0\u05d5, ${response.failed_projects} \u05e0\u05db\u05e9\u05dc\u05d5, ${response.skipped_projects} \u05d3\u05d5\u05dc\u05d2\u05d5."
+        ),
       });
     } catch (error) {
       setActionFeedback({
@@ -1037,9 +1049,11 @@ export default function OperationsPage() {
       });
       setActionFeedback({
         tone: response.failed_messages > 0 ? "error" : "success",
-        message:
-          `Bulk delivery retry finished: success ${response.successful_messages} | ` +
-          `failed ${response.failed_messages} | skipped ${response.skipped_messages}.`,
+        message: copy(
+          `Delivery retry finished: ${response.successful_messages} succeeded, ${response.failed_messages} failed, ${response.skipped_messages} skipped.`,
+          "\u041f\u043e\u0432\u0442\u043e\u0440 \u0434\u043e\u0441\u0442\u0430\u0432\u043a\u0438 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d: \u0443\u0441\u043f\u0435\u0448\u043d\u043e ${response.successful_messages}, \u043e\u0448\u0438\u0431\u043e\u043a ${response.failed_messages}, \u043f\u0440\u043e\u043f\u0443\u0449\u0435\u043d\u043e ${response.skipped_messages}.",
+          "\u05e0\u05d9\u05e1\u05d9\u05d5\u05df \u05d4\u05de\u05e9\u05dc\u05d5\u05d7 \u05d4\u05e1\u05ea\u05d9\u05d9\u05dd: ${response.successful_messages} \u05d4\u05e6\u05dc\u05d9\u05d7\u05d5, ${response.failed_messages} \u05e0\u05db\u05e9\u05dc\u05d5, ${response.skipped_messages} \u05d3\u05d5\u05dc\u05d2\u05d5."
+        ),
       });
     } catch (error) {
       setActionFeedback({
