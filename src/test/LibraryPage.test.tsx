@@ -110,5 +110,6 @@ describe("LibraryPage", () => {
         }),
       });
     });
+    expect(await screen.findByText("Library product created.")).toBeInTheDocument();
   }, 15000);
 });

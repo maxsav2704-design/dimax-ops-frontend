@@ -14,6 +14,7 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
+import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions, canViewRates } from "@/lib/admin-access";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -306,6 +307,8 @@ export default function InstallersPage() {
 
   const [form, setForm] = useState<InstallerFormState>(emptyForm());
   const [editingInstaller, setEditingInstaller] = useState<Installer | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const session = useAuthSession();
   const canManageInstallers = canRunPrivilegedAdminActions(session);
   const canManageRates = canViewRates(session);
@@ -375,9 +378,15 @@ export default function InstallersPage() {
         body: JSON.stringify(toPayload(form)),
       }),
     onSuccess: async () => {
+      setNotice("Installer created.");
+      setActionError(null);
       setIsCreateOpen(false);
       setForm(emptyForm());
       await queryClient.invalidateQueries({ queryKey: ["installers"] });
+    },
+    onError: (error) => {
+      setNotice(null);
+      setActionError(readableApiError(error, "en", "Failed to create installer."));
     },
   });
 
@@ -392,7 +401,13 @@ export default function InstallersPage() {
       });
     },
     onSuccess: async () => {
+      setNotice("Installer profile updated.");
+      setActionError(null);
       await queryClient.invalidateQueries({ queryKey: ["installers"] });
+    },
+    onError: (error) => {
+      setNotice(null);
+      setActionError(readableApiError(error, "en", "Failed to update installer."));
     },
   });
 
@@ -400,7 +415,13 @@ export default function InstallersPage() {
     mutationFn: (installerId: string) =>
       apiFetch<void>(`/api/v1/admin/installers/${installerId}`, { method: "DELETE" }),
     onSuccess: async () => {
+      setNotice("Installer deleted.");
+      setActionError(null);
       await queryClient.invalidateQueries({ queryKey: ["installers"] });
+    },
+    onError: (error) => {
+      setNotice(null);
+      setActionError(readableApiError(error, "en", "Failed to delete installer."));
     },
   });
 
@@ -415,8 +436,14 @@ export default function InstallersPage() {
       });
     },
     onSuccess: async (installer) => {
+      setNotice("Installer user link updated.");
+      setActionError(null);
       setEditingInstaller(installer);
       await queryClient.invalidateQueries({ queryKey: ["installers"] });
+    },
+    onError: (error) => {
+      setNotice(null);
+      setActionError(readableApiError(error, "en", "Failed to link installer user."));
     },
   });
 
@@ -430,9 +457,15 @@ export default function InstallersPage() {
       });
     },
     onSuccess: async (installer) => {
+      setNotice("Installer user link removed.");
+      setActionError(null);
       setEditingInstaller(installer);
       setLinkUserId("");
       await queryClient.invalidateQueries({ queryKey: ["installers"] });
+    },
+    onError: (error) => {
+      setNotice(null);
+      setActionError(readableApiError(error, "en", "Failed to unlink installer user."));
     },
   });
 
@@ -451,8 +484,14 @@ export default function InstallersPage() {
       });
     },
     onSuccess: async () => {
+      setNotice("Installer rate added.");
+      setActionError(null);
       setNewRatePrice("");
       await queryClient.invalidateQueries({ queryKey: ["installer-rates", editingInstaller?.id] });
+    },
+    onError: (error) => {
+      setNotice(null);
+      setActionError(readableApiError(error, "en", "Failed to add installer rate."));
     },
   });
 
@@ -463,7 +502,13 @@ export default function InstallersPage() {
         body: JSON.stringify({ price: rateDrafts[rateId] }),
       }),
     onSuccess: async () => {
+      setNotice("Installer rate updated.");
+      setActionError(null);
       await queryClient.invalidateQueries({ queryKey: ["installer-rates", editingInstaller?.id] });
+    },
+    onError: (error) => {
+      setNotice(null);
+      setActionError(readableApiError(error, "en", "Failed to update installer rate."));
     },
   });
 
@@ -471,7 +516,13 @@ export default function InstallersPage() {
     mutationFn: (rateId: string) =>
       apiFetch<void>(`/api/v1/admin/installer-rates/${rateId}`, { method: "DELETE" }),
     onSuccess: async () => {
+      setNotice("Installer rate deleted.");
+      setActionError(null);
       await queryClient.invalidateQueries({ queryKey: ["installer-rates", editingInstaller?.id] });
+    },
+    onError: (error) => {
+      setNotice(null);
+      setActionError(readableApiError(error, "en", "Failed to delete installer rate."));
     },
   });
 
@@ -498,11 +549,15 @@ export default function InstallersPage() {
   }, [installers]);
 
   const onOpenCreate = () => {
+    setNotice(null);
+    setActionError(null);
     setForm(emptyForm());
     setIsCreateOpen(true);
   };
 
   const onOpenEdit = (installer: Installer) => {
+    setNotice(null);
+    setActionError(null);
     setEditingInstaller(installer);
     setForm({
       full_name: installer.full_name,
@@ -617,7 +672,19 @@ export default function InstallersPage() {
         {hasError && (
           <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{t("installers.error")}</span>
+            <span>{readableApiError(installersQuery.error, "en", t("installers.error"))}</span>
+          </div>
+        )}
+        {actionError && (
+          <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>{actionError}</span>
+          </div>
+        )}
+        {notice && (
+          <div className="mb-4 rounded-lg border border-[hsl(var(--success)/0.35)] bg-[hsl(var(--success)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--success))] flex items-start gap-2">
+            <UserRound className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>{notice}</span>
           </div>
         )}
         {!canManageInstallers && (

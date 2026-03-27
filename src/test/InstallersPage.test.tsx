@@ -1,4 +1,4 @@
-﻿import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -110,4 +110,69 @@ describe("InstallersPage", () => {
     fireEvent.click(editButton);
     expect(await screen.findByText("Installer Rates")).toBeInTheDocument();
   });
+
+  it("creates installer and shows readable success notice", async () => {
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "OWNER",
+      can_view_rates: true,
+    });
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      const url = String(path);
+      if (url.includes("/api/v1/admin/installers?")) {
+        return [];
+      }
+      if (url === "/api/v1/admin/installers" && init?.method === "POST") {
+        return {
+          id: "installer-1",
+          company_id: "company-1",
+          full_name: "New Installer",
+          phone: null,
+          email: null,
+          status: "ACTIVE",
+          is_active: true,
+          user_id: null,
+          created_at: "2026-03-21T10:00:00Z",
+          updated_at: "2026-03-21T11:00:00Z",
+          deleted_at: null,
+        };
+      }
+      return [];
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallersPage />
+      </QueryClientProvider>
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Add Installer" }));
+    fireEvent.change(screen.getAllByRole("textbox")[1], {
+      target: { value: "New Installer" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(apiFetchMock).toHaveBeenCalledWith("/api/v1/admin/installers", {
+        method: "POST",
+        body: JSON.stringify({
+          full_name: "New Installer",
+          phone: null,
+          email: null,
+          address: null,
+          passport_id: null,
+          notes: null,
+          status: "ACTIVE",
+          is_active: true,
+        }),
+      });
+    });
+
+    expect(await screen.findByText("Installer created.")).toBeInTheDocument();
+  });
+
 });

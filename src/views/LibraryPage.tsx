@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api";
+import { readableApiError } from "@/lib/api-error-display";
 import { cn } from "@/lib/utils";
 
 type LibraryStatus = "ACTIVE" | "ARCHIVED";
@@ -82,6 +83,7 @@ export default function LibraryPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [form, setForm] = useState<ProductLibraryForm>(emptyForm());
   const [editingItem, setEditingItem] = useState<ProductLibraryItem | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const listQuery = useQuery({
     queryKey: ["library", search, statusFilter],
@@ -112,9 +114,14 @@ export default function LibraryPage() {
       }),
     onSuccess: async () => {
       setMessage("Library product created.");
+      setErrorMessage(null);
       setForm(emptyForm());
       setIsCreateOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["library"] });
+    },
+    onError: (error) => {
+      setMessage(null);
+      setErrorMessage(readableApiError(error, "en", "Failed to create library product."));
     },
   });
 
@@ -133,9 +140,14 @@ export default function LibraryPage() {
     },
     onSuccess: async () => {
       setMessage("Library product updated.");
+      setErrorMessage(null);
       setIsEditOpen(false);
       setEditingItem(null);
       await queryClient.invalidateQueries({ queryKey: ["library"] });
+    },
+    onError: (error) => {
+      setMessage(null);
+      setErrorMessage(readableApiError(error, "en", "Failed to update library product."));
     },
   });
 
@@ -158,11 +170,15 @@ export default function LibraryPage() {
 
   function openCreateDialog() {
     setForm(emptyForm());
+    setMessage(null);
+    setErrorMessage(null);
     setIsCreateOpen(true);
   }
 
   function openEditDialog(item: ProductLibraryItem) {
     setEditingItem(item);
+    setMessage(null);
+    setErrorMessage(null);
     setForm({
       sku: item.sku,
       name_ru: item.name_ru,
@@ -249,10 +265,10 @@ export default function LibraryPage() {
           </div>
         )}
 
-        {(listQuery.isError || createMutation.isError || updateMutation.isError) && (
+        {(listQuery.isError || errorMessage) && (
           <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{String(listQuery.error || createMutation.error || updateMutation.error || "Request failed")}</span>
+            <span>{errorMessage || readableApiError(listQuery.error, "en", "Failed to load library.")}</span>
           </div>
         )}
 
