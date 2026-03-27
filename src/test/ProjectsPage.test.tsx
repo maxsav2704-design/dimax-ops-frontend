@@ -1061,9 +1061,7 @@ describe("ProjectsPage", () => {
         )
       ).toBe(true);
     });
-    expect(
-      await screen.findByText("Additional work plan row was saved and financial screens were refreshed.")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Handle Upgrade was added to the project plan.")).toBeInTheDocument();
   }, 20000);
 
   it("creates an urgency surcharge row for the selected project", async () => {
@@ -1255,8 +1253,138 @@ describe("ProjectsPage", () => {
       ).toBe(true);
     });
     expect(
-      await screen.findByText("Urgency surcharge row was saved and project totals were refreshed.")
+      await screen.findByText(
+        "Urgency surcharge for order AZ-9001 was saved. The project matrix is now filtered to that order."
+      )
     ).toBeInTheDocument();
+  }, 20000);
+
+  it("blocks invalid additional work amounts before submit", async () => {
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      const url = String(path);
+
+      if (url.includes("/api/v1/admin/door-types")) return [];
+      if (url.endsWith("/api/v1/admin/projects")) {
+        return { items: [{ id: "project-1", name: "Project A", address: "Address A", status: "ACTIVE" }] };
+      }
+      if (url.includes("/api/v1/admin/library")) return { items: [] };
+      if (url.includes("/api/v1/admin/installers?")) return { items: [] };
+      if (url.includes("/api/v1/admin/addons/types")) {
+        return { items: [{ id: "addon-1", name: "Handle Upgrade", unit: "pcs", status: "ACTIVE" }] };
+      }
+      if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
+        return { default_code: "auto_v1", items: [] };
+      }
+      if (url.includes("/api/v1/admin/projects/project-1") && !url.includes("/doors/") && !url.includes("/addons/plan")) {
+        return {
+          id: "project-1",
+          name: "Project A",
+          address: "Address A",
+          status: "ACTIVE",
+          developer_company: "DIMAX Dev Co",
+          contact_name: "Eyal Cohen",
+          issues_open: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/projects/project-1/doors/layout")) {
+        return { project_id: "project-1", total_doors: 0, buckets: [] };
+      }
+      if (url.includes("/api/v1/admin/projects/project-1/addons/plan") && !init?.method) {
+        return { items: [] };
+      }
+      if (url.includes("/api/v1/admin/reports/project-plan-fact/project-1")) {
+        return {
+          project_id: "project-1",
+          total_doors: 0,
+          installed_doors: 0,
+          not_installed_doors: 0,
+          completion_pct: 0,
+          open_issues: 0,
+          planned_revenue_total: 0,
+          actual_revenue_total: 0,
+          revenue_gap_total: 0,
+          planned_payroll_total: 0,
+          actual_payroll_total: 0,
+          payroll_gap_total: 0,
+          planned_profit_total: 0,
+          actual_profit_total: 0,
+          profit_gap_total: 0,
+          planned_addons_qty: 0,
+          actual_addons_qty: 0,
+          missing_planned_rates_doors: 0,
+          missing_actual_rates_doors: 0,
+          missing_addon_plans_facts: 0,
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/project-risk-drilldown/project-1")) {
+        return {
+          generated_at: "2026-03-02T10:00:00Z",
+          project_id: "project-1",
+          project_name: "Project A",
+          summary: {
+            total_doors: 0,
+            installed_doors: 0,
+            not_installed_doors: 0,
+            completion_pct: 0,
+            open_issues: 0,
+            blocked_open_issues: 0,
+            planned_revenue_total: 0,
+            actual_revenue_total: 0,
+            revenue_gap_total: 0,
+            planned_profit_total: 0,
+            actual_profit_total: 0,
+            profit_gap_total: 0,
+            actual_margin_pct: 0,
+            delayed_revenue_total: 0,
+            delayed_profit_total: 0,
+            blocked_issue_profit_at_risk: 0,
+            addon_revenue_total: 0,
+            addon_profit_total: 0,
+            missing_planned_rates_doors: 0,
+            missing_actual_rates_doors: 0,
+            missing_addon_plans_facts: 0,
+          },
+          drivers: [],
+          top_reasons: [],
+          risky_orders: [],
+        };
+      }
+      if (url.includes("/doors/import-history")) return { items: [] };
+      if (url.includes("/import-runs/failed-queue")) return { items: [], total: 0, limit: 10, offset: 0 };
+      if (url.includes("/api/v1/admin/projects/project-1/addons/plan") && init?.method === "POST") {
+        throw new Error("Invalid plan row should not be submitted");
+      }
+      return {};
+    });
+
+    render(<ProjectsPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Add additional work" }));
+    fireEvent.change(screen.getByLabelText("Add-on type"), {
+      target: { value: "addon-1" },
+    });
+    fireEvent.change(screen.getByLabelText("Qty planned"), {
+      target: { value: "0" },
+    });
+    fireEvent.change(screen.getByLabelText("Client price"), {
+      target: { value: "-10" },
+    });
+    fireEvent.change(screen.getByLabelText("Installer price"), {
+      target: { value: "0" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save additional work" }));
+
+    expect(
+      await screen.findByText("Use positive numbers for planned qty and both prices.")
+    ).toBeInTheDocument();
+    expect(
+      apiFetchMock.mock.calls.some(
+        ([callPath, requestInit]) =>
+          String(callPath).includes("/api/v1/admin/projects/project-1/addons/plan") &&
+          (requestInit as RequestInit | undefined)?.method === "POST"
+      )
+    ).toBe(false);
   }, 20000);
 
   it("shows selected import run details with diagnostics and errors", async () => {

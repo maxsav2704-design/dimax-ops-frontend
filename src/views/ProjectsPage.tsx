@@ -2058,6 +2058,9 @@ export default function ProjectsPage() {
     if (!selectedProjectId) {
       return;
     }
+    const qtyPlanned = Number(additionalWorkForm.qty_planned.trim());
+    const clientPrice = Number(additionalWorkForm.client_price.trim());
+    const installerPrice = Number(additionalWorkForm.installer_price.trim());
     if (
       !additionalWorkForm.addon_type_id ||
       !additionalWorkForm.qty_planned.trim() ||
@@ -2069,6 +2072,16 @@ export default function ProjectsPage() {
           "Choose an add-on and fill qty + prices before saving.",
           "Выберите доп. работу и заполните количество и цены перед сохранением.",
           "בחר עבודת תוספת ומלא כמות ומחירים לפני השמירה."
+        )
+      );
+      return;
+    }
+    if (!Number.isFinite(qtyPlanned) || qtyPlanned <= 0 || !Number.isFinite(clientPrice) || clientPrice <= 0 || !Number.isFinite(installerPrice) || installerPrice <= 0) {
+      setError(
+        copy(
+          "Use positive numbers for planned qty and both prices.",
+          "Используйте положительные числа для количества и обеих цен.",
+          "השתמש במספרים חיוביים לכמות ולשני המחירים."
         )
       );
       return;
@@ -2092,11 +2105,19 @@ export default function ProjectsPage() {
       await loadProjectAddonPlan(selectedProjectId);
       await loadProjectPlanFact(selectedProjectId);
       await loadProjectRisk(selectedProjectId);
+      if (typeof document !== "undefined") {
+        window.setTimeout(() => {
+          document.getElementById("project-additional-works")?.scrollIntoView?.({
+            behavior: "smooth",
+            block: "start",
+          });
+        }, 0);
+      }
       setProjectFlowNotice(
         copy(
-          "Additional work plan row was saved and financial screens were refreshed.",
-          "Строка доп. работ сохранена, а финансовые экраны обновлены.",
-          "שורת עבודות נוספות נשמרה ומסכי הכספים רועננו."
+          `${selectedAddonType?.name || "Additional work"} was added to the project plan.`,
+          `${selectedAddonType?.name || "Доп. работа"} добавлена в план проекта.`,
+          `${selectedAddonType?.name || "עבודה נוספת"} נוספה לתוכנית הפרויקט.`
         )
       );
     } catch (e) {
@@ -2127,6 +2148,8 @@ export default function ProjectsPage() {
     if (!selectedProjectId) {
       return;
     }
+    const clientAmount = Number(urgencyForm.client_amount.trim());
+    const installerAmount = Number(urgencyForm.installer_amount.trim());
     if (
       !urgencyForm.reason.trim() ||
       !urgencyForm.client_amount.trim() ||
@@ -2138,6 +2161,16 @@ export default function ProjectsPage() {
           "Fill reason and both surcharge amounts. Order-scoped surcharge also needs an order number.",
           "Заполните причину и обе суммы surcharge. Для surcharge по заказу также нужен номер заказа.",
           "מלא סיבה ושני סכומי surcharge. עבור surcharge לפי הזמנה נדרש גם מספר הזמנה."
+        )
+      );
+      return;
+    }
+    if (!Number.isFinite(clientAmount) || clientAmount <= 0 || !Number.isFinite(installerAmount) || installerAmount <= 0) {
+      setError(
+        copy(
+          "Use positive amounts for both surcharge values.",
+          "Используйте положительные суммы для обеих надбавок.",
+          "השתמש בסכומים חיוביים לשתי תוספות הדחיפות."
         )
       );
       return;
@@ -2163,11 +2196,35 @@ export default function ProjectsPage() {
       await loadUrgencySurcharges(selectedProjectId);
       await loadProjectPlanFact(selectedProjectId);
       await loadProjectRisk(selectedProjectId);
+      if (urgencyForm.scope === "ORDER_NUMBER" && urgencyForm.order_number.trim()) {
+        setMatrixOrderNumber(urgencyForm.order_number.trim());
+        if (typeof document !== "undefined") {
+          window.setTimeout(() => {
+            document.getElementById("project-door-matrix")?.scrollIntoView?.({
+              behavior: "smooth",
+              block: "start",
+            });
+          }, 0);
+        }
+      } else if (typeof document !== "undefined") {
+        window.setTimeout(() => {
+          document.getElementById("project-urgency-surcharge")?.scrollIntoView?.({
+            behavior: "smooth",
+            block: "start",
+          });
+        }, 0);
+      }
       setProjectFlowNotice(
         copy(
-          "Urgency surcharge row was saved and project totals were refreshed.",
-          "Строка срочной надбавки сохранена, а итоги проекта обновлены.",
-          "שורת תוספת הדחיפות נשמרה וסיכומי הפרויקט רועננו."
+          urgencyForm.scope === "ORDER_NUMBER" && urgencyForm.order_number.trim()
+            ? `Urgency surcharge for order ${urgencyForm.order_number.trim()} was saved. The project matrix is now filtered to that order.`
+            : "Project-level urgency surcharge was saved.",
+          urgencyForm.scope === "ORDER_NUMBER" && urgencyForm.order_number.trim()
+            ? `Срочная надбавка для заказа ${urgencyForm.order_number.trim()} сохранена. Матрица проекта уже отфильтрована по этому заказу.`
+            : "Срочная надбавка уровня проекта сохранена.",
+          urgencyForm.scope === "ORDER_NUMBER" && urgencyForm.order_number.trim()
+            ? `תוספת הדחיפות להזמנה ${urgencyForm.order_number.trim()} נשמרה. מטריצת הפרויקט כבר מסוננת להזמנה הזו.`
+            : "תוספת דחיפות ברמת הפרויקט נשמרה."
         )
       );
     } catch (e) {
@@ -2442,7 +2499,7 @@ export default function ProjectsPage() {
                   </div>
                 </div>
 
-                <div className="surface-panel space-y-4">
+                <div id="project-additional-works" className="surface-panel space-y-4">
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="max-w-2xl">
                       <div className="page-eyebrow">
@@ -2500,7 +2557,7 @@ export default function ProjectsPage() {
                   </div>
                 </div>
 
-                <div className="surface-panel space-y-4">
+                <div id="project-urgency-surcharge" className="surface-panel space-y-4">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div className="max-w-2xl">
                       <div className="page-eyebrow">
