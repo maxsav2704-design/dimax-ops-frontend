@@ -68,6 +68,21 @@ type AdminIssue = {
   updated_at: string;
 };
 
+type AdminIssueComment = {
+  id: string;
+  body: string | null;
+  author_name?: string | null;
+  author_user_id?: string | null;
+  created_at?: string | null;
+};
+
+type AdminIssueMediaAsset = {
+  id: string;
+  file_name?: string | null;
+  content_type?: string | null;
+  created_at?: string | null;
+};
+
 type AdminIssuesResponse = {
   items: AdminIssue[];
 };
@@ -76,6 +91,14 @@ type AdminIssuesBulkWorkflowUpdateResponse = {
   updated: number;
   missing_issue_ids: string[];
   items: AdminIssue[];
+};
+
+type AdminIssueCommentsResponse = {
+  items: AdminIssueComment[];
+};
+
+type AdminIssueMediaResponse = {
+  items: AdminIssueMediaAsset[];
 };
 
 type Installer = {
@@ -208,6 +231,32 @@ function buildWorkflowPatch(
   return payload;
 }
 
+async function safeFetchIssueComments(issueId: string): Promise<AdminIssueComment[]> {
+  try {
+    const response = await apiFetch<AdminIssueCommentsResponse>(`/api/v1/admin/issues/${issueId}/comments`);
+    return response.items || [];
+  } catch {
+    return [];
+  }
+}
+
+async function safeFetchIssueMedia(issueId: string): Promise<AdminIssueMediaAsset[]> {
+  try {
+    const response = await apiFetch<AdminIssueMediaResponse>(`/api/v1/admin/issues/${issueId}/media`);
+    return response.items || [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchIssueMediaUrl(mediaId: string): Promise<string> {
+  const response = await apiFetch<{ url?: string | null }>(`/api/v1/media/${mediaId}/url`);
+  if (response.url) {
+    return response.url;
+  }
+  throw new Error("Media file is not ready");
+}
+
 export default function IssuesPage() {
   const queryClient = useQueryClient();
   const { locale, t } = useI18n();
@@ -296,6 +345,37 @@ export default function IssuesPage() {
     () => issues.find((item) => item.id === selectedIssueId) || null,
     [issues, selectedIssueId]
   );
+  const [issueMediaOpen, setIssueMediaOpen] = useState(false);
+
+  const issueCommentsQuery = useQuery({
+    queryKey: ["admin-issue-comments", selectedIssueId],
+    queryFn: () => safeFetchIssueComments(selectedIssueId as string),
+    enabled: !!selectedIssueId,
+    staleTime: 30_000,
+  });
+
+  const issueMediaQuery = useQuery({
+    queryKey: ["admin-issue-media", selectedIssueId],
+    queryFn: () => safeFetchIssueMedia(selectedIssueId as string),
+    enabled: !!selectedIssueId && issueMediaOpen,
+    staleTime: 30_000,
+  });
+
+  const openMediaMutation = useMutation({
+    mutationFn: async (media: AdminIssueMediaAsset) => {
+      const url = await fetchIssueMediaUrl(media.id);
+      return { url };
+    },
+    onSuccess: ({ url }) => {
+      if (typeof window !== "undefined") {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    },
+    onError: (error) => {
+      setSaveNote(null);
+      setFormError(readableApiError(error, locale, "Failed to open issue media"));
+    },
+  });
 
   useEffect(() => {
     if (!issueIdParam) {
@@ -326,6 +406,7 @@ export default function IssuesPage() {
       setForm(emptyForm());
       return;
     }
+    setIssueMediaOpen(false);
     setForm(toForm(selectedIssue));
     setFormError(null);
     setSaveNote(null);
@@ -624,6 +705,154 @@ export default function IssuesPage() {
                   </div>
                   <div className="font-medium mt-0.5">
                     {selectedIssue.door_unit_label} / {selectedIssue.project_id}
+                  </div>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-lg border border-border bg-background p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[12px] font-medium text-foreground">
+                        {locale === "ru"
+                          ? "Комментарии"
+                          : locale === "he"
+                            ? "הערות"
+                            : "Comments"}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground tabular-nums">
+                        {(issueCommentsQuery.data || []).length}
+                      </div>
+                    </div>
+                    {issueCommentsQuery.isLoading ? (
+                      <div className="text-[12px] text-muted-foreground">
+                        {locale === "ru"
+                          ? "Загружаем комментарии..."
+                          : locale === "he"
+                            ? "טוען הערות..."
+                            : "Loading comments..."}
+                      </div>
+                    ) : issueCommentsQuery.data && issueCommentsQuery.data.length > 0 ? (
+                      <div className="space-y-2">
+                        {issueCommentsQuery.data.slice(0, 4).map((comment) => (
+                          <div
+                            key={comment.id}
+                            className="rounded-lg border border-border/70 bg-muted/30 px-3 py-2"
+                          >
+                            <div className="text-[11px] text-muted-foreground">
+                              {comment.author_name || comment.author_user_id || "System"}
+                              {comment.created_at ? ` • ${formatDateTime(comment.created_at)}` : ""}
+                            </div>
+                            <div className="mt-1 text-[12px] text-foreground">
+                              {comment.body || "-"}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-[12px] text-muted-foreground">
+                        {locale === "ru"
+                          ? "Комментариев пока нет."
+                          : locale === "he"
+                            ? "עדיין אין הערות."
+                            : "No comments yet."}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border border-border bg-background p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[12px] font-medium text-foreground">
+                        {locale === "ru"
+                          ? "Медиа"
+                          : locale === "he"
+                            ? "מדיה"
+                            : "Media"}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIssueMediaOpen((current) => !current)}
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-border/70 bg-background/80 px-3 text-[11px] font-medium transition-colors hover:bg-muted"
+                      >
+                        {issueMediaOpen
+                          ? locale === "ru"
+                            ? "Скрыть"
+                            : locale === "he"
+                              ? "הסתר"
+                              : "Hide"
+                          : locale === "ru"
+                            ? "Показать"
+                            : locale === "he"
+                              ? "הצג"
+                              : "Show"}
+                      </button>
+                    </div>
+                    {!issueMediaOpen ? (
+                      <div className="text-[12px] text-muted-foreground">
+                        {locale === "ru"
+                          ? "Открой медиа, чтобы увидеть вложения по проблеме."
+                          : locale === "he"
+                            ? "פתח מדיה כדי לראות קבצים מצורפים לבעיה."
+                            : "Open media to inspect issue attachments."}
+                      </div>
+                    ) : issueMediaQuery.isLoading ? (
+                      <div className="text-[12px] text-muted-foreground">
+                        {locale === "ru"
+                          ? "Загружаем медиа..."
+                          : locale === "he"
+                            ? "טוען מדיה..."
+                            : "Loading media..."}
+                      </div>
+                    ) : issueMediaQuery.data && issueMediaQuery.data.length > 0 ? (
+                      <div className="space-y-2">
+                        {issueMediaQuery.data.slice(0, 4).map((media, index) => (
+                          <div
+                            key={media.id}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/70 bg-muted/30 px-3 py-2"
+                          >
+                            <div className="min-w-0">
+                              <div className="truncate text-[12px] font-medium text-foreground">
+                                {media.file_name ||
+                                  (locale === "ru"
+                                    ? `Файл ${index + 1}`
+                                    : locale === "he"
+                                      ? `קובץ ${index + 1}`
+                                      : `File ${index + 1}`)}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground">
+                                {[media.content_type, media.created_at ? formatDateTime(media.created_at) : null]
+                                  .filter(Boolean)
+                                  .join(" • ") || "-"}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => openMediaMutation.mutate(media)}
+                              disabled={openMediaMutation.isPending}
+                              className="inline-flex h-8 items-center justify-center rounded-lg border border-border/70 bg-background px-3 text-[11px] font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {openMediaMutation.isPending
+                                ? locale === "ru"
+                                  ? "Открываем..."
+                                  : locale === "he"
+                                    ? "פותח..."
+                                    : "Opening..."
+                                : locale === "ru"
+                                  ? "Открыть"
+                                  : locale === "he"
+                                    ? "פתח"
+                                    : "Open"}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-[12px] text-muted-foreground">
+                        {locale === "ru"
+                          ? "Вложений пока нет."
+                          : locale === "he"
+                            ? "עדיין אין קבצים מצורפים."
+                            : "No media yet."}
+                      </div>
+                    )}
                   </div>
                 </div>
 

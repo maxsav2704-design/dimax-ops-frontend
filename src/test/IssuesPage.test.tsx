@@ -313,5 +313,99 @@ describe("IssuesPage", () => {
     expect(await screen.findByRole("button", { name: "Save Workflow" })).toBeDisabled();
     expect(screen.getByRole("button", { name: /Apply To Filtered/i })).toBeDisabled();
   }, 15000);
+
+  it("shows issue comments and opens media attachments for the selected issue", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/api/v1/admin/installers")) {
+        return [];
+      }
+      if (path === "/api/v1/admin/issues?limit=200") {
+        return {
+          items: [
+            {
+              id: "issue-1",
+              company_id: "company-1",
+              door_id: "door-1",
+              project_id: "project-1",
+              door_unit_label: "A-101",
+              status: "OPEN",
+              workflow_state: "NEW",
+              priority: "P2",
+              owner_user_id: null,
+              due_at: null,
+              is_overdue: false,
+              title: "Install blocked",
+              details: "Client requested delay",
+              created_at: "2026-02-20T10:00:00Z",
+              updated_at: "2026-02-22T10:00:00Z",
+            },
+          ],
+        };
+      }
+      if (path === "/api/v1/admin/issues/issue-1/comments") {
+        return {
+          items: [
+            {
+              id: "comment-1",
+              body: "Called the customer and confirmed the delay.",
+              author_name: "Dispatcher One",
+              created_at: "2026-02-22T12:00:00Z",
+            },
+          ],
+        };
+      }
+      if (path === "/api/v1/admin/issues/issue-1/media") {
+        return {
+          items: [
+            {
+              id: "media-1",
+              file_name: "lock-photo.jpg",
+              content_type: "image/jpeg",
+              created_at: "2026-02-22T12:30:00Z",
+            },
+          ],
+        };
+      }
+      if (path === "/api/v1/media/media-1/url") {
+        return {
+          url: "https://files.dimax.test/lock-photo.jpg",
+        };
+      }
+      return {};
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <IssuesPage />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Install blocked")).toBeInTheDocument();
+    expect(await screen.findByText("Called the customer and confirmed the delay.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show" }));
+    expect(await screen.findByText("lock-photo.jpg")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+
+    await waitFor(() => {
+      expect(apiFetchMock).toHaveBeenCalledWith("/api/v1/media/media-1/url");
+      expect(openSpy).toHaveBeenCalledWith(
+        "https://files.dimax.test/lock-photo.jpg",
+        "_blank",
+        "noopener,noreferrer"
+      );
+    });
+  }, 15000);
 });
 
