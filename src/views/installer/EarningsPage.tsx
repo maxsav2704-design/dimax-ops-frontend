@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 
@@ -28,11 +29,22 @@ function formatMoney(value: string | number | null | undefined, currency?: strin
 
 export default function InstallerEarningsPage() {
   const { locale } = useI18n();
+  const searchParams = useSearchParams();
   const copy = (en: string, ru: string, he: string) => {
     if (locale === "ru") return ru;
     if (locale === "he") return he;
     return en;
   };
+  const focusedProjectId = (() => {
+    const fromParams = (searchParams?.get("project_id") || "").trim();
+    if (fromParams) {
+      return fromParams;
+    }
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return (new URLSearchParams(window.location.search).get("project_id") || "").trim();
+  })();
 
   const earningsQuery = useQuery({
     queryKey: ["installer-earnings-summary"],
@@ -43,6 +55,9 @@ export default function InstallerEarningsPage() {
   const summary = earningsQuery.data;
   const installTypes = summary?.by_install_type || [];
   const projects = summary?.by_project || [];
+  const visibleProjects = focusedProjectId
+    ? projects.filter((row) => row.project_id === focusedProjectId)
+    : projects;
   const days = summary?.by_day || [];
 
   return (
@@ -62,6 +77,19 @@ export default function InstallerEarningsPage() {
                 "פירוט פשוט להיום, לחודש, לסוגי התקנה ולפרויקטים."
               )}
             </p>
+            {focusedProjectId ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">
+                  {copy("Focused project", "Фокус на проекте", "פרויקט במיקוד")} {focusedProjectId}
+                </span>
+                <Link
+                  href="/installer/earnings"
+                  className="inline-flex items-center rounded-lg border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                >
+                  {copy("Show all earnings", "Показать весь заработок", "הצג את כל הרווחים")}
+                </Link>
+              </div>
+            ) : null}
           </div>
           <div className="flex gap-2">
             <Link
@@ -170,16 +198,26 @@ export default function InstallerEarningsPage() {
               <div className="page-eyebrow">{copy("Projects", "Проекты", "פרויקטים")}</div>
               <h2 className="mt-2 text-lg font-semibold">{copy("Project rows", "Строки по проектам", "שורות לפי פרויקט")}</h2>
             </div>
-            {projects.length === 0 ? (
+            {visibleProjects.length === 0 ? (
               <div className="text-sm text-muted-foreground">
-                {copy("No project-linked earnings yet.", "Пока нет строк по проектам.", "עדיין אין שורות רווח לפי פרויקט.")}
+                {focusedProjectId
+                  ? copy(
+                      "No earnings rows match the selected project yet.",
+                      "Пока нет строк заработка по выбранному проекту.",
+                      "עדיין אין שורות רווח שתואמות לפרויקט שנבחר."
+                    )
+                  : copy("No project-linked earnings yet.", "Пока нет строк по проектам.", "עדיין אין שורות רווח לפי פרויקט.")}
               </div>
             ) : (
               <div className="space-y-3">
-                {projects.map((row, index) => (
+                {visibleProjects.map((row, index) => (
                   <div
                     key={`${row.project_id || "none"}-${index}`}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-background/70 px-4 py-3"
+                    className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background/70 px-4 py-3 ${
+                      focusedProjectId && row.project_id === focusedProjectId
+                        ? "border-accent/45 shadow-[0_18px_40px_-28px_hsl(var(--accent)/0.5)]"
+                        : "border-border/70"
+                    }`}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium text-foreground">

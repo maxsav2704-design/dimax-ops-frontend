@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -23,28 +23,28 @@ const projectOverrides: Partial<Record<Locale, Record<string, string>>> = {
     "installerProject.issueStatusFilter": "Issue status filter",
   },
   ru: {
-    "installerProject.dismiss": "Закрыть",
-    "installerProject.loadingProject": "Загружаем детали проекта...",
-    "installerProject.quickSearchPlaceholder": "Дверь, заказ, квартира, локация, маркировка",
-    "installerProject.noAddonTypes": "Нет типов доп. работ",
-    "installerProject.optionalComment": "Необязательный комментарий",
-    "installerProject.noReasons": "Нет причин",
-    "installerProject.doorLabel": "Дверь",
-    "installerProject.onlyThisDoor": "Только эта дверь",
-    "installerProject.openDoor": "Открыть дверь",
-    "installerProject.issueStatusFilter": "Фильтр статуса проблемы",
+    "installerProject.dismiss": "Р—Р°РєСЂС‹С‚СЊ",
+    "installerProject.loadingProject": "Р—Р°РіСЂСѓР¶Р°РµРј РґРµС‚Р°Р»Рё РїСЂРѕРµРєС‚Р°...",
+    "installerProject.quickSearchPlaceholder": "Р”РІРµСЂСЊ, Р·Р°РєР°Р·, РєРІР°СЂС‚РёСЂР°, Р»РѕРєР°С†РёСЏ, РјР°СЂРєРёСЂРѕРІРєР°",
+    "installerProject.noAddonTypes": "РќРµС‚ С‚РёРїРѕРІ РґРѕРї. СЂР°Р±РѕС‚",
+    "installerProject.optionalComment": "РќРµРѕР±СЏР·Р°С‚РµР»СЊРЅС‹Р№ РєРѕРјРјРµРЅС‚Р°СЂРёР№",
+    "installerProject.noReasons": "РќРµС‚ РїСЂРёС‡РёРЅ",
+    "installerProject.doorLabel": "Р”РІРµСЂСЊ",
+    "installerProject.onlyThisDoor": "РўРѕР»СЊРєРѕ СЌС‚Р° РґРІРµСЂСЊ",
+    "installerProject.openDoor": "РћС‚РєСЂС‹С‚СЊ РґРІРµСЂСЊ",
+    "installerProject.issueStatusFilter": "Р¤РёР»СЊС‚СЂ СЃС‚Р°С‚СѓСЃР° РїСЂРѕР±Р»РµРјС‹",
   },
   he: {
-    "installerProject.dismiss": "סגור",
-    "installerProject.loadingProject": "טוען פרטי פרויקט...",
-    "installerProject.quickSearchPlaceholder": "דלת, הזמנה, דירה, מיקום, סימון",
-    "installerProject.noAddonTypes": "אין סוגי תוספות",
-    "installerProject.optionalComment": "הערה אופציונלית",
-    "installerProject.noReasons": "אין סיבות",
-    "installerProject.doorLabel": "דלת",
-    "installerProject.onlyThisDoor": "רק הדלת הזו",
-    "installerProject.openDoor": "פתח דלת",
-    "installerProject.issueStatusFilter": "סינון סטטוס תקלה",
+    "installerProject.dismiss": "ЧЎЧ’Ч•ЧЁ",
+    "installerProject.loadingProject": "ЧЧ•ЧўЧџ Ч¤ЧЁЧЧ™ Ч¤ЧЁЧ•Ч™Ч§Ч...",
+    "installerProject.quickSearchPlaceholder": "Ч“ЧњЧЄ, Ч”Ч–ЧћЧ Ч”, Ч“Ч™ЧЁЧ”, ЧћЧ™Ч§Ч•Чќ, ЧЎЧ™ЧћЧ•Чџ",
+    "installerProject.noAddonTypes": "ЧђЧ™Чџ ЧЎЧ•Ч’Ч™ ЧЄЧ•ЧЎЧ¤Ч•ЧЄ",
+    "installerProject.optionalComment": "Ч”ЧўЧЁЧ” ЧђЧ•Ч¤Ч¦Ч™Ч•Ч ЧњЧ™ЧЄ",
+    "installerProject.noReasons": "ЧђЧ™Чџ ЧЎЧ™Ч‘Ч•ЧЄ",
+    "installerProject.doorLabel": "Ч“ЧњЧЄ",
+    "installerProject.onlyThisDoor": "ЧЁЧ§ Ч”Ч“ЧњЧЄ Ч”Ч–Ч•",
+    "installerProject.openDoor": "Ч¤ЧЄЧ— Ч“ЧњЧЄ",
+    "installerProject.issueStatusFilter": "ЧЎЧ™Ч Ч•Чџ ЧЎЧЧЧ•ЧЎ ЧЄЧ§ЧњЧ”",
   },
 };
 
@@ -160,8 +160,13 @@ function parseDoorQuickFilter(value: string | null): DoorQuickFilter | null {
 
 export default function InstallerProjectPage({ projectId }: InstallerProjectPageProps) {
   const { locale, t } = useI18n();
+  const copy = (en: string, ru: string, he: string) => {
+    if (locale === "ru") return ru;
+    if (locale === "he") return he;
+    return en;
+  };
   const normalizeReadableText = (value: string, fallback: string) =>
-    /(\?{3,}|Р\S|Ч\S)/.test(value) ? fallback : value;
+    /(\?{3,}|Р \S|Р§\S)/.test(value) ? fallback : value;
   const pt = (key: string) =>
     normalizeReadableText(projectOverrides[locale]?.[key] ?? t(key), t(key));
   const shortOnlyThis =
@@ -598,6 +603,12 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               >
                 {t("installerProject.openSchedule")}
               </Link>
+              <Link
+                href={`/installer/earnings?project_id=${projectId}`}
+                className="inline-flex items-center justify-center rounded-xl border border-border/70 bg-background/75 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {copy("Open earnings", "Открыть заработок", "פתח רווחים")}
+              </Link>
               <a
                 href="#project-doors"
                 className="inline-flex items-center justify-center rounded-xl border border-border/70 bg-background/75 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
@@ -931,6 +942,12 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                       >
                         {pt("installerProject.openDoor")} {relatedDoor.unit_label}
                       </a>
+                      <Link
+                        href={`/installer/issues?project_id=${projectId}&issue_id=${issue.id}&issue_status=${encodeURIComponent(issue.status)}`}
+                        className="font-medium text-amber-200 underline-offset-2 hover:underline"
+                      >
+                        {copy("Open in issues flow", "Открыть в потоке проблем", "פתח בזרימת התקלות")}
+                      </Link>
                     </>
                   ) : (
                     <span className="text-amber-100/70">{t("installerProject.relatedDoorMissing")}</span>
@@ -1178,3 +1195,4 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
     </div>
   );
 }
+

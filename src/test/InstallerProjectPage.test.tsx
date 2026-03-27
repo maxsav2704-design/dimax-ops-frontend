@@ -180,6 +180,10 @@ describe("InstallerProjectPage", () => {
     renderSubject();
 
     expect(await screen.findByText("No open issues.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open earnings" })).toHaveAttribute(
+      "href",
+      "/installer/earnings?project_id=project-1"
+    );
   });
 
   it("applies issue continuity filters from url query params", async () => {
@@ -335,6 +339,10 @@ describe("InstallerProjectPage", () => {
     expect(screen.getByRole("link", { name: "Open door B-202" })).toHaveAttribute(
       "href",
       "#door-door-2"
+    );
+    expect(screen.getByRole("link", { name: "Open in issues flow" })).toHaveAttribute(
+      "href",
+      "/installer/issues?project_id=project-1&issue_id=issue-1&issue_status=BLOCKED"
     );
   });
 
