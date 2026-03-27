@@ -704,6 +704,7 @@ export default function InstallerWorkspacePage() {
           {events.map((event) => (
             <div
               key={event.id}
+              data-testid={`workspace-event-${event.id}`}
               className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.06))] p-4"
             >
               <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.6),transparent)]" />
@@ -712,12 +713,35 @@ export default function InstallerWorkspacePage() {
               <div className="mt-2 text-sm text-muted-foreground">{formatDate(event.starts_at)}</div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {event.project_id ? (
-                  <Link
-                    href={getWorkspaceIssueHref(event.project_id, event.event_type, event.title)}
-                    className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
-                  >
-                    {copy("Open project", "Открыть проект", "פתח פרויקט")}
-                  </Link>
+                  <>
+                    <Link
+                      href={`/installer/projects/${event.project_id}`}
+                      className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                    >
+                      {copy("Open project", "Открыть проект", "פתח פרויקט")}
+                    </Link>
+                    <Link
+                      href={buildInstallerIssuesHref(event.project_id, {
+                        issueStatus: event.event_type.trim().toLowerCase() === "service" ? "BLOCKED" : undefined,
+                        issueSearch: event.event_type.trim().toLowerCase() === "service" ? event.title : undefined,
+                      })}
+                      className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                    >
+                      {copy("Open issues", "Открыть проблемы", "פתח תקלות")}
+                    </Link>
+                    <Link
+                      href={`/installer/calendar?project_id=${event.project_id}`}
+                      className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                    >
+                      {copy("Open calendar", "Открыть календарь", "פתח יומן")}
+                    </Link>
+                    <Link
+                      href={`/installer/sync-queue?project_id=${event.project_id}`}
+                      className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                    >
+                      {copy("Open sync queue", "Открыть очередь синка", "פתח תור סנכרון")}
+                    </Link>
+                  </>
                 ) : (
                   <Link
                     href="/installer/calendar?preset=7d&project_id=none"

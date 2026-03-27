@@ -83,7 +83,7 @@ describe("InstallerSyncQueuePage", () => {
     ).toBeInTheDocument();
     expect(await screen.findByRole("link", { name: "Open issue" })).toHaveAttribute(
       "href",
-      "/installer/issues?issue_id=issue-1&issue_search=issue-1"
+      "/installer/issues?issue_id=issue-1&issue_search=issue-1&project_id=project-7"
     );
     expect(await screen.findByRole("link", { name: "Open project" })).toHaveAttribute(
       "href",

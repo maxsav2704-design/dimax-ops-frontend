@@ -221,7 +221,11 @@ export default function InstallerSyncQueuePage() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     {item.entity_type === "issue" && item.entity_id ? (
                       <Link
-                        href={`/installer/issues?issue_id=${encodeURIComponent(item.entity_id)}&issue_search=${encodeURIComponent(item.entity_id)}`}
+                        href={`/installer/issues?${new URLSearchParams({
+                          issue_id: item.entity_id,
+                          issue_search: item.entity_id,
+                          ...(item.project_id ? { project_id: item.project_id } : {}),
+                        }).toString()}`}
                         className="inline-flex items-center rounded-lg border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                       >
                         {copy("Open issue", "Открыть проблему", "פתח בעיה")}

@@ -111,6 +111,17 @@ describe("InstallerWorkspacePage", () => {
       "https://waze.example/project-1"
     );
     expect(screen.getAllByRole("link", { name: "Open project" }).length).toBeGreaterThan(0);
+    const eventCard = screen.getByTestId("workspace-event-event-1");
+    expect(within(eventCard).getByRole("link", { name: "Open project" })).toHaveAttribute(
+      "href",
+      "/installer/projects/project-1"
+    );
+    const eventLinks = within(eventCard)
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href"));
+    expect(eventLinks).toContain("/installer/issues?project_id=project-1");
+    expect(eventLinks).toContain("/installer/calendar?project_id=project-1");
+    expect(eventLinks).toContain("/installer/sync-queue?project_id=project-1");
 
     expect(screen.getByTestId("installer-tasks-today")).toHaveTextContent("3");
     expect(screen.getByTestId("installer-tasks-overdue")).toHaveTextContent("1");
