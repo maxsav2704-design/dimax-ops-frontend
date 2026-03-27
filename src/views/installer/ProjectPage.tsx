@@ -609,6 +609,12 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               >
                 {copy("Open earnings", "Открыть заработок", "פתח רווחים")}
               </Link>
+              <Link
+                href={`/installer/sync-queue?project_id=${projectId}`}
+                className="inline-flex items-center justify-center rounded-xl border border-border/70 bg-background/75 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {copy("Open sync queue", "Открыть очередь синка", "פתח תור סנכרון")}
+              </Link>
               <a
                 href="#project-doors"
                 className="inline-flex items-center justify-center rounded-xl border border-border/70 bg-background/75 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"

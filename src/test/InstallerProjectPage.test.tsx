@@ -180,6 +180,10 @@ describe("InstallerProjectPage", () => {
     renderSubject();
 
     expect(await screen.findByText("No open issues.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open sync queue" })).toHaveAttribute(
+      "href",
+      "/installer/sync-queue?project_id=project-1"
+    );
     expect(screen.getByRole("link", { name: "Open earnings" })).toHaveAttribute(
       "href",
       "/installer/earnings?project_id=project-1"

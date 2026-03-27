@@ -795,6 +795,14 @@ export default function ProjectsPage() {
   const deepLinkProjectId = (searchParams?.get("project_id") || "").trim();
   const deepLinkFocusSection = (searchParams?.get("focus_section") || "").trim().toLowerCase();
   const deepLinkOrderNumber = (searchParams?.get("order_number") || "").trim();
+  const focusedSectionLabel =
+    deepLinkFocusSection === "doors"
+      ? "Doors"
+      : deepLinkFocusSection === "addons"
+        ? "Additional works"
+        : deepLinkFocusSection === "urgency"
+          ? "Urgency surcharge"
+          : "";
   const deepLinkLibraryProductId = (searchParams?.get("library_product_id") || "").trim();
   const deepLinkLibraryInstallType = (searchParams?.get("library_install_type") || "").trim();
   const deepLinkFailedIds = useMemo(
@@ -2361,6 +2369,21 @@ export default function ProjectsPage() {
               {selectedProjectId && selectedProjectId === deepLinkProjectId ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <span className="metric-chip">Focused project {selectedProjectId}</span>
+                  {focusedSectionLabel ? (
+                    <span className="metric-chip">Focused section {focusedSectionLabel}</span>
+                  ) : null}
+                  {deepLinkOrderNumber ? (
+                    <span className="metric-chip">Order {deepLinkOrderNumber}</span>
+                  ) : null}
+                  {(focusedSectionLabel || deepLinkOrderNumber) ? (
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/projects?project_id=${selectedProjectId}`)}
+                      className="inline-flex items-center rounded-lg border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                    >
+                      Show full project workspace
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => router.push("/projects")}

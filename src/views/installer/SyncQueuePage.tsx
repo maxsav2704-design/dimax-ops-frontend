@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { RefreshCcw } from "lucide-react";
 
 import { readableApiError, readableConflictCode } from "@/lib/api-error-display";
@@ -30,11 +31,13 @@ function formatDate(value: string | null | undefined): string {
 
 export default function InstallerSyncQueuePage() {
   const { locale } = useI18n();
+  const searchParams = useSearchParams();
   const copy = (en: string, ru: string, he: string) => {
     if (locale === "ru") return ru;
     if (locale === "he") return he;
     return en;
   };
+  const focusedProjectId = (searchParams?.get("project_id") || "").trim();
 
   const syncQuery = useQuery({
     queryKey: ["installer-sync-queue"],
@@ -42,7 +45,17 @@ export default function InstallerSyncQueuePage() {
     refetchInterval: 30_000,
   });
 
-  const items = syncQuery.data?.items || [];
+  const allItems = syncQuery.data?.items || [];
+  const items = useMemo(() => {
+    if (!focusedProjectId) {
+      return allItems;
+    }
+    return allItems.filter(
+      (item) =>
+        item.project_id === focusedProjectId ||
+        (item.entity_type === "project" && item.entity_id === focusedProjectId)
+    );
+  }, [allItems, focusedProjectId]);
   const stats = useMemo(() => ({
     total: items.length,
     pending: items.filter((item) => item.status === "PENDING").length,
@@ -67,6 +80,19 @@ export default function InstallerSyncQueuePage() {
                 "פעולות ממתינות, נכשלות וחסומות ברשימה פשוטה אחת."
               )}
             </p>
+            {focusedProjectId ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">
+                  {copy("Focused project", "Фокус на проекте", "פרויקט במיקוד")} {focusedProjectId}
+                </span>
+                <Link
+                  href="/installer/sync-queue"
+                  className="inline-flex items-center rounded-lg border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                >
+                  {copy("Show full sync queue", "Показать всю очередь синка", "הצג את כל תור הסנכרון")}
+                </Link>
+              </div>
+            ) : null}
           </div>
           <div className="flex gap-2">
             <Link
@@ -139,7 +165,13 @@ export default function InstallerSyncQueuePage() {
 
       {!syncQuery.isLoading && syncQuery.data && items.length === 0 && (
         <div className="surface-panel text-sm text-muted-foreground">
-          {copy("Sync queue is empty.", "Очередь синка пуста.", "תור הסנכרון ריק.")}
+          {focusedProjectId
+            ? copy(
+                "No sync items for the focused project.",
+                "Для выбранного проекта нет элементов в очереди синка.",
+                "אין פריטי סנכרון לפרויקט שבמיקוד."
+              )
+            : copy("Sync queue is empty.", "Очередь синка пуста.", "תור הסנכרון ריק.")}
         </div>
       )}
 

@@ -93,6 +93,8 @@ export default function LibraryPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
   const returnTo = (searchParams?.get("return_to") || "").trim();
+  const focusedInstallType = (searchParams?.get("install_type") || "").trim();
+  const hasFocusedProjectFlow = Boolean(returnTo);
 
   const buildProjectFlowHref = (product?: Pick<ProductLibraryItem, "id" | "install_type">) => {
     if (!returnTo) {
@@ -193,15 +195,21 @@ export default function LibraryPage() {
   });
 
   const items = listQuery.data || [];
+  const visibleItems = useMemo(() => {
+    if (!focusedInstallType) {
+      return items;
+    }
+    return items.filter((item) => item.install_type.trim().toLowerCase() === focusedInstallType.toLowerCase());
+  }, [focusedInstallType, items]);
 
   const metrics = useMemo(() => {
-    const active = items.filter((item) => item.status === "ACTIVE").length;
+    const active = visibleItems.filter((item) => item.status === "ACTIVE").length;
     return {
-      total: items.length,
+      total: visibleItems.length,
       active,
-      archived: items.length - active,
+      archived: visibleItems.length - active,
     };
-  }, [items]);
+  }, [visibleItems]);
 
   const canSubmit =
     Boolean(form.sku.trim()) &&
@@ -245,21 +253,37 @@ export default function LibraryPage() {
               <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">
                 Canonical product definitions used by manual door creation and downstream pricing logic.
               </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="metric-chip">Rows {metrics.total}</span>
-                  <span className="metric-chip">Active {metrics.active}</span>
-                  <span className="metric-chip">Archived {metrics.archived}</span>
-                </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">Rows {metrics.total}</span>
+                <span className="metric-chip">Active {metrics.active}</span>
+                <span className="metric-chip">Archived {metrics.archived}</span>
               </div>
+              {hasFocusedProjectFlow ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="metric-chip">
+                    Focused project flow{focusedInstallType ? ` · ${focusedInstallType}` : ""}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/library")}
+                    className="inline-flex items-center rounded-lg border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                  >
+                    Show full library
+                  </button>
+                </div>
+              ) : null}
+            </div>
               <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                     <div className="metric-label">Visible</div>
-                    <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{items.length}</div>
+                    <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{visibleItems.length}</div>
                   </div>
                   <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                     <div className="metric-label">Scope</div>
-                    <div className="mt-1 text-lg font-semibold text-foreground">{statusFilter === "all" ? "All" : statusFilter}</div>
+                    <div className="mt-1 text-lg font-semibold text-foreground">
+                      {focusedInstallType ? `${focusedInstallType} · ${statusFilter === "all" ? "All" : statusFilter}` : statusFilter === "all" ? "All" : statusFilter}
+                    </div>
                   </div>
                 <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
                   <div className="metric-label">Unit model</div>
@@ -341,12 +365,12 @@ export default function LibraryPage() {
                 <TableRow className="data-table-row">
                   <TableCell colSpan={8} className="py-8 text-sm text-muted-foreground">Loading library...</TableCell>
                 </TableRow>
-              ) : items.length === 0 ? (
+              ) : visibleItems.length === 0 ? (
                 <TableRow className="data-table-row">
                   <TableCell colSpan={8} className="py-8 text-sm text-muted-foreground">No products found.</TableCell>
                 </TableRow>
               ) : (
-                items.map((item) => (
+                visibleItems.map((item) => (
                   <TableRow key={item.id} className="data-table-row">
                     <TableCell className="font-medium text-card-foreground">{item.sku}</TableCell>
                     <TableCell className="text-card-foreground">{item.name_ru}</TableCell>

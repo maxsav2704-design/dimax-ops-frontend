@@ -7,6 +7,9 @@ import InstallerSyncQueuePage from "@/views/installer/SyncQueuePage";
 const { apiFetchMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
 }));
+const { searchParamsMock } = vi.hoisted(() => ({
+  searchParamsMock: vi.fn(() => new URLSearchParams("")),
+}));
 
 vi.mock("@/lib/api", () => ({
   ApiError: class ApiError extends Error {
@@ -19,9 +22,15 @@ vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
 }));
 
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => searchParamsMock(),
+}));
+
 describe("InstallerSyncQueuePage", () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
+    searchParamsMock.mockReset();
+    searchParamsMock.mockReturnValue(new URLSearchParams(""));
   });
 
   it("renders sync queue stats and items", async () => {
@@ -105,5 +114,53 @@ describe("InstallerSyncQueuePage", () => {
     );
 
     expect(await screen.findByText("Sync queue is empty.")).toBeInTheDocument();
+  });
+
+  it("surfaces focused project context and filters queue items", async () => {
+    searchParamsMock.mockReturnValue(new URLSearchParams("project_id=project-7"));
+    apiFetchMock.mockResolvedValue({
+      items: [
+        {
+          id: "item-1",
+          entity_type: "issue",
+          entity_id: "issue-1",
+          project_id: "project-7",
+          operation_type: "add_comment",
+          status: "BLOCKED",
+          created_at: "2026-03-21T11:00:00Z",
+          synced_at: null,
+          conflict_code: "CONFLICT_ASSIGNMENT_CHANGED",
+        },
+        {
+          id: "item-2",
+          entity_type: "project",
+          entity_id: "project-9",
+          project_id: "project-9",
+          operation_type: "update_project",
+          status: "PENDING",
+          created_at: "2026-03-21T11:30:00Z",
+          synced_at: null,
+          conflict_code: null,
+        },
+      ],
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallerSyncQueuePage />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Focused project project-7")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Show full sync queue" })).toHaveAttribute(
+      "href",
+      "/installer/sync-queue"
+    );
+    expect(await screen.findByText("add_comment")).toBeInTheDocument();
+    expect(screen.queryByText("update_project")).not.toBeInTheDocument();
   });
 });
