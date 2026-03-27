@@ -21,8 +21,9 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
+import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type ProjectListItem = {
@@ -185,6 +186,12 @@ type CommunicationTemplateRenderPreviewResponse = {
 
 type FeedbackTone = "success" | "error" | "info";
 
+function pickByLocale(locale: Locale, en: string, ru: string, he: string): string {
+  if (locale === "ru") return ru;
+  if (locale === "he") return he;
+  return en;
+}
+
 function formatDateTime(value: string | null): string {
   if (!value) {
     return "Not set";
@@ -285,7 +292,7 @@ function SectionMessage({
 
 export default function JournalPage() {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const session = useAuthSession();
   const canManage = canRunPrivilegedAdminActions(session);
 
@@ -331,6 +338,14 @@ export default function JournalPage() {
   }, [savedTemplates, selectedTemplateId]);
 
   useEffect(() => {
+    if (!feedback || feedback.tone === "error") {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setFeedback(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [feedback]);
+
+  useEffect(() => {
     let alive = true;
 
     async function loadQueue() {
@@ -367,7 +382,7 @@ export default function JournalPage() {
         if (!alive) {
           return;
         }
-        setPageError(error instanceof Error ? error.message : "Failed to load communications center");
+        setPageError(readableApiError(error, locale, "Failed to load communications center"));
       } finally {
         if (alive) {
           setQueueLoading(false);
@@ -404,7 +419,7 @@ export default function JournalPage() {
         if (!alive) {
           return;
         }
-        setDetailsError(error instanceof Error ? error.message : "Failed to load selected journal");
+        setDetailsError(readableApiError(error, locale, "Failed to load selected journal"));
         setSelectedJournal(null);
       } finally {
         if (alive) {
@@ -444,7 +459,7 @@ export default function JournalPage() {
         if (!alive) {
           return;
         }
-        setPageError(error instanceof Error ? error.message : "Failed to load delivery log");
+        setPageError(readableApiError(error, locale, "Failed to load delivery log"));
       } finally {
         if (alive) {
           setDeliveryLoading(false);
@@ -533,12 +548,17 @@ export default function JournalPage() {
       setRefreshTick((value) => value + 1);
       setFeedback({
         tone: "success",
-        message: `Draft created for ${selectedProject?.name ?? "selected project"}.`,
+        message: pickByLocale(
+          locale,
+          `Draft created for ${selectedProject?.name ?? "selected project"}.`,
+          `Черновик создан для ${selectedProject?.name ?? "выбранного проекта"}.`,
+          `טיוטה נוצרה עבור ${selectedProject?.name ?? "הפרויקט שנבחר"}.`
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to create journal draft",
+        message: readableApiError(error, locale, "Failed to create journal draft"),
       });
     } finally {
       setBusyAction("");
@@ -559,12 +579,17 @@ export default function JournalPage() {
       setRefreshTick((value) => value + 1);
       setFeedback({
         tone: "success",
-        message: `Journal marked ready. Public URL: ${response.public_url}`,
+        message: pickByLocale(
+          locale,
+          `Journal marked ready. Public URL: ${response.public_url}`,
+          `Журнал отмечен как готовый. Публичная ссылка: ${response.public_url}`,
+          `היומן סומן כמוכן. קישור ציבורי: ${response.public_url}`
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to mark journal ready",
+        message: readableApiError(error, locale, "Failed to mark journal ready"),
       });
     } finally {
       setBusyAction("");
@@ -584,12 +609,17 @@ export default function JournalPage() {
       );
       setFeedback({
         tone: "success",
-        message: `PDF exported: ${response.file_path} (${response.size_bytes} bytes).`,
+        message: pickByLocale(
+          locale,
+          `PDF exported: ${response.file_path} (${response.size_bytes} bytes).`,
+          `PDF экспортирован: ${response.file_path} (${response.size_bytes} байт).`,
+          `ה-PDF יוצא: ${response.file_path} (${response.size_bytes} בתים).`
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to export PDF",
+        message: readableApiError(error, locale, "Failed to export PDF"),
       });
     } finally {
       setBusyAction("");
@@ -603,21 +633,36 @@ export default function JournalPage() {
     if (!effectiveSendEmail && !effectiveSendWhatsapp) {
       setFeedback({
         tone: "error",
-        message: "Enable at least one active delivery channel before queueing send.",
+        message: pickByLocale(
+          locale,
+          "Enable at least one active delivery channel before queueing send.",
+          "Перед отправкой включите хотя бы один активный канал доставки.",
+          "לפני השליחה יש להפעיל לפחות ערוץ משלוח פעיל אחד."
+        ),
       });
       return;
     }
     if (effectiveSendEmail && !emailTo.trim()) {
       setFeedback({
         tone: "error",
-        message: "Email recipient is required when email delivery is enabled.",
+        message: pickByLocale(
+          locale,
+          "Email recipient is required when email delivery is enabled.",
+          "Когда включена email-доставка, нужно указать получателя.",
+          "כאשר משלוח באימייל פעיל, חייבים לציין נמען."
+        ),
       });
       return;
     }
     if (effectiveSendWhatsapp && !whatsappTo.trim()) {
       setFeedback({
         tone: "error",
-        message: "WhatsApp recipient is required when WhatsApp delivery is enabled.",
+        message: pickByLocale(
+          locale,
+          "WhatsApp recipient is required when WhatsApp delivery is enabled.",
+          "Когда включена доставка через WhatsApp, нужно указать получателя.",
+          "כאשר משלוח ב-WhatsApp פעיל, חייבים לציין נמען."
+        ),
       });
       return;
     }
@@ -649,12 +694,17 @@ export default function JournalPage() {
         .join(" + ");
       setFeedback({
         tone: "success",
-        message: `Queued send via ${sentChannels || "selected channels"}. Object key: ${response.object_key}`,
+        message: pickByLocale(
+          locale,
+          `Queued send via ${sentChannels || "selected channels"}. Object key: ${response.object_key}`,
+          `Отправка поставлена в очередь через ${sentChannels || "выбранные каналы"}. Object key: ${response.object_key}`,
+          `השליחה הוכנסה לתור דרך ${sentChannels || "הערוצים שנבחרו"}. Object key: ${response.object_key}`
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to queue journal send",
+        message: readableApiError(error, locale, "Failed to queue journal send"),
       });
     } finally {
       setBusyAction("");
@@ -677,12 +727,17 @@ export default function JournalPage() {
       setRefreshTick((value) => value + 1);
       setFeedback({
         tone: "success",
-        message: "Delivery item moved back to queue.",
+        message: pickByLocale(
+          locale,
+          "Delivery item moved back to queue.",
+          "Элемент доставки возвращён в очередь.",
+          "פריט המשלוח הוחזר לתור."
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to retry outbox item",
+        message: readableApiError(error, locale, "Failed to retry outbox item"),
       });
     } finally {
       setBusyAction("");
@@ -711,12 +766,17 @@ export default function JournalPage() {
       setSendWhatsapp(selectedTemplate.send_whatsapp);
       setFeedback({
         tone: "info",
-        message: `Template applied: ${selectedTemplate.name}`,
+        message: pickByLocale(
+          locale,
+          `Template applied: ${selectedTemplate.name}`,
+          `Шаблон применён: ${selectedTemplate.name}`,
+          `התבנית הוחלה: ${selectedTemplate.name}`
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to render template preview",
+        message: readableApiError(error, locale, "Failed to render template preview"),
       });
     } finally {
       setBusyAction("");
@@ -728,7 +788,12 @@ export default function JournalPage() {
     if (!normalizedName) {
       setFeedback({
         tone: "error",
-        message: "Template name is required.",
+        message: pickByLocale(
+          locale,
+          "Template name is required.",
+          "Нужно указать имя шаблона.",
+          "יש לציין שם לתבנית."
+        ),
       });
       return;
     }
@@ -771,12 +836,17 @@ export default function JournalPage() {
       setTemplateName("");
       setFeedback({
         tone: "success",
-        message: `Template saved: ${nextTemplate.name}`,
+        message: pickByLocale(
+          locale,
+          `Template saved: ${nextTemplate.name}`,
+          `Шаблон сохранён: ${nextTemplate.name}`,
+          `התבנית נשמרה: ${nextTemplate.name}`
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to save template",
+        message: readableApiError(error, locale, "Failed to save template"),
       });
     } finally {
       setBusyAction("");
@@ -799,12 +869,17 @@ export default function JournalPage() {
       });
       setFeedback({
         tone: "info",
-        message: "Template removed from shared presets.",
+        message: pickByLocale(
+          locale,
+          "Template removed from shared presets.",
+          "Шаблон удалён из общих пресетов.",
+          "התבנית הוסרה מההגדרות המשותפות."
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to delete template",
+        message: readableApiError(error, locale, "Failed to delete template"),
       });
     } finally {
       setBusyAction("");

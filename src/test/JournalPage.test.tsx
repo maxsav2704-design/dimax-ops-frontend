@@ -343,6 +343,10 @@ describe("JournalPage", () => {
         send_whatsapp: true,
       });
     });
+
+    expect(
+      await screen.findByText(/Queued send via email \+ WhatsApp\. Object key: journals\/journal-1\.pdf/)
+    ).toBeInTheDocument();
   }, 15000);
 
   it("applies preview and saves shared template via backend", async () => {
@@ -380,6 +384,8 @@ describe("JournalPage", () => {
         subject: "Final delivery confirmation for Ashdod Towers",
       });
     });
+
+    expect(await screen.findByText("Template saved: Delivery Pack Template")).toBeInTheDocument();
   });
 
   it("retries failed outbox delivery from the log", async () => {
@@ -400,5 +406,7 @@ describe("JournalPage", () => {
         reason: "communications_center_manual_retry",
       });
     });
+
+    expect(await screen.findByText("Delivery item moved back to queue.")).toBeInTheDocument();
   });
 });
