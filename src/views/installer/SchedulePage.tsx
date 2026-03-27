@@ -467,6 +467,12 @@ export default function InstallerSchedulePage() {
                   >
                     Open issues
                   </Link>
+                  <Link
+                    href={`/installer/earnings?project_id=${event.project_id}`}
+                    className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                  >
+                    Open earnings
+                  </Link>
                 </>
               )}
               {event.waze_url && (

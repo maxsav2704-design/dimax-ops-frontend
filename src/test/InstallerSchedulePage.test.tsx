@@ -59,6 +59,10 @@ describe("InstallerSchedulePage", () => {
       "/installer/issues?project_id=project-1&issue_status=BLOCKED&issue_search=Site+visit"
     );
     expect(await screen.findByRole("link", { name: "Open project" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open earnings" })).toHaveAttribute(
+      "href",
+      "/installer/earnings?project_id=project-1"
+    );
   });
 
   it("applies project query filter and event-type filter", async () => {

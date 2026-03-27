@@ -62,6 +62,10 @@ describe("InstallerEarningsPage", () => {
       "href",
       "/installer/projects/p1"
     );
+    expect(await screen.findByRole("link", { name: "Open calendar" })).toHaveAttribute(
+      "href",
+      "/installer/calendar?project_id=p1"
+    );
     expect(await screen.findByText("2026-03-21")).toBeInTheDocument();
   });
 
@@ -116,6 +120,10 @@ describe("InstallerEarningsPage", () => {
     expect(screen.getByRole("link", { name: "Show all earnings" })).toHaveAttribute(
       "href",
       "/installer/earnings"
+    );
+    expect(screen.getByRole("link", { name: "Open calendar" })).toHaveAttribute(
+      "href",
+      "/installer/calendar?project_id=p1"
     );
   });
 });
