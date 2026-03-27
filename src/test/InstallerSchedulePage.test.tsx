@@ -119,6 +119,11 @@ describe("InstallerSchedulePage", () => {
 
     expect(await screen.findByText("Delivery Project 2")).toBeInTheDocument();
     expect(screen.queryByText("Install Project 1")).not.toBeInTheDocument();
+    expect(screen.getByText("Focused project project-2")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Show full calendar" })).toHaveAttribute(
+      "href",
+      "/installer/calendar"
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Overdue only" }));
     expect(await screen.findByText("No events match current filters.")).toBeInTheDocument();

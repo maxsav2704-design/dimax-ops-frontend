@@ -245,6 +245,33 @@ export default function InstallerSchedulePage() {
                 {overdueOnly ? t("installerSchedule.overdueFocus") : t("installerSchedule.mixedQueue")}
               </span>
             </div>
+            {projectFilter !== "ALL" && projectFilter !== "NONE" ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">
+                  {normalizeReadableText(
+                    locale === "ru"
+                      ? `Фокус проекта ${projectFilter}`
+                      : locale === "he"
+                        ? `מיקוד פרויקט ${projectFilter}`
+                        : `Focused project ${projectFilter}`,
+                    `Focused project ${projectFilter}`
+                  )}
+                </span>
+                <Link
+                  href="/installer/calendar"
+                  className="inline-flex items-center rounded-lg border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                >
+                  {normalizeReadableText(
+                    locale === "ru"
+                      ? "Показать весь календарь"
+                      : locale === "he"
+                        ? "הצג את כל היומן"
+                        : "Show full calendar",
+                    "Show full calendar"
+                  )}
+                </Link>
+              </div>
+            ) : null}
           </div>
           <div className="surface-subtle max-w-3xl space-y-4 p-4 sm:p-5">
             <div className="text-[12px] leading-5 text-muted-foreground">

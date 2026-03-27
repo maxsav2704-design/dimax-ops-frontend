@@ -136,6 +136,11 @@ describe("InstallerIssuesPage", () => {
     expect(screen.getByLabelText("Project")).toHaveValue("project-2");
     expect(screen.getByLabelText("Status")).toHaveValue("OPEN");
     expect(screen.getByLabelText("Issue search")).toHaveValue("handle");
+    expect(screen.getByText("Focused project project-2")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Show all issues" })).toHaveAttribute(
+      "href",
+      "/installer/issues"
+    );
   });
 
   it("saves installer note for an issue", async () => {

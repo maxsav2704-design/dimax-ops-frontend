@@ -326,6 +326,19 @@ export default function InstallerIssuesPage() {
                 "רשימה פשוטה אחת לבעיות חסומות, פתוחות ומקושרות לפרויקט."
               )}
             </p>
+            {projectFilter !== "ALL" ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="metric-chip">
+                  {copy("Focused project", "Фокус на проекте", "פרויקט במיקוד")} {projectFilter}
+                </span>
+                <Link
+                  href="/installer/issues"
+                  className="inline-flex items-center rounded-lg border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                >
+                  {copy("Show all issues", "Показать все проблемы", "הצג את כל הבעיות")}
+                </Link>
+              </div>
+            ) : null}
           </div>
           <div className="flex gap-2">
             <Link
