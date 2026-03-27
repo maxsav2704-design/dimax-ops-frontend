@@ -699,8 +699,193 @@ describe("ProjectsPage", () => {
       ).toBe(true);
     });
     expect(
-      await screen.findByText("Door D-1201 was added and project screens were refreshed.")
+      await screen.findByText("Door D-1201 was added. The project matrix is now filtered to that door.")
     ).toBeInTheDocument();
+  }, 20000);
+
+  it("blocks duplicate manual door codes before sending create request", async () => {
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      const url = String(path);
+
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [{ id: "door-type-1", code: "entrance", name: "Entrance", is_active: true }];
+      }
+
+      if (url.endsWith("/api/v1/admin/projects")) {
+        return {
+          items: [{ id: "project-1", name: "Project A", address: "Address A", status: "ACTIVE" }],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/library")) {
+        return {
+          items: [
+            {
+              id: "product-1",
+              sku: "LIB-001",
+              name_ru: "Входная дверь",
+              name_he: "דלת כניסה",
+              install_type: "INSTALL",
+              manufacturer: "DIMAX",
+              unit: "piece",
+              status: "ACTIVE",
+            },
+          ],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/installers?")) {
+        return { items: [] };
+      }
+
+      if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
+        return { default_code: "auto_v1", items: [] };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1") && !url.includes("/doors/")) {
+        return {
+          id: "project-1",
+          name: "Project A",
+          address: "Address A",
+          status: "ACTIVE",
+          developer_company: "DIMAX Dev Co",
+          contact_name: "Eyal Cohen",
+          issues_open: [],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1/doors/layout")) {
+        return {
+          project_id: "project-1",
+          total_doors: 1,
+          buckets: [
+            {
+              order_number: "AZ-5001",
+              house_number: "A",
+              floor_label: "12",
+              location_code: "dira",
+              door_marking: null,
+              total: 1,
+              status_breakdown: { NOT_INSTALLED: 1 },
+              doors: [
+                {
+                  id: "door-existing-1",
+                  unit_label: "12-04",
+                  door_type_id: "door-type-1",
+                  order_number: "AZ-5001",
+                  apartment_number: "12-04",
+                  location_code: "dira",
+                  door_marking: "D-1201",
+                  status: "NOT_INSTALLED",
+                  installer_id: null,
+                },
+              ],
+            },
+          ],
+        };
+      }
+
+      if (url.includes("/api/v1/admin/reports/project-plan-fact/project-1")) {
+        return {
+          project_id: "project-1",
+          total_doors: 1,
+          installed_doors: 0,
+          not_installed_doors: 1,
+          completion_pct: 0,
+          open_issues: 0,
+          planned_revenue_total: 0,
+          actual_revenue_total: 0,
+          revenue_gap_total: 0,
+          planned_payroll_total: 0,
+          actual_payroll_total: 0,
+          payroll_gap_total: 0,
+          planned_profit_total: 0,
+          actual_profit_total: 0,
+          profit_gap_total: 0,
+          planned_addons_qty: 0,
+          actual_addons_qty: 0,
+          missing_planned_rates_doors: 0,
+          missing_actual_rates_doors: 0,
+          missing_addon_plans_facts: 0,
+        };
+      }
+
+      if (url.includes("/api/v1/admin/reports/project-risk-drilldown/project-1")) {
+        return {
+          generated_at: "2026-03-02T10:00:00Z",
+          project_id: "project-1",
+          project_name: "Project A",
+          summary: {
+            total_doors: 1,
+            installed_doors: 0,
+            not_installed_doors: 1,
+            completion_pct: 0,
+            open_issues: 0,
+            blocked_open_issues: 0,
+            planned_revenue_total: 0,
+            actual_revenue_total: 0,
+            revenue_gap_total: 0,
+            planned_profit_total: 0,
+            actual_profit_total: 0,
+            profit_gap_total: 0,
+            actual_margin_pct: 0,
+            delayed_revenue_total: 0,
+            delayed_profit_total: 0,
+            blocked_issue_profit_at_risk: 0,
+            addon_revenue_total: 0,
+            addon_profit_total: 0,
+            missing_planned_rates_doors: 0,
+            missing_actual_rates_doors: 0,
+            missing_addon_plans_facts: 0,
+          },
+          drivers: [],
+          top_reasons: [],
+          risky_orders: [],
+        };
+      }
+
+      if (url.includes("/doors/import-history")) {
+        return { items: [] };
+      }
+
+      if (url.includes("/import-runs/failed-queue")) {
+        return { items: [], total: 0, limit: 10, offset: 0 };
+      }
+
+      if (url.includes("/api/v1/admin/projects/project-1/doors") && init?.method === "POST") {
+        throw new Error("Duplicate request should not be submitted");
+      }
+
+      return {};
+    });
+
+    render(<ProjectsPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Add door manually" }));
+    fireEvent.change(screen.getByLabelText("Library product"), {
+      target: { value: "product-1" },
+    });
+    fireEvent.change(screen.getByLabelText("Door code"), {
+      target: { value: "D-1201" },
+    });
+    fireEvent.change(screen.getByLabelText("Unit / apartment"), {
+      target: { value: "12-05" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Create door" }));
+
+    expect(
+      await screen.findByText(
+        "Door code D-1201 already exists in this project. Review the matrix before creating another door."
+      )
+    ).toBeInTheDocument();
+    expect(
+      apiFetchMock.mock.calls.some(
+        ([callPath, requestInit]) =>
+          String(callPath).includes("/api/v1/admin/projects/project-1/doors") &&
+          (requestInit as RequestInit | undefined)?.method === "POST"
+      )
+    ).toBe(false);
   }, 20000);
 
   it("creates an additional work plan row for the selected project", async () => {

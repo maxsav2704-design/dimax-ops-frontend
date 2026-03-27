@@ -1032,6 +1032,18 @@ export default function ProjectsPage() {
     matrixMarkingSearch,
   ]);
 
+  const existingDoorMarkings = useMemo(() => {
+    const values = new Set<string>();
+    for (const row of matrixRows) {
+      const marking = row.door_marking.trim();
+      if (!marking || marking === "-") {
+        continue;
+      }
+      values.add(marking.toLowerCase());
+    }
+    return values;
+  }, [matrixRows]);
+
   const filteredMatrixSummary = useMemo(() => {
     const uniqueOrders = new Set<string>();
     const uniqueHouses = new Set<string>();
@@ -1952,7 +1964,8 @@ export default function ProjectsPage() {
     if (!selectedProjectId) {
       return;
     }
-    if (!manualDoorForm.product_id || !manualDoorForm.door_code.trim() || !manualDoorForm.unit.trim()) {
+    const normalizedDoorCode = manualDoorForm.door_code.trim();
+    if (!manualDoorForm.product_id || !normalizedDoorCode || !manualDoorForm.unit.trim()) {
       setError(
         copy(
           "Choose a product and fill door code + unit before saving.",
@@ -1960,6 +1973,17 @@ export default function ProjectsPage() {
           "בחר מוצר ומלא קוד דלת ו-unit לפני השמירה."
         )
       );
+      return;
+    }
+    if (existingDoorMarkings.has(normalizedDoorCode.toLowerCase())) {
+      setError(
+        copy(
+          `Door code ${normalizedDoorCode} already exists in this project. Review the matrix before creating another door.`,
+          `Код двери ${normalizedDoorCode} уже есть в этом проекте. Проверьте матрицу перед созданием новой двери.`,
+          `קוד הדלת ${normalizedDoorCode} כבר קיים בפרויקט הזה. בדוק את המטריצה לפני יצירת דלת נוספת.`
+        )
+      );
+      setMatrixMarkingSearch(normalizedDoorCode);
       return;
     }
 
@@ -1970,7 +1994,7 @@ export default function ProjectsPage() {
         method: "POST",
         body: JSON.stringify({
           ...manualDoorForm,
-          door_code: manualDoorForm.door_code.trim(),
+          door_code: normalizedDoorCode,
           unit: manualDoorForm.unit.trim(),
           floor: manualDoorForm.floor.trim() || null,
           location_code: manualDoorForm.location_code.trim() || null,
@@ -1989,11 +2013,21 @@ export default function ProjectsPage() {
       await loadLayout(selectedProjectId);
       await loadProjectPlanFact(selectedProjectId);
       await loadProjectRisk(selectedProjectId);
+      setMatrixApartmentSearch("");
+      setMatrixMarkingSearch(normalizedDoorCode);
+      if (typeof document !== "undefined") {
+        window.setTimeout(() => {
+          document.getElementById("project-door-matrix")?.scrollIntoView?.({
+            behavior: "smooth",
+            block: "start",
+          });
+        }, 0);
+      }
       setProjectFlowNotice(
         copy(
-          `Door ${manualDoorForm.door_code.trim()} was added and project screens were refreshed.`,
-          `Дверь ${manualDoorForm.door_code.trim()} добавлена, а экраны проекта обновлены.`,
-          `הדלת ${manualDoorForm.door_code.trim()} נוספה ומסכי הפרויקט רועננו.`
+          `Door ${normalizedDoorCode} was added. The project matrix is now filtered to that door.`,
+          `Дверь ${normalizedDoorCode} добавлена. Матрица проекта уже отфильтрована по этой двери.`,
+          `הדלת ${normalizedDoorCode} נוספה. מטריצת הפרויקט כבר מסוננת לדלת הזו.`
         )
       );
     } catch (e) {
@@ -3339,7 +3373,7 @@ export default function ProjectsPage() {
                   </div>
                 </div>
 
-                <div className="glass-card rounded-xl p-4">
+                <div id="project-door-matrix" className="glass-card rounded-xl p-4">
                   <div className="flex items-center gap-2 text-[13px] font-semibold">
                     <Upload className="w-4 h-4" />
                     {t("projects.importFactoryFile")}
