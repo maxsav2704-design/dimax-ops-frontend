@@ -728,6 +728,7 @@ export default function ProjectsPage() {
   const [loadingProjectPlanFact, setLoadingProjectPlanFact] = useState(false);
   const [loadingProjectRisk, setLoadingProjectRisk] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [projectFlowNotice, setProjectFlowNotice] = useState<string | null>(null);
   const [manualDoorDialogOpen, setManualDoorDialogOpen] = useState(false);
   const [manualDoorForm, setManualDoorForm] = useState<ManualDoorFormState>(emptyManualDoorForm());
   const [manualDoorSubmitting, setManualDoorSubmitting] = useState(false);
@@ -1942,6 +1943,8 @@ export default function ProjectsPage() {
   const openManualDoorDialog = () => {
     const nextForm = emptyManualDoorForm();
     setManualDoorForm(nextForm);
+    setProjectFlowNotice(null);
+    setError(null);
     setManualDoorDialogOpen(true);
   };
 
@@ -1986,6 +1989,13 @@ export default function ProjectsPage() {
       await loadLayout(selectedProjectId);
       await loadProjectPlanFact(selectedProjectId);
       await loadProjectRisk(selectedProjectId);
+      setProjectFlowNotice(
+        copy(
+          `Door ${manualDoorForm.door_code.trim()} was added and project screens were refreshed.`,
+          `Дверь ${manualDoorForm.door_code.trim()} добавлена, а экраны проекта обновлены.`,
+          `הדלת ${manualDoorForm.door_code.trim()} נוספה ומסכי הפרויקט רועננו.`
+        )
+      );
     } catch (e) {
       setError(
         readableApiError(
@@ -2005,6 +2015,8 @@ export default function ProjectsPage() {
 
   const openAdditionalWorkDialog = () => {
     setAdditionalWorkForm(emptyAdditionalWorkForm());
+    setProjectFlowNotice(null);
+    setError(null);
     setAdditionalWorkDialogOpen(true);
   };
 
@@ -2046,6 +2058,13 @@ export default function ProjectsPage() {
       await loadProjectAddonPlan(selectedProjectId);
       await loadProjectPlanFact(selectedProjectId);
       await loadProjectRisk(selectedProjectId);
+      setProjectFlowNotice(
+        copy(
+          "Additional work plan row was saved and financial screens were refreshed.",
+          "Строка доп. работ сохранена, а финансовые экраны обновлены.",
+          "שורת עבודות נוספות נשמרה ומסכי הכספים רועננו."
+        )
+      );
     } catch (e) {
       setError(
         readableApiError(
@@ -2065,6 +2084,8 @@ export default function ProjectsPage() {
 
   const openUrgencyDialog = () => {
     setUrgencyForm(emptyUrgencySurchargeForm());
+    setProjectFlowNotice(null);
+    setError(null);
     setUrgencyDialogOpen(true);
   };
 
@@ -2108,6 +2129,13 @@ export default function ProjectsPage() {
       await loadUrgencySurcharges(selectedProjectId);
       await loadProjectPlanFact(selectedProjectId);
       await loadProjectRisk(selectedProjectId);
+      setProjectFlowNotice(
+        copy(
+          "Urgency surcharge row was saved and project totals were refreshed.",
+          "Строка срочной надбавки сохранена, а итоги проекта обновлены.",
+          "שורת תוספת הדחיפות נשמרה וסיכומי הפרויקט רועננו."
+        )
+      );
     } catch (e) {
       setError(
         readableApiError(
@@ -2188,6 +2216,13 @@ export default function ProjectsPage() {
           <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {projectFlowNotice && (
+          <div className="mb-4 rounded-lg border border-[hsl(var(--success)/0.35)] bg-[hsl(var(--success)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--success))] flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>{projectFlowNotice}</span>
           </div>
         )}
 

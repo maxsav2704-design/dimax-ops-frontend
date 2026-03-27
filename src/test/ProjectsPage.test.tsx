@@ -698,6 +698,9 @@ describe("ProjectsPage", () => {
         )
       ).toBe(true);
     });
+    expect(
+      await screen.findByText("Door D-1201 was added and project screens were refreshed.")
+    ).toBeInTheDocument();
   }, 20000);
 
   it("creates an additional work plan row for the selected project", async () => {
@@ -873,6 +876,9 @@ describe("ProjectsPage", () => {
         )
       ).toBe(true);
     });
+    expect(
+      await screen.findByText("Additional work plan row was saved and financial screens were refreshed.")
+    ).toBeInTheDocument();
   }, 20000);
 
   it("creates an urgency surcharge row for the selected project", async () => {
@@ -1063,6 +1069,9 @@ describe("ProjectsPage", () => {
         )
       ).toBe(true);
     });
+    expect(
+      await screen.findByText("Urgency surcharge row was saved and project totals were refreshed.")
+    ).toBeInTheDocument();
   }, 20000);
 
   it("shows selected import run details with diagnostics and errors", async () => {
