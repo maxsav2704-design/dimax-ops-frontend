@@ -80,6 +80,14 @@ describe("InstallerSyncQueuePage", () => {
       "href",
       "/installer/projects/project-7"
     );
+    expect(await screen.findByRole("link", { name: "Open calendar" })).toHaveAttribute(
+      "href",
+      "/installer/calendar?project_id=project-7"
+    );
+    expect(await screen.findByRole("link", { name: "Open earnings" })).toHaveAttribute(
+      "href",
+      "/installer/earnings?project_id=project-7"
+    );
     expect(await screen.findAllByText("2")).not.toHaveLength(0);
   });
 

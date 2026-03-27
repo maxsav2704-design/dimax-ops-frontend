@@ -100,6 +100,12 @@ describe("InstallerWorkspacePage", () => {
 
     const scheduleLink = screen.getByRole("link", { name: "Open schedule" });
     expect(scheduleLink).toHaveAttribute("href", "/installer/calendar?project_id=project-1");
+    const projectCard = scheduleLink.closest("div.relative");
+    expect(projectCard).not.toBeNull();
+    expect(within(projectCard as HTMLElement).getByRole("link", { name: "Open earnings" })).toHaveAttribute(
+      "href",
+      "/installer/earnings?project_id=project-1"
+    );
     expect(screen.getByRole("link", { name: "Open Waze" })).toHaveAttribute(
       "href",
       "https://waze.example/project-1"

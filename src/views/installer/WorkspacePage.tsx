@@ -654,6 +654,12 @@ export default function InstallerWorkspacePage() {
                 >
                   {copy("Open schedule", "Открыть расписание", "פתח לוח זמנים")}
                 </Link>
+                <Link
+                  href={`/installer/earnings?project_id=${project.id}`}
+                  className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                >
+                  {copy("Open earnings", "Открыть заработок", "פתח רווחים")}
+                </Link>
                 {project.status === "PROBLEM" && (
                   <Link
                     href={buildInstallerIssuesHref(project.id, { issueStatus: "BLOCKED" })}

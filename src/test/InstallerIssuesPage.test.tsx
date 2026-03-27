@@ -75,6 +75,16 @@ describe("InstallerIssuesPage", () => {
       .map((link) => link.getAttribute("href"));
     expect(projectHrefs).toContain("/installer/projects/project-1");
     expect(projectHrefs).toContain("/installer/projects/project-2");
+    const calendarHrefs = screen
+      .getAllByRole("link", { name: "Open calendar" })
+      .map((link) => link.getAttribute("href"));
+    expect(calendarHrefs).toContain("/installer/calendar?project_id=project-1");
+    expect(calendarHrefs).toContain("/installer/calendar?project_id=project-2");
+    const earningsHrefs = screen
+      .getAllByRole("link", { name: "Open earnings" })
+      .map((link) => link.getAttribute("href"));
+    expect(earningsHrefs).toContain("/installer/earnings?project_id=project-1");
+    expect(earningsHrefs).toContain("/installer/earnings?project_id=project-2");
 
     fireEvent.change(screen.getByLabelText("Status"), { target: { value: "OPEN" } });
 

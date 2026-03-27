@@ -540,12 +540,26 @@ export default function InstallerIssuesPage() {
               />
               <div className="flex flex-wrap gap-2">
                 {issue.project_id && (
-                  <Link
-                    href={`/installer/projects/${issue.project_id}`}
-                    className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
-                  >
-                    {copy("Open project", "Открыть проект", "פתח פרויקט")}
-                  </Link>
+                  <>
+                    <Link
+                      href={`/installer/projects/${issue.project_id}`}
+                      className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                    >
+                      {copy("Open project", "Открыть проект", "פתח פרויקט")}
+                    </Link>
+                    <Link
+                      href={`/installer/calendar?project_id=${issue.project_id}`}
+                      className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                    >
+                      {copy("Open calendar", "Открыть календарь", "פתח יומן")}
+                    </Link>
+                    <Link
+                      href={`/installer/earnings?project_id=${issue.project_id}`}
+                      className="inline-flex items-center rounded-xl border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                    >
+                      {copy("Open earnings", "Открыть заработок", "פתח רווחים")}
+                    </Link>
+                  </>
                 )}
               </div>
             </div>

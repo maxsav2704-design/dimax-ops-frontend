@@ -196,12 +196,26 @@ export default function InstallerSyncQueuePage() {
                       </Link>
                     ) : null}
                     {(item.project_id || item.entity_type === "project") && (item.project_id || item.entity_id) ? (
-                      <Link
-                        href={`/installer/projects/${encodeURIComponent(item.project_id || item.entity_id || "")}`}
-                        className="inline-flex items-center rounded-lg border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
-                      >
-                        {copy("Open project", "Открыть проект", "פתח פרויקט")}
-                      </Link>
+                      <>
+                        <Link
+                          href={`/installer/projects/${encodeURIComponent(item.project_id || item.entity_id || "")}`}
+                          className="inline-flex items-center rounded-lg border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                        >
+                          {copy("Open project", "Открыть проект", "פתח פרויקט")}
+                        </Link>
+                        <Link
+                          href={`/installer/calendar?project_id=${encodeURIComponent(item.project_id || item.entity_id || "")}`}
+                          className="inline-flex items-center rounded-lg border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                        >
+                          {copy("Open calendar", "Открыть календарь", "פתח יומן")}
+                        </Link>
+                        <Link
+                          href={`/installer/earnings?project_id=${encodeURIComponent(item.project_id || item.entity_id || "")}`}
+                          className="inline-flex items-center rounded-lg border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                        >
+                          {copy("Open earnings", "Открыть заработок", "פתח רווחים")}
+                        </Link>
+                      </>
                     ) : null}
                   </div>
                 )}
