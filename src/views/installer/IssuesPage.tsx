@@ -172,6 +172,7 @@ export default function InstallerIssuesPage() {
   const [projectFilter, setProjectFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [focusedIssueId, setFocusedIssueId] = useState("");
   const [isQueryInitialized, setIsQueryInitialized] = useState(false);
   const [draftComments, setDraftComments] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
@@ -216,7 +217,9 @@ export default function InstallerIssuesPage() {
     const params = new URLSearchParams(window.location.search);
     setProjectFilter(params.get("project_id") || "ALL");
     setStatusFilter(params.get("issue_status") || "ALL");
-    setSearch(params.get("issue_search") || "");
+    const issueId = params.get("issue_id") || "";
+    setFocusedIssueId(issueId);
+    setSearch(params.get("issue_search") || issueId);
     setIsQueryInitialized(true);
   }, []);
 
@@ -251,11 +254,14 @@ export default function InstallerIssuesPage() {
     if (search.trim()) {
       params.set("issue_search", search.trim());
     }
+    if (focusedIssueId) {
+      params.set("issue_id", focusedIssueId);
+    }
 
     const nextSearch = params.toString();
     const nextUrl = nextSearch ? `${window.location.pathname}?${nextSearch}` : window.location.pathname;
     window.history.replaceState(window.history.state, "", nextUrl);
-  }, [isQueryInitialized, projectFilter, search, statusFilter]);
+  }, [focusedIssueId, isQueryInitialized, projectFilter, search, statusFilter]);
 
   const projectOptions = useMemo(
     () => Array.from(new Set(issues.map((issue) => issue.project_id).filter(Boolean) as string[])).sort(),
@@ -278,7 +284,7 @@ export default function InstallerIssuesPage() {
       if (!needle) {
         return true;
       }
-      return [issue.title, issue.description, issue.details, issue.priority, issue.door_id, issue.comment]
+      return [issue.id, issue.title, issue.description, issue.details, issue.priority, issue.door_id, issue.comment]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(needle));
     });
@@ -298,6 +304,7 @@ export default function InstallerIssuesPage() {
     setProjectFilter("ALL");
     setStatusFilter("ALL");
     setSearch("");
+    setFocusedIssueId("");
   }
 
   const hasActiveFilters = projectFilter !== "ALL" || statusFilter !== "ALL" || search.trim().length > 0;
@@ -457,7 +464,14 @@ export default function InstallerIssuesPage() {
       {!issuesQuery.isLoading && filteredIssues.length > 0 && (
         <section className="space-y-3">
           {filteredIssues.map((issue) => (
-            <div key={issue.id} className="surface-panel space-y-3">
+            <div
+              key={issue.id}
+              className={`surface-panel space-y-3 ${
+                focusedIssueId === issue.id
+                  ? "border-accent/45 shadow-[0_24px_60px_-36px_hsl(var(--accent)/0.55)]"
+                  : ""
+              }`}
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="text-base font-semibold text-foreground">

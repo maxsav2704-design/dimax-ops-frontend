@@ -185,6 +185,26 @@ export default function InstallerSyncQueuePage() {
                     )}
                   </div>
                 </div>
+                {(item.entity_type === "issue" || item.project_id || item.entity_type === "project") && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {item.entity_type === "issue" && item.entity_id ? (
+                      <Link
+                        href={`/installer/issues?issue_id=${encodeURIComponent(item.entity_id)}&issue_search=${encodeURIComponent(item.entity_id)}`}
+                        className="inline-flex items-center rounded-lg border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                      >
+                        {copy("Open issue", "Открыть проблему", "פתח בעיה")}
+                      </Link>
+                    ) : null}
+                    {(item.project_id || item.entity_type === "project") && (item.project_id || item.entity_id) ? (
+                      <Link
+                        href={`/installer/projects/${encodeURIComponent(item.project_id || item.entity_id || "")}`}
+                        className="inline-flex items-center rounded-lg border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                      >
+                        {copy("Open project", "Открыть проект", "פתח פרויקט")}
+                      </Link>
+                    ) : null}
+                  </div>
+                )}
               </div>
             ))}
           </div>

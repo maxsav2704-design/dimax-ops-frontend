@@ -239,4 +239,44 @@ describe("InstallerIssuesPage", () => {
       );
     });
   });
+
+  it("reads focused issue id from query params", async () => {
+    window.history.replaceState({}, "", "/installer/issues?issue_id=issue-2");
+
+    apiFetchMock.mockResolvedValue({
+      items: [
+        {
+          id: "issue-1",
+          project_id: "project-1",
+          door_id: "door-1",
+          status: "BLOCKED",
+          priority: "P1",
+          title: "Blocked lock",
+          description: "Lock jammed on site",
+        },
+        {
+          id: "issue-2",
+          project_id: "project-2",
+          door_id: "door-2",
+          status: "OPEN",
+          priority: "P2",
+          title: "Missing handle",
+          description: "Need replacement",
+        },
+      ],
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallerIssuesPage />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Missing handle")).toBeInTheDocument();
+    expect(screen.getByLabelText("Issue search")).toHaveValue("issue-2");
+  });
 });

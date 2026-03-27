@@ -177,8 +177,25 @@ export default function InstallerEarningsPage() {
             ) : (
               <div className="space-y-3">
                 {projects.map((row, index) => (
-                  <div key={`${row.project_id || "none"}-${index}`} className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-background/70 px-4 py-3">
-                    <div className="text-sm font-medium text-foreground">{row.project_name || copy("No project", "Без проекта", "ללא פרויקט")}</div>
+                  <div
+                    key={`${row.project_id || "none"}-${index}`}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-background/70 px-4 py-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-foreground">
+                        {row.project_name || copy("No project", "Без проекта", "ללא פרויקט")}
+                      </div>
+                      {row.project_id ? (
+                        <div className="mt-1">
+                          <Link
+                            href={`/installer/projects/${row.project_id}`}
+                            className="inline-flex items-center rounded-lg border border-border/70 bg-background/80 px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted"
+                          >
+                            {copy("Open project", "Открыть проект", "פתח פרויקט")}
+                          </Link>
+                        </div>
+                      ) : null}
+                    </div>
                     <div className="text-sm font-semibold text-foreground tabular-nums">
                       {formatMoney(row.amount, summary.currency)}
                     </div>

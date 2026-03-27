@@ -57,6 +57,10 @@ describe("InstallerEarningsPage", () => {
     expect(await screen.findByText(/3.?100 ILS/)).toBeInTheDocument();
     expect(await screen.findByText("INSTALLATION")).toBeInTheDocument();
     expect(await screen.findByText("Ashdod Towers")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Open project" })).toHaveAttribute(
+      "href",
+      "/installer/projects/p1"
+    );
     expect(await screen.findByText("2026-03-21")).toBeInTheDocument();
   });
 

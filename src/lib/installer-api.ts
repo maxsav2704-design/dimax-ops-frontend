@@ -68,6 +68,7 @@ export type InstallerSyncQueueItem = {
   id: string;
   entity_type: string;
   entity_id?: string | null;
+  project_id?: string | null;
   operation_type: string;
   status: string;
   conflict_code?: string | null;

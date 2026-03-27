@@ -43,6 +43,7 @@ describe("InstallerSyncQueuePage", () => {
               id: "item-2",
               entity_type: "issue",
               entity_id: "issue-1",
+              project_id: "project-7",
               operation_type: "add_comment",
               status: "BLOCKED",
               created_at: "2026-03-21T11:00:00Z",
@@ -71,6 +72,14 @@ describe("InstallerSyncQueuePage", () => {
     expect(
       await screen.findByText((content) => content.includes("CONFLICT_ASSIGNMENT_CHANGED"))
     ).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Open issue" })).toHaveAttribute(
+      "href",
+      "/installer/issues?issue_id=issue-1&issue_search=issue-1"
+    );
+    expect(await screen.findByRole("link", { name: "Open project" })).toHaveAttribute(
+      "href",
+      "/installer/projects/project-7"
+    );
     expect(await screen.findAllByText("2")).not.toHaveLength(0);
   });
 
