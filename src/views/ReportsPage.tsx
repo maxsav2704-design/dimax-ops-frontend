@@ -2110,6 +2110,13 @@ export default function ReportsPage() {
       : scopedInstallerId
         ? t("reports.scopedInstaller").replace("{id}", scopedInstallerId)
         : null;
+  const hasScopedContextOnly = !activeFocus && Boolean(scopedProjectId || scopedInstallerId);
+  const scopedContextLabel = scopedProjectId
+    ? copy("Focused project", "Фокус по проекту", "מיקוד פרויקט")
+    : scopedInstallerId
+      ? copy("Focused installer", "Фокус по монтажнику", "מיקוד מתקין")
+      : "";
+  const scopedContextValue = scopedProjectId || scopedInstallerId || "";
   const reportsJumpLinks = [
     {
       label: copy("Open Operations SLA", "Открыть SLA операций", "פתח SLA תפעולי"),
@@ -2583,6 +2590,31 @@ export default function ReportsPage() {
         {presetNotice && (
           <div className="rounded-lg border border-border/70 bg-background/60 px-4 py-3 text-[13px] text-muted-foreground">
             {presetNotice}
+          </div>
+        )}
+        {hasScopedContextOnly && (
+          <div className="rounded-lg border border-[hsl(var(--accent)/0.35)] bg-[hsl(var(--accent)/0.08)] px-4 py-3 text-[13px]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="font-medium text-foreground">
+                  {scopedContextLabel} {scopedContextValue}
+                </div>
+                <div className="mt-1 text-muted-foreground">
+                  {copy(
+                    "This report is narrowed to one linked context. You can return to the full report at any time.",
+                    "Этот отчёт открыт в контексте одной связанной сущности. В любой момент можно вернуться к полному обзору.",
+                    "הדוח פתוח בהקשר ממוקד של ישות אחת. אפשר לחזור בכל רגע לתצוגה המלאה."
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push("/reports")}
+                className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
+              >
+                {copy("Show full report", "Показать полный отчёт", "הצג דוח מלא")}
+              </button>
+            </div>
           </div>
         )}
         {activeFocus && (

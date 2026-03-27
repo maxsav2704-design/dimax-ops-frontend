@@ -866,6 +866,9 @@ describe("ProjectsPage", () => {
     render(<ProjectsPage />);
 
     expect(await screen.findByText("Add door manually")).toBeInTheDocument();
+    expect(screen.getByText("Focused project project-1")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Show all projects"));
+    expect(pushMock).toHaveBeenCalledWith("/projects");
     expect(await screen.findByLabelText("Library product")).toHaveValue("product-1");
     expect(screen.getByLabelText("Install type")).toHaveValue("INSTALL");
   }, 20000);

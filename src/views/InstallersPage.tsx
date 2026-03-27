@@ -585,6 +585,10 @@ export default function InstallersPage() {
     const inactive = installers.length - active;
     return { total: installers.length, active, inactive };
   }, [installers]);
+  const focusedInstaller = useMemo(
+    () => installers.find((installer) => installer.id === deepLinkInstallerId) || null,
+    [deepLinkInstallerId, installers]
+  );
 
   const onOpenCreate = () => {
     setNotice(null);
@@ -629,6 +633,18 @@ export default function InstallersPage() {
                 <span className="metric-chip">{t("common.active")} {metrics.active}</span>
                 {canManageRates ? <span className="metric-chip">{t("installers.rateControls")}</span> : null}
               </div>
+              {focusedInstaller ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="metric-chip">Focused installer {focusedInstaller.id}</span>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/installers")}
+                    className="inline-flex items-center rounded-lg border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                  >
+                    Show all installers
+                  </button>
+                </div>
+              ) : null}
             </div>
             <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
               <div className="grid gap-3 sm:grid-cols-3">

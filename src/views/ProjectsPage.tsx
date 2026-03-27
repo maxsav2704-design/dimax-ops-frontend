@@ -2358,6 +2358,18 @@ export default function ProjectsPage() {
                   {tt("projects.selectedLabel")} {bulkSelectedProjectIds.length}
                 </span>
               </div>
+              {selectedProjectId && selectedProjectId === deepLinkProjectId ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="metric-chip">Focused project {selectedProjectId}</span>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/projects")}
+                    className="inline-flex items-center rounded-lg border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                  >
+                    Show all projects
+                  </button>
+                </div>
+              ) : null}
             </div>
             <div className="surface-subtle min-w-0 max-w-xl space-y-4 p-4 sm:p-5 xl:min-w-[320px]">
               <div className="flex items-start justify-between gap-4">

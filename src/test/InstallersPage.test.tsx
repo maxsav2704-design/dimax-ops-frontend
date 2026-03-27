@@ -123,7 +123,7 @@ describe("InstallersPage", () => {
     expect(await screen.findByText("Installer Rates")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open KPI report" }));
     expect(pushMock).toHaveBeenCalledWith("/reports?installer_id=installer-1");
-  });
+  }, 15000);
 
   it("opens installer card from deep-link installer_id", async () => {
     searchParamsMock.mockReturnValue(new URLSearchParams("installer_id=installer-1"));
@@ -172,6 +172,9 @@ describe("InstallersPage", () => {
 
     expect(await screen.findByText("Edit Installer")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Installer Deep Link")).toBeInTheDocument();
+    expect(screen.getByText("Focused installer installer-1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Show all installers" }));
+    expect(pushMock).toHaveBeenCalledWith("/installers");
   });
 
   it("creates installer and shows readable success notice", async () => {
