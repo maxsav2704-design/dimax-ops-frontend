@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Building2, KeyRound, LogIn, Mail } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { apiBaseUrl } from "@/lib/api";
+import { apiBaseUrl, apiFetch } from "@/lib/api";
 import { resolveAdminHomePath } from "@/lib/admin-access";
 import { normalizeAuthSession, persistAccessToken } from "@/lib/auth-session";
 import { useI18n } from "@/lib/i18n";
@@ -23,18 +23,9 @@ type AuthMeResponse = {
   can_view_rates?: boolean | null;
 };
 
-async function resolveDefaultPath(accessToken: string): Promise<string> {
+async function resolveDefaultPath(): Promise<string> {
   try {
-    const response = await fetch(`${apiBaseUrl()}/api/v1/auth/me`, {
-      credentials: "include",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-    if (!response.ok) {
-      return "/";
-    }
-    const body = (await response.json()) as AuthMeResponse;
+    const body = await apiFetch<AuthMeResponse>("/api/v1/auth/me");
     const session = normalizeAuthSession(body);
     if (!session) {
       return "/";
@@ -116,7 +107,7 @@ export default function LoginPage() {
       persistAccessToken(body.access_token);
       localStorage.setItem("dimax_company_id", companyId.trim());
       localStorage.setItem("dimax_email", email.trim());
-      let nextPath = await resolveDefaultPath(body.access_token);
+      let nextPath = await resolveDefaultPath();
       if (typeof window !== "undefined") {
         const fromQuery = new URLSearchParams(window.location.search).get("next");
         if (fromQuery) {
