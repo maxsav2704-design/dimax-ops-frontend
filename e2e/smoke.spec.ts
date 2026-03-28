@@ -29,8 +29,9 @@ async function login(page) {
     .click();
   const loginResponse = await loginResponsePromise;
   expect(loginResponse.ok()).toBeTruthy();
+  const loginBody = (await loginResponse.json()) as { access_token?: string };
   await page.waitForFunction(
-    () => Boolean(window.localStorage.getItem("dimax_access_token")),
+    () => Boolean(window.sessionStorage.getItem("dimax_refresh_token")),
     undefined,
     { timeout: 30_000 }
   );
@@ -44,9 +45,8 @@ async function login(page) {
   await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
   await expect(page.getByText("Dispatcher Board")).toBeVisible({ timeout: 30_000 });
 
-  const token = await page.evaluate(() => window.localStorage.getItem("dimax_access_token"));
-  expect(token).toBeTruthy();
-  return token as string;
+  expect(loginBody.access_token).toBeTruthy();
+  return loginBody.access_token as string;
 }
 
 async function createProject(request, token: string, suffix: string) {
