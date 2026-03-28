@@ -9,8 +9,7 @@ const { replaceMock, pathnameMock } = vi.hoisted(() => ({
   pathnameMock: vi.fn(),
 }));
 
-const { getAccessTokenMock, apiFetchMock } = vi.hoisted(() => ({
-  getAccessTokenMock: vi.fn(),
+const { apiFetchMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
 }));
 
@@ -22,7 +21,6 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/lib/api", () => ({
-  getAccessToken: getAccessTokenMock,
   apiFetch: apiFetchMock,
 }));
 
@@ -37,13 +35,12 @@ describe("RequireAuth", () => {
   beforeEach(() => {
     replaceMock.mockReset();
     pathnameMock.mockReset();
-    getAccessTokenMock.mockReset();
     apiFetchMock.mockReset();
     pathnameMock.mockReturnValue("/reports");
   });
 
-  it("redirects to login when token is missing", async () => {
-    getAccessTokenMock.mockReturnValue(null);
+  it("redirects to login when session bootstrap fails", async () => {
+    apiFetchMock.mockRejectedValue(new Error("unauthorized"));
 
     renderSubject();
 
@@ -53,7 +50,6 @@ describe("RequireAuth", () => {
   });
 
   it("redirects installer from admin scope to installer workspace", async () => {
-    getAccessTokenMock.mockReturnValue("token");
     pathnameMock.mockReturnValue("/settings");
     apiFetchMock.mockResolvedValue({ role: "INSTALLER" });
 
@@ -65,7 +61,6 @@ describe("RequireAuth", () => {
   });
 
   it("renders children for admin role", async () => {
-    getAccessTokenMock.mockReturnValue("token");
     apiFetchMock.mockResolvedValue({ role: "ADMIN" });
 
     renderSubject();
@@ -75,7 +70,6 @@ describe("RequireAuth", () => {
   });
 
   it("renders children for installer scope when role is installer", async () => {
-    getAccessTokenMock.mockReturnValue("token");
     pathnameMock.mockReturnValue("/installer");
     apiFetchMock.mockResolvedValue({ role: "INSTALLER" });
 
@@ -86,7 +80,6 @@ describe("RequireAuth", () => {
   });
 
   it("redirects admin from installer scope to admin workspace", async () => {
-    getAccessTokenMock.mockReturnValue("token");
     pathnameMock.mockReturnValue("/installer");
     apiFetchMock.mockResolvedValue({ role: "ADMIN" });
 
@@ -95,5 +88,14 @@ describe("RequireAuth", () => {
     await waitFor(() => {
       expect(replaceMock).toHaveBeenCalledWith("/");
     });
+  });
+
+  it("allows restored session without a preloaded access token", async () => {
+    apiFetchMock.mockResolvedValue({ role: "ADMIN", admin_scope: "OPERATIONS" });
+
+    renderSubject(<div>restored protected</div>);
+
+    expect(await screen.findByText("restored protected")).toBeInTheDocument();
+    expect(replaceMock).not.toHaveBeenCalled();
   });
 });

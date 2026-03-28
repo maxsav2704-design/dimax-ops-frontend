@@ -1,6 +1,6 @@
 "use client";
 
-import { apiFetch, getAccessToken } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { canAccessAdminPath, resolveAdminHomePath } from "@/lib/admin-access";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -50,12 +50,7 @@ export function RequireAuth({
     let cancelled = false;
 
     async function checkAccess(): Promise<void> {
-      const token = getAccessToken();
       const next = pathname || "/";
-      if (!token) {
-        router.replace(`/login?next=${encodeURIComponent(next)}`);
-        return;
-      }
 
       try {
         const me = await apiFetch<AuthMeResponse>("/api/v1/auth/me");

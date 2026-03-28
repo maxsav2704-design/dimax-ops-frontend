@@ -92,6 +92,24 @@ describe("apiFetch", () => {
     expect(retriedHeaders.get("Authorization")).toBe("Bearer fresh-token");
   });
 
+  it("bootstraps a session from refresh when no access token is present", async () => {
+    getAccessTokenMock.mockReturnValue(null);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ detail: "missing token" }, 401, "UNAUTHORIZED"))
+      .mockResolvedValueOnce(jsonResponse({ access_token: "fresh-token" }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await apiFetch<{ ok: boolean }>("/api/v1/auth/me");
+
+    expect(result).toEqual({ ok: true });
+    expect(persistAccessTokenMock).toHaveBeenCalledWith("fresh-token");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const firstHeaders = new Headers((fetchMock.mock.calls[0]?.[1] as RequestInit)?.headers);
+    expect(firstHeaders.has("Authorization")).toBe(false);
+  });
+
   it("clears session when refresh fails and surfaces the original 401", async () => {
     getAccessTokenMock.mockReturnValue("expired-token");
     const fetchMock = vi

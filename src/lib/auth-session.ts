@@ -20,25 +20,6 @@ const LEGACY_REFRESH_TOKEN_STORAGE_KEYS = ["dimax_refresh_token", "refresh_token
 const AUTH_EVENT_NAME = "dimax-auth-changed";
 let inMemoryAccessToken: string | null = null;
 
-function readStorageValue(keys: readonly string[]): string | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  const stores = [window.sessionStorage, window.localStorage];
-  for (const store of stores) {
-    if (!store || typeof store.getItem !== "function") {
-      continue;
-    }
-    for (const key of keys) {
-      const value = store.getItem(key);
-      if (value) {
-        return value;
-      }
-    }
-  }
-  return null;
-}
-
 function removeStorageKeys(keys: readonly string[]): void {
   if (typeof window === "undefined") {
     return;
@@ -62,23 +43,13 @@ function dispatchAuthChanged(): void {
 }
 
 export function getAccessToken(): string | null {
-  if (inMemoryAccessToken) {
-    return inMemoryAccessToken;
-  }
-  const persisted = readStorageValue(ACCESS_TOKEN_STORAGE_KEYS);
-  if (persisted) {
-    inMemoryAccessToken = persisted;
-  }
-  return persisted;
+  return inMemoryAccessToken;
 }
 
 export function persistAccessToken(token: string): void {
-  if (typeof window === "undefined") {
-    return;
-  }
   inMemoryAccessToken = token;
   removeStorageKeys(ACCESS_TOKEN_STORAGE_KEYS);
-  window.sessionStorage.setItem("dimax_access_token", token);
+  removeStorageKeys(LEGACY_REFRESH_TOKEN_STORAGE_KEYS);
   dispatchAuthChanged();
 }
 
