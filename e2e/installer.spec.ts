@@ -148,6 +148,15 @@ test.describe.serial("Installer web smoke", () => {
     await page.goto(`/installer/projects/${targetProject.id}`);
     await expect(page.getByText("Door filters")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("Add-on fact")).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.locator("a,button").filter({ hasText: /^Open Waze$/ }).first()
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.locator("a,button").filter({ hasText: /^Open WhatsApp$/ }).first()
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.locator("a,button").filter({ hasText: /^Call contact$/ }).first()
+    ).toBeVisible({ timeout: 30_000 });
 
     const problemProject = projectsBody.items.find((project) => project.status === "PROBLEM");
     if (problemProject) {
