@@ -16,7 +16,7 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { apiBaseUrl, apiFetch, getAccessToken } from "@/lib/api";
+import { apiDownload, apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { canAccessAdminModule, canViewRates } from "@/lib/admin-access";
@@ -1239,18 +1239,10 @@ function downloadBlob(blob: Blob, filename: string): void {
 }
 
 async function downloadCsvExport(pathWithQuery: string, fallbackFilename: string): Promise<void> {
-  const token = getAccessToken();
-  const headers = new Headers();
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-  const response = await fetch(`${apiBaseUrl()}${pathWithQuery}`, {
+  const response = await apiDownload(pathWithQuery, {
     method: "GET",
-    headers,
+    credentials: "include",
   });
-  if (!response.ok) {
-    throw new Error(`Export failed: ${response.status} ${response.statusText}`);
-  }
   const blob = await response.blob();
   const disposition = response.headers.get("content-disposition") || "";
   const match = disposition.match(/filename=\"?([^"]+)\"?/i);

@@ -23,6 +23,7 @@ vi.mock("@/components/DashboardLayout", () => ({
 
 vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
+  apiDownload: (path: string, init?: RequestInit) => fetch(path, init),
   apiBaseUrl: () => "",
   getAccessToken: () => null,
 }));

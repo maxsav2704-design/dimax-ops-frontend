@@ -114,7 +114,7 @@ async function requestWithToken(path: string, init: RequestInit | undefined, tok
   return response;
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function ensureAuthorizedResponse(path: string, init?: RequestInit): Promise<Response> {
   const token = getAccessToken();
   let response = await requestWithToken(path, init, token);
 
@@ -124,6 +124,12 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       response = await requestWithToken(path, init, refreshedToken);
     }
   }
+
+  return response;
+}
+
+export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await ensureAuthorizedResponse(path, init);
 
   if (!response.ok) {
     let message = `${response.status} ${response.statusText}`;
@@ -142,6 +148,24 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   }
 
   return response.json() as Promise<T>;
+}
+
+export async function apiDownload(path: string, init?: RequestInit): Promise<Response> {
+  const response = await ensureAuthorizedResponse(path, init);
+
+  if (!response.ok) {
+    let message = `${response.status} ${response.statusText}`;
+    let body: ApiErrorBody | undefined;
+    try {
+      body = (await response.json()) as ApiErrorBody;
+      message = body?.error?.message || body?.detail || message;
+    } catch {
+      // Keep default error message.
+    }
+    throw new ApiError(response.status, message, body);
+  }
+
+  return response;
 }
 
 export async function logoutSession(): Promise<void> {

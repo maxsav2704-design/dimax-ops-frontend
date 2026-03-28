@@ -16,7 +16,7 @@ vi.mock("@/lib/auth-session", () => ({
   clearStoredSession: clearStoredSessionMock,
 }));
 
-import { ApiError, apiFetch, logoutSession } from "./api";
+import { ApiError, apiDownload, apiFetch, logoutSession } from "./api";
 
 function jsonResponse(body: unknown, status = 200, statusText = "OK"): Response {
   return {
@@ -129,6 +129,33 @@ describe("apiFetch", () => {
     expect((thrown as ApiError).status).toBe(401);
     expect(clearStoredSessionMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("downloads with refresh when export request gets a 401", async () => {
+    getAccessTokenMock.mockReturnValue("expired-token");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ detail: "expired" }, 401, "UNAUTHORIZED"))
+      .mockResolvedValueOnce(jsonResponse({ access_token: "fresh-token" }))
+      .mockResolvedValueOnce(
+        new Response(new Blob(["id,value\n1,42"], { type: "text/csv" }), {
+          status: 200,
+          headers: {
+            "content-disposition": 'attachment; filename="export.csv"',
+          },
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await apiDownload("/api/v1/admin/reports/export");
+
+    expect(response.ok).toBe(true);
+    expect(persistAccessTokenMock).toHaveBeenCalledWith("fresh-token");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const retriedInit = fetchMock.mock.calls[2]?.[1] as RequestInit;
+    const retriedHeaders = new Headers(retriedInit?.headers);
+    expect(retriedHeaders.get("Authorization")).toBe("Bearer fresh-token");
+    expect(retriedInit.credentials).toBe("include");
   });
 });
 
