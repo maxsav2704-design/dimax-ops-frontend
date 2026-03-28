@@ -301,7 +301,7 @@ export default function InstallersPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
@@ -391,7 +391,7 @@ export default function InstallersPage() {
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, "en", "Failed to create installer."));
+      setActionError(readableApiError(error, locale, "Failed to create installer."));
     },
   });
 
@@ -412,7 +412,7 @@ export default function InstallersPage() {
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, "en", "Failed to update installer."));
+      setActionError(readableApiError(error, locale, "Failed to update installer."));
     },
   });
 
@@ -426,7 +426,7 @@ export default function InstallersPage() {
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, "en", "Failed to delete installer."));
+      setActionError(readableApiError(error, locale, "Failed to delete installer."));
     },
   });
 
@@ -448,7 +448,7 @@ export default function InstallersPage() {
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, "en", "Failed to link installer user."));
+      setActionError(readableApiError(error, locale, "Failed to link installer user."));
     },
   });
 
@@ -470,7 +470,7 @@ export default function InstallersPage() {
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, "en", "Failed to unlink installer user."));
+      setActionError(readableApiError(error, locale, "Failed to unlink installer user."));
     },
   });
 
@@ -496,7 +496,7 @@ export default function InstallersPage() {
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, "en", "Failed to add installer rate."));
+      setActionError(readableApiError(error, locale, "Failed to add installer rate."));
     },
   });
 
@@ -513,7 +513,7 @@ export default function InstallersPage() {
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, "en", "Failed to update installer rate."));
+      setActionError(readableApiError(error, locale, "Failed to update installer rate."));
     },
   });
 
@@ -527,7 +527,7 @@ export default function InstallersPage() {
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, "en", "Failed to delete installer rate."));
+      setActionError(readableApiError(error, locale, "Failed to delete installer rate."));
     },
   });
 
@@ -726,7 +726,7 @@ export default function InstallersPage() {
         {hasError && (
           <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{readableApiError(installersQuery.error, "en", t("installers.error"))}</span>
+            <span>{readableApiError(installersQuery.error, locale, t("installers.error"))}</span>
           </div>
         )}
         {actionError && (

@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type CatalogItem = {
@@ -155,6 +156,7 @@ export function CatalogCrudPage({
 }: CatalogCrudPageProps) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { locale } = useI18n();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
@@ -334,7 +336,7 @@ export function CatalogCrudPage({
       const parsedItems = parseImportPayload(text);
       importMutation.mutate(parsedItems);
     } catch (error) {
-      setMessage(readableApiError(error, "en", "Import parsing failed."));
+      setMessage(readableApiError(error, locale, "Import parsing failed."));
     }
   };
 
@@ -528,7 +530,7 @@ export function CatalogCrudPage({
                   bulkMutation.error ||
                   importMutation.error ||
                   exportMutation.error,
-                "en",
+                locale,
                 "Request failed."
               )}
             </span>

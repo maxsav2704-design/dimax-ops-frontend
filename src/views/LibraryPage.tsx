@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type LibraryStatus = "ACTIVE" | "ARCHIVED";
@@ -78,6 +79,7 @@ function formatDateTime(value?: string): string {
 export default function LibraryPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { locale } = useI18n();
   const searchParams = useSearchParams();
   const initialSearch = (searchParams?.get("q") || "").trim();
   const initialStatus = searchParams?.get("status") === "ACTIVE" || searchParams?.get("status") === "ARCHIVED"
@@ -164,7 +166,7 @@ export default function LibraryPage() {
     },
     onError: (error) => {
       setMessage(null);
-      setErrorMessage(readableApiError(error, "en", "Failed to create library product."));
+      setErrorMessage(readableApiError(error, locale, "Failed to create library product."));
     },
   });
 
@@ -190,7 +192,7 @@ export default function LibraryPage() {
     },
     onError: (error) => {
       setMessage(null);
-      setErrorMessage(readableApiError(error, "en", "Failed to update library product."));
+      setErrorMessage(readableApiError(error, locale, "Failed to update library product."));
     },
   });
 
@@ -342,7 +344,7 @@ export default function LibraryPage() {
         {(listQuery.isError || errorMessage) && (
           <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{errorMessage || readableApiError(listQuery.error, "en", "Failed to load library.")}</span>
+            <span>{errorMessage || readableApiError(listQuery.error, locale, "Failed to load library.")}</span>
           </div>
         )}
 
