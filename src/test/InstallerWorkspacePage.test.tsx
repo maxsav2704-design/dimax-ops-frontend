@@ -102,6 +102,10 @@ describe("InstallerWorkspacePage", () => {
     expect(scheduleLink).toHaveAttribute("href", "/installer/calendar?project_id=project-1");
     const projectCard = scheduleLink.closest("div.relative");
     expect(projectCard).not.toBeNull();
+    expect(within(projectCard as HTMLElement).getByRole("link", { name: "Harbor 11" })).toHaveAttribute(
+      "href",
+      "https://waze.example/project-1"
+    );
     expect(within(projectCard as HTMLElement).getByRole("link", { name: "Open earnings" })).toHaveAttribute(
       "href",
       "/installer/earnings?project_id=project-1"
@@ -147,6 +151,59 @@ describe("InstallerWorkspacePage", () => {
       "href",
       "/installer/calendar?preset=today&project_id=none"
     );
+  }, 15000);
+
+  it("shows non-clickable address fallback when workspace project has no route data", async () => {
+    const base = new Date();
+    base.setHours(12, 0, 0, 0);
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/installer/projects") {
+        return {
+          items: [
+            {
+              id: "project-1",
+              name: "Ashdod Towers",
+              address: null,
+              status: "IN_PROGRESS",
+              waze_url: null,
+            },
+          ],
+        };
+      }
+      if (String(path).includes("/api/v1/installer/calendar/events?")) {
+        return {
+          items: [
+            {
+              id: "event-1",
+              title: "Morning visit",
+              starts_at: new Date(base.getTime() + 60 * 60 * 1000).toISOString(),
+              ends_at: new Date(base.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+              event_type: "INSTALLATION",
+              project_id: "project-1",
+            },
+          ],
+        };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallerWorkspacePage />
+      </QueryClientProvider>
+    );
+
+    expect((await screen.findAllByText("Ashdod Towers")).length).toBeGreaterThan(0);
+    const projectCard = screen.getByRole("link", { name: "Open schedule" }).closest("div.relative");
+    expect(projectCard).not.toBeNull();
+    expect(within(projectCard as HTMLElement).getByText("Address not specified")).toBeInTheDocument();
+    expect(within(projectCard as HTMLElement).queryByRole("link", { name: "Address not specified" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open Waze" })).not.toBeInTheDocument();
   }, 15000);
 
   it("shows retry action and refetches all installer workspace queries", async () => {

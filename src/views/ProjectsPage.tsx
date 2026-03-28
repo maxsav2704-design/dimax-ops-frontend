@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
@@ -7,13 +7,23 @@ import {
   FileSpreadsheet,
   FilterX,
   Layers3,
+  MapPinned,
+  MessageCircle,
+  Phone,
   Plus,
+  PencilLine,
   RefreshCw,
   Search,
   Upload,
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,7 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -68,6 +78,7 @@ const projectsOverrides: Partial<Record<Locale, Record<string, string>>> = {
 type ProjectListItem = {
   id: string;
   name: string;
+  code?: string | null;
   address: string;
   status: string;
 };
@@ -83,14 +94,56 @@ type ProjectOpenIssue = {
 type ProjectDetailsResponse = {
   id?: string;
   name?: string;
+  code?: string | null;
   address?: string;
+  planned_start_date?: string | null;
+  planned_end_date?: string | null;
   status?: string;
   developer_company?: string | null;
   contact_name?: string | null;
   contact_phone?: string | null;
   contact_email?: string | null;
+  developer_phone_alt?: string | null;
+  developer_whatsapp?: string | null;
+  developer_notes?: string | null;
+  address_street?: string | null;
+  address_building?: string | null;
+  address_city?: string | null;
+  address_entrance?: string | null;
+  address_lat?: string | number | null;
+  address_lng?: string | number | null;
+  address_waze_url?: string | null;
+  waze_deep_link?: string | null;
+  whatsapp_deep_link?: string | null;
+  call_deep_link?: string | null;
   issues_open?: ProjectOpenIssue[];
 };
+
+type ProjectFormState = {
+  code: string;
+  name: string;
+  planned_start_date: string;
+  planned_end_date: string;
+  address: string;
+  address_street: string;
+  address_building: string;
+  address_city: string;
+  address_entrance: string;
+  address_lat: string;
+  address_lng: string;
+  address_waze_url: string;
+  developer_company: string;
+  contact_name: string;
+  contact_phone: string;
+  developer_phone_alt: string;
+  developer_whatsapp: string;
+  contact_email: string;
+  developer_notes: string;
+};
+
+type ProjectFormFieldErrors = Partial<
+  Record<"contact_phone" | "developer_phone_alt" | "developer_whatsapp" | "address_waze_url", string>
+>;
 
 type DoorType = {
   id: string;
@@ -374,6 +427,32 @@ type ProjectImportRunsResponse = {
   items: ProjectImportRunItem[];
 };
 
+type ProjectAddressSuggestion = {
+  key: string;
+  label: string;
+  street: string;
+  building: string;
+  city: string;
+  entrance: string;
+  lat: string;
+  lng: string;
+};
+
+const PROJECT_CITY_COORDS: Array<{
+  lat: string;
+  lng: string;
+  aliases: string[];
+}> = [
+  { lat: "31.8014", lng: "34.6435", aliases: ["ashdod", "אשדוד", "ашдод"] },
+  { lat: "31.2518", lng: "34.7915", aliases: ["ashkelon", "אשקלון", "ашкелон"] },
+  { lat: "31.7683", lng: "35.2137", aliases: ["jerusalem", "ירושלים", "иерусалим"] },
+  { lat: "32.0853", lng: "34.7818", aliases: ["tel aviv", "tel-aviv", "תל אביב", "тель авив"] },
+  { lat: "32.7940", lng: "34.9896", aliases: ["haifa", "חיפה", "хайфа"] },
+  { lat: "31.9980", lng: "34.7320", aliases: ["rishon lezion", "ראשון לציון", "ришон лецион"] },
+  { lat: "32.3215", lng: "34.8532", aliases: ["netanya", "נתניה", "нетания"] },
+  { lat: "31.2520", lng: "34.7913", aliases: ["beer sheva", "be'er sheva", "באר שבע", "беэр шева"] },
+];
+
 function emptyManualDoorForm(): ManualDoorFormState {
   return {
     product_id: "",
@@ -386,6 +465,269 @@ function emptyManualDoorForm(): ManualDoorFormState {
     is_critical: false,
     assigned_installer_id: "",
     planned_install_date: "",
+  };
+}
+
+function emptyProjectForm(): ProjectFormState {
+  return {
+    code: "",
+    name: "",
+    planned_start_date: "",
+    planned_end_date: "",
+    address: "",
+    address_street: "",
+    address_building: "",
+    address_city: "",
+    address_entrance: "",
+    address_lat: "",
+    address_lng: "",
+    address_waze_url: "",
+    developer_company: "",
+    contact_name: "",
+    contact_phone: "",
+    developer_phone_alt: "",
+    developer_whatsapp: "",
+    contact_email: "",
+    developer_notes: "",
+  };
+}
+
+function normalizeDraftPhone(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  let digits = trimmed.replace(/[^\d+]/g, "");
+  if (digits.startsWith("00")) {
+    digits = `+${digits.slice(2)}`;
+  }
+  if (digits.startsWith("0")) {
+    digits = `+972${digits.slice(1)}`;
+  } else if (!digits.startsWith("+")) {
+    digits = `+${digits}`;
+  }
+  digits = `+${digits.replace(/[^\d]/g, "")}`;
+  return digits.length >= 12 && digits.length <= 13 ? digits : null;
+}
+
+function buildDraftProjectAddress(form: ProjectFormState): string {
+  const structured = [
+    form.address_street.trim(),
+    form.address_building.trim(),
+    form.address_city.trim(),
+  ].filter(Boolean);
+  const base = structured.length > 0 ? structured.join(", ") : form.address.trim();
+  if (!base) {
+    return "";
+  }
+  return form.address_entrance.trim() ? `${base}, ${form.address_entrance.trim()}` : base;
+}
+
+function buildDraftWazeLink(form: ProjectFormState): string | null {
+  if (form.address_waze_url.trim()) {
+    return form.address_waze_url.trim();
+  }
+  if (form.address_lat.trim() && form.address_lng.trim()) {
+    return `https://www.waze.com/ul?ll=${encodeURIComponent(form.address_lat.trim())},${encodeURIComponent(form.address_lng.trim())}&navigate=yes`;
+  }
+  const address = buildDraftProjectAddress(form);
+  if (!address) {
+    return null;
+  }
+  return `https://www.waze.com/ul?q=${encodeURIComponent(address)}&navigate=yes`;
+}
+
+function buildDraftWhatsappLink(form: ProjectFormState): string | null {
+  const phone = normalizeDraftPhone(form.developer_whatsapp || form.contact_phone);
+  if (!phone) {
+    return null;
+  }
+  const message = [form.code.trim(), form.name.trim()].filter(Boolean).join(" · ");
+  const waPhone = phone.replace("+", "");
+  return message ? `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}` : `https://wa.me/${waPhone}`;
+}
+
+function formatReadablePhone(value: string | null | undefined): string {
+  const normalized = normalizeDraftPhone(value || "");
+  if (!normalized) {
+    return value?.trim() || "?";
+  }
+  if (normalized.startsWith("+972") && normalized.length === 13) {
+    return `+972 ${normalized.slice(4, 6)}-${normalized.slice(6, 9)}-${normalized.slice(9)}`;
+  }
+  return normalized;
+}
+
+function formatProjectPhoneInput(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  let digits = trimmed.replace(/[^\d+]/g, "");
+  if (digits.startsWith("00")) {
+    digits = `+${digits.slice(2)}`;
+  }
+  if (digits.startsWith("0")) {
+    digits = `+972${digits.slice(1)}`;
+  } else if (digits.startsWith("972")) {
+    digits = `+${digits}`;
+  } else if (!digits.startsWith("+")) {
+    digits = `+972${digits}`;
+  }
+
+  return `+${digits.replace(/[^\d]/g, "")}`;
+}
+
+async function copyTextToClipboard(value: string): Promise<boolean> {
+  if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+    return false;
+  }
+  await navigator.clipboard.writeText(value);
+  return true;
+}
+
+function buildDraftMapPreviewUrl(form: ProjectFormState): string | null {
+  const lat = Number(form.address_lat.trim());
+  const lng = Number(form.address_lng.trim());
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
+  const delta = 0.01;
+  const bbox = [lng - delta, lat - delta, lng + delta, lat + delta]
+    .map((item) => item.toFixed(6))
+    .join("%2C");
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat.toFixed(6)}%2C${lng.toFixed(6)}`;
+}
+
+function buildProjectFieldErrorCopy(
+  field: keyof ProjectFormFieldErrors,
+  locale: Locale
+): string {
+  const copyByField: Record<keyof ProjectFormFieldErrors, Record<Locale, string>> = {
+    contact_phone: {
+      en: "Enter the primary phone in +972XXXXXXXXX format.",
+      ru: "Введите основной телефон в формате +972XXXXXXXXX.",
+      he: "הזן את הטלפון הראשי בפורמט ‎+972XXXXXXXXX.",
+    },
+    developer_phone_alt: {
+      en: "Enter the backup phone in +972XXXXXXXXX format.",
+      ru: "Введите дополнительный телефон в формате +972XXXXXXXXX.",
+      he: "הזן את הטלפון הנוסף בפורמט ‎+972XXXXXXXXX.",
+    },
+    developer_whatsapp: {
+      en: "Enter the WhatsApp number in +972XXXXXXXXX format.",
+      ru: "Введите номер WhatsApp в формате +972XXXXXXXXX.",
+      he: "הזן את מספר ה-WhatsApp בפורמט ‎+972XXXXXXXXX.",
+    },
+    address_waze_url: {
+      en: "Enter a valid http or https Waze link.",
+      ru: "Введите корректную Waze-ссылку с http или https.",
+      he: "הזן קישור Waze תקין עם http או https.",
+    },
+  };
+
+  return copyByField[field][locale];
+}
+
+function lookupProjectCityCoords(city: string): { lat: string; lng: string } | null {
+  const normalized = city.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  const match = PROJECT_CITY_COORDS.find((item) =>
+    item.aliases.some((alias) => normalized.includes(alias))
+  );
+  return match ? { lat: match.lat, lng: match.lng } : null;
+}
+
+function buildProjectAddressSuggestions(raw: string): ProjectAddressSuggestion[] {
+  const value = raw.trim();
+  if (value.length < 3) {
+    return [];
+  }
+
+  const suggestions: ProjectAddressSuggestion[] = [];
+  const seen = new Set<string>();
+
+  const pushSuggestion = (street: string, building: string, city: string, entrance: string) => {
+    const normalizedStreet = street.trim();
+    const normalizedBuilding = building.trim();
+    const normalizedCity = city.trim();
+    const normalizedEntrance = entrance.trim();
+    if (!normalizedStreet && !normalizedCity) {
+      return;
+    }
+    const label = [normalizedStreet, normalizedBuilding, normalizedCity, normalizedEntrance]
+      .filter(Boolean)
+      .join(", ");
+    if (!label || seen.has(label.toLowerCase())) {
+      return;
+    }
+    seen.add(label.toLowerCase());
+    const coords = lookupProjectCityCoords(normalizedCity);
+    suggestions.push({
+      key: label.toLowerCase(),
+      label,
+      street: normalizedStreet,
+      building: normalizedBuilding,
+      city: normalizedCity,
+      entrance: normalizedEntrance,
+      lat: coords?.lat || "",
+      lng: coords?.lng || "",
+    });
+  };
+
+  const commaParts = value.split(",").map((part) => part.trim()).filter(Boolean);
+  if (commaParts.length >= 3) {
+    pushSuggestion(
+      commaParts[0] || "",
+      commaParts[1] || "",
+      commaParts[2] || "",
+      commaParts.slice(3).join(", ")
+    );
+  }
+
+  const compactMatch = value.match(
+    /^(.+?)\s+(\d+[A-Za-zА-Яа-я\-\/]*)\s+([A-Za-z\u0590-\u05FF\u0400-\u04FF][A-Za-z\u0590-\u05FF\u0400-\u04FF\s-]*?)(?:\s+([A-Za-z0-9\u0590-\u05FF\u0400-\u04FF-]+))?$/u
+  );
+  if (compactMatch) {
+    pushSuggestion(
+      compactMatch[1] || "",
+      compactMatch[2] || "",
+      compactMatch[3] || "",
+      compactMatch[4] || ""
+    );
+  }
+
+  if (suggestions.length === 0) {
+    pushSuggestion(value, "", "", "");
+  }
+
+  return suggestions;
+}
+
+function projectFormFromDetails(details: ProjectDetailsResponse | null): ProjectFormState {
+  return {
+    code: details?.code || "",
+    name: details?.name || "",
+    planned_start_date: details?.planned_start_date || "",
+    planned_end_date: details?.planned_end_date || "",
+    address: details?.address || "",
+    address_street: details?.address_street || "",
+    address_building: details?.address_building || "",
+    address_city: details?.address_city || "",
+    address_entrance: details?.address_entrance || "",
+    address_lat: details?.address_lat != null ? String(details.address_lat) : "",
+    address_lng: details?.address_lng != null ? String(details.address_lng) : "",
+    address_waze_url: details?.address_waze_url || "",
+    developer_company: details?.developer_company || "",
+    contact_name: details?.contact_name || "",
+    contact_phone: details?.contact_phone || "",
+    developer_phone_alt: details?.developer_phone_alt || "",
+    developer_whatsapp: details?.developer_whatsapp || "",
+    contact_email: details?.contact_email || "",
+    developer_notes: details?.developer_notes || "",
   };
 }
 
@@ -730,6 +1072,13 @@ export default function ProjectsPage() {
   const [loadingProjectRisk, setLoadingProjectRisk] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [projectFlowNotice, setProjectFlowNotice] = useState<string | null>(null);
+  const [projectActionHint, setProjectActionHint] = useState<string | null>(null);
+  const quickActionCopyTimeoutRef = useRef<number | null>(null);
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [projectDialogMode, setProjectDialogMode] = useState<"create" | "edit">("create");
+  const [projectForm, setProjectForm] = useState<ProjectFormState>(emptyProjectForm());
+  const [projectFormFieldErrors, setProjectFormFieldErrors] = useState<ProjectFormFieldErrors>({});
+  const [projectSubmitting, setProjectSubmitting] = useState(false);
   const [manualDoorDialogOpen, setManualDoorDialogOpen] = useState(false);
   const [manualDoorForm, setManualDoorForm] = useState<ManualDoorFormState>(emptyManualDoorForm());
   const [manualDoorSubmitting, setManualDoorSubmitting] = useState(false);
@@ -782,6 +1131,11 @@ export default function ProjectsPage() {
     useState<ProjectImportRunDetails | null>(null);
   const [loadingImportRunDetails, setLoadingImportRunDetails] = useState(false);
   const [deepLinkApplied, setDeepLinkApplied] = useState(false);
+
+  const projectAddressSuggestions = useMemo(
+    () => buildProjectAddressSuggestions(projectForm.address),
+    [projectForm.address]
+  );
   const [deepLinkFocusApplied, setDeepLinkFocusApplied] = useState(false);
   const [matrixHouse, setMatrixHouse] = useState("all");
   const [matrixOrderNumber, setMatrixOrderNumber] = useState("all");
@@ -1761,6 +2115,14 @@ export default function ProjectsPage() {
   }, [failedQueueOffset, failedQueueOnlySelectedProject, selectedProjectId]);
 
   useEffect(() => {
+    if (!projectActionHint) {
+      return;
+    }
+    const timeout = window.setTimeout(() => setProjectActionHint(null), 3200);
+    return () => window.clearTimeout(timeout);
+  }, [projectActionHint]);
+
+  useEffect(() => {
     if (!focusedImportRunId) {
       setFocusedImportRunDetails(null);
       return;
@@ -2053,10 +2415,211 @@ export default function ProjectsPage() {
     setSelectedProjectId(projectId);
   };
 
+  const projectFormPayload = {
+    code: projectForm.code.trim() || null,
+    name: projectForm.name.trim(),
+    planned_start_date: projectForm.planned_start_date || null,
+    planned_end_date: projectForm.planned_end_date || null,
+    address: projectForm.address.trim(),
+    address_street: projectForm.address_street.trim() || null,
+    address_building: projectForm.address_building.trim() || null,
+    address_city: projectForm.address_city.trim() || null,
+    address_entrance: projectForm.address_entrance.trim() || null,
+    address_lat: projectForm.address_lat.trim() ? Number(projectForm.address_lat) : null,
+    address_lng: projectForm.address_lng.trim() ? Number(projectForm.address_lng) : null,
+    address_waze_url: projectForm.address_waze_url.trim() || null,
+    developer_company: projectForm.developer_company.trim() || null,
+    contact_name: projectForm.contact_name.trim() || null,
+    contact_phone: projectForm.contact_phone.trim() || null,
+    developer_phone_alt: projectForm.developer_phone_alt.trim() || null,
+    developer_whatsapp: projectForm.developer_whatsapp.trim() || null,
+    contact_email: projectForm.contact_email.trim() || null,
+    developer_notes: projectForm.developer_notes.trim() || null,
+  };
+  const draftWazeLink = buildDraftWazeLink(projectForm);
+  const draftWhatsappLink = buildDraftWhatsappLink(projectForm);
+  const draftCallLink = normalizeDraftPhone(projectForm.contact_phone)
+    ? `tel:${normalizeDraftPhone(projectForm.contact_phone)}`
+    : null;
+
+  const openCreateProjectDialog = () => {
+    setProjectDialogMode("create");
+    setProjectForm(emptyProjectForm());
+    setProjectFormFieldErrors({});
+    setProjectFlowNotice(null);
+    setProjectActionHint(null);
+    setError(null);
+    setProjectDialogOpen(true);
+  };
+
+  const openEditProjectDialog = () => {
+    if (!projectDetails) {
+      return;
+    }
+    setProjectDialogMode("edit");
+    setProjectForm(projectFormFromDetails(projectDetails));
+    setProjectFormFieldErrors({});
+    setProjectFlowNotice(null);
+    setProjectActionHint(null);
+    setError(null);
+    setProjectDialogOpen(true);
+  };
+
+  const applyProjectAddressSuggestion = (suggestion: ProjectAddressSuggestion) => {
+    setProjectForm((prev) => ({
+      ...prev,
+      address: suggestion.label,
+      address_street: suggestion.street,
+      address_building: suggestion.building,
+      address_city: suggestion.city,
+      address_entrance: suggestion.entrance,
+      address_lat: suggestion.lat,
+      address_lng: suggestion.lng,
+    }));
+    setProjectFormFieldErrors((prev) => {
+      if (!prev.address_waze_url) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next.address_waze_url;
+      return next;
+    });
+  };
+
+  const showProjectActionHint = (message: string) => {
+    setProjectFlowNotice(null);
+    setProjectActionHint(message);
+  };
+
+  const clearProjectPhoneCopyTimer = () => {
+    if (quickActionCopyTimeoutRef.current != null) {
+      window.clearTimeout(quickActionCopyTimeoutRef.current);
+      quickActionCopyTimeoutRef.current = null;
+    }
+  };
+
+  const copyProjectPhone = async (value: string | null | undefined) => {
+    const normalized = normalizeDraftPhone(value || "");
+    if (!normalized) {
+      showProjectActionHint(
+        copy(
+          "Add a primary phone to unlock direct calling.",
+          "Добавьте основной телефон, чтобы включить прямой звонок.",
+          "הוסף טלפון ראשי כדי לפתוח חיוג ישיר."
+        )
+      );
+      return;
+    }
+    const copied = await copyTextToClipboard(normalized);
+    if (copied) {
+      setProjectActionHint(null);
+      setProjectFlowNotice(
+        copy(
+          "Phone number copied.",
+          "Номер телефона скопирован.",
+          "מספר הטלפון הועתק."
+        )
+      );
+    }
+  };
+
+  const scheduleProjectPhoneCopy = (value: string | null | undefined) => {
+    clearProjectPhoneCopyTimer();
+    quickActionCopyTimeoutRef.current = window.setTimeout(() => {
+      void copyProjectPhone(value);
+      quickActionCopyTimeoutRef.current = null;
+    }, 700);
+  };
+
+  const updateProjectFormField = <K extends keyof ProjectFormState>(
+    field: K,
+    value: ProjectFormState[K]
+  ) => {
+    setProjectForm((prev) => ({ ...prev, [field]: value }));
+    if (field in projectFormFieldErrors) {
+      setProjectFormFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field as keyof ProjectFormFieldErrors];
+        return next;
+      });
+    }
+  };
+
+  const handleProjectSubmit = async () => {
+    if (!projectForm.name.trim()) {
+      setError(copy("Project name is required.", "Название проекта обязательно.", "שם הפרויקט הוא שדה חובה."));
+      return;
+    }
+
+    setProjectSubmitting(true);
+    setError(null);
+    setProjectFormFieldErrors({});
+
+    try {
+      if (projectDialogMode === "create") {
+        const response = await apiFetch<{ id: string }>("/api/v1/admin/projects", {
+          method: "POST",
+          body: JSON.stringify(projectFormPayload),
+        });
+        await loadProjects();
+        setSelectedProjectId(response.id);
+        setProjectDialogOpen(false);
+        setProjectForm(emptyProjectForm());
+        setProjectFlowNotice(
+          copy(
+            "Project created. Continue with address, contacts and import flow.",
+            "Проект создан. Продолжайте с адресом, контактами и импортом.",
+            "הפרויקט נוצר. המשך עם כתובת, אנשי קשר וזרימת הייבוא."
+          )
+        );
+        return;
+      }
+
+      if (!selectedProjectId) {
+        return;
+      }
+      await apiFetch(`/api/v1/admin/projects/${selectedProjectId}`, {
+        method: "PATCH",
+        body: JSON.stringify(projectFormPayload),
+      });
+      await loadProjects();
+      await loadProjectDetails(selectedProjectId);
+      setProjectDialogOpen(false);
+      setProjectFlowNotice(
+        copy(
+          "Project settings updated. Quick actions are ready where data is available.",
+          "Настройки проекта обновлены. Быстрые действия готовы там, где данные заполнены.",
+          "הגדרות הפרויקט עודכנו. פעולות מהירות מוכנות היכן שהנתונים מולאו."
+        )
+      );
+    } catch (e) {
+      if (e instanceof ApiError) {
+        const fieldFromMeta = typeof e.meta?.field === "string" ? e.meta.field : null;
+        const apiField = (e.field || fieldFromMeta) as keyof ProjectFormFieldErrors | undefined;
+        if (e.code === "INVALID_PHONE" && apiField && apiField in emptyProjectForm()) {
+          setProjectFormFieldErrors((prev) => ({
+            ...prev,
+            [apiField]: buildProjectFieldErrorCopy(apiField, locale),
+          }));
+        }
+        if (e.code === "INVALID_WAZE_URL") {
+          setProjectFormFieldErrors((prev) => ({
+            ...prev,
+            address_waze_url: buildProjectFieldErrorCopy("address_waze_url", locale),
+          }));
+        }
+      }
+      setError(readableApiError(e, locale, copy("Unable to save project settings.", "Не удалось сохранить настройки проекта.", "לא ניתן לשמור את הגדרות הפרויקט.")));
+    } finally {
+      setProjectSubmitting(false);
+    }
+  };
+
   const openManualDoorDialog = () => {
     const nextForm = emptyManualDoorForm();
     setManualDoorForm(nextForm);
     setProjectFlowNotice(null);
+    setProjectActionHint(null);
     setError(null);
     setManualDoorDialogOpen(true);
   };
@@ -2151,6 +2714,7 @@ export default function ProjectsPage() {
   const openAdditionalWorkDialog = () => {
     setAdditionalWorkForm(emptyAdditionalWorkForm());
     setProjectFlowNotice(null);
+    setProjectActionHint(null);
     setError(null);
     setAdditionalWorkDialogOpen(true);
   };
@@ -2241,6 +2805,7 @@ export default function ProjectsPage() {
   const openUrgencyDialog = () => {
     setUrgencyForm(emptyUrgencySurchargeForm());
     setProjectFlowNotice(null);
+    setProjectActionHint(null);
     setError(null);
     setUrgencyDialogOpen(true);
   };
@@ -2444,6 +3009,12 @@ export default function ProjectsPage() {
             <span>{projectFlowNotice}</span>
           </div>
         )}
+        {projectActionHint && (
+          <div className="mb-4 rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))] flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>{projectActionHint}</span>
+          </div>
+        )}
 
         {deepLinkedFailedCount > 0 && (
           <div className="mb-4 rounded-lg border border-[hsl(var(--accent)/0.35)] bg-[hsl(var(--accent)/0.10)] px-4 py-3 text-[13px] text-foreground">
@@ -2456,15 +3027,21 @@ export default function ProjectsPage() {
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
           <section className="surface-panel xl:col-span-1">
             <div className="mb-4">
-              <div className="min-w-0">
-                <div className="page-eyebrow">{tt("projects.projectList")}</div>
-                <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
-                  {tt("projects.portfolioNavigator")}
-                </h2>
-                <p className="mt-2 text-[13px] leading-6 text-muted-foreground">
-                  {tt("projects.filteredCount")} {filteredProjects.length} · {tt("projects.selectedCount")}{" "}
-                  {bulkSelectedProjectIds.length}
-                </p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="page-eyebrow">{tt("projects.projectList")}</div>
+                  <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
+                    {tt("projects.portfolioNavigator")}
+                  </h2>
+                  <p className="mt-2 text-[13px] leading-6 text-muted-foreground">
+                    {tt("projects.filteredCount")} {filteredProjects.length} · {tt("projects.selectedCount")}{" "}
+                    {bulkSelectedProjectIds.length}
+                  </p>
+                </div>
+                <Button type="button" onClick={openCreateProjectDialog} className="gap-2 self-start">
+                  <Plus className="h-4 w-4" />
+                  {copy("New project", "Новый проект", "פרויקט חדש")}
+                </Button>
               </div>
             </div>
             <div className="relative mb-3">
@@ -2623,6 +3200,176 @@ export default function ProjectsPage() {
                       {projectDetails?.contact_name
                         ? `${t("projects.contact")}: ${projectDetails.contact_name}`
                         : t("projects.noContactAssigned")}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="surface-panel space-y-4">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="max-w-3xl">
+                      <div className="page-eyebrow">
+                        {copy("Project settings", "Настройки проекта", "הגדרות פרויקט")}
+                      </div>
+                      <h3 className="mt-2 text-[15px] font-semibold leading-tight text-foreground">
+                        {projectDetails?.code
+                          ? `${projectDetails.code} · ${selectedProject.name}`
+                          : selectedProject.name}
+                      </h3>
+                      <p className="mt-2 text-[12px] leading-6 text-muted-foreground">
+                        {projectDetails?.address || copy("Add the site address and developer contact to unlock Waze, WhatsApp and direct calling.", "Добавьте адрес объекта и контакт застройщика, чтобы включить Waze, WhatsApp и прямой звонок.", "הוסף כתובת אתר ואיש קשר של היזם כדי להפעיל Waze, WhatsApp וחיוג ישיר.")}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                        {projectDetails?.planned_start_date ? (
+                          <span className="metric-chip">
+                            {copy("Start", "Старт", "התחלה")} {projectDetails.planned_start_date}
+                          </span>
+                        ) : null}
+                        {projectDetails?.planned_end_date ? (
+                          <span className="metric-chip">
+                            {copy("Finish", "Финиш", "סיום")} {projectDetails.planned_end_date}
+                          </span>
+                        ) : null}
+                        <span className="metric-chip">
+                          {copy("Contact", "Контакт", "איש קשר")} {projectDetails?.contact_name || copy("missing", "не заполнен", "חסר")}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap gap-2 lg:justify-end">
+                      <Button type="button" variant="outline" onClick={openEditProjectDialog} className="gap-2">
+                        <PencilLine className="h-4 w-4" />
+                        {copy("Edit project", "Редактировать проект", "ערוך פרויקט")}
+                      </Button>
+                      {projectDetails?.waze_deep_link ? (
+                        <a
+                          href={projectDetails.waze_deep_link}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={projectDetails.address || ""}
+                          className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                        >
+                          <MapPinned className="h-4 w-4" />
+                          Waze
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            showProjectActionHint(
+                              copy(
+                                "Add address in project settings to unlock Waze.",
+                                "Добавьте адрес в настройках проекта, чтобы включить Waze.",
+                                "הוסף כתובת בהגדרות הפרויקט כדי לפתוח את Waze."
+                              )
+                            )
+                          }
+                          className="inline-flex items-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
+                        >
+                          <MapPinned className="h-4 w-4" />
+                          Waze
+                        </button>
+                      )}
+                      {projectDetails?.whatsapp_deep_link ? (
+                        <a
+                          href={projectDetails.whatsapp_deep_link}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={[projectDetails.contact_name, projectDetails.developer_whatsapp || projectDetails.contact_phone].filter(Boolean).join(" · ")}
+                          className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          WhatsApp
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            showProjectActionHint(
+                              copy(
+                                "Add a contact phone or WhatsApp number to unlock WhatsApp.",
+                                "Добавьте телефон контакта или номер WhatsApp, чтобы включить WhatsApp.",
+                                "הוסף טלפון איש קשר או מספר WhatsApp כדי לפתוח את WhatsApp."
+                              )
+                            )
+                          }
+                          className="inline-flex items-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          WhatsApp
+                        </button>
+                      )}
+                      {projectDetails?.call_deep_link ? (
+                        <a
+                          href={projectDetails.call_deep_link}
+                          title={projectDetails.contact_phone || ""}
+                          className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                        >
+                          <Phone className="h-4 w-4" />
+                          {copy("Call", "Позвонить", "התקשר")}
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            showProjectActionHint(
+                              copy(
+                                "Add a primary phone in project settings to unlock calling.",
+                                "Добавьте основной телефон в настройках проекта, чтобы включить звонок.",
+                                "הוסף טלפון ראשי בהגדרות הפרויקט כדי לפתוח חיוג."
+                              )
+                            )
+                          }
+                          className="inline-flex items-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
+                        >
+                          <Phone className="h-4 w-4" />
+                          {copy("Call", "Позвонить", "התקשר")}
+                        </button>
+                      )}
+                      {projectDetails?.contact_phone ? (
+                        <button
+                          type="button"
+                          title={copy(
+                            "Click or hold to copy the number",
+                            "Нажмите или удерживайте, чтобы скопировать номер",
+                            "לחץ או החזק כדי להעתיק את המספר"
+                          )}
+                          onClick={() => void copyProjectPhone(projectDetails.contact_phone)}
+                          onContextMenu={(event) => {
+                            event.preventDefault();
+                            void copyProjectPhone(projectDetails.contact_phone);
+                          }}
+                          onPointerDown={() => scheduleProjectPhoneCopy(projectDetails.contact_phone)}
+                          onPointerUp={clearProjectPhoneCopyTimer}
+                          onPointerLeave={clearProjectPhoneCopyTimer}
+                          className="inline-flex items-center rounded-xl border border-border/70 bg-background/60 px-3 py-2 text-sm font-medium tabular-nums text-foreground transition-colors hover:bg-muted"
+                        >
+                          {formatReadablePhone(projectDetails.contact_phone)}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 text-[12px] text-muted-foreground">
+                    <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+                      <div className="font-medium text-foreground">{copy("Developer", "Застройщик", "יזם")}</div>
+                      <div className="mt-1">{projectDetails?.developer_company || "—"}</div>
+                    </div>
+                    <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+                      <div className="font-medium text-foreground">{copy("Contact", "Контакт", "איש קשר")}</div>
+                      <div className="mt-1">{projectDetails?.contact_name || "—"}</div>
+                      <div className="mt-1">{projectDetails?.contact_phone ? formatReadablePhone(projectDetails.contact_phone) : "—"}</div>
+                    </div>
+                    <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+                      <div className="font-medium text-foreground">WhatsApp</div>
+                      <div className="mt-1">
+                        {projectDetails?.developer_whatsapp || projectDetails?.contact_phone
+                          ? formatReadablePhone(projectDetails?.developer_whatsapp || projectDetails?.contact_phone)
+                          : "—"}
+                      </div>
+                      <div className="mt-1">{projectDetails?.contact_email || "—"}</div>
+                    </div>
+                    <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
+                      <div className="font-medium text-foreground">{copy("Notes", "Заметки", "הערות")}</div>
+                      <div className="mt-1 line-clamp-3">{projectDetails?.developer_notes || "—"}</div>
                     </div>
                   </div>
                 </div>
@@ -4679,6 +5426,302 @@ export default function ProjectsPage() {
           </section>
         </div>
       </div>
+
+      <Dialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen}>
+        <DialogContent className="max-w-[920px]">
+          <DialogHeader>
+            <DialogTitle>
+              {projectDialogMode === "create"
+                ? copy("Create project", "Создать проект", "צור פרויקט")
+                : copy("Edit project", "Редактировать проект", "ערוך פרויקט")}
+            </DialogTitle>
+            <DialogDescription>
+              {copy(
+                "Keep one structured project record: core data, site address and developer contact for fast field actions.",
+                "Держите одну структурированную карточку проекта: основная информация, адрес объекта и контакт застройщика для быстрых полевых действий.",
+                "שמור כרטיס פרויקט אחד ומסודר: נתוני בסיס, כתובת האתר ואיש קשר של היזם לפעולות מהירות בשטח."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Accordion type="multiple" defaultValue={["main", "address", "contact"]} className="w-full">
+            <AccordionItem value="main">
+              <AccordionTrigger className="text-left">
+                {copy("Main information", "Основная информация", "מידע בסיסי")}
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-code">{copy("Project code", "Код проекта", "קוד פרויקט")}</Label>
+                    <Input id="project-form-code" value={projectForm.code} onChange={(event) => setProjectForm((prev) => ({ ...prev, code: event.target.value }))} placeholder="PRJ-001" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-name">{copy("Project name", "Название проекта", "שם הפרויקט")}</Label>
+                    <Input id="project-form-name" value={projectForm.name} onChange={(event) => setProjectForm((prev) => ({ ...prev, name: event.target.value }))} placeholder={copy("Ashdod Tower A", "Ашдод Тауэр A", "מגדל אשדוד A")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-start">{copy("Planned start", "Плановая дата начала", "תאריך התחלה מתוכנן")}</Label>
+                    <Input id="project-form-start" type="date" value={projectForm.planned_start_date} onChange={(event) => setProjectForm((prev) => ({ ...prev, planned_start_date: event.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-end">{copy("Planned finish", "Плановая дата завершения", "תאריך סיום מתוכנן")}</Label>
+                    <Input id="project-form-end" type="date" value={projectForm.planned_end_date} onChange={(event) => setProjectForm((prev) => ({ ...prev, planned_end_date: event.target.value }))} />
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="address">
+              <AccordionTrigger className="text-left">
+                {copy("Site address", "Адрес объекта", "כתובת האתר")}
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="project-form-address-search">{copy("Address search / fallback", "Поиск адреса / запасное поле", "חיפוש כתובת / שדה חלופי")}</Label>
+                    <Input id="project-form-address-search" value={projectForm.address} onChange={(event) => updateProjectFormField("address", event.target.value)} placeholder={copy("Street, building, city", "Улица, дом, город", "רחוב, בניין, עיר")} />
+                    {projectAddressSuggestions.length > 0 ? (
+                      <div className="rounded-2xl border border-border/70 bg-background/60 p-3">
+                        <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                          {copy("Address suggestions", "Подсказки адреса", "הצעות כתובת")}
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {projectAddressSuggestions.map((suggestion) => (
+                            <button
+                              key={suggestion.key}
+                              type="button"
+                              onClick={() => applyProjectAddressSuggestion(suggestion)}
+                              className="inline-flex items-center rounded-xl border border-border/70 bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+                            >
+                              {suggestion.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="mt-2 text-xs leading-5 text-muted-foreground">
+                          {copy(
+                            "Choose a suggestion to autofill street, building, city and entrance. Coordinates are estimated from the city when available.",
+                            "Выберите подсказку, чтобы автозаполнить улицу, дом, город и подъезд. Координаты подставляются по городу, если он распознан.",
+                            "בחר הצעה כדי למלא אוטומטית רחוב, בניין, עיר וכניסה. קואורדינטות יושלמו לפי העיר אם היא זוהתה."
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-street">{copy("Street", "Улица", "רחוב")}</Label>
+                    <Input id="project-form-street" value={projectForm.address_street} onChange={(event) => updateProjectFormField("address_street", event.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-building">{copy("Building", "Дом", "בניין")}</Label>
+                    <Input id="project-form-building" value={projectForm.address_building} onChange={(event) => updateProjectFormField("address_building", event.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-city">{copy("City", "Город", "עיר")}</Label>
+                    <Input id="project-form-city" value={projectForm.address_city} onChange={(event) => updateProjectFormField("address_city", event.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-entrance">{copy("Entrance", "Подъезд / вход", "כניסה")}</Label>
+                    <Input id="project-form-entrance" value={projectForm.address_entrance} onChange={(event) => updateProjectFormField("address_entrance", event.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-lat">Lat</Label>
+                    <Input id="project-form-lat" value={projectForm.address_lat} onChange={(event) => updateProjectFormField("address_lat", event.target.value)} placeholder="31.2456789" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-lng">Lng</Label>
+                    <Input id="project-form-lng" value={projectForm.address_lng} onChange={(event) => updateProjectFormField("address_lng", event.target.value)} placeholder="34.7912345" />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="project-form-waze">{copy("Waze URL override", "Ссылка Waze вручную", "קישור Waze ידני")}</Label>
+                    <Input id="project-form-waze" value={projectForm.address_waze_url} onChange={(event) => updateProjectFormField("address_waze_url", event.target.value)} placeholder="https://www.waze.com/ul?..." />
+                    {projectFormFieldErrors.address_waze_url ? (
+                      <div className="text-xs text-destructive">{projectFormFieldErrors.address_waze_url}</div>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href={draftWazeLink || undefined}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-disabled={!draftWazeLink}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium",
+                        draftWazeLink ? "border-border/70 bg-background/75 text-foreground hover:bg-muted" : "cursor-not-allowed border-dashed border-border/70 bg-muted/40 text-muted-foreground"
+                      )}
+                    >
+                      <MapPinned className="h-4 w-4" />
+                      {copy("Test Waze", "Проверить Waze", "בדוק Waze")}
+                    </a>
+                    <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+                      {buildDraftProjectAddress(projectForm) || copy("No address yet", "Адрес пока не заполнен", "הכתובת עדיין לא מולאה")}
+                    </div>
+                  </div>
+                  <div className="overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.94),hsl(var(--accent)/0.08))] text-sm">
+                    {buildDraftMapPreviewUrl(projectForm) ? (
+                      <div className="border-b border-border/60 bg-muted/10 p-2">
+                        <iframe
+                          title={copy("Map preview", "Предпросмотр карты", "תצוגה מקדימה של המפה")}
+                          src={buildDraftMapPreviewUrl(projectForm) || undefined}
+                          className="h-36 w-full rounded-xl border border-border/60 bg-background"
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                        />
+                      </div>
+                    ) : null}
+                    <div className="px-4 py-4">
+                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                      {copy("Route preview", "Предпросмотр маршрута", "תצוגת מסלול")}
+                    </div>
+                    <div className="mt-3 font-medium text-foreground">
+                      {buildDraftProjectAddress(projectForm) || copy("Awaiting address", "Ждём адрес", "ממתין לכתובת")}
+                    </div>
+                    <div className="mt-2 text-xs leading-5 text-muted-foreground">
+                      {projectForm.address_lat.trim() && projectForm.address_lng.trim()
+                        ? `${copy("Coordinates", "Координаты", "קואורדינטות")}: ${projectForm.address_lat}, ${projectForm.address_lng}`
+                        : copy("No coordinates yet. Choose an address suggestion or fill them manually.", "Координаты пока не заполнены. Выберите подсказку адреса или заполните их вручную.", "עדיין אין קואורדינטות. בחר הצעת כתובת או מלא ידנית.")}
+                    </div>
+                    <div className="mt-3 text-xs text-muted-foreground">
+                      {draftWazeLink
+                        ? copy("Waze link is ready for a quick field check.", "Ссылка Waze готова для быстрой полевой проверки.", "קישור Waze מוכן לבדיקה מהירה בשטח.")
+                        : copy("Fill address data to unlock navigation.", "Заполните адрес, чтобы включить навигацию.", "מלא נתוני כתובת כדי לפתוח ניווט.")}
+                    </div>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="contact">
+              <AccordionTrigger className="text-left">
+                {copy("Developer contact", "Контакты застройщика", "אנשי קשר של היזם")}
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-dev-company">{copy("Developer company", "Компания застройщика", "חברת יזם")}</Label>
+                    <Input id="project-form-dev-company" value={projectForm.developer_company} onChange={(event) => updateProjectFormField("developer_company", event.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-contact-name">{copy("Contact name", "Имя ответственного", "שם איש קשר")}</Label>
+                    <Input id="project-form-contact-name" value={projectForm.contact_name} onChange={(event) => updateProjectFormField("contact_name", event.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-phone">{copy("Primary phone", "Основной телефон", "טלפון ראשי")}</Label>
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex h-10 items-center rounded-xl border border-border/70 bg-muted/30 px-3 text-xs font-medium text-muted-foreground">
+                        {copy("🇮🇱 +972", "🇮🇱 +972", "🇮🇱 +972")}
+                      </div>
+                      <Input
+                        id="project-form-phone"
+                        value={projectForm.contact_phone}
+                        onChange={(event) => updateProjectFormField("contact_phone", formatProjectPhoneInput(event.target.value))}
+                        placeholder="+972501234567"
+                      />
+                    </div>
+                    {projectFormFieldErrors.contact_phone ? (
+                      <div className="text-xs text-destructive">{projectFormFieldErrors.contact_phone}</div>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-phone-alt">{copy("Alt phone", "Доп. телефон", "טלפון נוסף")}</Label>
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex h-10 items-center rounded-xl border border-border/70 bg-muted/30 px-3 text-xs font-medium text-muted-foreground">
+                        {copy("🇮🇱 +972", "🇮🇱 +972", "🇮🇱 +972")}
+                      </div>
+                      <Input
+                        id="project-form-phone-alt"
+                        value={projectForm.developer_phone_alt}
+                        onChange={(event) => updateProjectFormField("developer_phone_alt", formatProjectPhoneInput(event.target.value))}
+                        placeholder="+972501234568"
+                      />
+                    </div>
+                    {projectFormFieldErrors.developer_phone_alt ? (
+                      <div className="text-xs text-destructive">{projectFormFieldErrors.developer_phone_alt}</div>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-whatsapp">WhatsApp</Label>
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex h-10 items-center rounded-xl border border-border/70 bg-muted/30 px-3 text-xs font-medium text-muted-foreground">
+                        {copy("🇮🇱 +972", "🇮🇱 +972", "🇮🇱 +972")}
+                      </div>
+                      <Input
+                        id="project-form-whatsapp"
+                        value={projectForm.developer_whatsapp}
+                        onChange={(event) => updateProjectFormField("developer_whatsapp", formatProjectPhoneInput(event.target.value))}
+                        placeholder="+972501234569"
+                      />
+                    </div>
+                    {projectFormFieldErrors.developer_whatsapp ? (
+                      <div className="text-xs text-destructive">{projectFormFieldErrors.developer_whatsapp}</div>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project-form-email">Email</Label>
+                    <Input id="project-form-email" type="email" value={projectForm.contact_email} onChange={(event) => updateProjectFormField("contact_email", event.target.value)} placeholder="contact@example.com" />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="project-form-notes">{copy("Notes", "Заметки", "הערות")}</Label>
+                    <textarea
+                      id="project-form-notes"
+                      value={projectForm.developer_notes}
+                      onChange={(event) => updateProjectFormField("developer_notes", event.target.value)}
+                      className="control-textarea min-h-[110px] w-full"
+                      placeholder={copy("Access rules, gate, working hours, site notes", "Пропуск, ворота, режим работы, заметки по объекту", "כללי כניסה, שער, שעות עבודה, הערות אתר")}
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <a
+                    href={draftWhatsappLink || undefined}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-disabled={!draftWhatsappLink}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium",
+                      draftWhatsappLink ? "border-border/70 bg-background/75 text-foreground hover:bg-muted" : "cursor-not-allowed border-dashed border-border/70 bg-muted/40 text-muted-foreground"
+                    )}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    {copy("Test WhatsApp", "Проверить WhatsApp", "בדוק WhatsApp")}
+                  </a>
+                  <a
+                    href={draftCallLink || undefined}
+                    aria-disabled={!draftCallLink}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium",
+                      draftCallLink ? "border-border/70 bg-background/75 text-foreground hover:bg-muted" : "cursor-not-allowed border-dashed border-border/70 bg-muted/40 text-muted-foreground"
+                    )}
+                  >
+                    <Phone className="h-4 w-4" />
+                    {copy("Test call", "Проверить звонок", "בדוק שיחה")}
+                  </a>
+                  {!projectForm.contact_name.trim() && !projectForm.contact_phone.trim() && !projectForm.developer_whatsapp.trim() ? (
+                    <div className="rounded-xl border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-3 py-2 text-xs text-[hsl(var(--warning-foreground))]">
+                      {copy("Add contacts to unlock quick field actions.", "Добавьте контакты, чтобы включить быстрые полевые действия.", "הוסף אנשי קשר כדי להפעיל פעולות שטח מהירות.")}
+                    </div>
+                  ) : null}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProjectDialogOpen(false)} disabled={projectSubmitting}>
+              {copy("Cancel", "Отмена", "ביטול")}
+            </Button>
+            <Button onClick={() => void handleProjectSubmit()} disabled={projectSubmitting}>
+              {projectSubmitting
+                ? copy("Saving...", "Сохраняем...", "שומר...")
+                : projectDialogMode === "create"
+                  ? copy("Create project", "Создать проект", "צור פרויקט")
+                  : copy("Save changes", "Сохранить изменения", "שמור שינויים")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={urgencyDialogOpen} onOpenChange={setUrgencyDialogOpen}>
         <DialogContent className="max-w-[760px]">

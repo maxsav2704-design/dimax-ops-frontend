@@ -16,7 +16,13 @@ const projectDetails = {
   id: "project-1",
   name: "Project One",
   address: "Address",
-  waze_url: null,
+  waze_url: "https://waze.example/project-1",
+  whatsapp_url: "https://wa.me/972501234567",
+  call_url: "tel:+972501234567",
+  contact_name: "Yael Cohen",
+  contact_phone: "+972501234567",
+  developer_company: "DIMAX Dev Co",
+  developer_notes: "Gate code 7788, call before arrival.",
   status: "IN_PROGRESS",
   server_time: "2026-03-07T09:00:00Z",
   reasons_catalog: [{ id: "reason-1", code: "R1", name: "Blocked" }],
@@ -180,6 +186,26 @@ describe("InstallerProjectPage", () => {
     renderSubject();
 
     expect(await screen.findByText("No open issues.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Address" })).toHaveAttribute(
+      "href",
+      "https://waze.example/project-1"
+    );
+    expect(screen.getByRole("link", { name: "Open Waze" })).toHaveAttribute(
+      "href",
+      "https://waze.example/project-1"
+    );
+    expect(screen.getByRole("link", { name: "Open WhatsApp" })).toHaveAttribute(
+      "href",
+      "https://wa.me/972501234567"
+    );
+    expect(screen.getByRole("link", { name: "Call contact" })).toHaveAttribute(
+      "href",
+      "tel:+972501234567"
+    );
+    expect(screen.getByText("DIMAX Dev Co")).toBeInTheDocument();
+    expect(screen.getByText("Yael Cohen")).toBeInTheDocument();
+    expect(screen.getByText("Developer contact")).toBeInTheDocument();
+    expect(screen.getByText("Gate code 7788, call before arrival.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open sync queue" })).toHaveAttribute(
       "href",
       "/installer/sync-queue?project_id=project-1"
@@ -188,7 +214,37 @@ describe("InstallerProjectPage", () => {
       "href",
       "/installer/earnings?project_id=project-1"
     );
-  });
+  }, 15000);
+
+  it("keeps installer quick actions visible and shows guidance when project contact data is missing", async () => {
+    setupApiMock({
+      ...projectDetails,
+      address: null,
+      waze_url: null,
+      whatsapp_url: null,
+      call_url: null,
+      contact_name: null,
+      contact_phone: null,
+      developer_company: null,
+      developer_notes: null,
+    });
+    renderSubject();
+
+    expect(await screen.findByText("Project One")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Waze" }));
+    expect(await screen.findByText("Waze route not configured")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open WhatsApp" }));
+    expect(
+      await screen.findByText("Add contact phone to unlock WhatsApp")
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Call contact" }));
+    expect(
+      await screen.findByText("Add primary phone to unlock calling")
+    ).toBeInTheDocument();
+  }, 15000);
 
   it("applies issue continuity filters from url query params", async () => {
     window.history.replaceState(

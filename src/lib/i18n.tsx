@@ -820,7 +820,7 @@ const messages: Record<Locale, Messages> = {
     "installerProject.error": "Failed to load project details.",
     "installerProject.contextCopy":
       "Move between the live schedule, issue triage and add-on facts without losing the working door context.",
-    "installerProject.noAddress": "No address",
+    "installerProject.noAddress": "Address not specified",
     "installerProject.statusPrefix": "Status",
     "installerProject.doors": "Doors",
     "installerProject.visible": "Visible",
@@ -2539,7 +2539,7 @@ const messages: Record<Locale, Messages> = {
     "installerProject.openIssues": "תקלות פתוחות",
     "installerProject.error": "לא ניתן לטעון את פרטי הפרויקט.",
     "installerProject.contextCopy": "עברו בין לוח הזמנים, triage תקלות ותיעוד תוספות בלי לאבד את הקשר הדלת הפעילה.",
-    "installerProject.noAddress": "אין כתובת",
+    "installerProject.noAddress": "הכתובת לא צוינה",
     "installerProject.statusPrefix": "סטטוס",
     "installerProject.doors": "דלתות",
     "installerProject.visible": "מוצג",

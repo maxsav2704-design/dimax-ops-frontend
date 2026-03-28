@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { RefreshCcw } from "lucide-react";
+import { MapPinned, RefreshCcw } from "lucide-react";
 
 import { fetchInstallerWorkspace } from "@/lib/installer-api";
 import { readableApiError } from "@/lib/api-error-display";
@@ -632,9 +632,26 @@ export default function InstallerWorkspacePage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-medium">{project.name}</div>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    {project.address || copy("No address", "Нет адреса", "אין כתובת")}
-                  </div>
+                  {project.waze_url && project.address ? (
+                    <a
+                      href={project.waze_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+                    >
+                      <MapPinned className="h-3.5 w-3.5" />
+                      {project.address}
+                    </a>
+                  ) : (
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      {project.address ||
+                        copy(
+                          "Address not specified",
+                          "Адрес не указан",
+                          "הכתובת לא צוינה"
+                        )}
+                    </div>
+                  )}
                 </div>
                 <span className="rounded-lg border border-border/70 bg-background/70 px-2.5 py-1 text-xs">
                   {project.status}

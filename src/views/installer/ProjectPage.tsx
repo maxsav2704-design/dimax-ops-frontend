@@ -1,9 +1,9 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Wrench } from "lucide-react";
+import { ArrowLeft, MapPinned, MessageCircle, Phone, Wrench } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
@@ -106,6 +106,12 @@ type InstallerProjectDetailsResponse = {
   name: string;
   address: string | null;
   waze_url: string | null;
+  whatsapp_url?: string | null;
+  call_url?: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  developer_company?: string | null;
+  developer_notes?: string | null;
   status: string;
   doors: InstallerDoor[];
   issues_open: InstallerIssue[];
@@ -142,6 +148,27 @@ function toAnchorId(value: string): string {
 type InstallerProjectPageProps = {
   projectId: string;
 };
+
+function normalizePhoneForDisplay(value: string | null | undefined): string {
+  const trimmed = (value || "").trim();
+  if (!trimmed) {
+    return "";
+  }
+  const digits = trimmed.replace(/[^\d+]/g, "");
+  if (digits.startsWith("+972") && digits.length === 13) {
+    return `+972 ${digits.slice(4, 6)}-${digits.slice(6, 9)}-${digits.slice(9)}`;
+  }
+  return trimmed;
+}
+
+async function copyProjectPhoneToClipboard(value: string | null | undefined): Promise<boolean> {
+  const trimmed = (value || "").trim();
+  if (!trimmed || typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+    return false;
+  }
+  await navigator.clipboard.writeText(trimmed);
+  return true;
+}
 
 type DoorQuickFilter = "ALL" | "NOT_INSTALLED" | "INSTALLED" | "LOCKED" | "WITH_ISSUES";
 
@@ -188,6 +215,8 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
   const [issueSearch, setIssueSearch] = useState("");
   const [issueStatusFilter, setIssueStatusFilter] = useState("ALL");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionHint, setActionHint] = useState<string | null>(null);
+  const quickActionCopyTimeoutRef = useRef<number | null>(null);
 
   const detailsQuery = useQuery({
     queryKey: ["installer-project-details", projectId],
@@ -199,6 +228,43 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
   const details = detailsQuery.data;
   const reasons = details?.reasons_catalog || [];
   const addonTypes = details?.addons.types || [];
+
+  useEffect(() => {
+    if (!actionHint) {
+      return;
+    }
+    const timeout = window.setTimeout(() => setActionHint(null), 3200);
+    return () => window.clearTimeout(timeout);
+  }, [actionHint]);
+
+  const clearPhoneCopyTimer = () => {
+    if (quickActionCopyTimeoutRef.current != null) {
+      window.clearTimeout(quickActionCopyTimeoutRef.current);
+      quickActionCopyTimeoutRef.current = null;
+    }
+  };
+
+  const showActionHint = (message: string) => {
+    setActionError(null);
+    setActionHint(message);
+  };
+
+  const handleCopyProjectPhone = async (value: string | null | undefined) => {
+    const copied = await copyProjectPhoneToClipboard(value);
+    if (copied) {
+      setActionHint(
+        copy("Phone number copied.", "Номер телефона скопирован.", "מספר הטלפון הועתק.")
+      );
+    }
+  };
+
+  const schedulePhoneCopy = (value: string | null | undefined) => {
+    clearPhoneCopyTimer();
+    quickActionCopyTimeoutRef.current = window.setTimeout(() => {
+      void handleCopyProjectPhone(value);
+      quickActionCopyTimeoutRef.current = null;
+    }, 700);
+  };
 
   const orderOptions = useMemo(() => {
     const values = new Set<string>();
@@ -582,9 +648,25 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
             <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
               {details?.name || t("installerProject.projectDetails")}
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
-              {details?.address || t("installerProject.noAddress")} | {t("installerProject.statusPrefix")}: {details?.status || "--"}
-            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm leading-6 text-muted-foreground sm:text-[15px]">
+              {details?.waze_url && details?.address ? (
+                <a
+                  href={details.waze_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 underline-offset-4 transition-colors hover:text-foreground hover:underline"
+                >
+                  <MapPinned className="h-4 w-4" />
+                  {details.address}
+                </a>
+              ) : (
+                <span>{details?.address || t("installerProject.noAddress")}</span>
+              )}
+              <span>|</span>
+              <span>
+                {t("installerProject.statusPrefix")}: {details?.status || "--"}
+              </span>
+            </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="metric-chip">{t("installerProject.doors")} {details?.doors.length ?? "--"}</span>
               <span className="metric-chip">
@@ -637,11 +719,124 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   {t("installerProject.openWaze")}
                 </a>
               ) : (
-                <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-4 py-3 text-sm text-muted-foreground">
-                  {t("installerProject.noWaze")}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => showActionHint(t("installerProject.noWaze"))}
+                  className="rounded-xl border border-dashed border-border/70 bg-background/40 px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted"
+                >
+                  {copy("Open Waze", "Открыть Waze", "פתח Waze")}
+                </button>
+              )}
+              {details?.whatsapp_url ? (
+                <a
+                  href={details.whatsapp_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  {copy("Open WhatsApp", "Открыть WhatsApp", "פתח WhatsApp")}
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    showActionHint(
+                      copy(
+                        "Add contact phone to unlock WhatsApp",
+                        "Добавьте телефон контакта, чтобы включить WhatsApp",
+                        "הוסף טלפון איש קשר כדי לפתוח WhatsApp"
+                      )
+                    )
+                  }
+                  className="rounded-xl border border-dashed border-border/70 bg-background/40 px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted"
+                >
+                  {copy("Open WhatsApp", "Открыть WhatsApp", "פתח WhatsApp")}
+                </button>
+              )}
+              {details?.call_url ? (
+                <>
+                  <a
+                    href={details.call_url}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                  >
+                    <Phone className="h-4 w-4" />
+                    {copy("Call contact", "Позвонить контакту", "התקשר לאיש הקשר")}
+                  </a>
+                  <button
+                    type="button"
+                    title={copy(
+                      "Click or hold to copy the number",
+                      "Нажмите или удерживайте, чтобы скопировать номер",
+                      "לחץ או החזק כדי להעתיק את המספר"
+                    )}
+                    onClick={() => void handleCopyProjectPhone(details.contact_phone)}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      void handleCopyProjectPhone(details.contact_phone);
+                    }}
+                    onPointerDown={() => schedulePhoneCopy(details.contact_phone)}
+                    onPointerUp={clearPhoneCopyTimer}
+                    onPointerLeave={clearPhoneCopyTimer}
+                    className="inline-flex items-center justify-center rounded-xl border border-border/70 bg-background/60 px-4 py-3 text-sm font-medium tabular-nums text-foreground transition-colors hover:bg-muted"
+                  >
+                    {normalizePhoneForDisplay(details.contact_phone)}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    showActionHint(
+                      copy(
+                        "Add primary phone to unlock calling",
+                        "Добавьте основной телефон, чтобы включить звонок",
+                        "הוסף טלפון ראשי כדי לפתוח חיוג"
+                      )
+                    )
+                  }
+                  className="rounded-xl border border-dashed border-border/70 bg-background/40 px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted"
+                >
+                  {copy("Call contact", "Позвонить контакту", "התקשר לאיש הקשר")}
+                </button>
               )}
             </div>
+            <details className="rounded-xl border border-border/70 bg-background/60 px-3 py-3 text-sm">
+              <summary className="cursor-pointer list-none font-medium text-foreground">
+                {copy("Developer contact", "Контакт застройщика", "איש קשר של היזם")}
+              </summary>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-3 text-sm">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {copy("Developer", "Застройщик", "יזם")}
+                  </div>
+                  <div className="mt-1 font-medium text-foreground">
+                    {details?.developer_company || copy("Not filled", "Не заполнено", "לא הוזן")}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-3 text-sm">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {copy("Contact", "Контакт", "איש קשר")}
+                  </div>
+                  <div className="mt-1 font-medium text-foreground">
+                    {details?.contact_name || copy("Not filled", "Не заполнено", "לא הוזן")}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {details?.contact_phone
+                      ? normalizePhoneForDisplay(details.contact_phone)
+                      : copy("No phone yet", "Телефон не добавлен", "אין עדיין טלפון")}
+                  </div>
+                </div>
+              </div>
+              {details?.developer_notes ? (
+                <div className="mt-2 rounded-xl border border-border/70 bg-background/70 px-3 py-3 text-sm text-muted-foreground">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {copy("Site notes", "Заметки по объекту", "הערות לאתר")}
+                  </div>
+                  <div className="mt-1 leading-6 text-foreground/90">{details.developer_notes}</div>
+                </div>
+              ) : null}
+            </details>
           </div>
         </div>
       </section>
@@ -658,6 +853,21 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               className="inline-flex items-center rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
             >
               {t("common.retry")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {actionHint && (
+        <div className="rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-4 py-3 text-sm text-[hsl(var(--warning-foreground))]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>{actionHint}</span>
+            <button
+              type="button"
+              onClick={() => setActionHint(null)}
+              className="inline-flex items-center rounded-lg border border-[hsl(var(--warning)/0.35)] bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              {pt("installerProject.dismiss")}
             </button>
           </div>
         </div>

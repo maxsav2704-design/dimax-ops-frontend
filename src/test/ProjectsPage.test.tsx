@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
+import { ApiError } from "@/lib/api";
 import ProjectsPage from "@/views/ProjectsPage";
 
 const { apiFetchMock } = vi.hoisted(() => ({
@@ -20,6 +21,21 @@ vi.mock("@/components/DashboardLayout", () => ({
 
 vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
+  ApiError: class ApiError extends Error {
+    code?: string;
+    field?: string;
+    meta?: Record<string, unknown>;
+    status: number;
+
+    constructor(status: number, message: string, body?: { error?: { code?: string; field?: string; meta?: Record<string, unknown> } }) {
+      super(message);
+      this.name = "ApiError";
+      this.status = status;
+      this.code = body?.error?.code;
+      this.field = body?.error?.field;
+      this.meta = body?.error?.meta;
+    }
+  },
 }));
 
 vi.mock("next/navigation", () => ({
@@ -2049,4 +2065,387 @@ describe("ProjectsPage", () => {
 
     expect(await screen.findByText("Row 4: Missing marking")).toBeInTheDocument();
   }, 20000);
+
+  it("creates and edits a project with address and contact quick actions", async () => {
+    let projects = [
+      { id: "project-1", name: "Project A", code: "PRJ-001", address: "Address A", status: "NEW" },
+    ];
+    let projectDetails = {
+      id: "project-1",
+      name: "Project A",
+      code: "PRJ-001",
+      address: "Address A",
+      status: "NEW",
+      planned_start_date: null,
+      planned_end_date: null,
+      developer_company: "DIMAX Dev Co",
+      contact_name: "Eyal Cohen",
+      contact_phone: "+972501111111",
+      contact_email: "eyal@example.com",
+      developer_phone_alt: null,
+      developer_whatsapp: "+972502222222",
+      developer_notes: "Call before arrival",
+      address_street: "Harbor",
+      address_building: "11",
+      address_city: "Ashdod",
+      address_entrance: "A",
+      address_lat: "31.8",
+      address_lng: "34.6",
+      address_waze_url: null,
+      waze_deep_link: "https://waze.example/project-1",
+      whatsapp_deep_link: "https://wa.me/972502222222",
+      call_deep_link: "tel:+972501111111",
+      issues_open: [],
+      doors: [],
+    };
+
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      const url = String(path);
+
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [{ id: "door-type-1", code: "entrance", name: "Entrance", is_active: true }];
+      }
+      if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
+        return { default_code: "auto_v1", items: [] };
+      }
+      if (url.includes("/api/v1/admin/projects/project-1/doors/layout")) {
+        return { project_id: "project-1", total_doors: 0, buckets: [] };
+      }
+      if (url.includes("/api/v1/admin/projects/project-1") && !url.includes("/doors/") && !url.includes("/addons/") && !url.includes("/urgency-surcharges")) {
+        return projectDetails;
+      }
+      if (url.endsWith("/api/v1/admin/projects") && (!init || !init.method || init.method === "GET")) {
+        return { items: projects };
+      }
+      if (url === "/api/v1/admin/projects" && init?.method === "POST") {
+        const payload = JSON.parse(String(init.body));
+        expect(payload).toMatchObject({
+          code: "PRJ-777",
+          name: "Harbor Tower",
+          address_street: "Harbor",
+          address_building: "11",
+          address_city: "Ashdod",
+          developer_company: "Builder Ltd",
+          contact_name: "Yael Cohen",
+          contact_phone: "+972501234567",
+          developer_whatsapp: "+972509876543",
+        });
+
+        projects = [
+          ...projects,
+          {
+            id: "project-3",
+            name: "Harbor Tower",
+            code: "PRJ-777",
+            address: "Harbor, 11, Ashdod, A",
+            status: "NEW",
+          },
+        ];
+        projectDetails = {
+          ...projectDetails,
+          id: "project-3",
+          name: "Harbor Tower",
+          code: "PRJ-777",
+          address: "Harbor, 11, Ashdod, A",
+          developer_company: "Builder Ltd",
+          contact_name: "Yael Cohen",
+          contact_phone: "+972501234567",
+          contact_email: "yael@example.com",
+          developer_whatsapp: "+972509876543",
+          address_street: "Harbor",
+          address_building: "11",
+          address_city: "Ashdod",
+          address_entrance: "A",
+          waze_deep_link: "https://waze.example/project-3",
+          whatsapp_deep_link: "https://wa.me/972509876543",
+          call_deep_link: "tel:+972501234567",
+          issues_open: [],
+          doors: [],
+        };
+        return { id: "project-3" };
+      }
+      if (url === "/api/v1/admin/projects/project-3" && init?.method === "PATCH") {
+        const payload = JSON.parse(String(init.body));
+        expect(payload.contact_name).toBe("Noa Levi");
+        projectDetails = {
+          ...projectDetails,
+          contact_name: "Noa Levi",
+        };
+        return { ok: true };
+      }
+      if (url.includes("/api/v1/admin/projects/project-3") && !url.includes("/doors/") && !url.includes("/addons/") && !url.includes("/urgency-surcharges")) {
+        return projectDetails;
+      }
+      if (url.includes("/api/v1/admin/projects/project-3/doors/layout")) {
+        return { project_id: "project-3", total_doors: 0, buckets: [] };
+      }
+      if (url.includes("/api/v1/admin/projects/project-3/addons/plan")) {
+        return { items: [], summary: { total_rows: 0, total_qty_planned: "0", total_client_price: "0", total_installer_price: "0" } };
+      }
+      if (url.includes("/api/v1/admin/projects/project-3/urgency-surcharges")) {
+        return { items: [], summary: { total_rows: 0, order_rows: 0, total_client_amount: "0", total_installer_amount: "0" } };
+      }
+      if (url.includes("/api/v1/admin/projects/project-3/doors/import-history")) {
+        return { items: [] };
+      }
+      if (url.includes("/api/v1/admin/projects/import-runs/failed-queue")) {
+        return { items: [], total: 0, limit: 10, offset: 0 };
+      }
+      if (url.includes("/api/v1/admin/library")) {
+        return { items: [] };
+      }
+      if (url.includes("/api/v1/admin/installers")) {
+        return { items: [] };
+      }
+
+      return {};
+    });
+
+    render(<ProjectsPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "New project" }));
+    fireEvent.change(screen.getByLabelText("Project code"), { target: { value: "PRJ-777" } });
+    fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Harbor Tower" } });
+    fireEvent.change(screen.getByLabelText("Street"), { target: { value: "Harbor" } });
+    fireEvent.change(screen.getByLabelText("Building"), { target: { value: "11" } });
+    fireEvent.change(screen.getByLabelText("City"), { target: { value: "Ashdod" } });
+    fireEvent.change(screen.getByLabelText("Entrance"), { target: { value: "A" } });
+    fireEvent.change(screen.getByLabelText("Developer company"), { target: { value: "Builder Ltd" } });
+    fireEvent.change(screen.getByLabelText("Contact name"), { target: { value: "Yael Cohen" } });
+    fireEvent.change(screen.getByLabelText("Primary phone"), { target: { value: "+972501234567" } });
+    fireEvent.change(screen.getByLabelText("WhatsApp"), { target: { value: "+972509876543" } });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "yael@example.com" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Create project" }));
+
+    expect(await screen.findByText("Project created. Continue with address, contacts and import flow.")).toBeInTheDocument();
+    expect(await screen.findByText(/PRJ-777.*Harbor Tower/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Waze" })).toHaveAttribute("href", "https://waze.example/project-3");
+    expect(screen.getByRole("link", { name: "WhatsApp" })).toHaveAttribute("href", "https://wa.me/972509876543");
+    expect(screen.getByRole("link", { name: "Call" })).toHaveAttribute("href", "tel:+972501234567");
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit project" }));
+    fireEvent.change(screen.getByLabelText("Contact name"), { target: { value: "Noa Levi" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText("Project settings updated. Quick actions are ready where data is available.")).toBeInTheDocument();
+    expect(await screen.findByText("Contact: Noa Levi")).toBeInTheDocument();
+  }, 45000);
+
+  it("keeps quick actions visible and shows guidance when project contact data is missing", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [{ id: "door-type-1", code: "entrance", name: "Entrance", is_active: true }];
+      }
+      if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
+        return { default_code: "auto_v1", items: [] };
+      }
+      if (url.endsWith("/api/v1/admin/projects")) {
+        return {
+          items: [{ id: "project-1", name: "Project A", code: "PRJ-001", address: "", status: "NEW" }],
+        };
+      }
+      if (url.includes("/api/v1/admin/projects/project-1/doors/layout")) {
+        return { project_id: "project-1", total_doors: 0, buckets: [] };
+      }
+      if (url.includes("/api/v1/admin/projects/project-1") && !url.includes("/doors/") && !url.includes("/addons/") && !url.includes("/urgency-surcharges")) {
+        return {
+          id: "project-1",
+          name: "Project A",
+          code: "PRJ-001",
+          address: "",
+          status: "NEW",
+          developer_company: null,
+          contact_name: null,
+          contact_phone: null,
+          contact_email: null,
+          developer_phone_alt: null,
+          developer_whatsapp: null,
+          developer_notes: null,
+          address_street: null,
+          address_building: null,
+          address_city: null,
+          address_entrance: null,
+          address_lat: null,
+          address_lng: null,
+          address_waze_url: null,
+          waze_deep_link: null,
+          whatsapp_deep_link: null,
+          call_deep_link: null,
+          issues_open: [],
+          doors: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/projects/import-runs/failed-queue")) {
+        return { items: [], total: 0, limit: 10, offset: 0 };
+      }
+      if (url.includes("/api/v1/admin/library")) {
+        return { items: [] };
+      }
+      if (url.includes("/api/v1/admin/installers")) {
+        return { items: [] };
+      }
+      return {};
+    });
+
+    render(<ProjectsPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Waze" }));
+    expect(
+      await screen.findByText("Add address in project settings to unlock Waze.")
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "WhatsApp" }));
+    expect(
+      await screen.findByText("Add a contact phone or WhatsApp number to unlock WhatsApp.")
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Call" }));
+    expect(
+      await screen.findByText("Add a primary phone in project settings to unlock calling.")
+    ).toBeInTheDocument();
+  }, 25000);
+
+  it("autofills structured address fields from project address suggestions", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [{ id: "door-type-1", code: "entrance", name: "Entrance", is_active: true }];
+      }
+      if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
+        return { default_code: "auto_v1", items: [] };
+      }
+      if (url.endsWith("/api/v1/admin/projects")) {
+        return {
+          items: [{ id: "project-1", name: "Project A", code: "PRJ-001", address: "Address A", status: "NEW" }],
+        };
+      }
+      if (url.includes("/api/v1/admin/projects/project-1/doors/layout")) {
+        return { project_id: "project-1", total_doors: 0, buckets: [] };
+      }
+      if (url.includes("/api/v1/admin/projects/project-1") && !url.includes("/doors/") && !url.includes("/addons/") && !url.includes("/urgency-surcharges")) {
+        return {
+          id: "project-1",
+          name: "Project A",
+          code: "PRJ-001",
+          address: "Address A",
+          status: "NEW",
+          developer_company: "DIMAX Dev Co",
+          contact_name: "Eyal Cohen",
+          issues_open: [],
+          doors: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/projects/import-runs/failed-queue")) {
+        return { items: [], total: 0, limit: 10, offset: 0 };
+      }
+      return {};
+    });
+
+    render(<ProjectsPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "New project" }));
+    fireEvent.change(screen.getByLabelText("Address search / fallback"), {
+      target: { value: "Herzl, 14, Ashdod, A" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Herzl, 14, Ashdod, A" }));
+
+    expect(screen.getByLabelText("Street")).toHaveValue("Herzl");
+    expect(screen.getByLabelText("Building")).toHaveValue("14");
+    expect(screen.getByLabelText("City")).toHaveValue("Ashdod");
+    expect(screen.getByLabelText("Entrance")).toHaveValue("A");
+    expect(screen.getByLabelText("Lat")).toHaveValue("31.8014");
+    expect(screen.getByLabelText("Lng")).toHaveValue("34.6435");
+    expect(screen.getByText("Coordinates: 31.8014, 34.6435")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Test Waze" })).toHaveAttribute(
+      "href",
+      "https://www.waze.com/ul?ll=31.8014,34.6435&navigate=yes"
+    );
+    expect(screen.getByTitle("Map preview")).toHaveAttribute("src", expect.stringContaining("openstreetmap.org/export/embed.html"));
+  }, 25000);
+
+  it("autoformats project contact phones to israel format while typing", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [{ id: "door-type-1", code: "entrance", name: "Entrance", is_active: true }];
+      }
+      if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
+        return { default_code: "auto_v1", items: [] };
+      }
+      if (url.endsWith("/api/v1/admin/projects")) {
+        return { items: [] };
+      }
+      if (url.includes("/api/v1/admin/projects/import-runs/failed-queue")) {
+        return { items: [], total: 0, limit: 10, offset: 0 };
+      }
+      return {};
+    });
+
+    render(<ProjectsPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "New project" }));
+
+    fireEvent.change(screen.getByLabelText("Primary phone"), { target: { value: "050-123-4567" } });
+    fireEvent.change(screen.getByLabelText("Alt phone"), { target: { value: "052 765 4321" } });
+    fireEvent.change(screen.getByLabelText("WhatsApp"), { target: { value: "0549990000" } });
+
+    expect(screen.getByLabelText("Primary phone")).toHaveValue("+972501234567");
+    expect(screen.getByLabelText("Alt phone")).toHaveValue("+972527654321");
+    expect(screen.getByLabelText("WhatsApp")).toHaveValue("+972549990000");
+  }, 25000);
+
+  it("shows field guidance when backend rejects invalid phone or Waze URL", async () => {
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      const url = String(path);
+
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [{ id: "door-type-1", code: "entrance", name: "Entrance", is_active: true }];
+      }
+      if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
+        return { default_code: "auto_v1", items: [] };
+      }
+      if (url.endsWith("/api/v1/admin/projects") && (!init?.method || init.method === "GET")) {
+        return { items: [] };
+      }
+      if (url.includes("/api/v1/admin/projects/import-runs/failed-queue")) {
+        return { items: [], total: 0, limit: 10, offset: 0 };
+      }
+      if (url.endsWith("/api/v1/admin/projects") && init?.method === "POST") {
+        const payload = JSON.parse(String(init.body));
+        if (payload.address_waze_url) {
+          throw new ApiError(422, "Waze URL must be a valid http or https address", {
+            error: { code: "INVALID_WAZE_URL", field: "address_waze_url" },
+          });
+        }
+        throw new ApiError(422, "Phone number must be in international format", {
+          error: { code: "INVALID_PHONE", field: "contact_phone" },
+        });
+      }
+      return {};
+    });
+
+    render(<ProjectsPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "New project" }));
+    fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Validation Project" } });
+    fireEvent.change(screen.getByLabelText("Primary phone"), { target: { value: "abc" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Create project" }));
+    expect(await screen.findByText("Enter the primary phone in +972XXXXXXXXX format.")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Primary phone"), { target: { value: "0501234567" } });
+    expect(screen.queryByText("Enter the primary phone in +972XXXXXXXXX format.")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Waze URL override"), { target: { value: "ftp://bad-link" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create project" }));
+
+    expect(await screen.findByText("Enter a valid http or https Waze link.")).toBeInTheDocument();
+  }, 25000);
+
 });
