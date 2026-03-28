@@ -6,14 +6,13 @@ import { useRouter } from "next/navigation";
 import { Building2, KeyRound, LogIn, Mail } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { apiBaseUrl, apiFetch } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { resolveAdminHomePath } from "@/lib/admin-access";
 import { normalizeAuthSession, persistAccessToken } from "@/lib/auth-session";
 import { useI18n } from "@/lib/i18n";
 
 type LoginResponse = {
   access_token: string;
-  refresh_token: string;
   token_type: string;
 };
 
@@ -83,27 +82,15 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${apiBaseUrl()}/api/v1/auth/login`, {
+      const body = await apiFetch<LoginResponse>("/api/v1/auth/login", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           company_id: companyId.trim(),
           email: email.trim(),
           password,
         }),
       });
-      if (!response.ok) {
-        let message = `${response.status} ${response.statusText}`;
-        try {
-          const body = await response.json();
-          message = body?.error?.message || body?.detail || message;
-        } catch {
-          // Keep default message.
-        }
-        throw new Error(message);
-      }
-      const body = (await response.json()) as LoginResponse;
       persistAccessToken(body.access_token);
       localStorage.setItem("dimax_company_id", companyId.trim());
       localStorage.setItem("dimax_email", email.trim());
