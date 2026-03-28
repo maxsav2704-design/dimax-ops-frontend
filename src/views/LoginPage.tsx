@@ -75,6 +75,10 @@ export default function LoginPage() {
       setAccessNotice(t("login.accessInstallerOnly"));
       return;
     }
+    if (code === "access_denied") {
+      setAccessNotice(t("login.accessDenied"));
+      return;
+    }
     setAccessNotice(null);
   }, [t]);
 
