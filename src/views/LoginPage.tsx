@@ -9,6 +9,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { apiFetch } from "@/lib/api";
 import { resolveAdminHomePath } from "@/lib/admin-access";
 import { normalizeAuthSession, persistAccessToken } from "@/lib/auth-session";
+import { readableApiError } from "@/lib/api-error-display";
 import { useI18n } from "@/lib/i18n";
 
 type LoginResponse = {
@@ -111,7 +112,7 @@ export default function LoginPage() {
       }
       router.replace(nextPath);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Login failed");
+      setError(readableApiError(e, locale, t("login.errorFallback")));
     } finally {
       setLoading(false);
     }

@@ -1,10 +1,13 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LanguageProvider } from "@/lib/i18n";
 import LoginPage from "@/views/LoginPage";
 
-const replaceMock = vi.fn();
+const { replaceMock, apiFetchMock } = vi.hoisted(() => ({
+  replaceMock: vi.fn(),
+  apiFetchMock: vi.fn(),
+}));
 const storageState = new Map<string, string>();
 
 const storageMock = {
@@ -22,17 +25,19 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/lib/api", () => ({
-  apiFetch: vi.fn(async (path: string) => {
-    if (path === "/api/v1/auth/me") {
-      throw new Error("unauthorized");
-    }
-    throw new Error(`Unexpected path: ${path}`);
-  }),
+  apiFetch: apiFetchMock,
 }));
 
 describe("LoginPage", () => {
   beforeEach(() => {
     replaceMock.mockReset();
+    apiFetchMock.mockReset();
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/auth/me") {
+        throw new Error("unauthorized");
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
     storageState.clear();
     Object.defineProperty(window, "localStorage", {
       value: storageMock,
@@ -67,6 +72,35 @@ describe("LoginPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Sign in to continue to the requested area.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows readable sign-in failure from auth api errors", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/auth/login") {
+        const error = new Error("forbidden");
+        Object.assign(error, { code: "FORBIDDEN_SCOPE", status: 403 });
+        throw error;
+      }
+      if (path === "/api/v1/auth/me") {
+        throw new Error("unauthorized");
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    render(
+      <LanguageProvider>
+        <LoginPage />
+      </LanguageProvider>
+    );
+
+    fireEvent.change(screen.getByLabelText("Company ID"), { target: { value: "company-1" } });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "admin@example.com" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("This action is not available for your access level.")).toBeInTheDocument();
     });
   });
 
