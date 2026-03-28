@@ -2432,6 +2432,38 @@ describe("ProjectsPage", () => {
     expect(screen.getByLabelText("WhatsApp")).toHaveValue("+972549990000");
   }, 25000);
 
+  it("builds localized WhatsApp draft text for project contact checks", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [{ id: "door-type-1", code: "entrance", name: "Entrance", is_active: true }];
+      }
+      if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
+        return { default_code: "auto_v1", items: [] };
+      }
+      if (url.endsWith("/api/v1/admin/projects")) {
+        return { items: [] };
+      }
+      if (url.includes("/api/v1/admin/projects/import-runs/failed-queue")) {
+        return { items: [], total: 0, limit: 10, offset: 0 };
+      }
+      return {};
+    });
+
+    render(<ProjectsPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "New project" }));
+
+    fireEvent.change(screen.getByLabelText("Project code"), { target: { value: "PRJ-042" } });
+    fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Ashdod Towers Block B" } });
+    fireEvent.change(screen.getByLabelText("Primary phone"), { target: { value: "0521234567" } });
+
+    expect(screen.getByRole("link", { name: "Test WhatsApp" })).toHaveAttribute(
+      "href",
+      "https://wa.me/972521234567?text=Hello%2C%20regarding%20project%20Ashdod%20Towers%20Block%20B%20(PRJ-042)"
+    );
+  }, 25000);
+
   it("keeps Waze preview priority as coordinates over manual url", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
       const url = String(path);

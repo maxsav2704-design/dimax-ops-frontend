@@ -541,12 +541,28 @@ function buildDraftWazeLink(form: ProjectFormState): string | null {
   return `https://www.waze.com/ul?q=${encodeURIComponent(address)}&navigate=yes`;
 }
 
-function buildDraftWhatsappLink(form: ProjectFormState): string | null {
+function buildDraftWhatsappMessage(form: ProjectFormState, locale: Locale): string | null {
+  const code = form.code.trim();
+  const name = form.name.trim();
+  if (!code && !name) {
+    return null;
+  }
+  const projectRef = code && name ? `${name} (${code})` : name || code;
+  if (locale === "ru") {
+    return `Добрый день, по проекту ${projectRef}`;
+  }
+  if (locale === "he") {
+    return `שלום, בקשר לפרויקט ${projectRef}`;
+  }
+  return `Hello, regarding project ${projectRef}`;
+}
+
+function buildDraftWhatsappLink(form: ProjectFormState, locale: Locale): string | null {
   const phone = normalizeDraftPhone(form.developer_whatsapp || form.contact_phone);
   if (!phone) {
     return null;
   }
-  const message = [form.code.trim(), form.name.trim()].filter(Boolean).join(" · ");
+  const message = buildDraftWhatsappMessage(form, locale);
   const waPhone = phone.replace("+", "");
   return message ? `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}` : `https://wa.me/${waPhone}`;
 }
@@ -2438,7 +2454,7 @@ export default function ProjectsPage() {
     developer_notes: projectForm.developer_notes.trim() || null,
   };
   const draftWazeLink = buildDraftWazeLink(projectForm);
-  const draftWhatsappLink = buildDraftWhatsappLink(projectForm);
+  const draftWhatsappLink = buildDraftWhatsappLink(projectForm, locale);
   const draftCallLink = normalizeDraftPhone(projectForm.contact_phone)
     ? `tel:${normalizeDraftPhone(projectForm.contact_phone)}`
     : null;
