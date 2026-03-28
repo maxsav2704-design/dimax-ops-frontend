@@ -103,9 +103,30 @@ type ProjectDetailsResponse = {
   name?: string;
   code?: string | null;
   address?: string;
+  address_details?: {
+    street?: string | null;
+    building?: string | null;
+    city?: string | null;
+    entrance?: string | null;
+    lat?: string | number | null;
+    lng?: string | number | null;
+    waze_url?: string | null;
+    waze_deep_link?: string | null;
+  } | null;
   planned_start_date?: string | null;
   planned_end_date?: string | null;
   status?: string;
+  developer?: {
+    name?: string | null;
+    contact_name?: string | null;
+    phone?: string | null;
+    phone_alt?: string | null;
+    whatsapp?: string | null;
+    email?: string | null;
+    notes?: string | null;
+    whatsapp_deep_link?: string | null;
+    call_deep_link?: string | null;
+  } | null;
   developer_company?: string | null;
   contact_name?: string | null;
   contact_phone?: string | null;
@@ -735,26 +756,38 @@ function buildProjectAddressSuggestions(raw: string): ProjectAddressSuggestion[]
 }
 
 function projectFormFromDetails(details: ProjectDetailsResponse | null): ProjectFormState {
+  const addressDetails = details?.address_details;
+  const developer = details?.developer;
   return {
     code: details?.code || "",
     name: details?.name || "",
     planned_start_date: details?.planned_start_date || "",
     planned_end_date: details?.planned_end_date || "",
     address: details?.address || "",
-    address_street: details?.address_street || "",
-    address_building: details?.address_building || "",
-    address_city: details?.address_city || "",
-    address_entrance: details?.address_entrance || "",
-    address_lat: details?.address_lat != null ? String(details.address_lat) : "",
-    address_lng: details?.address_lng != null ? String(details.address_lng) : "",
-    address_waze_url: details?.address_waze_url || "",
-    developer_company: details?.developer_company || "",
-    contact_name: details?.contact_name || "",
-    contact_phone: details?.contact_phone || "",
-    developer_phone_alt: details?.developer_phone_alt || "",
-    developer_whatsapp: details?.developer_whatsapp || "",
-    contact_email: details?.contact_email || "",
-    developer_notes: details?.developer_notes || "",
+    address_street: addressDetails?.street || details?.address_street || "",
+    address_building: addressDetails?.building || details?.address_building || "",
+    address_city: addressDetails?.city || details?.address_city || "",
+    address_entrance: addressDetails?.entrance || details?.address_entrance || "",
+    address_lat:
+      addressDetails?.lat != null
+        ? String(addressDetails.lat)
+        : details?.address_lat != null
+          ? String(details.address_lat)
+          : "",
+    address_lng:
+      addressDetails?.lng != null
+        ? String(addressDetails.lng)
+        : details?.address_lng != null
+          ? String(details.address_lng)
+          : "",
+    address_waze_url: addressDetails?.waze_url || details?.address_waze_url || "",
+    developer_company: developer?.name || details?.developer_company || "",
+    contact_name: developer?.contact_name || details?.contact_name || "",
+    contact_phone: developer?.phone || details?.contact_phone || "",
+    developer_phone_alt: developer?.phone_alt || details?.developer_phone_alt || "",
+    developer_whatsapp: developer?.whatsapp || details?.developer_whatsapp || "",
+    contact_email: developer?.email || details?.contact_email || "",
+    developer_notes: developer?.notes || details?.developer_notes || "",
   };
 }
 
