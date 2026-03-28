@@ -56,11 +56,19 @@ async function createProject(request, token: string, suffix: string) {
       "Content-Type": "application/json",
     },
     data: {
+      code: `E2E-${suffix.slice(-6)}`,
       name: `E2E Smoke ${suffix}`,
-      address: `Ashdod Site ${suffix}`,
+      address: `Herzl 14 Ashdod ${suffix}`,
+      address_street: "Herzl",
+      address_building: "14",
+      address_city: "Ashdod",
+      address_entrance: "B",
+      address_lat: 31.801,
+      address_lng: 34.643,
       developer_company: "DIMAX E2E",
       contact_name: "E2E Admin",
       contact_phone: "+972500000999",
+      developer_whatsapp: "+972500000999",
       contact_email: "e2e@dimax.dev",
     },
   });
@@ -69,6 +77,7 @@ async function createProject(request, token: string, suffix: string) {
   const body = await response.json();
   return {
     id: String(body.id),
+    code: `E2E-${suffix.slice(-6)}`,
     name: `E2E Smoke ${suffix}`,
   };
 }
@@ -159,6 +168,19 @@ test.describe.serial("Admin web smoke", () => {
       await page.getByPlaceholder("Search project...").fill(project.name);
       await page.locator("button").filter({ hasText: project.name }).first().click();
       await expect(page.getByRole("heading", { name: "Project Financial Screen" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Waze" })).toHaveAttribute(
+        "href",
+        /https:\/\/waze\.com\/ul\?ll=31\.8010*,34\.6430*&navigate=yes/
+      );
+      await expect(page.getByRole("link", { name: "WhatsApp" })).toHaveAttribute(
+        "href",
+        new RegExp(`^https://wa\\.me/972500000999\\?text=.*${project.code}`)
+      );
+      await expect(page.getByRole("link", { name: "Call" })).toHaveAttribute(
+        "href",
+        "tel:+972500000999"
+      );
+      await expect(page.getByText("Contact: E2E Admin")).toBeVisible();
 
       const csv = [
         "\uFEFF\u05de\u05e1\u05e4\u05e8 \u05d4\u05d6\u05de\u05e0\u05d4,\u05d1\u05e0\u05d9\u05d9\u05df,\u05e7\u05d5\u05de\u05d4,\u05d3\u05d9\u05e8\u05d4,\u05d3\u05d2\u05dd \u05db\u05e0\u05e3,qty",
