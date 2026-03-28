@@ -894,7 +894,7 @@ export default function OperationsPage() {
     } catch (error) {
       setActionFeedback({
         tone: "error",
-        message: readableApiError(error, locale, "Failed to retry import run"),
+        message: readableApiError(error, locale, locale === "ru" ? "?? ??????? ????????? import run." : locale === "he" ? "?? ???? ????? ??? ?? ???? ??????." : "Failed to retry import run"),
       });
     } finally {
       setBusyAction("");
@@ -922,7 +922,7 @@ export default function OperationsPage() {
     } catch (error) {
       setActionFeedback({
         tone: "error",
-        message: readableApiError(error, locale, "Failed to retry outbox item"),
+        message: readableApiError(error, locale, locale === "ru" ? "?? ??????? ????????? outbox item." : locale === "he" ? "?? ???? ????? ??? ?? ???? ?-outbox." : "Failed to retry outbox item"),
       });
     } finally {
       setBusyAction("");
@@ -966,7 +966,7 @@ export default function OperationsPage() {
     } catch (error) {
       setActionFeedback({
         tone: "error",
-        message: readableApiError(error, locale, "Failed to retry actionable imports"),
+        message: readableApiError(error, locale, locale === "ru" ? "?? ??????? ????????? actionable imports." : locale === "he" ? "?? ???? ????? ??? ?? ?????? ?????." : "Failed to retry actionable imports"),
       });
     } finally {
       setBusyAction("");
@@ -1012,7 +1012,7 @@ export default function OperationsPage() {
     } catch (error) {
       setActionFeedback({
         tone: "error",
-        message: readableApiError(error, locale, "Failed to reconcile actionable projects"),
+        message: readableApiError(error, locale, locale === "ru" ? "?? ??????? ??????? actionable projects." : locale === "he" ? "?? ???? ???? reconciliation ????????? ???????." : "Failed to reconcile actionable projects"),
       });
     } finally {
       setBusyAction("");
@@ -1058,7 +1058,7 @@ export default function OperationsPage() {
     } catch (error) {
       setActionFeedback({
         tone: "error",
-        message: readableApiError(error, locale, "Failed to retry actionable delivery"),
+        message: readableApiError(error, locale, locale === "ru" ? "?? ??????? ????????? actionable delivery." : locale === "he" ? "?? ???? ????? ??? ?? ?????? ?????." : "Failed to retry actionable delivery"),
       });
     } finally {
       setBusyAction("");
