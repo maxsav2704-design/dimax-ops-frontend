@@ -347,18 +347,30 @@ export default function CalendarPage() {
     eventsQuery.isError || installersQuery.isError || projectsQuery.isError;
   const hasActionError =
     createMutation.isError || updateMutation.isError || deleteMutation.isError;
+  const calendarActionFallback =
+    locale === "ru"
+      ? "?? ??????? ????????? ???????? ?????????."
+      : locale === "he"
+        ? "?? ???? ?????? ?? ????? ?????."
+        : "Calendar action failed.";
+  const calendarLoadFallback =
+    locale === "ru"
+      ? "?? ??????? ????????? ?????? ?????????."
+      : locale === "he"
+        ? "?? ???? ????? ?? ????? ?????."
+        : "Failed to load calendar data.";
   const actionErrorMessage =
     (createMutation.error &&
-      readableApiError(createMutation.error, locale, "Calendar action failed.")) ||
+      readableApiError(createMutation.error, locale, calendarActionFallback)) ||
     (updateMutation.error &&
-      readableApiError(updateMutation.error, locale, "Calendar action failed.")) ||
+      readableApiError(updateMutation.error, locale, calendarActionFallback)) ||
     (deleteMutation.error &&
-      readableApiError(deleteMutation.error, locale, "Calendar action failed.")) ||
-    "Calendar action failed.";
+      readableApiError(deleteMutation.error, locale, calendarActionFallback)) ||
+    calendarActionFallback;
   const loadErrorMessage = readableApiError(
     eventsQuery.error || installersQuery.error || projectsQuery.error,
     locale,
-    "Failed to load calendar data."
+    calendarLoadFallback
   );
   const isInvalidTimeRange = form.ends_at_hhmm <= form.starts_at_hhmm;
 
