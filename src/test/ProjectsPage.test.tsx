@@ -2239,6 +2239,22 @@ describe("ProjectsPage", () => {
       if (url.includes("/api/v1/admin/door-types")) {
         return [{ id: "door-type-1", code: "entrance", name: "Entrance", is_active: true }];
       }
+      if (url.includes("/api/v1/admin/projects/address-suggestions")) {
+        return {
+          items: [
+            {
+              key: "herzl-14-ashdod-a",
+              label: "Herzl, 14, Ashdod, A",
+              street: "Herzl",
+              building: "14",
+              city: "Ashdod",
+              entrance: "A",
+              lat: "31.8014",
+              lng: "34.6435",
+            },
+          ],
+        };
+      }
       if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
         return { default_code: "auto_v1", items: [] };
       }
@@ -2315,6 +2331,22 @@ describe("ProjectsPage", () => {
       if (url.includes("/api/v1/admin/door-types")) {
         return [{ id: "door-type-1", code: "entrance", name: "Entrance", is_active: true }];
       }
+      if (url.includes("/api/v1/admin/projects/address-suggestions")) {
+        return {
+          items: [
+            {
+              key: "herzl-14-ashdod-a",
+              label: "Herzl, 14, Ashdod, A",
+              street: "Herzl",
+              building: "14",
+              city: "Ashdod",
+              entrance: "A",
+              lat: "31.8014",
+              lng: "34.6435",
+            },
+          ],
+        };
+      }
       if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
         return { default_code: "auto_v1", items: [] };
       }
@@ -2352,7 +2384,7 @@ describe("ProjectsPage", () => {
       target: { value: "Herzl, 14, Ashdod, A" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Herzl, 14, Ashdod, A" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Herzl, 14, Ashdod, A" }));
 
     expect(screen.getByLabelText("Street")).toHaveValue("Herzl");
     expect(screen.getByLabelText("Building")).toHaveValue("14");

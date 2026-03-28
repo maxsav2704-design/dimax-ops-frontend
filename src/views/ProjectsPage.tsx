@@ -438,6 +438,10 @@ type ProjectAddressSuggestion = {
   lng: string;
 };
 
+type ProjectAddressSuggestionsResponse = {
+  items: ProjectAddressSuggestion[];
+};
+
 const PROJECT_CITY_COORDS: Array<{
   lat: string;
   lng: string;
@@ -1131,11 +1135,8 @@ export default function ProjectsPage() {
     useState<ProjectImportRunDetails | null>(null);
   const [loadingImportRunDetails, setLoadingImportRunDetails] = useState(false);
   const [deepLinkApplied, setDeepLinkApplied] = useState(false);
-
-  const projectAddressSuggestions = useMemo(
-    () => buildProjectAddressSuggestions(projectForm.address),
-    [projectForm.address]
-  );
+  const [projectAddressSuggestions, setProjectAddressSuggestions] = useState<ProjectAddressSuggestion[]>([]);
+  const [loadingProjectAddressSuggestions, setLoadingProjectAddressSuggestions] = useState(false);
   const [deepLinkFocusApplied, setDeepLinkFocusApplied] = useState(false);
   const [matrixHouse, setMatrixHouse] = useState("all");
   const [matrixOrderNumber, setMatrixOrderNumber] = useState("all");
@@ -2544,6 +2545,47 @@ export default function ProjectsPage() {
       });
     }
   };
+
+  useEffect(() => {
+    if (!projectDialogOpen) {
+      setProjectAddressSuggestions([]);
+      setLoadingProjectAddressSuggestions(false);
+      return;
+    }
+
+    const query = projectForm.address.trim();
+    if (query.length < 3) {
+      setProjectAddressSuggestions([]);
+      setLoadingProjectAddressSuggestions(false);
+      return;
+    }
+
+    let active = true;
+    const timeoutId = window.setTimeout(async () => {
+      setLoadingProjectAddressSuggestions(true);
+      try {
+        const response = await apiFetch<ProjectAddressSuggestionsResponse>(
+          `/api/v1/admin/projects/address-suggestions?q=${encodeURIComponent(query)}&limit=5`
+        );
+        if (active) {
+          setProjectAddressSuggestions(response.items || []);
+        }
+      } catch {
+        if (active) {
+          setProjectAddressSuggestions(buildProjectAddressSuggestions(query));
+        }
+      } finally {
+        if (active) {
+          setLoadingProjectAddressSuggestions(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [projectDialogOpen, projectForm.address]);
 
   const handleProjectSubmit = async () => {
     if (!projectForm.name.trim()) {
@@ -5480,28 +5522,40 @@ export default function ProjectsPage() {
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="project-form-address-search">{copy("Address search / fallback", "Поиск адреса / запасное поле", "חיפוש כתובת / שדה חלופי")}</Label>
                     <Input id="project-form-address-search" value={projectForm.address} onChange={(event) => updateProjectFormField("address", event.target.value)} placeholder={copy("Street, building, city", "Улица, дом, город", "רחוב, בניין, עיר")} />
-                    {projectAddressSuggestions.length > 0 ? (
+                    {loadingProjectAddressSuggestions || projectAddressSuggestions.length > 0 ? (
                       <div className="rounded-2xl border border-border/70 bg-background/60 p-3">
                         <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                          {copy("Address suggestions", "Подсказки адреса", "הצעות כתובת")}
+                          {loadingProjectAddressSuggestions
+                            ? copy("Searching address", "Ищем адрес", "מחפש כתובת")
+                            : copy("Address suggestions", "Подсказки адреса", "הצעות כתובת")}
                         </div>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {projectAddressSuggestions.map((suggestion) => (
-                            <button
-                              key={suggestion.key}
-                              type="button"
-                              onClick={() => applyProjectAddressSuggestion(suggestion)}
-                              className="inline-flex items-center rounded-xl border border-border/70 bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
-                            >
-                              {suggestion.label}
-                            </button>
-                          ))}
-                        </div>
+                        {projectAddressSuggestions.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {projectAddressSuggestions.map((suggestion) => (
+                              <button
+                                key={suggestion.key}
+                                type="button"
+                                onClick={() => applyProjectAddressSuggestion(suggestion)}
+                                className="inline-flex items-center rounded-xl border border-border/70 bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+                              >
+                                {suggestion.label}
+                              </button>
+                            ))}
+                          </div>
+                        ) : loadingProjectAddressSuggestions ? (
+                          <div className="mt-3 text-sm text-muted-foreground">
+                            {copy("Checking geocoder suggestions…", "Проверяем подсказки геокодера…", "בודק הצעות ממנוע הכתובות…")}
+                          </div>
+                        ) : (
+                          <div className="mt-3 text-sm text-muted-foreground">
+                            {copy("No suggestions found yet. Continue typing or fill the fields manually.", "Подсказки пока не найдены. Продолжайте ввод или заполните поля вручную.", "עדיין לא נמצאו הצעות. המשך להקליד או מלא את השדות ידנית.")}
+                          </div>
+                        )}
                         <div className="mt-2 text-xs leading-5 text-muted-foreground">
                           {copy(
-                            "Choose a suggestion to autofill street, building, city and entrance. Coordinates are estimated from the city when available.",
-                            "Выберите подсказку, чтобы автозаполнить улицу, дом, город и подъезд. Координаты подставляются по городу, если он распознан.",
-                            "בחר הצעה כדי למלא אוטומטית רחוב, בניין, עיר וכניסה. קואורדינטות יושלמו לפי העיר אם היא זוהתה."
+                            "Choose a suggestion to autofill street, building, city and entrance. Coordinates arrive with the selected suggestion when available.",
+                            "Выберите подсказку, чтобы автозаполнить улицу, дом, город и подъезд. Координаты приходят вместе с выбранной подсказкой, если они определены.",
+                            "בחר הצעה כדי למלא אוטומטית רחוב, בניין, עיר וכניסה. קואורדינטות מגיעות יחד עם ההצעה שנבחרה כאשר הן זמינות."
                           )}
                         </div>
                       </div>
