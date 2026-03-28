@@ -21,6 +21,8 @@ const projectDetails = {
   call_url: "tel:+972501234567",
   contact_name: "Yael Cohen",
   contact_phone: "+972501234567",
+  developer_phone_alt: "+972502224466",
+  developer_whatsapp: "+972509876543",
   developer_company: "DIMAX Dev Co",
   developer_notes: "Gate code 7788, call before arrival.",
   status: "IN_PROGRESS",
@@ -204,6 +206,8 @@ describe("InstallerProjectPage", () => {
     );
     expect(screen.getByText("DIMAX Dev Co")).toBeInTheDocument();
     expect(screen.getByText("Yael Cohen")).toBeInTheDocument();
+    expect(screen.getByText("Alt: +972 50-222-4466")).toBeInTheDocument();
+    expect(screen.getByText("WhatsApp: +972 50-987-6543")).toBeInTheDocument();
     expect(screen.getByText("Developer contact")).toBeInTheDocument();
     expect(screen.getByText("Gate code 7788, call before arrival.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open sync queue" })).toHaveAttribute(
@@ -225,6 +229,8 @@ describe("InstallerProjectPage", () => {
       call_url: null,
       contact_name: null,
       contact_phone: null,
+      developer_phone_alt: null,
+      developer_whatsapp: null,
       developer_company: null,
       developer_notes: null,
     });

@@ -110,6 +110,8 @@ type InstallerProjectDetailsResponse = {
   call_url?: string | null;
   contact_name?: string | null;
   contact_phone?: string | null;
+  developer_phone_alt?: string | null;
+  developer_whatsapp?: string | null;
   developer_company?: string | null;
   developer_notes?: string | null;
   status: string;
@@ -826,6 +828,16 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                       ? normalizePhoneForDisplay(details.contact_phone)
                       : copy("No phone yet", "Телефон не добавлен", "אין עדיין טלפון")}
                   </div>
+                  {details?.developer_phone_alt ? (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {copy("Alt", "Доп.", "נוסף")}: {normalizePhoneForDisplay(details.developer_phone_alt)}
+                    </div>
+                  ) : null}
+                  {details?.developer_whatsapp ? (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      WhatsApp: {normalizePhoneForDisplay(details.developer_whatsapp)}
+                    </div>
+                  ) : null}
                 </div>
               </div>
               {details?.developer_notes ? (
