@@ -220,6 +220,58 @@ describe("InstallerProjectPage", () => {
     );
   }, 15000);
 
+  it("prefers structured installer project details when nested objects are present", async () => {
+    setupApiMock({
+      ...projectDetails,
+      address: null,
+      waze_url: null,
+      whatsapp_url: null,
+      call_url: null,
+      contact_name: null,
+      contact_phone: null,
+      developer_phone_alt: null,
+      developer_whatsapp: null,
+      developer_company: null,
+      developer_notes: null,
+      address_details: {
+        street: "Herzl",
+        building: "12",
+        city: "Ashdod",
+        entrance: "B",
+        lat: "31.801",
+        lng: "34.643",
+        waze_url: "https://www.waze.com/ul?ll=31.801,34.643&navigate=yes",
+        waze_deep_link: "https://www.waze.com/ul?ll=31.801,34.643&navigate=yes",
+      },
+      developer: {
+        name: "Bridge Dev Co",
+        contact_name: "Noa Levi",
+        phone: "+972503334455",
+        phone_alt: "+972504445566",
+        whatsapp: "+972507778899",
+        notes: "Use side gate.",
+        whatsapp_deep_link: "https://wa.me/972507778899",
+        call_deep_link: "tel:+972503334455",
+      },
+    });
+    renderSubject();
+
+    expect(await screen.findByText("Project One")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Herzl, 12, Ashdod, B" })).toHaveAttribute(
+      "href",
+      "https://www.waze.com/ul?ll=31.801,34.643&navigate=yes"
+    );
+    expect(screen.getByRole("link", { name: "Open WhatsApp" })).toHaveAttribute(
+      "href",
+      "https://wa.me/972507778899"
+    );
+    expect(screen.getByRole("link", { name: "Call contact" })).toHaveAttribute(
+      "href",
+      "tel:+972503334455"
+    );
+    expect(screen.getByRole("button", { name: "+972 50-333-4455" })).toBeInTheDocument();
+  }, 15000);
+
   it("keeps installer quick actions visible and shows guidance when project contact data is missing", async () => {
     setupApiMock({
       ...projectDetails,

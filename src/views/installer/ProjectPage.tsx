@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -105,9 +105,29 @@ type InstallerProjectDetailsResponse = {
   id: string;
   name: string;
   address: string | null;
+  address_details?: {
+    street?: string | null;
+    building?: string | null;
+    city?: string | null;
+    entrance?: string | null;
+    lat?: string | number | null;
+    lng?: string | number | null;
+    waze_url?: string | null;
+    waze_deep_link?: string | null;
+  } | null;
   waze_url: string | null;
   whatsapp_url?: string | null;
   call_url?: string | null;
+  developer?: {
+    name?: string | null;
+    contact_name?: string | null;
+    phone?: string | null;
+    phone_alt?: string | null;
+    whatsapp?: string | null;
+    notes?: string | null;
+    whatsapp_deep_link?: string | null;
+    call_deep_link?: string | null;
+  } | null;
   contact_name?: string | null;
   contact_phone?: string | null;
   developer_phone_alt?: string | null;
@@ -230,6 +250,23 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
   const details = detailsQuery.data;
   const reasons = details?.reasons_catalog || [];
   const addonTypes = details?.addons.types || [];
+  const addressDetails = details?.address_details;
+  const developer = details?.developer;
+  const projectAddress =
+    details?.address
+    || [addressDetails?.street, addressDetails?.building, addressDetails?.city, addressDetails?.entrance]
+      .filter((value): value is string => Boolean(value && String(value).trim()))
+      .join(", ")
+    || null;
+  const wazeUrl = details?.waze_url || addressDetails?.waze_deep_link || addressDetails?.waze_url || null;
+  const whatsappUrl = details?.whatsapp_url || developer?.whatsapp_deep_link || null;
+  const callUrl = details?.call_url || developer?.call_deep_link || null;
+  const developerCompany = details?.developer_company || developer?.name || null;
+  const contactName = details?.contact_name || developer?.contact_name || null;
+  const contactPhone = details?.contact_phone || developer?.phone || null;
+  const developerPhoneAlt = details?.developer_phone_alt || developer?.phone_alt || null;
+  const developerWhatsapp = details?.developer_whatsapp || developer?.whatsapp || null;
+  const developerNotes = details?.developer_notes || developer?.notes || null;
 
   useEffect(() => {
     if (!actionHint) {
@@ -651,18 +688,18 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               {details?.name || t("installerProject.projectDetails")}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm leading-6 text-muted-foreground sm:text-[15px]">
-              {details?.waze_url && details?.address ? (
+              {wazeUrl && projectAddress ? (
                 <a
-                  href={details.waze_url}
+                  href={wazeUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 underline-offset-4 transition-colors hover:text-foreground hover:underline"
                 >
                   <MapPinned className="h-4 w-4" />
-                  {details.address}
+                  {projectAddress}
                 </a>
               ) : (
-                <span>{details?.address || t("installerProject.noAddress")}</span>
+                <span>{projectAddress || t("installerProject.noAddress")}</span>
               )}
               <span>|</span>
               <span>
@@ -711,9 +748,9 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
               >
                 {t("installerProject.openIssues")}
               </a>
-              {details?.waze_url ? (
+              {wazeUrl ? (
                 <a
-                  href={details.waze_url}
+                  href={wazeUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center justify-center rounded-xl border border-border/70 bg-background/75 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
@@ -729,9 +766,9 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   {copy("Open Waze", "Открыть Waze", "פתח Waze")}
                 </button>
               )}
-              {details?.whatsapp_url ? (
+              {whatsappUrl ? (
                 <a
-                  href={details.whatsapp_url}
+                  href={whatsappUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
@@ -756,10 +793,10 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                   {copy("Open WhatsApp", "Открыть WhatsApp", "פתח WhatsApp")}
                 </button>
               )}
-              {details?.call_url ? (
+              {callUrl ? (
                 <>
                   <a
-                    href={details.call_url}
+                    href={callUrl}
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                   >
                     <Phone className="h-4 w-4" />
@@ -772,17 +809,17 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                       "Нажмите или удерживайте, чтобы скопировать номер",
                       "לחץ או החזק כדי להעתיק את המספר"
                     )}
-                    onClick={() => void handleCopyProjectPhone(details.contact_phone)}
+                    onClick={() => void handleCopyProjectPhone(contactPhone)}
                     onContextMenu={(event) => {
                       event.preventDefault();
-                      void handleCopyProjectPhone(details.contact_phone);
+                      void handleCopyProjectPhone(contactPhone);
                     }}
-                    onPointerDown={() => schedulePhoneCopy(details.contact_phone)}
+                    onPointerDown={() => schedulePhoneCopy(contactPhone)}
                     onPointerUp={clearPhoneCopyTimer}
                     onPointerLeave={clearPhoneCopyTimer}
                     className="inline-flex items-center justify-center rounded-xl border border-border/70 bg-background/60 px-4 py-3 text-sm font-medium tabular-nums text-foreground transition-colors hover:bg-muted"
                   >
-                    {normalizePhoneForDisplay(details.contact_phone)}
+                    {normalizePhoneForDisplay(contactPhone)}
                   </button>
                 </>
               ) : (
@@ -824,28 +861,28 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
                     {details?.contact_name || copy("Not filled", "Не заполнено", "לא הוזן")}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {details?.contact_phone
-                      ? normalizePhoneForDisplay(details.contact_phone)
+                    {contactPhone
+                      ? normalizePhoneForDisplay(contactPhone)
                       : copy("No phone yet", "Телефон не добавлен", "אין עדיין טלפון")}
                   </div>
-                  {details?.developer_phone_alt ? (
+                  {developerPhoneAlt ? (
                     <div className="mt-1 text-xs text-muted-foreground">
-                      {copy("Alt", "Доп.", "נוסף")}: {normalizePhoneForDisplay(details.developer_phone_alt)}
+                      {copy("Alt", "Доп.", "נוסף")}: {normalizePhoneForDisplay(developerPhoneAlt)}
                     </div>
                   ) : null}
-                  {details?.developer_whatsapp ? (
+                  {developerWhatsapp ? (
                     <div className="mt-1 text-xs text-muted-foreground">
-                      WhatsApp: {normalizePhoneForDisplay(details.developer_whatsapp)}
+                      WhatsApp: {normalizePhoneForDisplay(developerWhatsapp)}
                     </div>
                   ) : null}
                 </div>
               </div>
-              {details?.developer_notes ? (
+              {developerNotes ? (
                 <div className="mt-2 rounded-xl border border-border/70 bg-background/70 px-3 py-3 text-sm text-muted-foreground">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                     {copy("Site notes", "Заметки по объекту", "הערות לאתר")}
                   </div>
-                  <div className="mt-1 leading-6 text-foreground/90">{details.developer_notes}</div>
+                  <div className="mt-1 leading-6 text-foreground/90">{developerNotes}</div>
                 </div>
               ) : null}
             </details>
@@ -1423,4 +1460,3 @@ export default function InstallerProjectPage({ projectId }: InstallerProjectPage
     </div>
   );
 }
-
