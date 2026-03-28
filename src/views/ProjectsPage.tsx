@@ -4,6 +4,7 @@ import {
   AlertCircle,
   Building2,
   CheckCircle2,
+  ChevronDown,
   FileSpreadsheet,
   FilterX,
   Layers3,
@@ -18,6 +19,12 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Accordion,
   AccordionContent,
@@ -3297,91 +3304,175 @@ export default function ProjectsPage() {
                         <PencilLine className="h-4 w-4" />
                         {copy("Edit project", "Редактировать проект", "ערוך פרויקט")}
                       </Button>
-                      {projectDetails?.waze_deep_link ? (
-                        <a
-                          href={projectDetails.waze_deep_link}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={projectDetails.address || ""}
-                          className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                        >
-                          <MapPinned className="h-4 w-4" />
-                          Waze
-                        </a>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            showProjectActionHint(
-                              copy(
-                                "Add address in project settings to unlock Waze.",
-                                "Добавьте адрес в настройках проекта, чтобы включить Waze.",
-                                "הוסף כתובת בהגדרות הפרויקט כדי לפתוח את Waze."
+                      <div className="hidden md:flex md:flex-wrap md:gap-2">
+                        {projectDetails?.waze_deep_link ? (
+                          <a
+                            href={projectDetails.waze_deep_link}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={projectDetails.address || ""}
+                            className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                          >
+                            <MapPinned className="h-4 w-4" />
+                            Waze
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              showProjectActionHint(
+                                copy(
+                                  "Add address in project settings to unlock Waze.",
+                                  "Добавьте адрес в настройках проекта, чтобы включить Waze.",
+                                  "הוסף כתובת בהגדרות הפרויקט כדי לפתוח את Waze."
+                                )
                               )
-                            )
-                          }
-                          className="inline-flex items-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
-                        >
-                          <MapPinned className="h-4 w-4" />
-                          Waze
-                        </button>
-                      )}
-                      {projectDetails?.whatsapp_deep_link ? (
-                        <a
-                          href={projectDetails.whatsapp_deep_link}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={[projectDetails.contact_name, projectDetails.developer_whatsapp || projectDetails.contact_phone].filter(Boolean).join(" · ")}
-                          className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                          WhatsApp
-                        </a>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            showProjectActionHint(
-                              copy(
-                                "Add a contact phone or WhatsApp number to unlock WhatsApp.",
-                                "Добавьте телефон контакта или номер WhatsApp, чтобы включить WhatsApp.",
-                                "הוסף טלפון איש קשר או מספר WhatsApp כדי לפתוח את WhatsApp."
+                            }
+                            className="inline-flex items-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
+                          >
+                            <MapPinned className="h-4 w-4" />
+                            Waze
+                          </button>
+                        )}
+                        {projectDetails?.whatsapp_deep_link ? (
+                          <a
+                            href={projectDetails.whatsapp_deep_link}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={[projectDetails.contact_name, projectDetails.developer_whatsapp || projectDetails.contact_phone].filter(Boolean).join(" · ")}
+                            className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            WhatsApp
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              showProjectActionHint(
+                                copy(
+                                  "Add a contact phone or WhatsApp number to unlock WhatsApp.",
+                                  "Добавьте телефон контакта или номер WhatsApp, чтобы включить WhatsApp.",
+                                  "הוסף טלפון איש קשר או מספר WhatsApp כדי לפתוח את WhatsApp."
+                                )
                               )
-                            )
-                          }
-                          className="inline-flex items-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                          WhatsApp
-                        </button>
-                      )}
-                      {projectDetails?.call_deep_link ? (
-                        <a
-                          href={projectDetails.call_deep_link}
-                          title={projectDetails.contact_phone || ""}
-                          className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                        >
-                          <Phone className="h-4 w-4" />
-                          {copy("Call", "Позвонить", "התקשר")}
-                        </a>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            showProjectActionHint(
-                              copy(
-                                "Add a primary phone in project settings to unlock calling.",
-                                "Добавьте основной телефон в настройках проекта, чтобы включить звонок.",
-                                "הוסף טלפון ראשי בהגדרות הפרויקט כדי לפתוח חיוג."
+                            }
+                            className="inline-flex items-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            WhatsApp
+                          </button>
+                        )}
+                        {projectDetails?.call_deep_link ? (
+                          <a
+                            href={projectDetails.call_deep_link}
+                            title={projectDetails.contact_phone || ""}
+                            className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                          >
+                            <Phone className="h-4 w-4" />
+                            {copy("Call", "Позвонить", "התקשר")}
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              showProjectActionHint(
+                                copy(
+                                  "Add a primary phone in project settings to unlock calling.",
+                                  "Добавьте основной телефон в настройках проекта, чтобы включить звонок.",
+                                  "הוסף טלפון ראשי בהגדרות הפרויקט כדי לפתוח חיוג."
+                                )
                               )
-                            )
-                          }
-                          className="inline-flex items-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
-                        >
-                          <Phone className="h-4 w-4" />
-                          {copy("Call", "Позвонить", "התקשר")}
-                        </button>
-                      )}
+                            }
+                            className="inline-flex items-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
+                          >
+                            <Phone className="h-4 w-4" />
+                            {copy("Call", "Позвонить", "התקשר")}
+                          </button>
+                        )}
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button type="button" variant="outline" className="gap-2 md:hidden">
+                            {copy("Actions", "Действия", "פעולות")}
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 md:hidden">
+                          {projectDetails?.waze_deep_link ? (
+                            <DropdownMenuItem asChild className="gap-2">
+                              <a href={projectDetails.waze_deep_link} target="_blank" rel="noreferrer">
+                                <MapPinned className="h-4 w-4" />
+                                Waze
+                              </a>
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onSelect={() =>
+                                showProjectActionHint(
+                                  copy(
+                                    "Add address in project settings to unlock Waze.",
+                                    "Добавьте адрес в настройках проекта, чтобы включить Waze.",
+                                    "הוסף כתובת בהגדרות הפרויקט כדי לפתוח את Waze."
+                                  )
+                                )
+                              }
+                            >
+                              <MapPinned className="h-4 w-4" />
+                              Waze
+                            </DropdownMenuItem>
+                          )}
+                          {projectDetails?.whatsapp_deep_link ? (
+                            <DropdownMenuItem asChild className="gap-2">
+                              <a href={projectDetails.whatsapp_deep_link} target="_blank" rel="noreferrer">
+                                <MessageCircle className="h-4 w-4" />
+                                WhatsApp
+                              </a>
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onSelect={() =>
+                                showProjectActionHint(
+                                  copy(
+                                    "Add a contact phone or WhatsApp number to unlock WhatsApp.",
+                                    "Добавьте телефон контакта или номер WhatsApp, чтобы включить WhatsApp.",
+                                    "הוסף טלפון איש קשר או מספר WhatsApp כדי לפתוח את WhatsApp."
+                                  )
+                                )
+                              }
+                            >
+                              <MessageCircle className="h-4 w-4" />
+                              WhatsApp
+                            </DropdownMenuItem>
+                          )}
+                          {projectDetails?.call_deep_link ? (
+                            <DropdownMenuItem asChild className="gap-2">
+                              <a href={projectDetails.call_deep_link}>
+                                <Phone className="h-4 w-4" />
+                                {copy("Call", "Позвонить", "התקשר")}
+                              </a>
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onSelect={() =>
+                                showProjectActionHint(
+                                  copy(
+                                    "Add a primary phone in project settings to unlock calling.",
+                                    "Добавьте основной телефон в настройках проекта, чтобы включить звонок.",
+                                    "הוסף טלפון ראשי בהגדרות הפרויקט כדי לפתוח חיוג."
+                                  )
+                                )
+                              }
+                            >
+                              <Phone className="h-4 w-4" />
+                              {copy("Call", "Позвонить", "התקשר")}
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       {projectDetails?.contact_phone ? (
                         <button
                           type="button"
@@ -3398,7 +3489,7 @@ export default function ProjectsPage() {
                           onPointerDown={() => scheduleProjectPhoneCopy(projectDetails.contact_phone)}
                           onPointerUp={clearProjectPhoneCopyTimer}
                           onPointerLeave={clearProjectPhoneCopyTimer}
-                          className="inline-flex items-center rounded-xl border border-border/70 bg-background/60 px-3 py-2 text-sm font-medium tabular-nums text-foreground transition-colors hover:bg-muted"
+                          className="hidden md:inline-flex items-center rounded-xl border border-border/70 bg-background/60 px-3 py-2 text-sm font-medium tabular-nums text-foreground transition-colors hover:bg-muted"
                         >
                           {formatReadablePhone(projectDetails.contact_phone)}
                         </button>
