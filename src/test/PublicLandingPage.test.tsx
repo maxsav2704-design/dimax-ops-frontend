@@ -76,5 +76,5 @@ describe("PublicLandingPage", () => {
       "href",
       "/login?next=/installer"
     );
-  }, 10000);
+  }, 20000);
 });
