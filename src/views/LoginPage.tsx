@@ -79,6 +79,10 @@ export default function LoginPage() {
       setAccessNotice(t("login.accessDenied"));
       return;
     }
+    if (code === "auth_required") {
+      setAccessNotice(t("login.authRequired"));
+      return;
+    }
     setAccessNotice(null);
   }, [t]);
 

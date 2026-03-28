@@ -45,7 +45,7 @@ describe("RequireAuth", () => {
     renderSubject();
 
     await waitFor(() => {
-      expect(replaceMock).toHaveBeenCalledWith("/login?next=%2Freports");
+      expect(replaceMock).toHaveBeenCalledWith("/login?next=%2Freports&error=auth_required");
     });
   });
 

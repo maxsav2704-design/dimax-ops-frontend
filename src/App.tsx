@@ -47,7 +47,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
   const next = `${location.pathname}${location.search}${location.hash}`;
 
   if (!session) {
-    return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
+    return <Navigate to={`/login?next=${encodeURIComponent(next)}&error=auth_required`} replace />;
   }
 
   if (session.role !== "ADMIN") {

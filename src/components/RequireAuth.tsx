@@ -59,7 +59,7 @@ export function RequireAuth({
           return;
         }
         if (!session) {
-          router.replace(`/login?next=${encodeURIComponent(next)}`);
+          router.replace(`/login?next=${encodeURIComponent(next)}&error=auth_required`);
           return;
         }
         if (scope === "admin" && session.role === "INSTALLER") {
@@ -81,7 +81,7 @@ export function RequireAuth({
         setAllowed(true);
       } catch {
         if (!cancelled) {
-          router.replace(`/login?next=${encodeURIComponent(next)}`);
+          router.replace(`/login?next=${encodeURIComponent(next)}&error=auth_required`);
         }
       }
     }

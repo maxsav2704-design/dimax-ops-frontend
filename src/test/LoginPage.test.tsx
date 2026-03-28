@@ -56,4 +56,18 @@ describe("LoginPage", () => {
       ).toBeInTheDocument();
     });
   });
+  it("shows readable auth required notice from bootstrap redirect query", async () => {
+    window.history.replaceState({}, "", "/login?error=auth_required&next=%2Fprojects");
+
+    render(
+      <LanguageProvider>
+        <LoginPage />
+      </LanguageProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Sign in to continue to the requested area.")).toBeInTheDocument();
+    });
+  });
+
 });
