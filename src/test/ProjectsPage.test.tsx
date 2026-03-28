@@ -2324,6 +2324,86 @@ describe("ProjectsPage", () => {
     ).toBeInTheDocument();
   }, 25000);
 
+  it("shows readable project phone next to call action and copies it on click", async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "clipboard", {
+      value: { writeText: writeTextMock },
+      configurable: true,
+    });
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [{ id: "door-type-1", code: "entrance", name: "Entrance", is_active: true }];
+      }
+      if (url.includes("/api/v1/admin/projects/address-suggestions")) {
+        return { items: [] };
+      }
+      if (url.includes("/api/v1/admin/projects/import-mapping-profiles")) {
+        return { default_code: "auto_v1", items: [] };
+      }
+      if (url.endsWith("/api/v1/admin/projects")) {
+        return {
+          items: [{ id: "project-1", name: "Project A", code: "PRJ-001", address: "Harbor 11", status: "NEW" }],
+        };
+      }
+      if (url.includes("/api/v1/admin/projects/project-1/doors/layout")) {
+        return { project_id: "project-1", total_doors: 0, buckets: [] };
+      }
+      if (url.includes("/api/v1/admin/projects/project-1") && !url.includes("/doors/") && !url.includes("/addons/") && !url.includes("/urgency-surcharges")) {
+        return {
+          id: "project-1",
+          name: "Project A",
+          code: "PRJ-001",
+          address: "Harbor 11, Ashdod",
+          status: "NEW",
+          developer_company: "Builder Ltd",
+          contact_name: "Yael Cohen",
+          contact_phone: "+972501234567",
+          contact_email: "yael@example.com",
+          developer_phone_alt: null,
+          developer_whatsapp: "+972509876543",
+          developer_notes: "Call before arrival.",
+          address_street: "Harbor",
+          address_building: "11",
+          address_city: "Ashdod",
+          address_entrance: null,
+          address_lat: "31.8014",
+          address_lng: "34.6435",
+          address_waze_url: null,
+          waze_deep_link: "https://waze.com/ul?ll=31.8014,34.6435&navigate=yes",
+          whatsapp_deep_link: "https://wa.me/972509876543",
+          call_deep_link: "tel:+972501234567",
+          issues_open: [],
+          doors: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/projects/import-runs/failed-queue")) {
+        return { items: [], total: 0, limit: 10, offset: 0 };
+      }
+      if (url.includes("/api/v1/admin/library")) {
+        return { items: [] };
+      }
+      if (url.includes("/api/v1/admin/installers")) {
+        return { items: [] };
+      }
+      return {};
+    });
+
+    render(<ProjectsPage />);
+
+    const phoneCopyButton = await screen.findByRole("button", { name: "+972 50-123-4567" });
+    expect(screen.getByRole("link", { name: "Call" })).toHaveAttribute("href", "tel:+972501234567");
+
+    fireEvent.click(phoneCopyButton);
+
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledWith("+972501234567");
+    });
+    expect(await screen.findByText("Phone number copied.")).toBeInTheDocument();
+  }, 25000);
+
   it("autofills structured address fields from project address suggestions", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
       const url = String(path);

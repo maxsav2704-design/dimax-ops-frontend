@@ -246,6 +246,30 @@ describe("InstallerProjectPage", () => {
     ).toBeInTheDocument();
   }, 15000);
 
+  it("shows readable installer contact phone and copies it on click", async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "clipboard", {
+      value: { writeText: writeTextMock },
+      configurable: true,
+    });
+
+    setupApiMock();
+    renderSubject();
+
+    const phoneCopyButton = await screen.findByRole("button", { name: "+972 50-123-4567" });
+    expect(screen.getByRole("link", { name: "Call contact" })).toHaveAttribute(
+      "href",
+      "tel:+972501234567"
+    );
+
+    fireEvent.click(phoneCopyButton);
+
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledWith("+972501234567");
+    });
+    expect(await screen.findByText("Phone number copied.")).toBeInTheDocument();
+  }, 15000);
+
   it("applies issue continuity filters from url query params", async () => {
     window.history.replaceState(
       {},
