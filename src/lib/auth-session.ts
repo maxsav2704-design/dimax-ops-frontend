@@ -46,10 +46,36 @@ export function getAccessToken(): string | null {
   return inMemoryAccessToken;
 }
 
+export function getRefreshToken(): string | null {
+  if (typeof window === "undefined" || !window.sessionStorage) {
+    return null;
+  }
+  for (const key of LEGACY_REFRESH_TOKEN_STORAGE_KEYS) {
+    const value = window.sessionStorage.getItem(key);
+    if (value) {
+      return value;
+    }
+  }
+  return null;
+}
+
 export function persistAccessToken(token: string): void {
   inMemoryAccessToken = token;
   removeStorageKeys(ACCESS_TOKEN_STORAGE_KEYS);
-  removeStorageKeys(LEGACY_REFRESH_TOKEN_STORAGE_KEYS);
+  dispatchAuthChanged();
+}
+
+export function persistRefreshToken(token: string): void {
+  if (typeof window !== "undefined" && window.sessionStorage) {
+    for (const key of LEGACY_REFRESH_TOKEN_STORAGE_KEYS) {
+      window.sessionStorage.setItem(key, token);
+    }
+  }
+  if (typeof window !== "undefined" && window.localStorage) {
+    for (const key of LEGACY_REFRESH_TOKEN_STORAGE_KEYS) {
+      window.localStorage.removeItem(key);
+    }
+  }
   dispatchAuthChanged();
 }
 

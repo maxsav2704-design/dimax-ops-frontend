@@ -8,12 +8,13 @@ import { Building2, KeyRound, LogIn, Mail } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { apiFetch } from "@/lib/api";
 import { resolveAdminHomePath } from "@/lib/admin-access";
-import { normalizeAuthSession, persistAccessToken } from "@/lib/auth-session";
+import { normalizeAuthSession, persistAccessToken, persistRefreshToken } from "@/lib/auth-session";
 import { readableApiError } from "@/lib/api-error-display";
 import { useI18n } from "@/lib/i18n";
 
 type LoginResponse = {
   access_token: string;
+  refresh_token?: string;
   token_type: string;
 };
 
@@ -101,6 +102,9 @@ export default function LoginPage() {
         }),
       });
       persistAccessToken(body.access_token);
+      if (body.refresh_token) {
+        persistRefreshToken(body.refresh_token);
+      }
       localStorage.setItem("dimax_company_id", companyId.trim());
       localStorage.setItem("dimax_email", email.trim());
       let nextPath = await resolveDefaultPath();

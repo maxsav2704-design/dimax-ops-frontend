@@ -24,21 +24,20 @@ async function loginInstaller(page) {
   await page.getByRole("button", { name: "Sign In" }).click();
   const loginResponse = await loginResponsePromise;
   expect(loginResponse.ok()).toBeTruthy();
-
-  await page.waitForFunction(
-    () => Boolean(window.localStorage.getItem("dimax_access_token")),
-    undefined,
-    { timeout: 30_000 }
-  );
+  const loginBody = (await loginResponse.json()) as { access_token?: string };
 
   await expect(page).toHaveURL(/\/installer(?:\/)?$/, { timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "Installer Workspace" })).toBeVisible({
     timeout: 30_000,
   });
+  await page.waitForFunction(
+    () => Boolean(window.sessionStorage.getItem("dimax_refresh_token")),
+    undefined,
+    { timeout: 30_000 }
+  );
 
-  const token = await page.evaluate(() => window.localStorage.getItem("dimax_access_token"));
-  expect(token).toBeTruthy();
-  return token as string;
+  expect(loginBody.access_token).toBeTruthy();
+  return loginBody.access_token as string;
 }
 
 test.describe.serial("Installer web smoke", () => {
@@ -204,7 +203,10 @@ test.describe.serial("Installer web smoke", () => {
 
     await page.getByRole("button", { name: "Reset filters" }).click();
     await expect(page).toHaveURL(/\/installer\/calendar$/);
-    await expect(page.getByLabel("Range", { exact: true })).toHaveValue("7d");
+    await expect(page.getByRole("button", { name: "Next 7 days" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
     await expect(page.getByLabel("Event type")).toHaveValue("ALL");
     await expect(page.getByLabel("Project")).toHaveValue("ALL");
   });

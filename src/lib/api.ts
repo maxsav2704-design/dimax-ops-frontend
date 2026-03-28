@@ -1,4 +1,10 @@
-import { clearStoredSession, getAccessToken, persistAccessToken } from "@/lib/auth-session";
+import {
+  clearStoredSession,
+  getAccessToken,
+  getRefreshToken,
+  persistAccessToken,
+  persistRefreshToken,
+} from "@/lib/auth-session";
 
 export { getAccessToken } from "@/lib/auth-session";
 
@@ -30,6 +36,7 @@ export class ApiError extends Error {
 
 type RefreshResponse = {
   access_token?: string;
+  refresh_token?: string;
   token_type?: string;
 };
 
@@ -73,9 +80,20 @@ async function requestAccessTokenRefresh(): Promise<string | null> {
   }
 
   refreshPromise = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      clearStoredSession();
+      return null;
+    }
     try {
       const response = await fetch(`${apiBaseUrl()}/api/v1/auth/refresh`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          refresh_token: refreshToken,
+        }),
         credentials: "include",
       });
 
@@ -91,6 +109,9 @@ async function requestAccessTokenRefresh(): Promise<string | null> {
       }
 
       persistAccessToken(body.access_token);
+      if (body.refresh_token) {
+        persistRefreshToken(body.refresh_token);
+      }
       return body.access_token;
     } catch {
       clearStoredSession();
@@ -170,12 +191,27 @@ export async function apiDownload(path: string, init?: RequestInit): Promise<Res
 
 export async function logoutSession(): Promise<void> {
   const token = getAccessToken();
+  const refreshToken = getRefreshToken();
   try {
-    await fetch(`${apiBaseUrl()}/api/v1/auth/logout`, {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      credentials: "include",
-    });
+    if (token) {
+      await fetch(`${apiBaseUrl()}/api/v1/auth/logout`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+    }
+    if (refreshToken) {
+      await fetch(`${apiBaseUrl()}/api/v1/auth/logout-refresh`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          refresh_token: refreshToken,
+        }),
+        credentials: "include",
+      });
+    }
   } finally {
     clearStoredSession();
   }
