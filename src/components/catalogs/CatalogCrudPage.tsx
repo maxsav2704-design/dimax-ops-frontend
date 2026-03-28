@@ -33,6 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { apiFetch } from "@/lib/api";
+import { readableApiError } from "@/lib/api-error-display";
 import { cn } from "@/lib/utils";
 
 type CatalogItem = {
@@ -333,7 +334,7 @@ export function CatalogCrudPage({
       const parsedItems = parseImportPayload(text);
       importMutation.mutate(parsedItems);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Import parsing failed");
+      setMessage(readableApiError(error, "en", "Import parsing failed."));
     }
   };
 
@@ -519,15 +520,16 @@ export function CatalogCrudPage({
           <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              {String(
+              {readableApiError(
                 listQuery.error ||
                   createMutation.error ||
                   updateMutation.error ||
                   deleteMutation.error ||
                   bulkMutation.error ||
                   importMutation.error ||
-                  exportMutation.error ||
-                  "Request failed"
+                  exportMutation.error,
+                "en",
+                "Request failed."
               )}
             </span>
           </div>
