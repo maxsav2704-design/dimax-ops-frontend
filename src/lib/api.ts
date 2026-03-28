@@ -71,6 +71,12 @@ function buildHeaders(init: RequestInit | undefined, token: string | null): Head
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
+  if (!headers.has("Accept-Language") && typeof window !== "undefined") {
+    const locale = window.localStorage.getItem("dimax_locale");
+    if (locale) {
+      headers.set("Accept-Language", locale);
+    }
+  }
   return headers;
 }
 

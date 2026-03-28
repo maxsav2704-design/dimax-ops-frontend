@@ -528,11 +528,11 @@ function buildDraftProjectAddress(form: ProjectFormState): string {
 }
 
 function buildDraftWazeLink(form: ProjectFormState): string | null {
-  if (form.address_waze_url.trim()) {
-    return form.address_waze_url.trim();
-  }
   if (form.address_lat.trim() && form.address_lng.trim()) {
     return `https://www.waze.com/ul?ll=${encodeURIComponent(form.address_lat.trim())},${encodeURIComponent(form.address_lng.trim())}&navigate=yes`;
+  }
+  if (form.address_waze_url.trim()) {
+    return form.address_waze_url.trim();
   }
   const address = buildDraftProjectAddress(form);
   if (!address) {
