@@ -5,13 +5,23 @@ import {
   AlertCircle,
   AlertTriangle,
   BellRing,
+  CalendarClock,
   CheckCircle2,
   CheckCheck,
+  FileText,
+  FolderKanban,
+  LineChart,
   Mail,
   MessageSquare,
+  Plus,
+  ReceiptText,
   RefreshCw,
   RotateCcw,
   ShieldAlert,
+  Star,
+  Users,
+  Wrench,
+  type LucideIcon,
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -19,7 +29,16 @@ import { Button } from "@/components/ui/button";
 import { apiDownload, apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { canAccessAdminModule, canViewRates } from "@/lib/admin-access";
+import {
+  canAccessAdminModule,
+  canRunPrivilegedAdminActions,
+  canViewRates,
+} from "@/lib/admin-access";
+import {
+  formatLocaleDateTime as formatLocalizedDateTime,
+  formatLocaleNumber as formatLocalizedNumber,
+  formatLocalePercent as formatLocalizedPercent,
+} from "@/lib/formatting";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +46,8 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
   en: {
     "reports.notAvailableShort": "n/a",
     "reports.openInProjects": "Open in Projects",
-    "reports.noFailingProjectsCurrentWindow": "No failing projects in current window.",
+    "reports.noFailingProjectsCurrentWindow":
+      "No failing projects in current window.",
     "reports.healthMetricsPlaybooks": "Health metrics and action playbooks",
     "reports.loadingSlaMetrics": "Loading SLA metrics...",
     "reports.loadingIssuesAnalytics": "Loading issues analytics...",
@@ -49,7 +69,8 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.outboxRisk": "Outbox Risk",
     "reports.limitAlerts": "Limit Alerts",
     "reports.warnDanger24h": "24h warn {warn} | danger {danger}",
-    "reports.topFailingProjectsTitle": "Top Failing Projects (7d import errors)",
+    "reports.topFailingProjectsTitle":
+      "Top Failing Projects (7d import errors)",
     "reports.failureRuns": "{count} fails",
     "reports.openShort": "Open",
     "reports.operationsSlaTitle": "Operations SLA",
@@ -83,16 +104,20 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.openIssuesMissingRates": "Open Issues / Missing Rates",
     "reports.lastInstall": "Last install:",
     "reports.addonsImpact": "Addons Impact",
-    "reports.addonsProfitMissingPlans": "Profit {profit} | Missing plans {count}",
+    "reports.addonsProfitMissingPlans":
+      "Profit {profit} | Missing plans {count}",
     "reports.openOperationsCenter": "Open Operations Center",
     "reports.openActionableOps": "Open Actionable Ops",
     "reports.loadingCommandCenter": "Loading command center...",
     "reports.issuesAnalyticsTitle": "Issues Analytics",
-    "reports.issuesAnalyticsSubtitle": "MTTR, overdue pressure and backlog dynamics",
+    "reports.issuesAnalyticsSubtitle":
+      "MTTR, overdue pressure and backlog dynamics",
     "reports.marginLeakageTitle": "Margin Leakage",
-    "reports.marginLeakageSubtitle": "Open issue exposure, stalled reasons and add-on uplift",
+    "reports.marginLeakageSubtitle":
+      "Open issue exposure, stalled reasons and add-on uplift",
     "reports.loadingProjectsForPlanFact": "Loading projects...",
-    "reports.preparingPlanFactFilters": "Preparing project filters for plan vs fact.",
+    "reports.preparingPlanFactFilters":
+      "Preparing project filters for plan vs fact.",
     "reports.loadingProjectPlanFact": "Loading project plan vs fact...",
     "reports.failedProjectPlanFact": "Failed to load project plan vs fact",
     "reports.failedIssuesAnalytics": "Failed to load issues analytics",
@@ -124,14 +149,17 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.installerProfitabilityMatrix": "Installer Profitability Matrix",
     "reports.installerProfitabilitySubtitle":
       "Ranking by money output, margin quality and issue pressure",
-    "reports.loadingInstallerProfitability": "Loading installer profitability matrix...",
+    "reports.loadingInstallerProfitability":
+      "Loading installer profitability matrix...",
     "reports.projectsAddons": "Projects {projects} | Add-ons {addons}",
     "reports.installerCrossViewTitle": "Installer x Project Cross-view",
     "reports.installerCrossViewSubtitle":
       "Which installer-project combinations create or destroy margin",
-    "reports.loadingInstallerCrossView": "Loading installer-project cross-view...",
+    "reports.loadingInstallerCrossView":
+      "Loading installer-project cross-view...",
     "reports.installersKpiTitle": "Installers KPI",
-    "reports.installersKpiSubtitle": "Sorted, paginated installer performance and money metrics",
+    "reports.installersKpiSubtitle":
+      "Sorted, paginated installer performance and money metrics",
     "reports.loadingInstallersKpi": "Loading installers KPI...",
     "reports.rowsCount": "Rows: {count}",
     "reports.exportInstallersCsv": "Export Installers CSV",
@@ -144,7 +172,8 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
   ru: {
     "reports.notAvailableShort": "н/д",
     "reports.openInProjects": "Открыть в проектах",
-    "reports.noFailingProjectsCurrentWindow": "В текущем окне нет проблемных проектов.",
+    "reports.noFailingProjectsCurrentWindow":
+      "В текущем окне нет проблемных проектов.",
     "reports.healthMetricsPlaybooks": "Метрики здоровья и сценарии действий",
     "reports.loadingSlaMetrics": "Загружаем SLA-метрики...",
     "reports.loadingIssuesAnalytics": "Загружаем аналитику проблем...",
@@ -166,7 +195,8 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.outboxRisk": "Риск outbox",
     "reports.limitAlerts": "Алерты лимитов",
     "reports.warnDanger24h": "24ч warn {warn} | danger {danger}",
-    "reports.topFailingProjectsTitle": "Проблемные проекты (ошибки импорта за 7д)",
+    "reports.topFailingProjectsTitle":
+      "Проблемные проекты (ошибки импорта за 7д)",
     "reports.failureRuns": "{count} сбоев",
     "reports.openShort": "Открыть",
     "reports.operationsSlaTitle": "Операционный SLA",
@@ -175,19 +205,23 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
       "Самые прибыльные и низкомаржинальные проекты по фактической марже.",
     "reports.topMarginProjects": "Топ по марже",
     "reports.loadingTopMarginProjects": "Загружаем проекты с лучшей маржой...",
-    "reports.failedTopMarginProjects": "Не удалось загрузить проекты с лучшей маржой",
+    "reports.failedTopMarginProjects":
+      "Не удалось загрузить проекты с лучшей маржой",
     "reports.noProfitableProjects": "Прибыльных проектов пока нет.",
     "reports.statusIssues": "Статус {status} | Проблемы {issues}",
     "reports.lowMarginRiskProjects": "Низкая маржа / риск",
-    "reports.loadingLowMarginProjects": "Загружаем низкомаржинальные проекты...",
-    "reports.failedLowMarginProjects": "Не удалось загрузить низкомаржинальные проекты",
+    "reports.loadingLowMarginProjects":
+      "Загружаем низкомаржинальные проекты...",
+    "reports.failedLowMarginProjects":
+      "Не удалось загрузить низкомаржинальные проекты",
     "reports.noLowMarginProjects": "Низкомаржинальных проектов нет.",
     "reports.completionIssues": "Готовность {completion} | Проблемы {issues}",
     "reports.riskConcentrationTitle": "Концентрация риска",
     "reports.riskConcentrationSubtitle":
       "Где сейчас сконцентрирован риск маржи по проектам, заказам и монтажникам.",
     "reports.loadingRiskConcentration": "Загружаем концентрацию риска...",
-    "reports.failedRiskConcentration": "Не удалось загрузить концентрацию риска",
+    "reports.failedRiskConcentration":
+      "Не удалось загрузить концентрацию риска",
     "reports.delayedProfitLabel": "Отложенная прибыль",
     "reports.openIssueRisk": "Риск открытых проблем {amount}",
     "reports.blockedIssueRisk": "Риск заблокированных проблем",
@@ -197,7 +231,8 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.revenuePayrollProfit": "Выручка / payroll / прибыль",
     "reports.projectsOrders": "Проекты / заказы",
     "reports.installedDoors": "Установлено дверей: {count}",
-    "reports.openIssuesMissingRates": "Открытые проблемы / отсутствующие ставки",
+    "reports.openIssuesMissingRates":
+      "Открытые проблемы / отсутствующие ставки",
     "reports.lastInstall": "Последняя установка:",
     "reports.addonsImpact": "Влияние допов",
     "reports.addonsProfitMissingPlans": "Прибыль {profit} | Нет планов {count}",
@@ -207,11 +242,14 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.issuesAnalyticsTitle": "Аналитика проблем",
     "reports.issuesAnalyticsSubtitle": "MTTR, просрочки и динамика бэклога",
     "reports.marginLeakageTitle": "Утечка маржи",
-    "reports.marginLeakageSubtitle": "Риск по открытым проблемам, зависшим причинам и допам",
+    "reports.marginLeakageSubtitle":
+      "Риск по открытым проблемам, зависшим причинам и допам",
     "reports.loadingProjectsForPlanFact": "Загружаем проекты...",
-    "reports.preparingPlanFactFilters": "Готовим фильтры проекта для блока план vs факт.",
+    "reports.preparingPlanFactFilters":
+      "Готовим фильтры проекта для блока план vs факт.",
     "reports.loadingProjectPlanFact": "Загружаем план vs факт по проекту...",
-    "reports.failedProjectPlanFact": "Не удалось загрузить план vs факт по проекту",
+    "reports.failedProjectPlanFact":
+      "Не удалось загрузить план vs факт по проекту",
     "reports.failedIssuesAnalytics": "Не удалось загрузить аналитику проблем",
     "reports.openTotal": "Открыто / всего",
     "reports.overdueRate": "Доля просрочки",
@@ -241,14 +279,16 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.installerProfitabilityMatrix": "Матрица прибыльности монтажников",
     "reports.installerProfitabilitySubtitle":
       "Рейтинг по денежному результату, качеству маржи и давлению проблем",
-    "reports.loadingInstallerProfitability": "Загружаем матрицу прибыльности монтажников...",
+    "reports.loadingInstallerProfitability":
+      "Загружаем матрицу прибыльности монтажников...",
     "reports.projectsAddons": "Проекты {projects} | Допы {addons}",
     "reports.installerCrossViewTitle": "Срез монтажник x проект",
     "reports.installerCrossViewSubtitle":
       "Какие связки монтажник-проект создают или съедают маржу",
     "reports.loadingInstallerCrossView": "Загружаем срез монтажник x проект...",
     "reports.installersKpiTitle": "KPI монтажников",
-    "reports.installersKpiSubtitle": "Сортируемые и постраничные метрики монтажников",
+    "reports.installersKpiSubtitle":
+      "Сортируемые и постраничные метрики монтажников",
     "reports.loadingInstallersKpi": "Загружаем KPI монтажников...",
     "reports.rowsCount": "Строк: {count}",
     "reports.exportInstallersCsv": "Экспорт CSV по монтажникам",
@@ -261,7 +301,8 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
   he: {
     "reports.notAvailableShort": "לא זמין",
     "reports.openInProjects": "פתח בפרויקטים",
-    "reports.noFailingProjectsCurrentWindow": "אין פרויקטים כושלים בחלון הנוכחי.",
+    "reports.noFailingProjectsCurrentWindow":
+      "אין פרויקטים כושלים בחלון הנוכחי.",
     "reports.healthMetricsPlaybooks": "מדדי בריאות וספרי פעולה",
     "reports.loadingSlaMetrics": "טוען מדדי SLA...",
     "reports.loadingIssuesAnalytics": "טוען אנליטיקת תקלות...",
@@ -283,7 +324,8 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.outboxRisk": "סיכון Outbox",
     "reports.limitAlerts": "התראות מגבלות",
     "reports.warnDanger24h": "24ש׳ אזהרה {warn} | סכנה {danger}",
-    "reports.topFailingProjectsTitle": "פרויקטים כושלים (שגיאות ייבוא ב-7 ימים)",
+    "reports.topFailingProjectsTitle":
+      "פרויקטים כושלים (שגיאות ייבוא ב-7 ימים)",
     "reports.failureRuns": "{count} כשלים",
     "reports.openShort": "פתח",
     "reports.operationsSlaTitle": "SLA תפעולי",
@@ -324,13 +366,14 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.issuesAnalyticsTitle": "אנליטיקת תקלות",
     "reports.issuesAnalyticsSubtitle": "MTTR, לחץ איחורים ודינמיקת backlog",
     "reports.marginLeakageTitle": "דליפת מרווח",
-    "reports.marginLeakageSubtitle": "חשיפת תקלות פתוחות, סיבות תקועות והתרוממות add-on",
+    "reports.marginLeakageSubtitle":
+      "חשיפת תקלות פתוחות, סיבות תקועות והתרוממות add-on",
     "reports.loadingProjectsForPlanFact": "טוען פרויקטים...",
     "reports.preparingPlanFactFilters": "מכין מסנני פרויקט עבור plan vs fact.",
     "reports.loadingProjectPlanFact": "טוען plan vs fact לפרויקט...",
     "reports.failedProjectPlanFact": "טעינת plan vs fact לפרויקט נכשלה",
     "reports.failedIssuesAnalytics": "טעינת אנליטיקת התקלות נכשלה",
-    "reports.openTotal": "פתוחות / סה\"כ",
+    "reports.openTotal": 'פתוחות / סה"כ',
     "reports.overdueRate": "שיעור איחור",
     "reports.overdueOpen": "{count} פתוחות באיחור",
     "reports.blockedOpen": "פתוחות חסומות",
@@ -768,6 +811,11 @@ type ProjectPlanFactResponse = {
   profit_gap_total: number;
   planned_addons_qty: number;
   actual_addons_qty: number;
+  urgency_surcharges_count: number;
+  urgency_order_surcharges_count: number;
+  urgency_client_total: number;
+  urgency_installer_total: number;
+  urgency_profit_total: number;
   missing_planned_rates_doors: number;
   missing_actual_rates_doors: number;
   missing_addon_plans_facts: number;
@@ -841,6 +889,11 @@ type ProjectRiskDrilldownSummary = {
   blocked_issue_profit_at_risk: number;
   addon_revenue_total: number;
   addon_profit_total: number;
+  urgency_surcharges_count: number;
+  urgency_order_surcharges_count: number;
+  urgency_client_total: number;
+  urgency_installer_total: number;
+  urgency_profit_total: number;
   missing_planned_rates_doors: number;
   missing_actual_rates_doors: number;
   missing_addon_plans_facts: number;
@@ -1013,7 +1066,9 @@ const REPORTS_FOCUS_IDS: Record<ReportsFocus, string> = {
   issues: "reports-issues-analytics",
 };
 
-function getReportsFocusCopy(t: (key: string) => string): Record<ReportsFocus, { title: string; description: string }> {
+function getReportsFocusCopy(
+  t: (key: string) => string,
+): Record<ReportsFocus, { title: string; description: string }> {
   return {
     operations: {
       title: t("reports.operationsFocusTitle"),
@@ -1031,8 +1086,11 @@ function getReportsFocusCopy(t: (key: string) => string): Record<ReportsFocus, {
 }
 
 function getReportsOpsPresetCopy(
-  t: (key: string) => string
-): Record<ReportsOpsPreset, { title: string; description: string; slaHistoryDays: number }> {
+  t: (key: string) => string,
+): Record<
+  ReportsOpsPreset,
+  { title: string; description: string; slaHistoryDays: number }
+> {
   return {
     "failed-imports": {
       title: t("reports.failedImportsPresetTitle"),
@@ -1068,7 +1126,11 @@ function parseReportsFocus(value: string | null): ReportsFocus | null {
 }
 
 function parseReportsOpsPreset(value: string | null): ReportsOpsPreset | null {
-  if (value === "failed-imports" || value === "delivery-risk" || value === "issue-pressure") {
+  if (
+    value === "failed-imports" ||
+    value === "delivery-risk" ||
+    value === "issue-pressure"
+  ) {
     return value;
   }
   return null;
@@ -1076,7 +1138,7 @@ function parseReportsOpsPreset(value: string | null): ReportsOpsPreset | null {
 
 function getReportsFocusTargetId(
   focus: ReportsFocus | null,
-  scope: ReportsScopedContext
+  scope: ReportsScopedContext,
 ): string | null {
   if (scope.projectId) {
     return "reports-project-plan-fact";
@@ -1095,7 +1157,13 @@ function getReportsFocusTargetId(
   }
   return REPORTS_FOCUS_IDS[focus];
 }
-const AUDIT_ENTITY_OPTIONS = ["door_type", "reason", "company", "project"] as const;
+const AUDIT_ENTITY_OPTIONS = [
+  "door_type",
+  "reason",
+  "company",
+  "project",
+  "sync_state",
+] as const;
 const AUDIT_ACTION_OPTIONS = [
   "DOOR_TYPE_CREATE",
   "DOOR_TYPE_UPDATE",
@@ -1108,6 +1176,7 @@ const AUDIT_ACTION_OPTIONS = [
   "PROJECT_DOORS_IMPORT_APPLY",
   "PROJECT_DOORS_IMPORT_RETRY",
   "PROJECT_DOORS_IMPORT_RETRY_BULK",
+  "SYNC_STATE_RESET",
 ] as const;
 const ISSUE_AUDIT_ACTION_OPTIONS = [
   "ISSUE_STATUS_UPDATE",
@@ -1119,7 +1188,10 @@ const SORT_DIR_OPTIONS: Array<{ value: SortDir; label: string }> = [
   { value: "desc", label: "Desc" },
   { value: "asc", label: "Asc" },
 ];
-const INSTALLERS_SORT_OPTIONS: Array<{ value: InstallersSortBy; label: string }> = [
+const INSTALLERS_SORT_OPTIONS: Array<{
+  value: InstallersSortBy;
+  label: string;
+}> = [
   { value: "installed_doors", label: "Installed Doors" },
   { value: "payroll_total", label: "Payroll" },
   { value: "revenue_total", label: "Revenue" },
@@ -1146,7 +1218,10 @@ const INSTALLER_PROJECT_SORT_OPTIONS: Array<{
   { value: "avg_profit_per_door", label: "Profit / Door" },
   { value: "open_issues", label: "Open Issues" },
 ];
-const ORDER_NUMBERS_SORT_OPTIONS: Array<{ value: OrderNumbersSortBy; label: string }> = [
+const ORDER_NUMBERS_SORT_OPTIONS: Array<{
+  value: OrderNumbersSortBy;
+  label: string;
+}> = [
   { value: "total_doors", label: "Total Doors" },
   { value: "installed_doors", label: "Installed Doors" },
   { value: "not_installed_doors", label: "Not Installed" },
@@ -1159,18 +1234,58 @@ const ORDER_NUMBERS_SORT_OPTIONS: Array<{ value: OrderNumbersSortBy; label: stri
 ];
 
 const SLA_STATUS_CLASS: Record<string, string> = {
-  OK: "text-[hsl(var(--success))] bg-[hsl(var(--success)/0.12)] border-[hsl(var(--success)/0.28)]",
-  WARN: "text-[hsl(var(--warning-foreground))] bg-[hsl(var(--warning)/0.12)] border-[hsl(var(--warning)/0.28)]",
+  OK: "border-status-ok-border bg-status-ok-bg text-status-ok-fg",
+  WARN: "border-status-warning-border bg-status-warning-bg text-status-warning-fg",
   DANGER:
-    "text-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.12)] border-[hsl(var(--destructive)/0.28)]",
+    "border-status-problem-border bg-status-problem-bg text-status-problem-fg",
 };
 
-function formatDateTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
+function installerPerformanceBandClass(band: string): string {
+  if (band === "STRONG") {
+    return "text-status-ok-fg bg-status-ok-bg border-status-ok-border";
   }
-  return date.toLocaleString();
+  if (band === "RISK") {
+    return "text-status-problem-fg bg-status-problem-bg border-status-problem-border";
+  }
+  return "text-status-warning-fg bg-status-warning-bg border-status-warning-border";
+}
+
+function reportsNoticeClass(
+  tone: "success" | "error" | "warning" | "accent" | "muted",
+): string {
+  if (tone === "success") {
+    return "rounded-lg border border-status-ok-border bg-status-ok-bg px-4 py-3 text-[13px] text-status-ok-fg";
+  }
+  if (tone === "error") {
+    return "rounded-lg border border-status-problem-border bg-status-problem-bg px-4 py-3 text-[13px] text-status-problem-fg";
+  }
+  if (tone === "warning") {
+    return "rounded-lg border border-status-warning-border bg-status-warning-bg px-4 py-3 text-[13px] text-status-warning-fg";
+  }
+  if (tone === "accent") {
+    return "rounded-lg border border-accent bg-[var(--dmx-accent-tint)] px-4 py-3 text-[13px] text-text";
+  }
+  return "rounded-lg border border-border bg-surface px-4 py-3 text-[13px] text-text-secondary";
+}
+
+function reportsPanelClass(extra?: string): string {
+  return cn("rounded-lg border border-border bg-surface", extra);
+}
+
+function reportsMetricCardClass(
+  tone: "soft" | "success" | "warning" | "danger" = "soft",
+): string {
+  return cn(
+    "rounded-lg border p-4",
+    tone === "success" && "border-status-ok-border bg-status-ok-bg",
+    tone === "warning" && "border-status-warning-border bg-status-warning-bg",
+    tone === "danger" && "border-status-problem-border bg-status-problem-bg",
+    tone === "soft" && "border-border bg-surface",
+  );
+}
+
+function formatDateTime(value: string): string {
+  return formatLocalizedDateTime(value);
 }
 
 function metricLabel(metric: string | null): string {
@@ -1209,19 +1324,317 @@ function buildOperationsHref(params: {
 }
 
 function formatAmount(value: number | null | undefined): string {
-  const num = Number(value ?? 0);
-  if (!Number.isFinite(num)) {
-    return "0.00";
-  }
-  return num.toFixed(2);
+  return formatLocalizedNumber(value ?? 0, undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function formatPercent(value: number | null | undefined): string {
-  const num = Number(value ?? 0);
-  if (!Number.isFinite(num)) {
-    return "0.00%";
+  return formatLocalizedPercent(value ?? 0);
+}
+
+function formatCount(value: number | string | null | undefined): string {
+  return formatLocalizedNumber(value ?? 0, undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+}
+
+function toReportNumber(value: number | string | null | undefined): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+type ReportsDashboardTone = "blue" | "green" | "neutral" | "orange" | "red";
+
+type ReportsInsight = {
+  cta: string;
+  delta: string;
+  detail: string;
+  eyebrow: string;
+  onClick?: () => void;
+  title: string;
+  tone: ReportsDashboardTone;
+  value: string;
+  variant: "bars" | "line-down" | "line-up";
+};
+
+type ReportsLibraryRow = {
+  badge?: "live" | "new" | "pinned";
+  icon: string;
+  meta: string;
+  onClick?: () => void;
+  subtitle: string;
+  title: string;
+};
+
+type ReportsLibraryGroup = {
+  count: number;
+  icon: LucideIcon;
+  rows: ReportsLibraryRow[];
+  subtitle: string;
+  title: string;
+  tone: ReportsDashboardTone;
+};
+
+function reportsDashboardToneClasses(tone: ReportsDashboardTone) {
+  if (tone === "red") {
+    return {
+      accent: "bg-status-problem-fg",
+      border: "before:bg-status-problem-fg",
+      icon: "bg-status-problem-bg text-status-problem-fg",
+      text: "text-status-problem-fg",
+      badge: "bg-status-problem-bg text-status-problem-fg",
+    };
   }
-  return `${num.toFixed(2)}%`;
+  if (tone === "orange") {
+    return {
+      accent: "bg-status-warning-fg",
+      border: "before:bg-status-warning-fg",
+      icon: "bg-status-warning-bg text-status-warning-fg",
+      text: "text-status-warning-fg",
+      badge: "bg-status-warning-bg text-status-warning-fg",
+    };
+  }
+  if (tone === "green") {
+    return {
+      accent: "bg-status-ok-fg",
+      border: "before:bg-status-ok-fg",
+      icon: "bg-status-ok-bg text-status-ok-fg",
+      text: "text-status-ok-fg",
+      badge: "bg-status-ok-bg text-status-ok-fg",
+    };
+  }
+  if (tone === "blue") {
+    return {
+      accent: "bg-link",
+      border: "before:bg-link",
+      icon: "bg-blue-50 text-link",
+      text: "text-link",
+      badge: "bg-blue-50 text-link",
+    };
+  }
+  return {
+    accent: "bg-border-strong",
+    border: "before:bg-border-strong",
+    icon: "bg-surface-subtle text-text-secondary",
+    text: "text-text",
+    badge: "bg-surface-subtle text-text-secondary",
+  };
+}
+
+function ReportsInsightChart({
+  tone,
+  variant,
+}: {
+  tone: ReportsDashboardTone;
+  variant: ReportsInsight["variant"];
+}) {
+  const stroke =
+    tone === "red" ? "#c0392b" : tone === "orange" ? "#a65300" : "#2d8f4e";
+
+  if (variant === "bars") {
+    return (
+      <svg
+        aria-hidden="true"
+        className="h-auto w-full"
+        viewBox="0 0 320 100"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <line x1="18" y1="78" x2="306" y2="78" stroke="#e5e5e7" />
+        {[64, 38, 28, 18, 12, 10, 8, 6].map((height, index) => (
+          <rect
+            key={index}
+            x={24 + index * 34}
+            y={78 - height}
+            width="24"
+            height={height}
+            rx="3"
+            fill={index === 0 ? "#ff8a3d" : "#ffc83a"}
+            opacity={index === 0 ? 1 : 0.7}
+          />
+        ))}
+        <line
+          x1="16"
+          y1="35"
+          x2="306"
+          y2="35"
+          stroke="#cfcfd2"
+          strokeDasharray="3 3"
+        />
+      </svg>
+    );
+  }
+
+  const points =
+    variant === "line-up"
+      ? "48,68 80,60 112,62 144,52 176,54 208,42 240,38 272,28 304,22"
+      : "48,28 80,34 112,30 144,42 176,50 208,54 240,60 272,66 304,72";
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-auto w-full"
+      viewBox="0 0 320 100"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <line x1="40" y1="20" x2="308" y2="20" stroke="#efeff1" />
+      <line x1="40" y1="45" x2="308" y2="45" stroke="#efeff1" />
+      <line x1="40" y1="70" x2="308" y2="70" stroke="#efeff1" />
+      <polyline
+        points={points}
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.2"
+      />
+      <circle cx="304" cy={variant === "line-up" ? 22 : 72} r="4" fill="#fff" stroke={stroke} strokeWidth="2" />
+    </svg>
+  );
+}
+
+function ReportsInsightCard({ insight }: { insight: ReportsInsight }) {
+  const tone = reportsDashboardToneClasses(insight.tone);
+
+  return (
+    <button
+      type="button"
+      onClick={insight.onClick}
+      className="overflow-hidden rounded-[12px] border border-border bg-surface text-start transition hover:border-border-strong hover:shadow-sm"
+    >
+      <div className={cn("h-[3px]", tone.accent)} />
+      <div className="flex items-start justify-between gap-3 px-4 pb-2 pt-4">
+        <div className="min-w-0">
+          <div
+            className={cn(
+              "text-[10px] font-semibold uppercase tracking-[0.06em]",
+              tone.text,
+            )}
+          >
+            {insight.eyebrow}
+          </div>
+          <div className="mt-1 truncate text-[14.5px] font-medium text-text">
+            {insight.title}
+          </div>
+        </div>
+        <span className="text-lg text-text-tertiary">›</span>
+      </div>
+      <div className="flex flex-wrap items-baseline gap-2 px-4 pb-3">
+        <div className={cn("text-[28px] font-semibold leading-none", tone.text)}>
+          {insight.value}
+        </div>
+        <div className="text-[11.5px] text-text-secondary">{insight.delta}</div>
+      </div>
+      <div className="border-y border-border-subtle bg-gradient-to-b from-surface-subtle to-surface px-4 py-3">
+        <ReportsInsightChart tone={insight.tone} variant={insight.variant} />
+      </div>
+      <div className="px-4 py-3 text-[11.5px] leading-5 text-text-secondary">
+        {insight.detail}{" "}
+        <span className="font-medium text-link">{insight.cta}</span>
+      </div>
+    </button>
+  );
+}
+
+function ReportsLibraryCard({ group }: { group: ReportsLibraryGroup }) {
+  const tone = reportsDashboardToneClasses(group.tone);
+  const Icon = group.icon;
+
+  return (
+    <div className="overflow-hidden rounded-[12px] border border-border bg-surface">
+      <div className="flex items-center gap-3 border-b border-border-subtle px-4 py-3.5">
+        <div
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+            tone.icon,
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13.5px] font-medium text-text">
+            {group.title}
+          </div>
+          <div className="truncate text-[11px] text-text-secondary">
+            {group.count} reports · {group.subtitle}
+          </div>
+        </div>
+      </div>
+      <div className="divide-y divide-border-subtle">
+        {group.rows.map((row) => (
+          <button
+            key={`${group.title}-${row.title}`}
+            type="button"
+            onClick={row.onClick}
+            className="grid w-full grid-cols-[24px_minmax(0,1fr)_auto_auto] items-center gap-3 px-4 py-3 text-start transition hover:bg-surface-subtle"
+          >
+            <span className="flex h-6 w-6 items-center justify-center rounded-md border border-border-subtle bg-surface-subtle text-[11px] font-medium text-text-secondary">
+              {row.icon}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-[13px] font-medium text-text">
+                {row.title}
+              </span>
+              <span className="block truncate text-[11px] text-text-secondary">
+                {row.subtitle}
+              </span>
+            </span>
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[9.5px] font-medium",
+                row.badge === "live" && "bg-status-ok-bg text-status-ok-fg",
+                row.badge === "new" && "bg-blue-50 text-link",
+                row.badge === "pinned" && "bg-accent/20 text-text",
+                !row.badge && "bg-transparent text-transparent",
+              )}
+            >
+              {row.badge === "pinned" ? "pin" : row.badge || "-"}
+            </span>
+            <span className="text-end text-[10.5px] font-medium text-text-tertiary">
+              {row.meta}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SavedReportViewCard({
+  eyebrow,
+  tone,
+  title,
+  value,
+}: {
+  eyebrow: string;
+  tone: ReportsDashboardTone;
+  title: string;
+  value: string;
+}) {
+  const toneClasses = reportsDashboardToneClasses(tone);
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-[10px] border border-border bg-surface px-4 py-3 before:absolute before:inset-y-3 before:left-0 before:w-[3px] before:rounded-r-full",
+        toneClasses.border,
+      )}
+    >
+      <div className="pl-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="truncate text-[9.5px] font-semibold uppercase tracking-[0.05em] text-text-secondary">
+            {eyebrow}
+          </div>
+          <Star className="h-3.5 w-3.5 shrink-0 text-accent" />
+        </div>
+        <div className="mt-2 text-[12.5px] font-medium text-text">{title}</div>
+        <div className={cn("mt-2 truncate text-lg font-semibold", toneClasses.text)}>
+          {value}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function downloadBlob(blob: Blob, filename: string): void {
@@ -1238,7 +1651,10 @@ function downloadBlob(blob: Blob, filename: string): void {
   }
 }
 
-async function downloadCsvExport(pathWithQuery: string, fallbackFilename: string): Promise<void> {
+async function downloadCsvExport(
+  pathWithQuery: string,
+  fallbackFilename: string,
+): Promise<void> {
   const response = await apiDownload(pathWithQuery, {
     method: "GET",
     credentials: "include",
@@ -1306,7 +1722,7 @@ function buildAuditParams({
 
 function changedFieldKeys(
   before: Record<string, unknown> | null | undefined,
-  after: Record<string, unknown> | null | undefined
+  after: Record<string, unknown> | null | undefined,
 ): string[] {
   const beforeObj = before || {};
   const afterObj = after || {};
@@ -1339,7 +1755,7 @@ function prettyJson(value: unknown): string {
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    value
+    value,
   );
 }
 
@@ -1363,7 +1779,10 @@ function writeReportsPresets(presets: ReportsPreset[]): void {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage.setItem(REPORTS_PRESETS_STORAGE_KEY, JSON.stringify(presets));
+  window.localStorage.setItem(
+    REPORTS_PRESETS_STORAGE_KEY,
+    JSON.stringify(presets),
+  );
 }
 
 function SectionMessage({
@@ -1377,8 +1796,8 @@ function SectionMessage({
 }) {
   const toneClass =
     tone === "error"
-      ? "border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] text-[hsl(var(--destructive))]"
-      : "border-border/70 bg-background/60 text-muted-foreground";
+      ? "border-status-problem-border bg-status-problem-bg text-status-problem-fg"
+      : "border-border bg-surface text-text-secondary";
   return (
     <div className={cn("rounded-lg border px-4 py-3 text-[13px]", toneClass)}>
       <div className="font-medium">{title}</div>
@@ -1410,7 +1829,7 @@ export default function ReportsPage() {
       case "Open Issues":
         return copy("Open Issues", "Открытые проблемы", "תקלות פתוחות");
       case "Total Doors":
-        return copy("Total Doors", "Всего дверей", "סה\"כ דלתות");
+        return copy("Total Doors", "Всего дверей", 'סה"כ דלתות');
       case "Not Installed":
         return copy("Not Installed", "Не смонтировано", "לא הותקן");
       case "Planned Revenue":
@@ -1427,12 +1846,22 @@ export default function ReportsPage() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const session = useAuthSession();
-  const canRunPrivilegedActions = !session || (session.role === "ADMIN" && session.admin_scope !== "VIEWER");
-  const canOpenOperations = !session || canAccessAdminModule(session, "operations");
-  const canExportFinancialReports = !session || canViewRates(session);
+  const canRunPrivilegedActions = canRunPrivilegedAdminActions(session);
+  const canOpenOperations = canAccessAdminModule(session, "operations");
+  const canExportFinancialReports = canViewRates(session);
   const privilegedActionHint = canRunPrivilegedActions
     ? undefined
     : t("reports.installerReadOnlyHint");
+  const financialReportsRestrictedTitle = copy(
+    "Financial reports are restricted",
+    "Финансовые отчёты ограничены",
+    "הדוחות הכספיים מוגבלים",
+  );
+  const financialReportsRestrictedDetail = copy(
+    "Your current admin scope can work with operations, but payroll, revenue, profit and price details require finance access.",
+    "Текущий админ-доступ подходит для операций, но payroll, выручка, прибыль и цены требуют финансового доступа.",
+    "הרשאת הניהול הנוכחית מתאימה לתפעול, אך שכר, הכנסה, רווח ופרטי מחירים דורשים גישת כספים.",
+  );
   const ratesScopeHint = canExportFinancialReports
     ? undefined
     : "Financial exports are restricted for your current admin scope.";
@@ -1447,21 +1876,28 @@ export default function ReportsPage() {
   const [issueAuditDateFrom, setIssueAuditDateFrom] = useState("");
   const [issueAuditDateTo, setIssueAuditDateTo] = useState("");
   const [issueAuditIssueId, setIssueAuditIssueId] = useState("");
-  const [expandedIssueAuditId, setExpandedIssueAuditId] = useState<string | null>(null);
+  const [expandedIssueAuditId, setExpandedIssueAuditId] = useState<
+    string | null
+  >(null);
   const [slaHistoryDays, setSlaHistoryDays] = useState<number>(30);
   const [installerMatrixSortBy, setInstallerMatrixSortBy] =
     useState<InstallerMatrixSortBy>("profit_total");
-  const [installerMatrixSortDir, setInstallerMatrixSortDir] = useState<SortDir>("desc");
+  const [installerMatrixSortDir, setInstallerMatrixSortDir] =
+    useState<SortDir>("desc");
   const [installerProjectSortBy, setInstallerProjectSortBy] =
     useState<InstallerProjectSortBy>("profit_total");
-  const [installerProjectSortDir, setInstallerProjectSortDir] = useState<SortDir>("desc");
+  const [installerProjectSortDir, setInstallerProjectSortDir] =
+    useState<SortDir>("desc");
   const [installersKpiOffset, setInstallersKpiOffset] = useState(0);
-  const [installersSortBy, setInstallersSortBy] = useState<InstallersSortBy>("installed_doors");
+  const [installersSortBy, setInstallersSortBy] =
+    useState<InstallersSortBy>("installed_doors");
   const [installersSortDir, setInstallersSortDir] = useState<SortDir>("desc");
   const [installerDetailsId, setInstallerDetailsId] = useState("");
   const [orderNumbersKpiOffset, setOrderNumbersKpiOffset] = useState(0);
-  const [orderNumbersSortBy, setOrderNumbersSortBy] = useState<OrderNumbersSortBy>("total_doors");
-  const [orderNumbersSortDir, setOrderNumbersSortDir] = useState<SortDir>("desc");
+  const [orderNumbersSortBy, setOrderNumbersSortBy] =
+    useState<OrderNumbersSortBy>("total_doors");
+  const [orderNumbersSortDir, setOrderNumbersSortDir] =
+    useState<SortDir>("desc");
   const [orderNumbersQuery, setOrderNumbersQuery] = useState("");
   const [orderNumbersProjectId, setOrderNumbersProjectId] = useState("");
   const [projectPlanFactProjectId, setProjectPlanFactProjectId] = useState("");
@@ -1472,12 +1908,16 @@ export default function ReportsPage() {
   const [presetNotice, setPresetNotice] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const activeFocus = parseReportsFocus(searchParams?.get("focus") || null);
-  const activeOpsPreset = parseReportsOpsPreset(searchParams?.get("ops_preset") || null);
+  const activeOpsPreset = parseReportsOpsPreset(
+    searchParams?.get("ops_preset") || null,
+  );
   const scopedProjectId = searchParams?.get("project_id") || null;
   const scopedOutboxId = searchParams?.get("outbox_id") || null;
   const scopedInstallerId = searchParams?.get("installer_id") || null;
-  const scopedDeliveryChannel = searchParams?.get("delivery_channel")?.trim().toUpperCase() || null;
-  const scopedWebhookProvider = searchParams?.get("webhook_provider")?.trim().toLowerCase() || null;
+  const scopedDeliveryChannel =
+    searchParams?.get("delivery_channel")?.trim().toUpperCase() || null;
+  const scopedWebhookProvider =
+    searchParams?.get("webhook_provider")?.trim().toLowerCase() || null;
   const appliedOpsPresetRef = useRef<ReportsOpsPreset | null>(null);
   const appliedProjectScopeRef = useRef<string | null>(null);
   const appliedInstallerScopeRef = useRef<string | null>(null);
@@ -1509,33 +1949,38 @@ export default function ReportsPage() {
     queryKey: ["limit-alerts", offset],
     queryFn: () =>
       apiFetch<LimitAlertsResponse>(
-        `/api/v1/admin/reports/limit-alerts?limit=${PAGE_SIZE}&offset=${offset}`
+        `/api/v1/admin/reports/limit-alerts?limit=${PAGE_SIZE}&offset=${offset}`,
       ),
     refetchInterval: 30_000,
   });
 
   const deliveryQuery = useQuery({
     queryKey: ["reports-delivery"],
-    queryFn: () => apiFetch<DeliveryStatsResponse>("/api/v1/admin/reports/delivery"),
+    queryFn: () =>
+      apiFetch<DeliveryStatsResponse>("/api/v1/admin/reports/delivery"),
     refetchInterval: 30_000,
   });
 
   const outboxSummaryQuery = useQuery({
     queryKey: ["outbox-summary"],
-    queryFn: () => apiFetch<OutboxSummaryResponse>("/api/v1/admin/outbox/summary"),
+    queryFn: () =>
+      apiFetch<OutboxSummaryResponse>("/api/v1/admin/outbox/summary"),
     refetchInterval: 30_000,
   });
 
   const operationsCenterQuery = useQuery({
     queryKey: ["reports-operations-center"],
     queryFn: () =>
-      apiFetch<OperationsCenterResponse>("/api/v1/admin/reports/operations-center"),
+      apiFetch<OperationsCenterResponse>(
+        "/api/v1/admin/reports/operations-center",
+      ),
     refetchInterval: 30_000,
   });
 
   const operationsSlaQuery = useQuery({
     queryKey: ["reports-operations-sla"],
-    queryFn: () => apiFetch<OperationsSlaResponse>("/api/v1/admin/reports/operations-sla"),
+    queryFn: () =>
+      apiFetch<OperationsSlaResponse>("/api/v1/admin/reports/operations-sla"),
     refetchInterval: 30_000,
   });
 
@@ -1543,7 +1988,7 @@ export default function ReportsPage() {
     queryKey: ["reports-operations-sla-history", slaHistoryDays],
     queryFn: () =>
       apiFetch<OperationsSlaHistoryResponse>(
-        `/api/v1/admin/reports/operations-sla/history?days=${slaHistoryDays}`
+        `/api/v1/admin/reports/operations-sla/history?days=${slaHistoryDays}`,
       ),
     refetchInterval: 30_000,
   });
@@ -1552,7 +1997,7 @@ export default function ReportsPage() {
     queryKey: ["reports-issues-analytics", ISSUES_ANALYTICS_DAYS],
     queryFn: () =>
       apiFetch<IssuesAnalyticsResponse>(
-        `/api/v1/admin/reports/issues-analytics?days=${ISSUES_ANALYTICS_DAYS}`
+        `/api/v1/admin/reports/issues-analytics?days=${ISSUES_ANALYTICS_DAYS}`,
       ),
     refetchInterval: 30_000,
   });
@@ -1560,7 +2005,10 @@ export default function ReportsPage() {
   const issuesAddonsImpactQuery = useQuery({
     queryKey: ["reports-issues-addons-impact"],
     queryFn: () =>
-      apiFetch<IssuesAddonsImpactResponse>("/api/v1/admin/reports/issues-addons-impact"),
+      apiFetch<IssuesAddonsImpactResponse>(
+        "/api/v1/admin/reports/issues-addons-impact",
+      ),
+    enabled: canExportFinancialReports,
     refetchInterval: 30_000,
   });
 
@@ -1568,8 +2016,9 @@ export default function ReportsPage() {
     queryKey: ["reports-risk-concentration"],
     queryFn: () =>
       apiFetch<RiskConcentrationResponse>(
-        `/api/v1/admin/reports/risk-concentration?limit=${RISK_CONCENTRATION_LIMIT}`
+        `/api/v1/admin/reports/risk-concentration?limit=${RISK_CONCENTRATION_LIMIT}`,
       ),
+    enabled: canExportFinancialReports,
     refetchInterval: 30_000,
   });
 
@@ -1581,11 +2030,12 @@ export default function ReportsPage() {
     ],
     queryFn: () =>
       apiFetch<InstallerProfitabilityMatrixResponse>(
-        `/api/v1/admin/reports/installers-profitability-matrix`
-        + `?limit=${INSTALLER_MATRIX_LIMIT}`
-        + `&sort_by=${installerMatrixSortBy}`
-        + `&sort_dir=${installerMatrixSortDir}`
+        `/api/v1/admin/reports/installers-profitability-matrix` +
+          `?limit=${INSTALLER_MATRIX_LIMIT}` +
+          `&sort_by=${installerMatrixSortBy}` +
+          `&sort_dir=${installerMatrixSortDir}`,
       ),
+    enabled: canExportFinancialReports,
     refetchInterval: 30_000,
   });
 
@@ -1597,17 +2047,19 @@ export default function ReportsPage() {
     ],
     queryFn: () =>
       apiFetch<InstallerProjectProfitabilityResponse>(
-        `/api/v1/admin/reports/installer-project-profitability`
-        + `?limit=${INSTALLER_PROJECT_LIMIT}`
-        + `&sort_by=${installerProjectSortBy}`
-        + `&sort_dir=${installerProjectSortDir}`
+        `/api/v1/admin/reports/installer-project-profitability` +
+          `?limit=${INSTALLER_PROJECT_LIMIT}` +
+          `&sort_by=${installerProjectSortBy}` +
+          `&sort_dir=${installerProjectSortDir}`,
       ),
+    enabled: canExportFinancialReports,
     refetchInterval: 30_000,
   });
 
   const projectsQuery = useQuery({
     queryKey: ["reports-project-options"],
-    queryFn: () => apiFetch<{ items: ProjectOption[] }>("/api/v1/admin/projects"),
+    queryFn: () =>
+      apiFetch<{ items: ProjectOption[] }>("/api/v1/admin/projects"),
     refetchInterval: 120_000,
   });
 
@@ -1615,33 +2067,35 @@ export default function ReportsPage() {
     queryKey: ["reports-project-plan-fact", projectPlanFactProjectId],
     queryFn: () =>
       apiFetch<ProjectPlanFactResponse>(
-        `/api/v1/admin/reports/project-plan-fact/${projectPlanFactProjectId}`
+        `/api/v1/admin/reports/project-plan-fact/${projectPlanFactProjectId}`,
       ),
-    enabled: Boolean(projectPlanFactProjectId),
+    enabled: canExportFinancialReports && Boolean(projectPlanFactProjectId),
     refetchInterval: 30_000,
   });
 
   const projectAddonPlanQuery = useQuery({
     queryKey: ["reports-project-addon-plan", projectPlanFactProjectId],
     queryFn: async () => {
-      const response = await apiFetch<ProjectAddonPlanItem[] | { items?: ProjectAddonPlanItem[] }>(
-        `/api/v1/admin/projects/${projectPlanFactProjectId}/addons/plan`
-      );
+      const response = await apiFetch<
+        ProjectAddonPlanItem[] | { items?: ProjectAddonPlanItem[] }
+      >(`/api/v1/admin/projects/${projectPlanFactProjectId}/addons/plan`);
       return Array.isArray(response) ? response : response.items || [];
     },
-    enabled: Boolean(projectPlanFactProjectId),
+    enabled: canExportFinancialReports && Boolean(projectPlanFactProjectId),
     refetchInterval: 30_000,
   });
 
   const projectUrgencySurchargesQuery = useQuery({
     queryKey: ["reports-project-urgency-surcharges", projectPlanFactProjectId],
     queryFn: async () => {
-      const response = await apiFetch<UrgencySurchargeItem[] | { items?: UrgencySurchargeItem[] }>(
-        `/api/v1/admin/projects/${projectPlanFactProjectId}/urgency-surcharges`
+      const response = await apiFetch<
+        UrgencySurchargeItem[] | { items?: UrgencySurchargeItem[] }
+      >(
+        `/api/v1/admin/projects/${projectPlanFactProjectId}/urgency-surcharges`,
       );
       return Array.isArray(response) ? response : response.items || [];
     },
-    enabled: Boolean(projectPlanFactProjectId),
+    enabled: canExportFinancialReports && Boolean(projectPlanFactProjectId),
     refetchInterval: 30_000,
   });
 
@@ -1649,9 +2103,9 @@ export default function ReportsPage() {
     queryKey: ["reports-project-risk-drilldown", projectRiskProjectId],
     queryFn: () =>
       apiFetch<ProjectRiskDrilldownResponse>(
-        `/api/v1/admin/reports/project-risk-drilldown/${projectRiskProjectId}?limit=5`
+        `/api/v1/admin/reports/project-risk-drilldown/${projectRiskProjectId}?limit=5`,
       ),
-    enabled: Boolean(projectRiskProjectId),
+    enabled: canExportFinancialReports && Boolean(projectRiskProjectId),
     refetchInterval: 30_000,
   });
 
@@ -1659,8 +2113,9 @@ export default function ReportsPage() {
     queryKey: ["reports-projects-margin", "top"],
     queryFn: () =>
       apiFetch<ProjectsMarginResponse>(
-        `/api/v1/admin/reports/projects-margin?limit=${PROJECT_MARGIN_LIMIT}&sort_by=profit_total&sort_dir=desc`
+        `/api/v1/admin/reports/projects-margin?limit=${PROJECT_MARGIN_LIMIT}&sort_by=profit_total&sort_dir=desc`,
       ),
+    enabled: canExportFinancialReports,
     refetchInterval: 30_000,
   });
 
@@ -1668,8 +2123,9 @@ export default function ReportsPage() {
     queryKey: ["reports-projects-margin", "risk"],
     queryFn: () =>
       apiFetch<ProjectsMarginResponse>(
-        `/api/v1/admin/reports/projects-margin?limit=${PROJECT_MARGIN_LIMIT}&sort_by=profit_total&sort_dir=asc`
+        `/api/v1/admin/reports/projects-margin?limit=${PROJECT_MARGIN_LIMIT}&sort_by=profit_total&sort_dir=asc`,
       ),
+    enabled: canExportFinancialReports,
     refetchInterval: 30_000,
   });
 
@@ -1682,8 +2138,9 @@ export default function ReportsPage() {
     ],
     queryFn: () =>
       apiFetch<InstallersKpiResponse>(
-        `/api/v1/admin/reports/installers-kpi?${installersParams.toString()}`
+        `/api/v1/admin/reports/installers-kpi?${installersParams.toString()}`,
       ),
+    enabled: canExportFinancialReports,
     refetchInterval: 30_000,
   });
 
@@ -1691,9 +2148,9 @@ export default function ReportsPage() {
     queryKey: ["reports-installer-kpi-details", installerDetailsId],
     queryFn: () =>
       apiFetch<InstallerKpiDetailsResponse>(
-        `/api/v1/admin/reports/installers-kpi/${installerDetailsId}`
+        `/api/v1/admin/reports/installers-kpi/${installerDetailsId}`,
       ),
-    enabled: Boolean(installerDetailsId),
+    enabled: canExportFinancialReports && Boolean(installerDetailsId),
     refetchInterval: 30_000,
   });
 
@@ -1708,36 +2165,43 @@ export default function ReportsPage() {
     ],
     queryFn: () =>
       apiFetch<OrderNumbersKpiResponse>(
-        `/api/v1/admin/reports/order-numbers-kpi?${orderNumbersParams.toString()}`
+        `/api/v1/admin/reports/order-numbers-kpi?${orderNumbersParams.toString()}`,
       ),
+    enabled: canExportFinancialReports,
     refetchInterval: 30_000,
   });
 
   const failedOutboxQuery = useQuery({
     queryKey: ["outbox-failed", scopedDeliveryChannel],
     queryFn: () =>
-      apiFetch<OutboxListResponse>(`/api/v1/admin/outbox?${(() => {
-        const params = new URLSearchParams();
-        params.set("status", "FAILED");
-        params.set("limit", String(FAILED_OUTBOX_LIMIT));
-        if (scopedDeliveryChannel) {
-          params.set("channel", scopedDeliveryChannel);
-        }
-        return params.toString();
-      })()}`),
+      apiFetch<OutboxListResponse>(
+        `/api/v1/admin/outbox?${(() => {
+          const params = new URLSearchParams();
+          params.set("status", "FAILED");
+          params.set("limit", String(FAILED_OUTBOX_LIMIT));
+          if (scopedDeliveryChannel) {
+            params.set("channel", scopedDeliveryChannel);
+          }
+          return params.toString();
+        })()}`,
+      ),
     refetchInterval: 30_000,
   });
 
   const webhookSignalsQuery = useQuery({
     queryKey: ["reports-webhook-signals", scopedWebhookProvider],
     queryFn: () =>
-      apiFetch<WebhookSignalListResponse>("/api/v1/admin/outbox/webhook-signals?limit=12"),
+      apiFetch<WebhookSignalListResponse>(
+        "/api/v1/admin/outbox/webhook-signals?limit=12",
+      ),
     refetchInterval: 30_000,
   });
   const retryAuditsQuery = useQuery({
     queryKey: ["reports-outbox-retry-audits", scopedOutboxId],
     queryFn: () =>
-      apiFetch<OutboxRetryAuditListResponse>("/api/v1/admin/outbox/retry-audits?limit=12"),
+      apiFetch<OutboxRetryAuditListResponse>(
+        "/api/v1/admin/outbox/retry-audits?limit=12",
+      ),
     refetchInterval: 30_000,
   });
 
@@ -1759,7 +2223,7 @@ export default function ReportsPage() {
           dateTo: auditDateTo,
           limit: AUDIT_PREVIEW_LIMIT,
           offset: auditOffset,
-        })}`
+        })}`,
       ),
     refetchInterval: 60_000,
   });
@@ -1783,27 +2247,32 @@ export default function ReportsPage() {
           dateTo: issueAuditDateTo,
           limit: AUDIT_PREVIEW_LIMIT,
           offset: issueAuditOffset,
-        })}`
+        })}`,
       ),
     refetchInterval: 60_000,
   });
 
   const markReadMutation = useMutation({
     mutationFn: () =>
-      apiFetch<LimitAlertsReadResponse>("/api/v1/admin/reports/limit-alerts/read", {
-        method: "POST",
-        body: JSON.stringify({}),
-      }),
+      apiFetch<LimitAlertsReadResponse>(
+        "/api/v1/admin/reports/limit-alerts/read",
+        {
+          method: "POST",
+          body: JSON.stringify({}),
+        },
+      ),
     onSuccess: async () => {
       setActionNotice(
         copy(
           "Alerts marked as read.",
           "Алерты отмечены как прочитанные.",
-          "ההתראות סומנו כנקראו."
-        )
+          "ההתראות סומנו כנקראו.",
+        ),
       );
       await queryClient.invalidateQueries({ queryKey: ["limit-alerts"] });
-      await queryClient.invalidateQueries({ queryKey: ["limit-alerts-unread"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["limit-alerts-unread"],
+      });
     },
   });
 
@@ -1818,8 +2287,8 @@ export default function ReportsPage() {
         copy(
           "Delivery retry started and reports were refreshed.",
           "Повтор доставки запущен, а отчёты обновлены.",
-          "ניסיון המשלוח הופעל מחדש והדוחות רועננו."
-        )
+          "ניסיון המשלוח הופעל מחדש והדוחות רועננו.",
+        ),
       );
       await queryClient.invalidateQueries({ queryKey: ["outbox-summary"] });
       await queryClient.invalidateQueries({ queryKey: ["outbox-failed"] });
@@ -1838,15 +2307,15 @@ export default function ReportsPage() {
           limit: AUDIT_EXPORT_LIMIT,
           offset: 0,
         })}`,
-        "audit_catalogs.csv"
+        "audit_catalogs.csv",
       ),
     onSuccess: () => {
       setActionNotice(
         copy(
           "Catalog audit export is ready.",
           "Экспорт аудита каталога готов.",
-          "ייצוא ביקורת הקטלוג מוכן."
-        )
+          "ייצוא ביקורת הקטלוג מוכן.",
+        ),
       );
     },
   });
@@ -1863,15 +2332,15 @@ export default function ReportsPage() {
           limit: AUDIT_EXPORT_LIMIT,
           offset: 0,
         })}`,
-        "audit_issues.csv"
+        "audit_issues.csv",
       ),
     onSuccess: () => {
       setActionNotice(
         copy(
           "Issue audit export is ready.",
           "Экспорт аудита проблем готов.",
-          "ייצוא ביקורת התקלות מוכן."
-        )
+          "ייצוא ביקורת התקלות מוכן.",
+        ),
       );
     },
   });
@@ -1885,7 +2354,7 @@ export default function ReportsPage() {
       params.set("sort_dir", installersSortDir);
       return downloadCsvExport(
         `/api/v1/admin/reports/installers-kpi/export?${params.toString()}`,
-        "installers_kpi.csv"
+        "installers_kpi.csv",
       );
     },
     onSuccess: () => {
@@ -1893,8 +2362,8 @@ export default function ReportsPage() {
         copy(
           "Installer KPI export is ready.",
           "Экспорт KPI монтажников готов.",
-          "ייצוא KPI למתקינים מוכן."
-        )
+          "ייצוא KPI למתקינים מוכן.",
+        ),
       );
     },
   });
@@ -1914,7 +2383,7 @@ export default function ReportsPage() {
       }
       return downloadCsvExport(
         `/api/v1/admin/reports/order-numbers-kpi/export?${params.toString()}`,
-        "order_numbers_kpi.csv"
+        "order_numbers_kpi.csv",
       );
     },
     onSuccess: () => {
@@ -1922,8 +2391,8 @@ export default function ReportsPage() {
         copy(
           "Order numbers export is ready.",
           "Экспорт по номерам заказов готов.",
-          "ייצוא מספרי ההזמנות מוכן."
-        )
+          "ייצוא מספרי ההזמנות מוכן.",
+        ),
       );
     },
   });
@@ -1939,7 +2408,7 @@ export default function ReportsPage() {
       }
       return downloadCsvExport(
         `/api/v1/admin/reports/executive/export?${params.toString()}`,
-        "reports_executive_snapshot.csv"
+        "reports_executive_snapshot.csv",
       );
     },
     onSuccess: () => {
@@ -1947,8 +2416,8 @@ export default function ReportsPage() {
         copy(
           "Executive export is ready.",
           "Executive-экспорт готов.",
-          "ייצוא הנהלה מוכן."
-        )
+          "ייצוא הנהלה מוכן.",
+        ),
       );
     },
   });
@@ -1968,15 +2437,29 @@ export default function ReportsPage() {
   const issuesAnalytics = issuesAnalyticsQuery.data;
   const issuesAddonsImpact = issuesAddonsImpactQuery.data;
   const riskConcentration = riskConcentrationQuery.data;
-  const installerProfitabilityMatrix = installerProfitabilityMatrixQuery.data?.items || [];
-  const installerProjectProfitability = installerProjectProfitabilityQuery.data?.items || [];
+  const installerProfitabilityMatrix =
+    installerProfitabilityMatrixQuery.data?.items || [];
+  const installerProjectProfitability =
+    installerProjectProfitabilityQuery.data?.items || [];
   const projectOptions = projectsQuery.data?.items || [];
+  const scopedProjectInOptions = scopedProjectId
+    ? projectOptions.some((project) => project.id === scopedProjectId)
+    : false;
+  const scopedProjectMissing = Boolean(
+    scopedProjectId &&
+      projectsQuery.isFetched &&
+      !projectsQuery.isLoading &&
+      !scopedProjectInOptions,
+  );
   const projectPlanFact = projectPlanFactQuery.data;
   const projectAddonPlan = projectAddonPlanQuery.data || [];
   const projectUrgencySurcharges = projectUrgencySurchargesQuery.data || [];
   const selectedProjectPlanFact = useMemo(
-    () => projectOptions.find((project) => project.id === projectPlanFactProjectId) || null,
-    [projectOptions, projectPlanFactProjectId]
+    () =>
+      projectOptions.find(
+        (project) => project.id === projectPlanFactProjectId,
+      ) || null,
+    [projectOptions, projectPlanFactProjectId],
   );
   const projectAddonPlanTotals = useMemo(
     () =>
@@ -1991,9 +2474,9 @@ export default function ReportsPage() {
           acc.installer += qty * installerPrice;
           return acc;
         },
-        { rows: 0, qty: 0, client: 0, installer: 0 }
+        { rows: 0, qty: 0, client: 0, installer: 0 },
       ),
-    [projectAddonPlan]
+    [projectAddonPlan],
   );
   const projectUrgencyTotals = useMemo(
     () =>
@@ -2007,22 +2490,110 @@ export default function ReportsPage() {
           }
           return acc;
         },
-        { rows: 0, client: 0, installer: 0, orderScoped: 0 }
+        { rows: 0, client: 0, installer: 0, orderScoped: 0 },
       ),
-    [projectUrgencySurcharges]
+    [projectUrgencySurcharges],
   );
+  const projectUrgencyContractTotals = useMemo(() => {
+    const client =
+      Number(
+        projectPlanFact?.urgency_client_total ?? projectUrgencyTotals.client,
+      ) || 0;
+    const installer =
+      Number(
+        projectPlanFact?.urgency_installer_total ??
+          projectUrgencyTotals.installer,
+      ) || 0;
+    return {
+      rows:
+        Number(
+          projectPlanFact?.urgency_surcharges_count ??
+            projectUrgencyTotals.rows,
+        ) || 0,
+      orderScoped:
+        Number(
+          projectPlanFact?.urgency_order_surcharges_count ??
+            projectUrgencyTotals.orderScoped,
+        ) || 0,
+      client,
+      installer,
+      profit:
+        Number(projectPlanFact?.urgency_profit_total ?? client - installer) ||
+        0,
+    };
+  }, [projectPlanFact, projectUrgencyTotals]);
   const projectCommercialAdjustments = useMemo(
     () => ({
-      rows: projectAddonPlanTotals.rows + projectUrgencyTotals.rows,
-      client: projectAddonPlanTotals.client + projectUrgencyTotals.client,
-      installer: projectAddonPlanTotals.installer + projectUrgencyTotals.installer,
+      rows: projectAddonPlanTotals.rows + projectUrgencyContractTotals.rows,
+      client:
+        projectAddonPlanTotals.client + projectUrgencyContractTotals.client,
+      installer:
+        projectAddonPlanTotals.installer +
+        projectUrgencyContractTotals.installer,
     }),
-    [projectAddonPlanTotals, projectUrgencyTotals]
+    [projectAddonPlanTotals, projectUrgencyContractTotals],
   );
+  const issuesImpactSummaryRows = [
+    {
+      label: tt("reports.openIssuesExposure"),
+      revenue: formatAmount(
+        issuesAddonsImpact?.summary?.open_issue_revenue_at_risk,
+      ),
+      payroll: formatAmount(
+        issuesAddonsImpact?.summary?.open_issue_payroll_at_risk,
+      ),
+      profit: formatAmount(
+        issuesAddonsImpact?.summary?.open_issue_profit_at_risk,
+      ),
+    },
+    {
+      label: tt("reports.delayedNotInstalled"),
+      revenue: formatAmount(issuesAddonsImpact?.summary?.delayed_revenue_total),
+      payroll: formatAmount(issuesAddonsImpact?.summary?.delayed_payroll_total),
+      profit: formatAmount(issuesAddonsImpact?.summary?.delayed_profit_total),
+    },
+    {
+      label: tt("reports.addonRealized"),
+      revenue: formatAmount(issuesAddonsImpact?.summary?.addon_revenue_total),
+      payroll: formatAmount(issuesAddonsImpact?.summary?.addon_payroll_total),
+      profit: formatAmount(issuesAddonsImpact?.summary?.addon_profit_total),
+    },
+  ];
+  const projectPlanFactRows = projectPlanFact
+    ? [
+        {
+          label: t("reports.revenue"),
+          plan: formatAmount(projectPlanFact.planned_revenue_total),
+          fact: formatAmount(projectPlanFact.actual_revenue_total),
+          gap: formatAmount(projectPlanFact.revenue_gap_total),
+        },
+        {
+          label: tt("reports.payroll"),
+          plan: formatAmount(projectPlanFact.planned_payroll_total),
+          fact: formatAmount(projectPlanFact.actual_payroll_total),
+          gap: formatAmount(projectPlanFact.payroll_gap_total),
+        },
+        {
+          label: copy("Profit", "Прибыль", "רווח"),
+          plan: formatAmount(projectPlanFact.planned_profit_total),
+          fact: formatAmount(projectPlanFact.actual_profit_total),
+          gap: formatAmount(projectPlanFact.profit_gap_total),
+        },
+      ]
+    : [];
   const projectRiskDrilldown = projectRiskDrilldownQuery.data;
   const topProjectsMargin = topProjectsMarginQuery.data?.items || [];
   const riskProjectsMargin = riskProjectsMarginQuery.data?.items || [];
   const installersKpiItems = installersKpiQuery.data?.items || [];
+  const scopedInstallerInKpi = scopedInstallerId
+    ? installersKpiItems.some((item) => item.installer_id === scopedInstallerId)
+    : false;
+  const scopedInstallerMissing = Boolean(
+    scopedInstallerId &&
+      installersKpiQuery.isFetched &&
+      !installersKpiQuery.isLoading &&
+      !scopedInstallerInKpi,
+  );
   const installerDetails = installerDetailsQuery.data;
   const orderNumbersKpiItems = orderNumbersKpiQuery.data?.items || [];
   const topFailingProjects = operationsCenter?.top_failing_projects || [];
@@ -2034,55 +2605,72 @@ export default function ReportsPage() {
   const failedItems = failedOutboxQuery.data?.items || [];
   const webhookSignalItems = webhookSignalsQuery.data?.items || [];
   const scopedWebhookSignals = webhookSignalItems.filter(
-    (item) => !scopedWebhookProvider || item.provider.toLowerCase() === scopedWebhookProvider
+    (item) =>
+      !scopedWebhookProvider ||
+      item.provider.toLowerCase() === scopedWebhookProvider,
   );
   const retryAuditItems = retryAuditsQuery.data?.items || [];
   const scopedRetryAuditItems = retryAuditItems.filter(
-    (item) => !scopedOutboxId || item.outbox_id === scopedOutboxId
+    (item) => !scopedOutboxId || item.outbox_id === scopedOutboxId,
   );
   const auditItems = auditCatalogsQuery.data?.items || [];
   const auditSummary = auditCatalogsQuery.data?.summary;
   const auditCanPrev = auditOffset > 0;
-  const auditCanNext = (auditOffset + AUDIT_PREVIEW_LIMIT) < (auditSummary?.total || 0);
+  const auditCanNext =
+    auditOffset + AUDIT_PREVIEW_LIMIT < (auditSummary?.total || 0);
   const issueAuditItems = issueAuditQuery.data?.items || [];
   const issueAuditSummary = issueAuditQuery.data?.summary;
   const issueAuditCanPrev = issueAuditOffset > 0;
   const issueAuditCanNext =
-    (issueAuditOffset + AUDIT_PREVIEW_LIMIT) < (issueAuditSummary?.total || 0);
+    issueAuditOffset + AUDIT_PREVIEW_LIMIT < (issueAuditSummary?.total || 0);
   const installersKpiCanPrev = installersKpiOffset > 0;
   const installersKpiCanNext = installersKpiItems.length >= KPI_PAGE_SIZE;
   const orderNumbersKpiCanPrev = orderNumbersKpiOffset > 0;
   const orderNumbersKpiCanNext =
-    (orderNumbersKpiOffset + KPI_PAGE_SIZE) < (orderNumbersKpiQuery.data?.total || 0);
-  const focusedFailingProjectIds = topFailingProjects.map((item) => item.project_id);
-  const focusedFailedProjectsHref = focusedFailingProjectIds.length > 0
-    ? `/projects?failed_project_ids=${encodeURIComponent(
-        focusedFailingProjectIds.join(",")
-      )}&only_failed_runs=1`
-    : "/projects?only_failed_runs=1";
-  const focusFollowupActions = activeFocus === "operations"
-    ? [
-        { label: t("reports.openActionableOps"), href: "/operations?actionable=1" },
-        { label: t("reports.openFailedProjects"), href: focusedFailedProjectsHref },
-      ]
-    : activeFocus === "delivery"
+    orderNumbersKpiOffset + KPI_PAGE_SIZE <
+    (orderNumbersKpiQuery.data?.total || 0);
+  const focusedFailingProjectIds = topFailingProjects.map(
+    (item) => item.project_id,
+  );
+  const focusedFailedProjectsHref =
+    focusedFailingProjectIds.length > 0
+      ? `/projects?failed_project_ids=${encodeURIComponent(
+          focusedFailingProjectIds.join(","),
+        )}&only_failed_runs=1`
+      : "/projects?only_failed_runs=1";
+  const focusFollowupActions =
+    activeFocus === "operations"
       ? [
           {
             label: t("reports.openActionableOps"),
-            href: buildOperationsHref({
-              actionable: true,
-              deliveryChannel: scopedDeliveryChannel || undefined,
-              webhookProvider: scopedWebhookProvider || undefined,
-            }),
+            href: "/operations?actionable=1",
           },
-          { label: t("reports.openJournalQueue"), href: "/journal" },
+          {
+            label: t("reports.openFailedProjects"),
+            href: focusedFailedProjectsHref,
+          },
         ]
-      : activeFocus === "issues"
+      : activeFocus === "delivery"
         ? [
-            { label: t("reports.openActionableOps"), href: "/operations?actionable=1" },
-            { label: t("reports.openIssuesBoard"), href: "/issues" },
+            {
+              label: t("reports.openActionableOps"),
+              href: buildOperationsHref({
+                actionable: true,
+                deliveryChannel: scopedDeliveryChannel || undefined,
+                webhookProvider: scopedWebhookProvider || undefined,
+              }),
+            },
+            { label: t("reports.openJournalQueue"), href: "/journal" },
           ]
-        : [];
+        : activeFocus === "issues"
+          ? [
+              {
+                label: t("reports.openActionableOps"),
+                href: "/operations?actionable=1",
+              },
+              { label: t("reports.openIssuesBoard"), href: "/issues" },
+            ]
+          : [];
   const scopedContext: ReportsScopedContext = {
     projectId: scopedProjectId,
     outboxId: scopedOutboxId,
@@ -2096,13 +2684,24 @@ export default function ReportsPage() {
     : scopedOutboxId
       ? t("reports.scopedOutbox").replace("{id}", scopedOutboxId)
       : scopedDeliveryChannel
-        ? t("reports.scopedDeliveryChannel").replace("{id}", scopedDeliveryChannel)
+        ? t("reports.scopedDeliveryChannel").replace(
+            "{id}",
+            scopedDeliveryChannel,
+          )
         : scopedWebhookProvider
-          ? t("reports.scopedWebhookProvider").replace("{id}", scopedWebhookProvider)
-      : scopedInstallerId
-        ? t("reports.scopedInstaller").replace("{id}", scopedInstallerId)
-        : null;
-  const hasScopedContextOnly = !activeFocus && Boolean(scopedProjectId || scopedInstallerId);
+          ? t("reports.scopedWebhookProvider").replace(
+              "{id}",
+              scopedWebhookProvider,
+            )
+          : scopedInstallerId
+            ? t("reports.scopedInstaller").replace("{id}", scopedInstallerId)
+            : null;
+  const hasScopedContextOnly =
+    !activeFocus &&
+    Boolean(
+      (scopedProjectId && !scopedProjectMissing) ||
+        (scopedInstallerId && !scopedInstallerMissing),
+    );
   const scopedContextLabel = scopedProjectId
     ? copy("Focused project", "Фокус по проекту", "מיקוד פרויקט")
     : scopedInstallerId
@@ -2111,25 +2710,41 @@ export default function ReportsPage() {
   const scopedContextValue = scopedProjectId || scopedInstallerId || "";
   const reportsJumpLinks = [
     {
-      label: copy("Open Operations SLA", "Открыть SLA операций", "פתח SLA תפעולי"),
+      label: copy(
+        "Open Operations SLA",
+        "Открыть SLA операций",
+        "פתח SLA תפעולי",
+      ),
       target: "reports-operations-sla",
     },
     {
-      label: copy("Open Plan vs Fact", "Открыть план / факт", "פתח תכנון מול ביצוע"),
+      label: copy(
+        "Open Plan vs Fact",
+        "Открыть план / факт",
+        "פתח תכנון מול ביצוע",
+      ),
       target: "reports-project-plan-fact",
     },
     {
-      label: copy("Open Project Risk", "Открыть риск проекта", "פתח סיכון פרויקט"),
+      label: copy(
+        "Open Project Risk",
+        "Открыть риск проекта",
+        "פתח סיכון פרויקט",
+      ),
       target: "reports-project-risk-drilldown",
     },
     {
-      label: copy("Open Installers KPI", "Открыть KPI монтажников", "פתח KPI מתקינים"),
+      label: copy(
+        "Open Installers KPI",
+        "Открыть KPI монтажников",
+        "פתח KPI מתקינים",
+      ),
       target: "reports-installers-kpi",
     },
   ];
 
   const refetchAllReports = () => {
-    void Promise.all([
+    const refreshes: Array<Promise<unknown>> = [
       alertsQuery.refetch(),
       deliveryQuery.refetch(),
       outboxSummaryQuery.refetch(),
@@ -2137,22 +2752,31 @@ export default function ReportsPage() {
       operationsSlaQuery.refetch(),
       operationsSlaHistoryQuery.refetch(),
       issuesAnalyticsQuery.refetch(),
-      issuesAddonsImpactQuery.refetch(),
-      riskConcentrationQuery.refetch(),
-      installerProfitabilityMatrixQuery.refetch(),
-      installerProjectProfitabilityQuery.refetch(),
       projectsQuery.refetch(),
-      projectPlanFactQuery.refetch(),
-      projectRiskDrilldownQuery.refetch(),
-      topProjectsMarginQuery.refetch(),
-      riskProjectsMarginQuery.refetch(),
-      installersKpiQuery.refetch(),
-      installerDetailsQuery.refetch(),
-      orderNumbersKpiQuery.refetch(),
       failedOutboxQuery.refetch(),
       auditCatalogsQuery.refetch(),
       issueAuditQuery.refetch(),
-    ]);
+    ];
+
+    if (canExportFinancialReports) {
+      refreshes.push(
+        issuesAddonsImpactQuery.refetch(),
+        riskConcentrationQuery.refetch(),
+        installerProfitabilityMatrixQuery.refetch(),
+        installerProjectProfitabilityQuery.refetch(),
+        projectPlanFactQuery.refetch(),
+        projectAddonPlanQuery.refetch(),
+        projectUrgencySurchargesQuery.refetch(),
+        projectRiskDrilldownQuery.refetch(),
+        topProjectsMarginQuery.refetch(),
+        riskProjectsMarginQuery.refetch(),
+        installersKpiQuery.refetch(),
+        installerDetailsQuery.refetch(),
+        orderNumbersKpiQuery.refetch(),
+      );
+    }
+
+    void Promise.all(refreshes);
   };
 
   const scrollToReportsSection = (targetId: string) => {
@@ -2167,20 +2791,59 @@ export default function ReportsPage() {
   };
 
   useEffect(() => {
+    if (scopedProjectId) {
+      if (!projectsQuery.isFetched && projectOptions.length === 0) {
+        return;
+      }
+      if (!scopedProjectInOptions) {
+        if (projectPlanFactProjectId) {
+          setProjectPlanFactProjectId("");
+        }
+        return;
+      }
+      if (projectPlanFactProjectId !== scopedProjectId) {
+        setProjectPlanFactProjectId(scopedProjectId);
+      }
+      return;
+    }
     if (projectOptions.length === 0) {
       if (projectPlanFactProjectId) {
         setProjectPlanFactProjectId("");
       }
       return;
     }
-    const exists = projectOptions.some((project) => project.id === projectPlanFactProjectId);
+    const exists = projectOptions.some(
+      (project) => project.id === projectPlanFactProjectId,
+    );
     if (!exists) {
       setProjectPlanFactProjectId(projectOptions[0].id);
     }
-  }, [projectOptions, projectPlanFactProjectId]);
+  }, [
+    projectOptions,
+    projectPlanFactProjectId,
+    projectsQuery.isFetched,
+    scopedProjectId,
+    scopedProjectInOptions,
+  ]);
 
   useEffect(() => {
-    const preferredId = riskProjectsMargin[0]?.project_id || projectOptions[0]?.id || "";
+    if (scopedProjectId) {
+      if (!projectsQuery.isFetched && projectOptions.length === 0) {
+        return;
+      }
+      if (!scopedProjectInOptions) {
+        if (projectRiskProjectId) {
+          setProjectRiskProjectId("");
+        }
+        return;
+      }
+      if (projectRiskProjectId !== scopedProjectId) {
+        setProjectRiskProjectId(scopedProjectId);
+      }
+      return;
+    }
+    const preferredId =
+      riskProjectsMargin[0]?.project_id || projectOptions[0]?.id || "";
     if (!preferredId) {
       if (projectRiskProjectId) {
         setProjectRiskProjectId("");
@@ -2189,11 +2852,20 @@ export default function ReportsPage() {
     }
     const exists =
       projectOptions.some((project) => project.id === projectRiskProjectId) ||
-      riskProjectsMargin.some((project) => project.project_id === projectRiskProjectId);
+      riskProjectsMargin.some(
+        (project) => project.project_id === projectRiskProjectId,
+      );
     if (!exists) {
       setProjectRiskProjectId(preferredId);
     }
-  }, [projectOptions, riskProjectsMargin, projectRiskProjectId]);
+  }, [
+    projectOptions,
+    projectRiskProjectId,
+    projectsQuery.isFetched,
+    riskProjectsMargin,
+    scopedProjectId,
+    scopedProjectInOptions,
+  ]);
 
   useEffect(() => {
     if (installersKpiItems.length === 0) {
@@ -2202,28 +2874,56 @@ export default function ReportsPage() {
       }
       return;
     }
-    const exists = installersKpiItems.some((item) => item.installer_id === installerDetailsId);
+    if (scopedInstallerId) {
+      if (!scopedInstallerInKpi) {
+        if (installerDetailsId) {
+          setInstallerDetailsId("");
+        }
+        return;
+      }
+      if (installerDetailsId !== scopedInstallerId) {
+        setInstallerDetailsId(scopedInstallerId);
+      }
+      return;
+    }
+    const exists = installersKpiItems.some(
+      (item) => item.installer_id === installerDetailsId,
+    );
     if (!exists) {
       setInstallerDetailsId(installersKpiItems[0].installer_id);
     }
-  }, [installersKpiItems, installerDetailsId]);
+  }, [
+    installersKpiItems,
+    installerDetailsId,
+    scopedInstallerId,
+    scopedInstallerInKpi,
+  ]);
 
   const exportErrorMessage =
     (exportAuditMutation.isError &&
-      readError(exportAuditMutation.error, t("reports.catalogAuditExportFailed"))) ||
+      readError(
+        exportAuditMutation.error,
+        t("reports.catalogAuditExportFailed"),
+      )) ||
     (exportIssueAuditMutation.isError &&
-      readError(exportIssueAuditMutation.error, t("reports.issueAuditExportFailed"))) ||
+      readError(
+        exportIssueAuditMutation.error,
+        t("reports.issueAuditExportFailed"),
+      )) ||
     (exportInstallersKpiMutation.isError &&
-      readError(exportInstallersKpiMutation.error, t("reports.installersKpiExportFailed"))) ||
+      readError(
+        exportInstallersKpiMutation.error,
+        t("reports.installersKpiExportFailed"),
+      )) ||
     (exportOrderNumbersKpiMutation.isError &&
       readError(
         exportOrderNumbersKpiMutation.error,
-        t("reports.orderNumbersKpiExportFailed")
+        t("reports.orderNumbersKpiExportFailed"),
       )) ||
     (exportExecutiveMutation.isError &&
       readError(
         exportExecutiveMutation.error,
-        t("reports.executiveExportFailed")
+        t("reports.executiveExportFailed"),
       )) ||
     null;
 
@@ -2252,7 +2952,9 @@ export default function ReportsPage() {
       return undefined;
     }
     const timer = window.setTimeout(() => {
-      const target = focusTargetId ? document.getElementById(focusTargetId) : null;
+      const target = focusTargetId
+        ? document.getElementById(focusTargetId)
+        : null;
       target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
     }, 0);
     return () => window.clearTimeout(timer);
@@ -2276,11 +2978,17 @@ export default function ReportsPage() {
       appliedProjectScopeRef.current = null;
       return;
     }
-    if (projectOptions.length === 0 || appliedProjectScopeRef.current === scopedProjectId) {
+    if (
+      (!projectsQuery.isFetched && projectOptions.length === 0) ||
+      appliedProjectScopeRef.current === scopedProjectId
+    ) {
       return;
     }
-    const exists = projectOptions.some((project) => project.id === scopedProjectId);
-    if (!exists) {
+    if (!scopedProjectInOptions) {
+      appliedProjectScopeRef.current = null;
+      if (orderNumbersProjectId) {
+        setOrderNumbersProjectId("");
+      }
       return;
     }
     appliedProjectScopeRef.current = scopedProjectId;
@@ -2288,7 +2996,13 @@ export default function ReportsPage() {
     setProjectRiskProjectId(scopedProjectId);
     setOrderNumbersProjectId(scopedProjectId);
     setOrderNumbersKpiOffset(0);
-  }, [projectOptions, scopedProjectId]);
+  }, [
+    orderNumbersProjectId,
+    projectOptions,
+    projectsQuery.isFetched,
+    scopedProjectId,
+    scopedProjectInOptions,
+  ]);
 
   useEffect(() => {
     if (!scopedInstallerId) {
@@ -2296,12 +3010,14 @@ export default function ReportsPage() {
       return;
     }
     if (
-      installersKpiItems.length === 0
-      || appliedInstallerScopeRef.current === scopedInstallerId
+      installersKpiItems.length === 0 ||
+      appliedInstallerScopeRef.current === scopedInstallerId
     ) {
       return;
     }
-    const exists = installersKpiItems.some((item) => item.installer_id === scopedInstallerId);
+    const exists = installersKpiItems.some(
+      (item) => item.installer_id === scopedInstallerId,
+    );
     if (!exists) {
       return;
     }
@@ -2381,186 +3097,540 @@ export default function ReportsPage() {
     setPresetNotice(t("reports.presetDeleted"));
   }
 
+  const scrollToReport = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+  const reportsLastRefresh =
+    operationsCenter?.generated_at ||
+    issuesAnalytics?.generated_at ||
+    issuesAddonsImpact?.generated_at ||
+    riskConcentration?.generated_at ||
+    null;
+  const marginLeakageValue =
+    toReportNumber(issuesAddonsImpact?.summary?.open_issue_profit_at_risk) +
+    toReportNumber(issuesAddonsImpact?.summary?.delayed_profit_total);
+  const installerDoorTotal = installersKpiItems.reduce(
+    (sum, item) => sum + item.installed_doors,
+    0,
+  );
+  const installerMissingRates = installersKpiItems.reduce(
+    (sum, item) => sum + item.missing_rates_installed_doors,
+    0,
+  );
+  const topInstaller = installersKpiItems[0]?.installer_name || "n/a";
+  const reportsInsights: ReportsInsight[] = [
+    {
+      eyebrow: "Margin leakage watch",
+      title: "Add-ons and delayed work need commercial review",
+      value: canExportFinancialReports
+        ? `${formatAmount(marginLeakageValue)} NIS`
+        : "Restricted",
+      delta: canExportFinancialReports
+        ? `${formatCount(issuesAddonsImpact?.summary?.missing_addon_plans_facts)} missing plan links`
+        : "finance access required",
+      detail:
+        canExportFinancialReports && issuesAddonsImpact?.top_reasons?.[0]
+          ? `Top reason: ${issuesAddonsImpact.top_reasons[0].reason_name}.`
+          : "Uses existing add-on impact and issue exposure reports.",
+      cta: "Review commercial reports",
+      onClick: () => scrollToReport("reports-issues-addons-impact"),
+      tone: marginLeakageValue > 0 ? "red" : "green",
+      variant: marginLeakageValue > 0 ? "line-down" : "line-up",
+    },
+    {
+      eyebrow: "Risk concentration watch",
+      title: "Backlog and profit risk by project",
+      value: canExportFinancialReports
+        ? `${formatCount(riskConcentration?.summary?.risky_projects)} projects`
+        : "Restricted",
+      delta: canExportFinancialReports
+        ? `${formatAmount(
+            toReportNumber(riskConcentration?.summary?.open_issue_profit_at_risk),
+          )} NIS at risk`
+        : "finance access required",
+      detail:
+        canExportFinancialReports && riskConcentration?.projects?.[0]
+          ? `Worst project: ${riskConcentration.projects[0].project_name}.`
+          : "Concentrates project, order and installer risk in one view.",
+      cta: "Open risk block",
+      onClick: () => scrollToReport("reports-project-risk-drilldown"),
+      tone:
+        (riskConcentration?.summary?.risky_projects ?? 0) > 0
+          ? "orange"
+          : "green",
+      variant: "bars",
+    },
+    {
+      eyebrow: "Installer KPI trend",
+      title: "Team delivery and rate coverage",
+      value: formatCount(installerDoorTotal),
+      delta: `${formatCount(installerMissingRates)} installed doors missing rates`,
+      detail: `Top installer in current sort: ${topInstaller}.`,
+      cta: "Open installer KPI",
+      onClick: () => scrollToReport("reports-installers-kpi"),
+      tone: installerMissingRates > 0 ? "orange" : "green",
+      variant: "line-up",
+    },
+  ];
+  const reportsLibraryGroups: ReportsLibraryGroup[] = [
+    {
+      title: "Financial control",
+      subtitle: "revenue, payroll, margin",
+      count: 6,
+      icon: ReceiptText,
+      tone: "green",
+      rows: [
+        {
+          icon: "PF",
+          title: "Project commercial plan/fact",
+          subtitle: "planned vs actual revenue and payroll",
+          badge: "live",
+          meta: "5m",
+          onClick: () => scrollToReport("reports-project-plan-fact"),
+        },
+        {
+          icon: "PL",
+          title: "Payroll and earnings ledger",
+          subtitle: "installer payouts and project filters",
+          badge: "pinned",
+          meta: "5m",
+          onClick: () => router.push("/earnings-ledger"),
+        },
+        {
+          icon: "ML",
+          title: "Leakage and add-on impact",
+          subtitle: "missing plans, urgency uplift, delayed profit",
+          badge: "new",
+          meta: "30m",
+          onClick: () => scrollToReport("reports-issues-addons-impact"),
+        },
+      ],
+    },
+    {
+      title: "Operational control",
+      subtitle: "imports, outbox, SLA, issues",
+      count: 7,
+      icon: Wrench,
+      tone: "orange",
+      rows: [
+        {
+          icon: "OC",
+          title: "Operations command snapshot",
+          subtitle: "failed imports, delivery risk, unread alerts",
+          badge: "live",
+          meta: "live",
+          onClick: () => scrollToReport("reports-operations-center"),
+        },
+        {
+          icon: "SLA",
+          title: "SLA and playbook health",
+          subtitle: "recovery metrics and action playbooks",
+          meta: "30m",
+          onClick: () => scrollToReport("reports-operations-sla"),
+        },
+        {
+          icon: "DL",
+          title: "Delivery and outbox failures",
+          subtitle: "failed communication, retry trail, webhook scope",
+          meta: "live",
+          onClick: () => scrollToReport("reports-delivery-risk"),
+        },
+      ],
+    },
+    {
+      title: "Installers",
+      subtitle: "performance, workload, cross-view",
+      count: 6,
+      icon: Users,
+      tone: "blue",
+      rows: [
+        {
+          icon: "KPI",
+          title: "Installer scorecard",
+          subtitle: "doors, earnings, missing rates, issues",
+          badge: "live",
+          meta: "5m",
+          onClick: () => scrollToReport("reports-installers-kpi"),
+        },
+        {
+          icon: "XP",
+          title: "Installer/project profitability",
+          subtitle: "who worked where and margin by combination",
+          meta: "1h",
+          onClick: () => scrollToReport("reports-installer-cross-view"),
+        },
+        {
+          icon: "ON",
+          title: "Order number progress",
+          subtitle: "door completion and profit by order number",
+          meta: "30m",
+          onClick: () => scrollToReport("reports-order-numbers-kpi"),
+        },
+      ],
+    },
+    {
+      title: "System and audit",
+      subtitle: "audit, integrations, sync",
+      count: 4,
+      icon: ShieldAlert,
+      tone: "neutral",
+      rows: [
+        {
+          icon: "AU",
+          title: "Catalog audit export",
+          subtitle: "catalog, sync-state and admin changes",
+          meta: "5m",
+          onClick: () => scrollToReport("reports-audit-catalogs"),
+        },
+        {
+          icon: "IS",
+          title: "Issue audit timeline",
+          subtitle: "problem lifecycle and operator activity",
+          meta: "5m",
+          onClick: () => scrollToReport("reports-issue-audit"),
+        },
+        {
+          icon: "WH",
+          title: "Webhook and delivery trail",
+          subtitle: "provider events and retry audit",
+          badge: "live",
+          meta: "live",
+          onClick: () => scrollToReport("reports-delivery-scope"),
+        },
+      ],
+    },
+  ];
+  const reportsLibraryCount = reportsLibraryGroups.reduce(
+    (sum, group) => sum + group.count,
+    0,
+  );
+  const pinnedSavedViews = savedPresets.slice(0, 4);
+
   return (
     <DashboardLayout>
-      <div className="motion-stagger readability-wrap max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <section className="page-hero readability-wrap relative overflow-hidden">
-          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
-          <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl min-w-0">
-              <div className="page-eyebrow">{t("reports.eyebrow")}</div>
-              <h1 className="mt-3 max-w-2xl font-display text-3xl leading-tight tracking-[-0.04em] text-foreground sm:text-4xl">
-                {t("reports.title")}
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
-                {t("reports.subtitle")}
-              </p>
+      <div className="page-shell page-stack-tight motion-stagger">
+        <section
+          data-testid="reports-dashboard-v3"
+          className="overflow-hidden rounded-[14px] border border-border bg-surface-subtle shadow-sm"
+        >
+          <div className="flex items-center gap-3 border-b border-border px-3 py-2">
+            <div className="rounded-full bg-text px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">
+              DIMAX
             </div>
-            <div className="surface-subtle min-w-0 max-w-2xl space-y-4 p-4 sm:p-5 xl:min-w-[360px]">
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-2">
-                    <div className="text-[12px] leading-5 text-muted-foreground">
-                      {t("reports.helper")}
-                    </div>
-                    <div className="text-[12px] text-muted-foreground">
-                      {activeFocus
-                        ? copy("Focused view", "Активный фокус", "מיקוד פעיל")
-                        : t("reports.focus")}{" "}
-                      <span className="font-semibold text-foreground">
-                        {activeFocus
-                          ? copy("Applied", "Применён", "מוחל")
-                          : t("reports.portfolio")}
-                      </span>
-                      {" · "}
-                      <span>{copy("Unread:", "Непрочитано:", "לא נקראו:")}</span>{" "}
-                      <span className="font-semibold text-foreground">{unreadBadge}</span>
-                    </div>
+            <div className="min-w-0 flex-1 truncate text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary">
+              DIMAX GROUP · REPORTS
+            </div>
+            <div className="rounded-full border border-status-warning-border bg-status-warning-bg px-2.5 py-1 text-[10.5px] font-medium text-status-warning-fg">
+              {copy("Unread", "Непрочитано", "לא נקראו")} {unreadBadge}
+            </div>
+          </div>
+
+          <div className="space-y-5 p-4 md:p-5">
+            <div className="truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-link">
+              Dashboard <span className="mx-1 text-text-tertiary">#</span>
+              <span className="text-text">Reports cockpit</span>
+            </div>
+
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <h1 className="text-[26px] font-semibold leading-tight text-text">
+                  Reports cockpit
+                </h1>
+                <p className="mt-1 max-w-4xl text-[12.5px] leading-5 text-text-secondary">
+                  <b className="font-medium text-text">
+                    {reportsLibraryCount}
+                  </b>{" "}
+                  report signals ·{" "}
+                  <b className="font-medium text-text">
+                    {savedPresets.length}
+                  </b>{" "}
+                  saved views · scheduled exports are manual in this build ·
+                  last refresh{" "}
+                  <b className="font-medium text-text">
+                    {reportsLastRefresh
+                      ? formatDateTime(reportsLastRefresh)
+                      : copy("not loaded", "не загружено", "לא נטען")}
+                  </b>
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={refetchAllReports}
+                  className="dmx-secondary-action"
+                >
+                  <RefreshCw className="h-4 w-4" strokeWidth={1.8} />
+                  {t("common.refresh")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => exportExecutiveMutation.mutate()}
+                  disabled={
+                    !canExportFinancialReports ||
+                    exportExecutiveMutation.isPending
+                  }
+                  title={privilegedActionHint}
+                  className="dmx-secondary-action disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <FileText className="h-4 w-4" strokeWidth={1.8} />
+                  Export snapshot
+                </button>
+                {canOpenOperations ? (
+                  <button
+                    type="button"
+                    onClick={() => router.push("/operations")}
+                    className="dmx-primary-action"
+                  >
+                    <Wrench className="h-4 w-4" strokeWidth={1.8} />
+                    Open operations
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <LineChart className="h-4 w-4 text-text-secondary" />
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary">
+                    Attention this week
                   </div>
-                  <div className="inline-flex h-9 items-center gap-2 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px]">
-                    <BellRing className="h-4 w-4 text-accent" />
-                    <span className="text-muted-foreground">{t("reports.privileged")}:</span>
-                    <span className="font-semibold text-foreground">
-                      {canRunPrivilegedActions ? t("reports.enabled") : t("reports.readOnly")}
-                    </span>
+                  <div className="rounded-full bg-surface px-2 py-0.5 text-[10.5px] text-text-secondary">
+                    live reports
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => router.push("/operations?actionable=1")}
+                  className="text-[11.5px] font-medium text-link"
+                >
+                  Open action queue
+                </button>
+              </div>
+              <div className="grid gap-3 xl:grid-cols-3">
+                {reportsInsights.map((insight) => (
+                  <ReportsInsightCard key={insight.eyebrow} insight={insight} />
+                ))}
+              </div>
+            </div>
 
-                <div className="rounded-2xl border border-border/70 bg-background/60 p-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {copy("Next step", "Следующий шаг", "השלב הבא")}
+            <div>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <FolderKanban className="h-4 w-4 text-text-secondary" />
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary">
+                    Report library
                   </div>
-                  <div className="mt-1 text-[12px] leading-5 text-muted-foreground">
-                    {copy(
-                      "Refresh the slice, open the active queue, or go straight to operations.",
-                      "Обновите срез, откройте активную очередь или сразу перейдите в операции.",
-                      "רעננו את החתך, פתחו את התור הפעיל או עברו ישירות לאופרציות."
-                    )}
-                  </div>
-                  <div className={cn("mt-3 grid gap-2", canOpenOperations ? "sm:grid-cols-3" : "sm:grid-cols-1")}>
-                    <button
-                      type="button"
-                      onClick={refetchAllReports}
-                      className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium"
-                    >
-                      <RefreshCw className="h-4 w-4" strokeWidth={1.8} />
-                      {t("common.refresh")}
-                    </button>
-                    {canOpenOperations ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => router.push("/operations?actionable=1")}
-                          className="h-10 rounded-xl border border-border/70 bg-background/70 px-4 text-[13px] font-medium text-foreground"
-                        >
-                          {copy("Open actionable queue", "Открыть очередь действий", "פתח תור פעולות")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => router.push("/operations")}
-                          className="h-10 rounded-xl border border-border/70 bg-background/70 px-4 text-[13px] font-medium text-foreground"
-                        >
-                          {copy("Go to operations", "Перейти в операции", "עבור לאופרציות")}
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed border-border/60 bg-background/45 px-3 py-2">
-                    <div className="text-[12px] text-muted-foreground">
-                      {copy(
-                        "Alert queue",
-                        "Очередь алертов",
-                        "תור ההתראות"
-                      )}{" "}
-                      <span className="font-semibold text-foreground">{unreadBadge}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => markReadMutation.mutate()}
-                      disabled={
-                        !canRunPrivilegedActions ||
-                        markReadMutation.isPending ||
-                        unreadCount === 0
-                      }
-                      title={ratesScopeHint}
-                      className="btn-premium h-10 rounded-xl px-4 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <CheckCheck className="h-4 w-4" strokeWidth={1.8} />
-                      {t("reports.markAllRead")}
-                    </button>
+                  <div className="rounded-full bg-surface px-2 py-0.5 text-[10.5px] text-text-secondary">
+                    {reportsLibraryCount} mapped
                   </div>
                 </div>
-
-                <div className="rounded-2xl border border-border/70 bg-background/60 p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                      {copy("Saved views", "Сохранённые виды", "תצוגות שמורות")}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => exportExecutiveMutation.mutate()}
-                      disabled={!canExportFinancialReports || exportExecutiveMutation.isPending}
-                      title={privilegedActionHint}
-                      aria-label={t("reports.exportExecutiveCsv")}
-                      className="h-9 rounded-xl border border-border/70 bg-background/70 px-3 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {t("reports.exportExecutiveCsv")}
-                    </button>
-                  </div>
-                  <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-                    <input
-                      aria-label={t("reports.presetName")}
-                      value={presetName}
-                      onChange={(e) => setPresetName(e.target.value)}
-                      placeholder={t("reports.savePreset")}
-                      className="h-10 min-w-0 rounded-xl border border-border/70 bg-background/80 px-3 text-[13px]"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSavePreset}
-                      className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
-                    >
-                      {t("reports.savePreset")}
-                    </button>
-                  </div>
-                  <div className="mt-2 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
-                    <select
-                      aria-label="Saved Presets"
-                      value={selectedPresetId}
-                      onChange={(e) => setSelectedPresetId(e.target.value)}
-                      className="h-10 min-w-0 rounded-xl border border-border/70 bg-background/80 px-2 text-[13px]"
-                    >
-                      <option value="">{t("reports.savedPresets")}</option>
-                      {savedPresets.map((preset) => (
-                        <option key={preset.id} value={preset.id}>
-                          {preset.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={handleApplySelectedPreset}
-                      className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
-                    >
-                      {t("reports.applyPreset")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDeleteSelectedPreset}
-                      className="h-10 rounded-xl border border-border/70 bg-background/70 px-3 text-[13px] font-medium"
-                    >
-                      {t("reports.deletePreset")}
-                    </button>
-                  </div>
+                <div className="text-[11.5px] font-medium text-text-secondary">
+                  API-first, no fake reports
                 </div>
+              </div>
+              <div className="grid gap-3 xl:grid-cols-2">
+                {reportsLibraryGroups.map((group) => (
+                  <ReportsLibraryCard key={group.title} group={group} />
+                ))}
+              </div>
+            </div>
 
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.95fr)]">
+              <div className="rounded-[12px] border border-border bg-surface p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary">
+                      Saved views
+                    </div>
+                    <div className="mt-1 text-[12px] text-text-secondary">
+                      Operator filters stored locally for this browser.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPresetNotice(
+                        copy(
+                          "Name the current filter in the controls below, then save it.",
+                          "Назови текущий фильтр в панели ниже и сохрани его.",
+                          "תן שם למסנן הנוכחי באזור הבקרה למטה ושמור אותו.",
+                        ),
+                      )
+                    }
+                    className="dmx-secondary-action"
+                  >
+                    <Plus className="h-4 w-4" strokeWidth={1.8} />
+                    Save current filter
+                  </button>
+                </div>
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  {pinnedSavedViews.length === 0 ? (
+                    <div className="rounded-[10px] border border-dashed border-border bg-surface-subtle px-4 py-5 text-[12px] leading-5 text-text-secondary md:col-span-2">
+                      No saved report views yet. Save the current filters below
+                      to pin an operator view.
+                    </div>
+                  ) : (
+                    pinnedSavedViews.map((preset) => (
+                      <SavedReportViewCard
+                        key={preset.id}
+                        eyebrow="saved view"
+                        title={preset.name}
+                        value={formatDateTime(preset.created_at)}
+                        tone="blue"
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-[12px] border border-border bg-surface p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary">
+                      Scheduled exports
+                    </div>
+                    <div className="mt-1 text-[12px] leading-5 text-text-secondary">
+                      Scheduler backend is not configured here. Use manual CSV
+                      exports until a real schedule service is added.
+                    </div>
+                  </div>
+                  <CalendarClock className="h-5 w-5 shrink-0 text-text-tertiary" />
+                </div>
+                <div className="mt-4 grid gap-2">
+                  <button
+                    type="button"
+                    onClick={() => exportExecutiveMutation.mutate()}
+                    disabled={
+                      !canExportFinancialReports ||
+                      exportExecutiveMutation.isPending
+                    }
+                    title={privilegedActionHint}
+                    className="dmx-secondary-action justify-center disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Executive CSV now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => exportInstallersKpiMutation.mutate()}
+                    disabled={
+                      !canExportFinancialReports ||
+                      exportInstallersKpiMutation.isPending
+                    }
+                    title={ratesScopeHint}
+                    className="dmx-secondary-action justify-center disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Installers CSV now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => exportOrderNumbersKpiMutation.mutate()}
+                    disabled={
+                      !canExportFinancialReports ||
+                      exportOrderNumbersKpiMutation.isPending
+                    }
+                    title={ratesScopeHint}
+                    className="dmx-secondary-action justify-center disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Orders CSV now
+                  </button>
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="toolbar-panel grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 text-[12px] text-text-secondary">
+            <BellRing className="h-4 w-4 text-text-secondary" />
+            <span>{t("reports.helper")}</span>
+            <span>{copy("Unread:", "Непрочитано:", "לא נקראו:")}</span>
+            <span className="rounded-full border border-status-warning-border bg-status-warning-bg px-2.5 py-1 text-[11px] font-medium text-status-warning-fg">
+              {copy("Alert queue", "Очередь алертов", "תור ההתראות")}{" "}
+              {unreadBadge}
+            </span>
+            <button
+              type="button"
+              onClick={() => markReadMutation.mutate()}
+              disabled={
+                !canRunPrivilegedActions ||
+                markReadMutation.isPending ||
+                unreadCount === 0
+              }
+              title={ratesScopeHint}
+              className="dmx-secondary-action disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <CheckCheck className="h-4 w-4" strokeWidth={1.8} />
+              {t("reports.markAllRead")}
+            </button>
+          </div>
+          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_auto_auto]">
+            <input
+              aria-label={t("reports.presetName")}
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              placeholder={t("reports.savePreset")}
+              className="control-input h-8 text-[12px]"
+            />
+            <button
+              type="button"
+              onClick={handleSavePreset}
+              className="dmx-secondary-action"
+            >
+              {t("reports.savePreset")}
+            </button>
+            <select
+              aria-label="Saved Presets"
+              value={selectedPresetId}
+              onChange={(e) => setSelectedPresetId(e.target.value)}
+              className="control-input h-8 text-[12px]"
+            >
+              <option value="">{t("reports.savedPresets")}</option>
+              {savedPresets.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={handleApplySelectedPreset}
+              className="dmx-secondary-action"
+            >
+              {t("reports.applyPreset")}
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteSelectedPreset}
+              className="dmx-secondary-action"
+            >
+              {t("reports.deletePreset")}
+            </button>
+            <button
+              type="button"
+              onClick={() => exportExecutiveMutation.mutate()}
+              disabled={
+                !canExportFinancialReports || exportExecutiveMutation.isPending
+              }
+              title={privilegedActionHint}
+              aria-label={t("reports.exportExecutiveCsv")}
+              className="dmx-secondary-action disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {t("reports.exportExecutiveCsv")}
+            </button>
+          </div>
         </section>
 
         {alertsQuery.isError && (
-          <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
+          <div
+            className={cn(
+              reportsNoticeClass("error"),
+              "flex items-start gap-2",
+            )}
+          >
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>
               {readError(alertsQuery.error, t("reports.failedAlerts"))}
@@ -2568,65 +3638,131 @@ export default function ReportsPage() {
           </div>
         )}
         {exportErrorMessage && (
-          <div className="rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
+          <div
+            className={cn(
+              reportsNoticeClass("error"),
+              "flex items-start gap-2",
+            )}
+          >
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{exportErrorMessage}</span>
           </div>
         )}
         {actionNotice && (
-          <div className="rounded-lg border border-[hsl(var(--success)/0.35)] bg-[hsl(var(--success)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--success))] flex items-start gap-2">
+          <div
+            className={cn(
+              reportsNoticeClass("success"),
+              "flex items-start gap-2",
+            )}
+          >
             <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{actionNotice}</span>
           </div>
         )}
         {presetNotice && (
-          <div className="rounded-lg border border-border/70 bg-background/60 px-4 py-3 text-[13px] text-muted-foreground">
-            {presetNotice}
+          <div className={reportsNoticeClass("muted")}>{presetNotice}</div>
+        )}
+        {scopedProjectMissing && (
+          <div
+            className={cn(
+              reportsNoticeClass("warning"),
+              "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+            )}
+          >
+            <div className="flex min-w-0 items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                {copy(
+                  `Requested project ${scopedProjectId} is not available in the current reports scope. Project-specific reports were not switched to another project.`,
+                  `Объект ${scopedProjectId} недоступен в текущем контексте отчётов. Объектные отчёты не были переключены на другой проект.`,
+                  `הפרויקט ${scopedProjectId} אינו זמין בהקשר הדוחות הנוכחי. הדוחות לפי פרויקט לא הועברו לפרויקט אחר.`,
+                )}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push("/reports")}
+              className="dmx-secondary-action shrink-0"
+            >
+              {copy("Show full report", "Показать полный отчёт", "הצג דוח מלא")}
+            </button>
+          </div>
+        )}
+        {scopedInstallerMissing && (
+          <div
+            className={cn(
+              reportsNoticeClass("warning"),
+              "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+            )}
+          >
+            <div className="flex min-w-0 items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                {copy(
+                  `Requested installer ${scopedInstallerId} is not available in the current reports scope. Installer-specific reports were not switched to another installer.`,
+                  `Монтажник ${scopedInstallerId} недоступен в текущем контексте отчётов. Отчёты по монтажнику не были переключены на другого монтажника.`,
+                  `המתקין ${scopedInstallerId} אינו זמין בהקשר הדוחות הנוכחי. הדוחות לפי מתקין לא הועברו למתקין אחר.`,
+                )}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push("/reports")}
+              className="dmx-secondary-action shrink-0"
+            >
+              {copy("Show full report", "Показать полный отчёт", "הצג דוח מלא")}
+            </button>
           </div>
         )}
         {hasScopedContextOnly && (
-          <div className="rounded-lg border border-[hsl(var(--accent)/0.35)] bg-[hsl(var(--accent)/0.08)] px-4 py-3 text-[13px]">
+          <div className={reportsNoticeClass("accent")}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="font-medium text-foreground">
+                <div className="font-medium text-text">
                   {scopedContextLabel} {scopedContextValue}
                 </div>
-                <div className="mt-1 text-muted-foreground">
+                <div className="mt-1 text-text-secondary">
                   {copy(
                     "This report is narrowed to one linked context. You can return to the full report at any time.",
                     "Этот отчёт открыт в контексте одной связанной сущности. В любой момент можно вернуться к полному обзору.",
-                    "הדוח פתוח בהקשר ממוקד של ישות אחת. אפשר לחזור בכל רגע לתצוגה המלאה."
+                    "הדוח פתוח בהקשר ממוקד של ישות אחת. אפשר לחזור בכל רגע לתצוגה המלאה.",
                   )}
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => router.push("/reports")}
-                className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
+                className="dmx-secondary-action"
               >
-                {copy("Show full report", "Показать полный отчёт", "הצג דוח מלא")}
+                {copy(
+                  "Show full report",
+                  "Показать полный отчёт",
+                  "הצג דוח מלא",
+                )}
               </button>
             </div>
           </div>
         )}
         {activeFocus && (
-          <div className="rounded-lg border border-[hsl(var(--accent)/0.35)] bg-[hsl(var(--accent)/0.08)] px-4 py-3 text-[13px]">
+          <div className={reportsNoticeClass("accent")}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="font-medium text-foreground">
+                <div className="font-medium text-text">
                   {reportsFocusCopy[activeFocus].title}
                 </div>
-                <div className="mt-1 text-muted-foreground">
+                <div className="mt-1 text-text-secondary">
                   {reportsFocusCopy[activeFocus].description}
                 </div>
                 {activeOpsPreset && (
-                  <div className="mt-2 text-[12px] text-muted-foreground">
+                  <div className="mt-2 text-[12px] text-text-secondary">
                     {reportsOpsPresetCopy[activeOpsPreset].title}.{" "}
                     {reportsOpsPresetCopy[activeOpsPreset].description}
                   </div>
                 )}
                 {scopeSummary && (
-                  <div className="mt-2 text-[12px] text-muted-foreground">{scopeSummary}</div>
+                  <div className="mt-2 text-[12px] text-text-secondary">
+                    {scopeSummary}
+                  </div>
                 )}
               </div>
               <div className="flex flex-wrap items-center justify-end gap-2">
@@ -2635,7 +3771,7 @@ export default function ReportsPage() {
                     key={action.label}
                     type="button"
                     onClick={() => router.push(action.href)}
-                    className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
+                    className="dmx-secondary-action"
                   >
                     {action.label}
                   </button>
@@ -2643,7 +3779,7 @@ export default function ReportsPage() {
                 <button
                   type="button"
                   onClick={() => router.push("/reports")}
-                  className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
+                  className="dmx-secondary-action"
                 >
                   {t("reports.clearFocus")}
                 </button>
@@ -2652,33 +3788,48 @@ export default function ReportsPage() {
           </div>
         )}
         {!canRunPrivilegedActions && (
-          <div className="rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.1)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))] flex items-start gap-2">
+          <div
+            className={cn(
+              reportsNoticeClass("warning"),
+              "flex items-start gap-2",
+            )}
+          >
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{t("reports.readOnlyNotice")}</span>
+          </div>
+        )}
+        {!canExportFinancialReports && (
+          <div className="rounded-lg border border-border bg-surface-subtle px-4 py-3 text-[13px] text-text-secondary flex items-start gap-2">
+            <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0 text-status-warning-fg" />
+            <span>
+              <span className="font-medium text-text">
+                {financialReportsRestrictedTitle}
+              </span>{" "}
+              {financialReportsRestrictedDetail}
+            </span>
           </div>
         )}
 
         <div
           id="reports-operations-center"
-          className="surface-panel relative overflow-hidden"
+          className={reportsPanelClass("relative overflow-hidden p-4")}
         >
-          <div className="absolute -top-14 -right-14 h-40 w-40 rounded-full bg-[hsl(var(--accent)/0.15)] blur-3xl pointer-events-none" />
           <div className="relative z-10 space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                <div className="text-[11px] uppercase text-text-secondary">
                   {t("reports.operationsCommandCenter")}
                 </div>
-                <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                <h2 className="mt-1 text-lg font-semibold tracking-tight text-text">
                   {t("reports.realTimePressureMap")}
                 </h2>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <div className="text-right">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="text-end">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {t("reports.generated")}
                   </div>
-                  <div className="text-[12px] text-foreground">
+                  <div className="text-[12px] text-text">
                     {operationsCenter?.generated_at
                       ? formatDateTime(operationsCenter.generated_at)
                       : t("reports.notAvailable")}
@@ -2688,14 +3839,14 @@ export default function ReportsPage() {
                   <button
                     type="button"
                     onClick={() => router.push("/operations")}
-                    className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
+                    className="dmx-secondary-action"
                   >
                     {tt("reports.openOperationsCenter")}
                   </button>
                   <button
                     type="button"
                     onClick={() => router.push("/operations?actionable=1")}
-                    className="h-8 rounded-lg border border-border bg-background/70 px-3 text-[12px] font-medium text-foreground"
+                    className="dmx-secondary-action"
                   >
                     {tt("reports.openActionableOps")}
                   </button>
@@ -2704,72 +3855,83 @@ export default function ReportsPage() {
             </div>
 
             {operationsCenterQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">{tt("reports.loadingCommandCenter")}</div>
+              <div className="text-[13px] text-text-secondary">
+                {tt("reports.loadingCommandCenter")}
+              </div>
             ) : (
               <div className="grid gap-3 md:grid-cols-4">
-                <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
-                  <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className={reportsMetricCardClass("soft")}>
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {t("reports.imports24h")}
                   </div>
-                  <div className="mt-1 text-xl font-semibold text-foreground">
-                    {operationsCenter?.imports.total_runs ?? 0}
+                  <div className="mt-1 text-xl font-semibold text-text">
+                    {operationsCenter?.imports?.total_runs ?? 0}
                   </div>
-                  <div className="mt-1 text-[12px] text-muted-foreground">
-                    Success {operationsCenter?.imports.success_runs ?? 0} | Partial{" "}
-                    {operationsCenter?.imports.partial_runs ?? 0} | Failed{" "}
-                    {operationsCenter?.imports.failed_runs ?? 0}
+                  <div className="mt-1 text-[12px] text-text-secondary">
+                    Success {operationsCenter?.imports?.success_runs ?? 0} |
+                    Partial {operationsCenter?.imports?.partial_runs ?? 0} |
+                    Failed {operationsCenter?.imports?.failed_runs ?? 0}
                   </div>
                 </div>
 
-                <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
-                  <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className={reportsMetricCardClass("soft")}>
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.importModes")}
                   </div>
-                  <div className="mt-1 text-xl font-semibold text-foreground">
-                    {operationsCenter?.imports.import_runs ?? 0}
+                  <div className="mt-1 text-xl font-semibold text-text">
+                    {operationsCenter?.imports?.import_runs ?? 0}
                   </div>
-                  <div className="mt-1 text-[12px] text-muted-foreground">
+                  <div className="mt-1 text-[12px] text-text-secondary">
                     {tt("reports.analyzeRetry")
-                      .replace("{analyze}", String(operationsCenter?.imports.analyze_runs ?? 0))
-                      .replace("{retry}", String(operationsCenter?.imports.retry_runs ?? 0))}
+                      .replace(
+                        "{analyze}",
+                        String(operationsCenter?.imports?.analyze_runs ?? 0),
+                      )
+                      .replace(
+                        "{retry}",
+                        String(operationsCenter?.imports?.retry_runs ?? 0),
+                      )}
                   </div>
                 </div>
 
-                <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
-                  <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className={reportsMetricCardClass("danger")}>
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.outboxRisk")}
                   </div>
-                  <div className="mt-1 text-xl font-semibold text-foreground">
-                    {operationsCenter?.outbox.failed_total ?? 0}
+                  <div className="mt-1 text-xl font-semibold text-text">
+                    {operationsCenter?.outbox?.failed_total ?? 0}
                   </div>
-                  <div className="mt-1 text-[12px] text-muted-foreground">
-                    Failed | Overdue {operationsCenter?.outbox.pending_overdue_15m ?? 0}
+                  <div className="mt-1 text-[12px] text-text-secondary">
+                    Failed | Overdue{" "}
+                    {operationsCenter?.outbox?.pending_overdue_15m ?? 0}
                   </div>
                 </div>
 
-                <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4">
-                  <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className={reportsMetricCardClass("warning")}>
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.limitAlerts")}
                   </div>
-                  <div className="mt-1 text-xl font-semibold text-foreground">
-                    {operationsCenter?.alerts.unread_count ?? unreadCount}
+                  <div className="mt-1 text-xl font-semibold text-text">
+                    {operationsCenter?.alerts?.unread_count ?? unreadCount}
                   </div>
-                  <div className="mt-1 text-[12px] text-muted-foreground">
+                  <div className="mt-1 text-[12px] text-text-secondary">
                     {tt("reports.warnDanger24h")
-                      .replace("{warn}", String(operationsCenter?.alerts.warn_last_24h ?? 0))
-                      .replace("{danger}", String(operationsCenter?.alerts.danger_last_24h ?? 0))}
+                      .replace(
+                        "{warn}",
+                        String(operationsCenter?.alerts?.warn_last_24h ?? 0),
+                      )
+                      .replace(
+                        "{danger}",
+                        String(operationsCenter?.alerts?.danger_last_24h ?? 0),
+                      )}
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] px-4 py-4">
+            <div className="surface-subtle p-4">
               <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="text-[11px] uppercase text-text-secondary">
                   {tt("reports.topFailingProjectsTitle")}
                 </div>
                 <button
@@ -2777,44 +3939,55 @@ export default function ReportsPage() {
                     if (topFailingProjects.length === 0) {
                       return;
                     }
-                    const ids = topFailingProjects.map((item) => item.project_id).join(",");
+                    const ids = topFailingProjects
+                      .map((item) => item.project_id)
+                      .join(",");
                     router.push(
                       `/projects?failed_project_ids=${encodeURIComponent(
-                        ids
-                      )}&only_failed_runs=1`
+                        ids,
+                      )}&only_failed_runs=1`,
                     );
                   }}
                   disabled={topFailingProjects.length === 0}
-                  className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[11px] font-medium disabled:opacity-50"
+                  className="dmx-secondary-action disabled:opacity-50"
                 >
                   {tt("reports.openInProjects")}
                 </button>
               </div>
               {topFailingProjects.length === 0 ? (
-                <div className="text-[12px] text-muted-foreground">{tt("reports.noFailingProjectsCurrentWindow")}</div>
+                <div className="text-[12px] text-text-secondary">
+                  {tt("reports.noFailingProjectsCurrentWindow")}
+                </div>
               ) : (
                 <div className="grid gap-2">
                   {topFailingProjects.slice(0, 3).map((item) => (
                     <div
                       key={`${item.project_id}-${item.last_run_at}`}
-                      className="grid grid-cols-[1fr_80px_170px_74px] items-center gap-2 rounded-xl border border-border/70 bg-background/55 px-3 py-2 text-[12px]"
+                      className="grid grid-cols-[1fr_80px_170px_74px] items-center gap-2 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-[12px]"
                     >
-                      <div className="font-medium text-foreground truncate">{item.project_name}</div>
-                      <div className="text-muted-foreground text-right">
-                        {tt("reports.failureRuns").replace("{count}", String(item.failure_runs))}
+                      <div className="font-medium text-text truncate">
+                        {item.project_name}
                       </div>
-                      <div className="text-muted-foreground text-right">{formatDateTime(item.last_run_at)}</div>
+                      <div className="text-text-secondary text-end">
+                        {tt("reports.failureRuns").replace(
+                          "{count}",
+                          String(item.failure_runs),
+                        )}
+                      </div>
+                      <div className="text-text-secondary text-end">
+                        {formatDateTime(item.last_run_at)}
+                      </div>
                       <button
                         onClick={() =>
                           router.push(
                             `/projects?project_id=${encodeURIComponent(
-                              item.project_id
+                              item.project_id,
                             )}&failed_project_ids=${encodeURIComponent(
-                              item.project_id
-                            )}&only_failed_runs=1`
+                              item.project_id,
+                            )}&only_failed_runs=1`,
                           )
                         }
-                        className="h-7 rounded-lg border border-border/70 bg-background/70 px-2 text-[11px] font-medium"
+                        className="h-7 rounded-lg border border-border bg-surface-subtle px-2 text-[11px] font-medium"
                       >
                         {tt("reports.openShort")}
                       </button>
@@ -2826,13 +3999,16 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div id="reports-operations-sla" className="surface-panel space-y-4">
+        <div
+          id="reports-operations-sla"
+          className={reportsPanelClass("space-y-4 p-4")}
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="text-[11px] uppercase text-text-secondary">
                 {tt("reports.operationsSlaTitle")}
               </div>
-              <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+              <h2 className="mt-1 text-lg font-semibold tracking-tight text-text">
                 {tt("reports.healthMetricsPlaybooks")}
               </h2>
             </div>
@@ -2840,7 +4016,7 @@ export default function ReportsPage() {
               className={cn(
                 "inline-flex items-center rounded-md border px-2 py-1 text-[11px] font-semibold",
                 SLA_STATUS_CLASS[operationsSla?.overall_status || ""] ||
-                  "text-muted-foreground bg-muted/40 border-border"
+                  "text-text-secondary bg-surface-subtle border-border",
               )}
             >
               {operationsSla?.overall_status || tt("reports.notAvailableShort")}
@@ -2848,10 +4024,15 @@ export default function ReportsPage() {
           </div>
 
           {operationsSlaQuery.isLoading ? (
-            <div className="text-[13px] text-muted-foreground">{tt("reports.loadingSlaMetrics")}</div>
+            <div className="text-[13px] text-text-secondary">
+              {tt("reports.loadingSlaMetrics")}
+            </div>
           ) : operationsSlaQuery.isError ? (
-            <div className="text-[13px] text-[hsl(var(--destructive))]">
-              {readError(operationsSlaQuery.error, "Failed to load SLA metrics")}
+            <div className="text-[13px] text-status-problem-fg">
+              {readError(
+                operationsSlaQuery.error,
+                "Failed to load SLA metrics",
+              )}
             </div>
           ) : (
             <>
@@ -2859,16 +4040,21 @@ export default function ReportsPage() {
                 {slaMetrics.map((metric) => (
                   <div
                     key={metric.code}
-                    className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.9),hsl(var(--accent)/0.08))] px-4 py-4"
+                    className={reportsMetricCardClass(
+                      metric.status === "DANGER"
+                        ? "danger"
+                        : metric.status === "WARN"
+                          ? "warning"
+                          : "success",
+                    )}
                   >
-                    <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--accent)/0.65),transparent)]" />
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    <div className="text-[11px] uppercase text-text-secondary">
                       {metric.title}
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-2">
-                      <div className="text-lg font-semibold text-foreground">
+                      <div className="text-lg font-semibold text-text">
                         {metric.current}
-                        <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                        <span className="ms-1 text-[11px] font-normal text-text-secondary">
                           {metric.unit}
                         </span>
                       </div>
@@ -2876,47 +4062,56 @@ export default function ReportsPage() {
                         className={cn(
                           "inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold",
                           SLA_STATUS_CLASS[metric.status] ||
-                            "text-muted-foreground bg-muted/40 border-border"
+                            "text-text-secondary bg-surface-subtle border-border",
                         )}
                       >
                         {metric.status}
                       </span>
                     </div>
-                    <div className="mt-1 text-[11px] text-muted-foreground">
-                      {copy("target", "цель", "יעד")} {metric.target} | {copy("warn", "предупр.", "אזהרה")} {metric.warn_threshold} | {copy("danger", "риск", "סיכון")}{" "}
+                    <div className="mt-1 text-[11px] text-text-secondary">
+                      {copy("target", "цель", "יעד")} {metric.target} |{" "}
+                      {copy("warn", "предупр.", "אזהרה")}{" "}
+                      {metric.warn_threshold} |{" "}
+                      {copy("danger", "риск", "סיכון")}{" "}
                       {metric.danger_threshold}
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] px-4 py-4 space-y-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {copy("Action Playbooks", "Сценарии действий", "תרחישי פעולה")}
+              <div className="surface-subtle space-y-3 p-4">
+                <div className="text-[11px] uppercase text-text-secondary">
+                  {copy(
+                    "Action Playbooks",
+                    "Сценарии действий",
+                    "תרחישי פעולה",
+                  )}
                 </div>
                 {slaPlaybooks.map((playbook) => (
                   <div
                     key={playbook.code}
-                    className="grid grid-cols-[1fr_120px] items-center gap-2 rounded-xl border border-border/70 bg-background/55 px-3 py-2.5 text-[12px]"
+                    className="grid grid-cols-[1fr_120px] items-center gap-2 rounded-lg border border-border bg-surface-subtle px-3 py-2.5 text-[12px]"
                   >
                     <div>
-                      <div className="font-medium text-foreground">
+                      <div className="font-medium text-text">
                         {playbook.title}
                         <span
                           className={cn(
                             "ml-2 inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold",
                             SLA_STATUS_CLASS[playbook.severity] ||
-                              "text-muted-foreground bg-muted/40 border-border"
+                              "text-text-secondary bg-surface-subtle border-border",
                           )}
                         >
                           {playbook.severity}
                         </span>
                       </div>
-                      <div className="text-muted-foreground">{playbook.description}</div>
+                      <div className="text-text-secondary">
+                        {playbook.description}
+                      </div>
                     </div>
                     <button
                       onClick={() => router.push(playbook.action_url)}
-                      className="h-8 rounded-lg border border-border/70 bg-background/70 px-3 text-[12px] font-medium"
+                      className="h-8 rounded-lg border border-border bg-surface-subtle px-3 text-[12px] font-medium"
                     >
                       Open Playbook
                     </button>
@@ -2924,12 +4119,12 @@ export default function ReportsPage() {
                 ))}
               </div>
 
-              <div className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--background)/0.82),hsl(var(--background)/0.62))] px-4 py-4 space-y-3">
+              <div className="surface-subtle space-y-3 p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     SLA Trend (last {slaHistoryDays} days)
                   </div>
-                  <div className="inline-flex items-center rounded-lg border border-border/70 bg-background/70 p-0.5">
+                  <div className="inline-flex items-center rounded-lg border border-border bg-surface-subtle p-0.5">
                     {SLA_HISTORY_DAYS_OPTIONS.map((option) => (
                       <button
                         key={option}
@@ -2938,7 +4133,7 @@ export default function ReportsPage() {
                           "h-7 px-2 rounded text-[11px]",
                           option === slaHistoryDays
                             ? "bg-accent text-accent-foreground"
-                            : "text-muted-foreground"
+                            : "text-text-secondary",
                         )}
                       >
                         {option}d
@@ -2947,38 +4142,55 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 {operationsSlaHistoryQuery.isLoading ? (
-                  <div className="text-[12px] text-muted-foreground">
+                  <div className="text-[12px] text-text-secondary">
                     {copy("Loading trend…", "Загружаем тренд…", "טוען מגמה…")}
                   </div>
                 ) : operationsSlaHistoryQuery.isError ? (
-                  <div className="text-[12px] text-[hsl(var(--destructive))]">
+                  <div className="text-[12px] text-status-problem-fg">
                     {readError(
                       operationsSlaHistoryQuery.error,
-                      copy("Failed to load SLA trend", "Не удалось загрузить тренд SLA", "טעינת מגמת SLA נכשלה")
+                      copy(
+                        "Failed to load SLA trend",
+                        "Не удалось загрузить тренд SLA",
+                        "טעינת מגמת SLA נכשלה",
+                      ),
                     )}
                   </div>
                 ) : (
                   <>
                     <div className="grid gap-2 md:grid-cols-4 text-[12px]">
-                      <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
-                        <div className="text-muted-foreground">{copy("Current", "Текущее", "נוכחי")}</div>
-                        <div className="font-semibold">{slaHistorySummary?.current_status || tt("reports.notAvailableShort")}</div>
-                      </div>
-                      <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
-                        <div className="text-muted-foreground">{copy("Status Days", "Дней в статусе", "ימים בסטטוס")}</div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
+                        <div className="text-text-secondary">
+                          {copy("Current", "Текущее", "נוכחי")}
+                        </div>
                         <div className="font-semibold">
-                          OK {slaHistorySummary?.ok_days || 0} | WARN {slaHistorySummary?.warn_days || 0} | DANGER{" "}
+                          {slaHistorySummary?.current_status ||
+                            tt("reports.notAvailableShort")}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
+                        <div className="text-text-secondary">
+                          {copy("Status Days", "Дней в статусе", "ימים בסטטוס")}
+                        </div>
+                        <div className="font-semibold">
+                          OK {slaHistorySummary?.ok_days || 0} | WARN{" "}
+                          {slaHistorySummary?.warn_days || 0} | DANGER{" "}
                           {slaHistorySummary?.danger_days || 0}
                         </div>
                       </div>
-                      <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
-                        <div className="text-muted-foreground">Delta Import % (d-1)</div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
+                        <div className="text-text-secondary">
+                          Delta Import % (d-1)
+                        </div>
                         <div className="font-semibold">
-                          {slaHistorySummary?.delta_import_failure_rate_pct ?? 0}
+                          {slaHistorySummary?.delta_import_failure_rate_pct ??
+                            0}
                         </div>
                       </div>
-                      <div className="rounded-xl border border-border/70 bg-background/55 px-3 py-2">
-                        <div className="text-muted-foreground">Delta Outbox % (d-1)</div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
+                        <div className="text-text-secondary">
+                          Delta Outbox % (d-1)
+                        </div>
                         <div className="font-semibold">
                           {slaHistorySummary?.delta_outbox_failed_rate_pct ?? 0}
                         </div>
@@ -2991,29 +4203,33 @@ export default function ReportsPage() {
                           key={point.day}
                           className="grid grid-cols-[92px_62px_1fr_1fr_64px] gap-2 items-center text-[11px]"
                         >
-                          <div className="text-muted-foreground">{point.day}</div>
+                          <div className="text-text-secondary">{point.day}</div>
                           <span
                             className={cn(
                               "inline-flex justify-center rounded border px-1.5 py-0.5 font-semibold",
                               SLA_STATUS_CLASS[point.overall_status] ||
-                                "text-muted-foreground bg-muted/40 border-border"
+                                "text-text-secondary bg-surface-subtle border-border",
                             )}
                           >
                             {point.overall_status}
                           </span>
-                          <div className="h-2 rounded bg-muted overflow-hidden">
+                          <div className="h-2 rounded bg-surface-sunken overflow-hidden">
                             <div
-                              className="h-full bg-[hsl(var(--warning))]"
-                              style={{ width: `${Math.min(100, point.import_failure_rate_pct)}%` }}
+                              className="h-full bg-status-warning-fg"
+                              style={{
+                                width: `${Math.min(100, point.import_failure_rate_pct)}%`,
+                              }}
                             />
                           </div>
-                          <div className="h-2 rounded bg-muted overflow-hidden">
+                          <div className="h-2 rounded bg-surface-sunken overflow-hidden">
                             <div
-                              className="h-full bg-[hsl(var(--destructive))]"
-                              style={{ width: `${Math.min(100, point.outbox_failed_rate_pct)}%` }}
+                              className="h-full bg-status-problem-fg"
+                              style={{
+                                width: `${Math.min(100, point.outbox_failed_rate_pct)}%`,
+                              }}
                             />
                           </div>
-                          <div className="text-right text-muted-foreground">
+                          <div className="text-end text-text-secondary">
                             A:{point.danger_alerts_count}
                           </div>
                         </div>
@@ -3028,18 +4244,18 @@ export default function ReportsPage() {
 
         <div
           id="reports-issues-analytics"
-          className="glass-card rounded-2xl border border-border p-5 space-y-4"
+          className={reportsPanelClass("space-y-4 p-4")}
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="text-[11px] uppercase text-text-secondary">
                 {tt("reports.issuesAnalyticsTitle")}
               </div>
-              <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+              <h2 className="mt-1 text-lg font-semibold tracking-tight text-text">
                 {tt("reports.issuesAnalyticsSubtitle")}
               </h2>
             </div>
-            <div className="text-right text-[11px] text-muted-foreground">
+            <div className="text-end text-[11px] text-text-secondary">
               {issuesAnalytics?.generated_at
                 ? formatDateTime(issuesAnalytics.generated_at)
                 : tt("reports.notAvailableShort")}
@@ -3047,105 +4263,122 @@ export default function ReportsPage() {
           </div>
 
           {issuesAnalyticsQuery.isLoading ? (
-            <div className="text-[13px] text-muted-foreground">{tt("reports.loadingIssuesAnalytics")}</div>
+            <div className="text-[13px] text-text-secondary">
+              {tt("reports.loadingIssuesAnalytics")}
+            </div>
           ) : issuesAnalyticsQuery.isError ? (
-            <div className="text-[13px] text-[hsl(var(--destructive))]">
-              {readError(issuesAnalyticsQuery.error, tt("reports.failedIssuesAnalytics"))}
+            <div className="text-[13px] text-status-problem-fg">
+              {readError(
+                issuesAnalyticsQuery.error,
+                tt("reports.failedIssuesAnalytics"),
+              )}
             </div>
           ) : (
             <>
               <div className="grid gap-3 md:grid-cols-5">
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.openTotal")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
-                    {issuesAnalytics?.summary.open_issues ?? 0} /{" "}
-                    {issuesAnalytics?.summary.total_issues ?? 0}
+                  <div className="mt-1 text-lg font-semibold tabular-nums text-text">
+                    {formatCount(issuesAnalytics?.summary.open_issues)} /{" "}
+                    {formatCount(issuesAnalytics?.summary.total_issues)}
                   </div>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.overdueRate")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-[hsl(var(--destructive))]">
-                    {issuesAnalytics?.summary.overdue_open_rate_pct ?? 0}%
+                  <div className="mt-1 text-lg font-semibold text-status-problem-fg">
+                    {formatPercent(
+                      issuesAnalytics?.summary.overdue_open_rate_pct,
+                    )}
                   </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">
+                  <div className="mt-1 text-[11px] text-text-secondary">
                     {tt("reports.overdueOpen").replace(
                       "{count}",
-                      String(issuesAnalytics?.summary.overdue_open_issues ?? 0)
+                      formatCount(issuesAnalytics?.summary.overdue_open_issues),
                     )}
                   </div>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     MTTR (h)
                   </div>
-                  <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+                  <div className="mt-1 text-lg font-semibold tabular-nums text-text">
                     {issuesAnalytics?.summary.mttr_hours ?? 0}
                   </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">
+                  <div className="mt-1 text-[11px] text-text-secondary">
                     P50: {issuesAnalytics?.summary.mttr_p50_hours ?? 0} | n=
                     {issuesAnalytics?.summary.mttr_sample_size ?? 0}
                   </div>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.blockedOpen")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-[hsl(var(--warning-foreground))]">
+                  <div className="mt-1 text-lg font-semibold text-status-warning-fg">
                     {issuesAnalytics?.summary.blocked_open_issues ?? 0}
                   </div>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     P1 Open
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-[hsl(var(--destructive))]">
+                  <div className="mt-1 text-lg font-semibold text-status-problem-fg">
                     {issuesAnalytics?.summary.p1_open_issues ?? 0}
                   </div>
                 </div>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
+                <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
+                  <div className="text-[11px] uppercase text-text-secondary mb-2">
                     {tt("reports.backlogByWorkflow")}
                   </div>
                   <div className="space-y-1 text-[12px]">
-                    {Object.entries(issuesAnalytics?.summary.backlog_by_workflow || {}).map(
-                      ([workflow, count]) => (
-                        <div key={workflow} className="flex items-center justify-between">
-                          <span className="text-muted-foreground">{workflow}</span>
-                          <span className="font-medium text-foreground">{count}</span>
-                        </div>
-                      )
-                    )}
+                    {Object.entries(
+                      issuesAnalytics?.summary.backlog_by_workflow || {},
+                    ).map(([workflow, count]) => (
+                      <div
+                        key={workflow}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="text-text-secondary">{workflow}</span>
+                        <span className="font-medium text-text">
+                          {count}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
+                <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
+                  <div className="text-[11px] uppercase text-text-secondary mb-2">
                     {tt("reports.backlogByPriority")}
                   </div>
                   <div className="space-y-1 text-[12px]">
-                    {Object.entries(issuesAnalytics?.summary.backlog_by_priority || {}).map(
-                      ([priority, count]) => (
-                        <div key={priority} className="flex items-center justify-between">
-                          <span className="text-muted-foreground">{priority}</span>
-                          <span className="font-medium text-foreground">{count}</span>
-                        </div>
-                      )
-                    )}
+                    {Object.entries(
+                      issuesAnalytics?.summary.backlog_by_priority || {},
+                    ).map(([priority, count]) => (
+                      <div
+                        key={priority}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="text-text-secondary">{priority}</span>
+                        <span className="font-medium text-text">
+                          {count}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3 space-y-2">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="space-y-2 rounded-lg border border-border bg-surface-subtle px-3 py-3">
+                <div className="text-[11px] uppercase text-text-secondary">
                   {tt("reports.trendLastDays").replace(
                     "{days}",
-                    String(issuesAnalytics?.days ?? ISSUES_ANALYTICS_DAYS)
+                    String(issuesAnalytics?.days ?? ISSUES_ANALYTICS_DAYS),
                   )}
                 </div>
                 {(issuesAnalytics?.trend || []).slice(-10).map((point) => (
@@ -3153,13 +4386,17 @@ export default function ReportsPage() {
                     key={point.day}
                     className="grid grid-cols-[90px_70px_70px_1fr] gap-2 items-center text-[11px]"
                   >
-                    <span className="text-muted-foreground">{point.day}</span>
-                    <span className="text-[hsl(var(--success))]">+{point.opened}</span>
-                    <span className="text-[hsl(var(--destructive))]">-{point.closed}</span>
-                    <div className="h-2 rounded bg-muted overflow-hidden">
+                    <span className="text-text-secondary">{point.day}</span>
+                    <span className="text-status-ok-fg">+{point.opened}</span>
+                    <span className="text-status-problem-fg">
+                      -{point.closed}
+                    </span>
+                    <div className="h-2 rounded bg-surface-sunken overflow-hidden">
                       <div
                         className="h-full bg-accent"
-                        style={{ width: `${Math.min(100, point.backlog_open_end)}%` }}
+                        style={{
+                          width: `${Math.min(100, point.backlog_open_end)}%`,
+                        }}
                       />
                     </div>
                   </div>
@@ -3169,17 +4406,20 @@ export default function ReportsPage() {
           )}
         </div>
 
-        <div className="glass-card rounded-2xl border border-border p-5 space-y-4">
+        <div
+          id="reports-issues-addons-impact"
+          className={reportsPanelClass("space-y-4 p-4")}
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="text-[11px] uppercase text-text-secondary">
                 {tt("reports.marginLeakageTitle")}
               </div>
-              <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+              <h2 className="mt-1 text-lg font-semibold tracking-tight text-text">
                 {tt("reports.marginLeakageSubtitle")}
               </h2>
             </div>
-            <div className="text-right text-[11px] text-muted-foreground">
+            <div className="text-end text-[11px] text-text-secondary">
               {issuesAddonsImpact?.generated_at
                 ? formatDateTime(issuesAddonsImpact.generated_at)
                 : tt("reports.notAvailableShort")}
@@ -3187,138 +4427,226 @@ export default function ReportsPage() {
           </div>
 
           {issuesAddonsImpactQuery.isLoading ? (
-            <div className="text-[13px] text-muted-foreground">{tt("reports.loadingMarginLeakage")}</div>
+            <div className="text-[13px] text-text-secondary">
+              {tt("reports.loadingMarginLeakage")}
+            </div>
           ) : issuesAddonsImpactQuery.isError ? (
-            <div className="text-[13px] text-[hsl(var(--destructive))]">
-              {readError(issuesAddonsImpactQuery.error, tt("reports.failedMarginLeakage"))}
+            <div className="text-[13px] text-status-problem-fg">
+              {readError(
+                issuesAddonsImpactQuery.error,
+                tt("reports.failedMarginLeakage"),
+              )}
             </div>
           ) : (
             <>
               <div className="grid gap-3 md:grid-cols-4">
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.openIssuesAtRisk")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
-                    {issuesAddonsImpact?.summary?.open_issues ?? 0}
+                  <div className="mt-1 text-lg font-semibold tabular-nums text-text">
+                    {formatCount(issuesAddonsImpact?.summary?.open_issues)}
                   </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">
+                  <div className="mt-1 text-[11px] text-text-secondary">
                     {tt("reports.profitAtRisk").replace(
                       "{amount}",
-                      formatAmount(issuesAddonsImpact?.summary?.open_issue_profit_at_risk)
+                      formatAmount(
+                        issuesAddonsImpact?.summary?.open_issue_profit_at_risk,
+                      ),
                     )}
                   </div>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.blockedMarginRisk")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-[hsl(var(--destructive))]">
-                    {issuesAddonsImpact?.summary?.blocked_open_issues ?? 0}
+                  <div className="mt-1 text-lg font-semibold text-status-problem-fg">
+                    {formatCount(
+                      issuesAddonsImpact?.summary?.blocked_open_issues,
+                    )}
                   </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">
+                  <div className="mt-1 text-[11px] text-text-secondary">
                     {tt("reports.blockedProfit").replace(
                       "{amount}",
-                      formatAmount(issuesAddonsImpact?.summary?.blocked_issue_profit_at_risk)
+                      formatAmount(
+                        issuesAddonsImpact?.summary
+                          ?.blocked_issue_profit_at_risk,
+                      ),
                     )}
                   </div>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.delayedDoors")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+                  <div className="mt-1 text-lg font-semibold tabular-nums text-text">
                     {issuesAddonsImpact?.summary?.not_installed_doors ?? 0}
                   </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">
+                  <div className="mt-1 text-[11px] text-text-secondary">
                     {tt("reports.delayedProfit").replace(
                       "{amount}",
-                      formatAmount(issuesAddonsImpact?.summary?.delayed_profit_total)
+                      formatAmount(
+                        issuesAddonsImpact?.summary?.delayed_profit_total,
+                      ),
                     )}
                   </div>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.addonUplift")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-[hsl(var(--success))]">
-                    {formatAmount(issuesAddonsImpact?.summary?.addon_profit_total)}
+                  <div className="mt-1 text-lg font-semibold text-status-ok-fg">
+                    {formatAmount(
+                      issuesAddonsImpact?.summary?.addon_profit_total,
+                    )}
                   </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">
-                    {t("reports.missingPlans")} {issuesAddonsImpact?.summary?.missing_addon_plans_facts ?? 0}
+                  <div className="mt-1 text-[11px] text-text-secondary">
+                    {t("reports.missingPlans")}{" "}
+                    {issuesAddonsImpact?.summary?.missing_addon_plans_facts ??
+                      0}
                   </div>
                 </div>
               </div>
 
-              <div className="overflow-auto rounded-xl border border-border/70 bg-background/60">
+              <div className="divide-y divide-border-subtle overflow-hidden rounded-lg border border-border bg-surface-subtle md:hidden">
+                {issuesImpactSummaryRows.map((row) => (
+                  <article key={row.label} className="px-3.5 py-3.5">
+                    <div className="text-[13px] font-semibold leading-5 text-text">
+                      {row.label}
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                        <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                          {copy("Revenue", "Выручка", "הכנסה")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                          {row.revenue}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                        <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                          {copy("Payroll", "ФОТ", "שכר")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                          {row.payroll}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                        <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                          {copy("Profit", "Прибыль", "רווח")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                          {row.profit}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className="hidden overflow-auto rounded-lg border border-border bg-surface-subtle md:block">
                 <table className="w-full text-[12px]">
-                  <thead className="bg-muted/40 text-muted-foreground">
+                  <thead className="bg-surface-subtle text-text-secondary">
                     <tr>
-                      <th className="text-left px-3 py-2 font-medium">{tt("reports.summary")}</th>
-                      <th className="text-right px-3 py-2 font-medium">{copy("Revenue", "Выручка", "הכנסה")}</th>
-                      <th className="text-right px-3 py-2 font-medium">{copy("Payroll", "ФОТ", "שכר")}</th>
-                      <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
+                      <th className="text-start px-3 py-2 font-medium">
+                        {tt("reports.summary")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Revenue", "Выручка", "הכנסה")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Payroll", "ФОТ", "שכר")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Profit", "Прибыль", "רווח")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-t border-border/70">
-                      <td className="px-3 py-2.5 font-medium text-foreground">{tt("reports.openIssuesExposure")}</td>
-                      <td className="px-3 py-2 text-right">
-                        {formatAmount(issuesAddonsImpact?.summary?.open_issue_revenue_at_risk)}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {formatAmount(issuesAddonsImpact?.summary?.open_issue_payroll_at_risk)}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {formatAmount(issuesAddonsImpact?.summary?.open_issue_profit_at_risk)}
-                      </td>
-                    </tr>
-                    <tr className="border-t border-border/70">
-                      <td className="px-3 py-2.5 font-medium text-foreground">{tt("reports.delayedNotInstalled")}</td>
-                      <td className="px-3 py-2 text-right">
-                        {formatAmount(issuesAddonsImpact?.summary?.delayed_revenue_total)}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {formatAmount(issuesAddonsImpact?.summary?.delayed_payroll_total)}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {formatAmount(issuesAddonsImpact?.summary?.delayed_profit_total)}
-                      </td>
-                    </tr>
-                    <tr className="border-t border-border/70">
-                      <td className="px-3 py-2.5 font-medium text-foreground">{tt("reports.addonRealized")}</td>
-                      <td className="px-3 py-2 text-right">
-                        {formatAmount(issuesAddonsImpact?.summary?.addon_revenue_total)}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {formatAmount(issuesAddonsImpact?.summary?.addon_payroll_total)}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {formatAmount(issuesAddonsImpact?.summary?.addon_profit_total)}
-                      </td>
-                    </tr>
+                    {issuesImpactSummaryRows.map((row) => (
+                      <tr key={row.label} className="border-t border-border">
+                        <td className="px-3 py-2.5 font-medium text-text">
+                          {row.label}
+                        </td>
+                        <td className="px-3 py-2 text-end">{row.revenue}</td>
+                        <td className="px-3 py-2 text-end">{row.payroll}</td>
+                        <td className="px-3 py-2 text-end">{row.profit}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-xl border border-border/70 bg-background/60 overflow-auto">
-                  <div className="border-b border-border/70 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="overflow-hidden rounded-lg border border-border bg-surface-subtle">
+                  <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
                     {tt("reports.delayedByReason")}
                   </div>
-                  <table className="w-full text-[12px]">
-                    <thead className="bg-muted/40 text-muted-foreground">
+                  <div className="divide-y divide-border-subtle md:hidden">
+                    {(issuesAddonsImpact?.top_reasons || []).length === 0 ? (
+                      <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                        {tt("reports.noDelayedReasons")}
+                      </div>
+                    ) : (
+                      (issuesAddonsImpact?.top_reasons || []).map((item) => (
+                        <article
+                          key={`${item.reason_id || item.reason_name}-mobile`}
+                          className="px-3.5 py-3.5"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
+                              {item.reason_name}
+                            </div>
+                            <div className="shrink-0 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
+                              {copy("Doors", "Двери", "דלתות")}: {item.doors}
+                            </div>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                              <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                                {copy("Revenue", "Выручка", "הכנסה")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                                {formatAmount(item.revenue_delayed_total)}
+                              </div>
+                            </div>
+                            <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                              <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                                {copy("Profit", "Прибыль", "רווח")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                                {formatAmount(item.profit_delayed_total)}
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                  <table className="hidden w-full text-[12px] md:table">
+                    <thead className="bg-surface-subtle text-text-secondary">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">{copy("Reason", "Причина", "סיבה")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{copy("Doors", "Двери", "דלתות")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{copy("Revenue", "Выручка", "הכנסה")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
+                        <th className="text-start px-3 py-2 font-medium">
+                          {copy("Reason", "Причина", "סיבה")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Doors", "Двери", "דלתות")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Revenue", "Выручка", "הכנסה")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Profit", "Прибыль", "רווח")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {(issuesAddonsImpact?.top_reasons || []).length === 0 ? (
                         <tr>
-                          <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                          <td
+                            className="px-3 py-3 text-text-secondary"
+                            colSpan={4}
+                          >
                             {tt("reports.noDelayedReasons")}
                           </td>
                         </tr>
@@ -3326,16 +4654,16 @@ export default function ReportsPage() {
                         (issuesAddonsImpact?.top_reasons || []).map((item) => (
                           <tr
                             key={item.reason_id || item.reason_name}
-                            className="border-t border-border/70"
+                            className="border-t border-border"
                           >
-                            <td className="px-3 py-2.5 font-medium text-foreground">
+                            <td className="px-3 py-2.5 font-medium text-text">
                               {item.reason_name}
                             </td>
-                            <td className="px-3 py-2 text-right">{item.doors}</td>
-                            <td className="px-3 py-2 text-right">
+                            <td className="px-3 py-2 text-end">{item.doors}</td>
+                            <td className="px-3 py-2 text-end">
                               {formatAmount(item.revenue_delayed_total)}
                             </td>
-                            <td className="px-3 py-2 text-right">
+                            <td className="px-3 py-2 text-end">
                               {formatAmount(item.profit_delayed_total)}
                             </td>
                           </tr>
@@ -3345,23 +4673,76 @@ export default function ReportsPage() {
                   </table>
                 </div>
 
-                <div className="rounded-xl border border-border/70 bg-background/60 overflow-auto">
-                  <div className="border-b border-border/70 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="overflow-hidden rounded-lg border border-border bg-surface-subtle">
+                  <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
                     {tt("reports.addonProfitImpact")}
                   </div>
-                  <table className="w-full text-[12px]">
-                    <thead className="bg-muted/40 text-muted-foreground">
+                  <div className="divide-y divide-border-subtle md:hidden">
+                    {(issuesAddonsImpact?.addon_impact || []).length === 0 ? (
+                      <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                        {tt("reports.noAddonImpactRows")}
+                      </div>
+                    ) : (
+                      (issuesAddonsImpact?.addon_impact || []).map((item) => (
+                        <article
+                          key={`${item.addon_type_id || item.addon_name}-mobile`}
+                          className="px-3.5 py-3.5"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
+                              {item.addon_name}
+                            </div>
+                            <div className="shrink-0 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
+                              {copy("Qty", "Кол-во", "כמות")}:{" "}
+                              {formatAmount(item.qty_done)}
+                            </div>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                              <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                                {copy("Profit", "Прибыль", "רווח")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                                {formatAmount(item.profit_total)}
+                              </div>
+                            </div>
+                            <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                              <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                                {tt("reports.missingPlans")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                                {item.missing_plan_facts}
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                  <table className="hidden w-full text-[12px] md:table">
+                    <thead className="bg-surface-subtle text-text-secondary">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">{tt("reports.addon")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{copy("Qty", "Кол-во", "כמות")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{tt("reports.missingPlans")}</th>
+                        <th className="text-start px-3 py-2 font-medium">
+                          {tt("reports.addon")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Qty", "Кол-во", "כמות")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Profit", "Прибыль", "רווח")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {tt("reports.missingPlans")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {(issuesAddonsImpact?.addon_impact || []).length === 0 ? (
                         <tr>
-                          <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                          <td
+                            className="px-3 py-3 text-text-secondary"
+                            colSpan={4}
+                          >
                             {tt("reports.noAddonImpactRows")}
                           </td>
                         </tr>
@@ -3369,18 +4750,20 @@ export default function ReportsPage() {
                         (issuesAddonsImpact?.addon_impact || []).map((item) => (
                           <tr
                             key={item.addon_type_id || item.addon_name}
-                            className="border-t border-border/70"
+                            className="border-t border-border"
                           >
-                            <td className="px-3 py-2.5 font-medium text-foreground">
+                            <td className="px-3 py-2.5 font-medium text-text">
                               {item.addon_name}
                             </td>
-                            <td className="px-3 py-2 text-right">
+                            <td className="px-3 py-2 text-end">
                               {formatAmount(item.qty_done)}
                             </td>
-                            <td className="px-3 py-2 text-right">
+                            <td className="px-3 py-2 text-end">
                               {formatAmount(item.profit_total)}
                             </td>
-                            <td className="px-3 py-2 text-right">{item.missing_plan_facts}</td>
+                            <td className="px-3 py-2 text-end">
+                              {item.missing_plan_facts}
+                            </td>
                           </tr>
                         ))
                       )}
@@ -3392,22 +4775,29 @@ export default function ReportsPage() {
           )}
         </div>
 
-        <div id="reports-project-plan-fact" className="glass-card rounded-xl overflow-hidden border border-border">
-          <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
+        <div
+          id="reports-project-plan-fact"
+          className={reportsPanelClass("overflow-hidden")}
+        >
+          <div className="px-4 py-3 border-b border-border bg-surface-subtle flex flex-col items-stretch gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="text-[11px] uppercase text-text-secondary">
                 {tt("reports.projectPlanVsFactTitle")}
               </div>
-              <div className="text-[13px] text-muted-foreground">{tt("reports.projectPlanVsFactSubtitle")}</div>
+              <div className="text-[13px] text-text-secondary">
+                {tt("reports.projectPlanVsFactSubtitle")}
+              </div>
             </div>
             <select
               aria-label="Project Plan Fact Filter"
               value={projectPlanFactProjectId}
               onChange={(e) => setProjectPlanFactProjectId(e.target.value)}
-              className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+              className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] md:w-auto md:max-w-[280px]"
             >
               <option value="">
-                {projectsQuery.isLoading ? t("reports.loadingProjects") : t("reports.selectProject")}
+                {projectsQuery.isLoading
+                  ? t("reports.loadingProjects")
+                  : t("reports.selectProject")}
               </option>
               {projectOptions.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -3419,7 +4809,10 @@ export default function ReportsPage() {
 
           {projectsQuery.isLoading && !projectPlanFactProjectId && (
             <div className="px-4 py-6">
-              <SectionMessage title={tt("reports.loadingProjectsForPlanFact")} detail={tt("reports.preparingPlanFactFilters")} />
+              <SectionMessage
+                title={tt("reports.loadingProjectsForPlanFact")}
+                detail={tt("reports.preparingPlanFactFilters")}
+              />
             </div>
           )}
           {!projectsQuery.isLoading && projectOptions.length === 0 && (
@@ -3430,77 +4823,103 @@ export default function ReportsPage() {
               />
             </div>
           )}
-          {!projectsQuery.isLoading && projectOptions.length > 0 && !projectPlanFactProjectId && (
-            <div className="px-4 py-6">
-              <SectionMessage
-                title={t("reports.selectProject")}
-                detail={t("reports.selectProjectPlanFact")}
-              />
-            </div>
-          )}
+          {!projectsQuery.isLoading &&
+            projectOptions.length > 0 &&
+            !projectPlanFactProjectId && (
+              <div className="px-4 py-6">
+                <SectionMessage
+                  title={t("reports.selectProject")}
+                  detail={t("reports.selectProjectPlanFact")}
+                />
+              </div>
+            )}
           {projectPlanFactQuery.isLoading && projectPlanFactProjectId && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {tt("reports.loadingProjectPlanFact")}
             </div>
           )}
           {projectPlanFactQuery.isError && projectPlanFactProjectId && (
-            <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
-              {readError(projectPlanFactQuery.error, tt("reports.failedProjectPlanFact"))}
+            <div className="px-4 py-6 text-[13px] text-status-problem-fg">
+              {readError(
+                projectPlanFactQuery.error,
+                tt("reports.failedProjectPlanFact"),
+              )}
             </div>
           )}
           {!projectPlanFactQuery.isLoading &&
             !projectPlanFactQuery.isError &&
             projectPlanFact && (
               <div className="p-4 space-y-4">
-                <div className="rounded-xl border border-border/70 bg-background/70 p-4">
+                <div className="rounded-lg border border-border bg-surface-subtle p-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div className="max-w-3xl">
-                      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                        {copy("Commercial Adjustments", "Коммерческие корректировки", "התאמות מסחריות")}
+                      <div className="text-[11px] uppercase text-text-secondary">
+                        {copy(
+                          "Commercial Adjustments",
+                          "Коммерческие корректировки",
+                          "התאמות מסחריות",
+                        )}
                       </div>
-                      <div className="mt-1 text-[13px] text-muted-foreground">
+                      <div className="mt-1 text-[13px] text-text-secondary">
                         {copy(
                           `Cross-check add-on plans and urgency uplift for ${selectedProjectPlanFact?.name || "the selected project"} before drilling deeper into margin risk.`,
                           `Сверьте план доп. работ и срочную надбавку для ${selectedProjectPlanFact?.name || "выбранного проекта"} до детального разбора маржи и рисков.`,
-                          `בדוק את תוכנית העבודות הנוספות ותוספת הדחיפות עבור ${selectedProjectPlanFact?.name || "הפרויקט הנבחר"} לפני ירידה עמוקה יותר לסיכון המרווח.`
+                          `בדוק את תוכנית העבודות הנוספות ותוספת הדחיפות עבור ${selectedProjectPlanFact?.name || "הפרויקט הנבחר"} לפני ירידה עמוקה יותר לסיכון המרווח.`,
                         )}
                       </div>
                     </div>
-                    <div className="rounded-lg border border-border/70 bg-card px-3 py-2 text-[12px] text-muted-foreground">
-                      {copy("Plan rows", "Строк плана", "שורות תוכנית")}: {projectCommercialAdjustments.rows}
+                    <div className="rounded-lg border border-border bg-surface px-3 py-2 text-[12px] text-text-secondary">
+                      {copy("Plan rows", "Строк плана", "שורות תוכנית")}:{" "}
+                      {formatCount(projectCommercialAdjustments.rows)}
                     </div>
                   </div>
                   <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-lg border border-border/70 bg-card p-3">
-                      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                        {copy("Client uplift", "Надбавка клиента", "תוספת לקוח")}
+                    <div className="rounded-lg border border-border bg-surface p-3">
+                      <div className="text-[11px] uppercase text-text-secondary">
+                        {copy(
+                          "Client uplift",
+                          "Надбавка клиента",
+                          "תוספת לקוח",
+                        )}
                       </div>
-                      <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+                      <div className="mt-1 text-lg font-semibold tabular-nums text-text">
                         {formatAmount(projectCommercialAdjustments.client)}
                       </div>
                     </div>
-                    <div className="rounded-lg border border-border/70 bg-card p-3">
-                      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                        {copy("Installer uplift", "Надбавка монтажника", "תוספת מתקין")}
+                    <div className="rounded-lg border border-border bg-surface p-3">
+                      <div className="text-[11px] uppercase text-text-secondary">
+                        {copy(
+                          "Installer uplift",
+                          "Надбавка монтажника",
+                          "תוספת מתקין",
+                        )}
                       </div>
-                      <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+                      <div className="mt-1 text-lg font-semibold tabular-nums text-text">
                         {formatAmount(projectCommercialAdjustments.installer)}
                       </div>
                     </div>
-                    <div className="rounded-lg border border-border/70 bg-card p-3">
-                      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                        {copy("Unreconciled add-on facts", "Несведённые add-on факты", "ביצועי add-on לא מותאמים")}
+                    <div className="rounded-lg border border-border bg-surface p-3">
+                      <div className="text-[11px] uppercase text-text-secondary">
+                        {copy(
+                          "Unreconciled add-on facts",
+                          "Несведённые add-on факты",
+                          "ביצועי add-on לא מותאמים",
+                        )}
                       </div>
-                      <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
-                        {projectPlanFact.missing_addon_plans_facts}
+                      <div className="mt-1 text-lg font-semibold tabular-nums text-text">
+                        {formatCount(projectPlanFact.missing_addon_plans_facts)}
                       </div>
                     </div>
-                    <div className="rounded-lg border border-border/70 bg-card p-3">
-                      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                        {copy("Order-level urgency", "Срочность по заказам", "דחיפות ברמת הזמנה")}
+                    <div className="rounded-lg border border-border bg-surface p-3">
+                      <div className="text-[11px] uppercase text-text-secondary">
+                        {copy(
+                          "Order-level urgency",
+                          "Срочность по заказам",
+                          "דחיפות ברמת הזמנה",
+                        )}
                       </div>
-                      <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
-                        {projectUrgencyTotals.orderScoped}
+                      <div className="mt-1 text-lg font-semibold tabular-nums text-text">
+                        {formatCount(projectUrgencyContractTotals.orderScoped)}
                       </div>
                     </div>
                   </div>
@@ -3512,11 +4931,15 @@ export default function ReportsPage() {
                         className="h-9"
                         onClick={() =>
                           router.push(
-                            `/projects?project_id=${selectedProjectPlanFact.id}&focus_section=addons`
+                            `/projects?project_id=${selectedProjectPlanFact.id}&focus_section=addons`,
                           )
                         }
                       >
-                        {copy("Open pricing flow", "Открыть блок цен", "פתח את בלוק התמחור")}
+                        {copy(
+                          "Open pricing flow",
+                          "Открыть блок цен",
+                          "פתח את בלוק התמחור",
+                        )}
                       </Button>
                       <Button
                         type="button"
@@ -3524,194 +4947,339 @@ export default function ReportsPage() {
                         className="h-9"
                         onClick={() =>
                           router.push(
-                            `/projects?project_id=${selectedProjectPlanFact.id}&focus_section=urgency`
+                            `/projects?project_id=${selectedProjectPlanFact.id}&focus_section=urgency`,
                           )
                         }
                       >
-                        {copy("Open urgency rows", "Открыть срочные надбавки", "פתח שורות דחיפות")}
+                        {copy(
+                          "Open urgency rows",
+                          "Открыть срочные надбавки",
+                          "פתח שורות דחיפות",
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9"
+                        onClick={() =>
+                          router.push(
+                            `/earnings-ledger?project_id=${selectedProjectPlanFact.id}`,
+                          )
+                        }
+                      >
+                        <ReceiptText className="h-3.5 w-3.5" />
+                        {copy(
+                          "Open payroll ledger",
+                          "Открыть начисления",
+                          "פתח יומן תשלומים",
+                        )}
                       </Button>
                     </div>
                   )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="rounded-lg border border-border bg-card p-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <div className="text-[11px] uppercase text-text-secondary">
                       {t("projects.completion")}
                     </div>
-                    <div className="mt-2 text-[22px] font-semibold text-foreground">
+                    <div className="mt-2 text-[22px] font-semibold text-text">
                       {formatPercent(projectPlanFact.completion_pct)}
                     </div>
-                    <div className="mt-1 text-[12px] text-muted-foreground">
-                      {projectPlanFact.installed_doors} / {projectPlanFact.total_doors} {t("reports.doors").toLowerCase()} installed
+                    <div className="mt-1 text-[12px] text-text-secondary">
+                      {projectPlanFact.installed_doors} /{" "}
+                      {projectPlanFact.total_doors}{" "}
+                      {t("reports.doors").toLowerCase()} installed
                     </div>
                   </div>
-                  <div className="rounded-lg border border-border bg-card p-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <div className="text-[11px] uppercase text-text-secondary">
                       {t("reports.openIssuesExposure")}
                     </div>
-                    <div className="mt-2 text-[22px] font-semibold text-foreground">
+                    <div className="mt-2 text-[22px] font-semibold text-text">
                       {projectPlanFact.open_issues}
                     </div>
-                    <div className="mt-1 text-[12px] text-muted-foreground">
-                      {projectPlanFact.not_installed_doors} {t("reports.doors").toLowerCase()} still pending
+                    <div className="mt-1 text-[12px] text-text-secondary">
+                      {projectPlanFact.not_installed_doors}{" "}
+                      {t("reports.doors").toLowerCase()} still pending
                     </div>
                   </div>
-                  <div className="rounded-lg border border-border bg-card p-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <div className="text-[11px] uppercase text-text-secondary">
                       {t("projects.missingRates")}
                     </div>
-                    <div className="mt-2 text-[22px] font-semibold text-foreground">
+                    <div className="mt-2 text-[22px] font-semibold text-text">
                       {projectPlanFact.missing_planned_rates_doors}
                     </div>
-                    <div className="mt-1 text-[12px] text-muted-foreground">
-                      {tt("reports.actualMissing")}: {projectPlanFact.missing_actual_rates_doors}
+                    <div className="mt-1 text-[12px] text-text-secondary">
+                      {tt("reports.actualMissing")}:{" "}
+                      {projectPlanFact.missing_actual_rates_doors}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-border bg-card p-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <div className="text-[11px] uppercase text-text-secondary">
                       {t("projects.addons")}
                     </div>
-                    <div className="mt-2 text-[22px] font-semibold text-foreground">
+                    <div className="mt-2 text-[22px] font-semibold text-text">
                       {formatAmount(projectPlanFact.actual_addons_qty)} /{" "}
                       {formatAmount(projectPlanFact.planned_addons_qty)}
                     </div>
-                    <div className="mt-1 text-[12px] text-muted-foreground">
-                      {t("reports.missingPlans")}: {projectPlanFact.missing_addon_plans_facts}
+                    <div className="mt-1 text-[12px] text-text-secondary">
+                      {t("reports.missingPlans")}:{" "}
+                      {projectPlanFact.missing_addon_plans_facts}
                     </div>
                   </div>
                 </div>
 
-                <div className="overflow-auto rounded-lg border border-border">
+                <div className="divide-y divide-border-subtle overflow-hidden rounded-lg border border-border bg-surface md:hidden">
+                  {projectPlanFactRows.map((row) => (
+                    <article
+                      key={`${row.label}-mobile`}
+                      className="px-3.5 py-3.5"
+                    >
+                      <div className="text-[13px] font-semibold leading-5 text-text">
+                        {row.label}
+                      </div>
+                      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                        <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                          <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                            {t("reports.plan")}
+                          </div>
+                          <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                            {row.plan}
+                          </div>
+                        </div>
+                        <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                          <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                            {t("reports.fact")}
+                          </div>
+                          <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                            {row.fact}
+                          </div>
+                        </div>
+                        <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                          <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                            {t("reports.gap")}
+                          </div>
+                          <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                            {row.gap}
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+
+                <div className="hidden overflow-auto rounded-lg border border-border md:block">
                   <table className="w-full text-[13px]">
-                    <thead className="bg-muted/40 text-muted-foreground">
+                    <thead className="bg-surface-subtle text-text-secondary">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">{t("reports.metric")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{t("reports.plan")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{t("reports.fact")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{t("reports.gap")}</th>
+                        <th className="text-start px-3 py-2 font-medium">
+                          {t("reports.metric")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {t("reports.plan")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {t("reports.fact")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {t("reports.gap")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-t border-border/70">
-                        <td className="px-3 py-2.5 font-medium text-foreground">{t("reports.revenue")}</td>
-                        <td className="px-3 py-2 text-right">
-                          {formatAmount(projectPlanFact.planned_revenue_total)}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          {formatAmount(projectPlanFact.actual_revenue_total)}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          {formatAmount(projectPlanFact.revenue_gap_total)}
-                        </td>
-                      </tr>
-                      <tr className="border-t border-border/70">
-                        <td className="px-3 py-2.5 font-medium text-foreground">{tt("reports.payroll")}</td>
-                        <td className="px-3 py-2 text-right">
-                          {formatAmount(projectPlanFact.planned_payroll_total)}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          {formatAmount(projectPlanFact.actual_payroll_total)}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          {formatAmount(projectPlanFact.payroll_gap_total)}
-                        </td>
-                      </tr>
-                      <tr className="border-t border-border/70">
-                        <td className="px-3 py-2.5 font-medium text-foreground">{copy("Profit", "Прибыль", "רווח")}</td>
-                        <td className="px-3 py-2 text-right">
-                          {formatAmount(projectPlanFact.planned_profit_total)}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          {formatAmount(projectPlanFact.actual_profit_total)}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          {formatAmount(projectPlanFact.profit_gap_total)}
-                        </td>
-                      </tr>
+                      {projectPlanFactRows.map((row) => (
+                        <tr key={row.label} className="border-t border-border">
+                          <td className="px-3 py-2.5 font-medium text-text">
+                            {row.label}
+                          </td>
+                          <td className="px-3 py-2 text-end">{row.plan}</td>
+                          <td className="px-3 py-2 text-end">{row.fact}</td>
+                          <td className="px-3 py-2 text-end">{row.gap}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                  <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                  <div className="rounded-lg border border-border bg-surface p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="max-w-[32rem]">
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                          {copy("Additional Works Plan", "План доп. работ", "תוכנית עבודות נוספות")}
+                        <div className="text-[11px] uppercase text-text-secondary">
+                          {copy(
+                            "Additional Works Plan",
+                            "План доп. работ",
+                            "תוכנית עבודות נוספות",
+                          )}
                         </div>
-                        <div className="mt-1 text-[12px] text-muted-foreground">
+                        <div className="mt-1 text-[12px] text-text-secondary">
                           {copy(
                             "Planned add-on rows that should later reconcile with installer facts.",
                             "Плановые строки доп. работ, которые позже должны сойтись с фактами монтажника.",
-                            "שורות add-on מתוכננות שאמורות בהמשך להתאזן מול דיווחי המתקין."
+                            "שורות add-on מתוכננות שאמורות בהמשך להתאזן מול דיווחי המתקין.",
                           )}
                         </div>
                       </div>
-                      <div className="rounded-lg border border-border/70 bg-background/70 px-3 py-2 text-right text-[12px] text-muted-foreground">
-                        {copy("Rows", "Строки", "שורות")}: {projectAddonPlanTotals.rows}
+                      <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2 text-end text-[12px] text-text-secondary">
+                        {copy("Rows", "Строки", "שורות")}:{" "}
+                        {projectAddonPlanTotals.rows}
                       </div>
                     </div>
                     <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                      <div className="rounded-lg border border-border/70 bg-background/70 p-3">
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      <div className="rounded-lg border border-border bg-surface-subtle p-3">
+                        <div className="text-[11px] uppercase text-text-secondary">
                           {copy("Qty planned", "План", "כמות")}
                         </div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{formatAmount(projectAddonPlanTotals.qty)}</div>
-                      </div>
-                      <div className="rounded-lg border border-border/70 bg-background/70 p-3">
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                          {copy("Client total", "Сумма клиента", "סה\"כ לקוח")}
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-text">
+                          {formatAmount(projectAddonPlanTotals.qty)}
                         </div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{formatAmount(projectAddonPlanTotals.client)}</div>
                       </div>
-                      <div className="rounded-lg border border-border/70 bg-background/70 p-3">
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                          {copy("Installer total", "Сумма монтажника", "סה\"כ מתקין")}
+                      <div className="rounded-lg border border-border bg-surface-subtle p-3">
+                        <div className="text-[11px] uppercase text-text-secondary">
+                          {copy("Client total", "Сумма клиента", 'סה"כ לקוח')}
                         </div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{formatAmount(projectAddonPlanTotals.installer)}</div>
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-text">
+                          {formatAmount(projectAddonPlanTotals.client)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle p-3">
+                        <div className="text-[11px] uppercase text-text-secondary">
+                          {copy(
+                            "Installer total",
+                            "Сумма монтажника",
+                            'סה"כ מתקין',
+                          )}
+                        </div>
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-text">
+                          {formatAmount(projectAddonPlanTotals.installer)}
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-3 overflow-auto rounded-lg border border-border">
+                    <div className="mt-3 divide-y divide-border-subtle overflow-hidden rounded-lg border border-border md:hidden">
+                      {projectAddonPlanQuery.isLoading ? (
+                        <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                          {copy(
+                            "Loading additional works plan...",
+                            "Загружаем план доп. работ...",
+                            "טוען תוכנית עבודות נוספות...",
+                          )}
+                        </div>
+                      ) : projectAddonPlan.length === 0 ? (
+                        <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                          {copy(
+                            "No planned additional works for this project.",
+                            "Для этого проекта нет запланированных доп. работ.",
+                            "אין עבודות נוספות מתוכננות לפרויקט זה.",
+                          )}
+                        </div>
+                      ) : (
+                        projectAddonPlan.slice(0, 4).map((item, index) => (
+                          <article
+                            key={`${item.id || `${item.addon_type_id}-${index}`}-mobile`}
+                            className="px-3.5 py-3.5"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
+                                {item.addon_name || item.addon_type_id}
+                              </div>
+                              <div className="shrink-0 rounded-full bg-surface-subtle px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
+                                {copy("Qty", "Кол-во", "כמות")}:{" "}
+                                {formatAmount(Number(item.qty_planned) || 0)}
+                              </div>
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                                <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                                  {copy("Client", "Клиент", "לקוח")}
+                                </div>
+                                <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                                  {formatAmount(Number(item.client_price) || 0)}
+                                </div>
+                              </div>
+                              <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                                <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                                  {copy("Installer", "Монтажник", "מתקין")}
+                                </div>
+                                <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                                  {formatAmount(
+                                    Number(item.installer_price) || 0,
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                    <div className="mt-3 hidden overflow-auto rounded-lg border border-border md:block">
                       <table className="min-w-[520px] w-full text-[12px] leading-5">
-                        <thead className="bg-muted/40 text-muted-foreground">
+                        <thead className="bg-surface-subtle text-text-secondary">
                           <tr>
-                            <th className="px-3 py-2.5 text-left font-medium">{tt("reports.addon")}</th>
-                            <th className="px-3 py-2.5 text-right font-medium">{copy("Qty", "Кол-во", "כמות")}</th>
-                            <th className="px-3 py-2.5 text-right font-medium">{copy("Client", "Клиент", "לקוח")}</th>
-                            <th className="px-3 py-2.5 text-right font-medium">{copy("Installer", "Монтажник", "מתקין")}</th>
+                            <th className="px-3 py-2.5 text-start font-medium">
+                              {tt("reports.addon")}
+                            </th>
+                            <th className="px-3 py-2.5 text-end font-medium">
+                              {copy("Qty", "Кол-во", "כמות")}
+                            </th>
+                            <th className="px-3 py-2.5 text-end font-medium">
+                              {copy("Client", "Клиент", "לקוח")}
+                            </th>
+                            <th className="px-3 py-2.5 text-end font-medium">
+                              {copy("Installer", "Монтажник", "מתקין")}
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {projectAddonPlanQuery.isLoading ? (
                             <tr>
-                              <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                              <td
+                                className="px-3 py-3 text-text-secondary"
+                                colSpan={4}
+                              >
                                 {copy(
                                   "Loading additional works plan...",
                                   "Загружаем план доп. работ...",
-                                  "טוען תוכנית עבודות נוספות..."
+                                  "טוען תוכנית עבודות נוספות...",
                                 )}
                               </td>
                             </tr>
                           ) : projectAddonPlan.length === 0 ? (
                             <tr>
-                              <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                              <td
+                                className="px-3 py-3 text-text-secondary"
+                                colSpan={4}
+                              >
                                 {copy(
                                   "No planned additional works for this project.",
                                   "Для этого проекта нет запланированных доп. работ.",
-                                  "אין עבודות נוספות מתוכננות לפרויקט זה."
+                                  "אין עבודות נוספות מתוכננות לפרויקט זה.",
                                 )}
                               </td>
                             </tr>
                           ) : (
                             projectAddonPlan.slice(0, 4).map((item, index) => (
-                              <tr key={item.id || `${item.addon_type_id}-${index}`} className="border-t border-border/70">
-                                <td className="px-3 py-2.5 font-medium text-foreground">
+                              <tr
+                                key={
+                                  item.id || `${item.addon_type_id}-${index}`
+                                }
+                                className="border-t border-border"
+                              >
+                                <td className="px-3 py-2.5 font-medium text-text">
                                   {item.addon_name || item.addon_type_id}
                                 </td>
-                                <td className="px-3 py-2.5 text-right tabular-nums">{formatAmount(Number(item.qty_planned) || 0)}</td>
-                                <td className="px-3 py-2.5 text-right tabular-nums">{formatAmount(Number(item.client_price) || 0)}</td>
-                                <td className="px-3 py-2.5 text-right tabular-nums">{formatAmount(Number(item.installer_price) || 0)}</td>
+                                <td className="px-3 py-2.5 text-end tabular-nums">
+                                  {formatAmount(Number(item.qty_planned) || 0)}
+                                </td>
+                                <td className="px-3 py-2.5 text-end tabular-nums">
+                                  {formatAmount(Number(item.client_price) || 0)}
+                                </td>
+                                <td className="px-3 py-2.5 text-end tabular-nums">
+                                  {formatAmount(
+                                    Number(item.installer_price) || 0,
+                                  )}
+                                </td>
                               </tr>
                             ))
                           )}
@@ -3720,88 +5288,199 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                  <div className="rounded-lg border border-border bg-surface p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="max-w-[32rem]">
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                          {copy("Urgency Surcharge", "Срочная надбавка", "תוספת דחיפות")}
+                        <div className="text-[11px] uppercase text-text-secondary">
+                          {copy(
+                            "Urgency Surcharge",
+                            "Срочная надбавка",
+                            "תוספת דחיפות",
+                          )}
                         </div>
-                        <div className="mt-1 text-[12px] text-muted-foreground">
+                        <div className="mt-1 text-[12px] text-text-secondary">
                           {copy(
                             "Separate urgency uplift rows that should stay visible in project commercial review.",
                             "Отдельные строки срочной надбавки, которые должны быть видимы в коммерческом разборе проекта.",
-                            "שורות תוספת דחיפות נפרדות שצריכות להישאר גלויות בבדיקה המסחרית של הפרויקט."
+                            "שורות תוספת דחיפות נפרדות שצריכות להישאר גלויות בבדיקה המסחרית של הפרויקט.",
                           )}
                         </div>
                       </div>
-                      <div className="rounded-lg border border-border/70 bg-background/70 px-3 py-2 text-right text-[12px] text-muted-foreground">
-                        {copy("Rows", "Строки", "שורות")}: {projectUrgencyTotals.rows}
+                      <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2 text-end text-[12px] text-text-secondary">
+                        {copy("Rows", "Строки", "שורות")}:{" "}
+                        {projectUrgencyContractTotals.rows}
                       </div>
                     </div>
                     <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                      <div className="rounded-lg border border-border/70 bg-background/70 p-3">
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      <div className="rounded-lg border border-border bg-surface-subtle p-3">
+                        <div className="text-[11px] uppercase text-text-secondary">
                           {copy("Order-scoped", "По заказу", "לפי הזמנה")}
                         </div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{projectUrgencyTotals.orderScoped}</div>
-                      </div>
-                      <div className="rounded-lg border border-border/70 bg-background/70 p-3">
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                          {copy("Client uplift", "Надбавка клиента", "תוספת לקוח")}
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-text">
+                          {projectUrgencyContractTotals.orderScoped}
                         </div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{formatAmount(projectUrgencyTotals.client)}</div>
                       </div>
-                      <div className="rounded-lg border border-border/70 bg-background/70 p-3">
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                          {copy("Installer uplift", "Надбавка монтажника", "תוספת מתקין")}
+                      <div className="rounded-lg border border-border bg-surface-subtle p-3">
+                        <div className="text-[11px] uppercase text-text-secondary">
+                          {copy(
+                            "Client uplift",
+                            "Надбавка клиента",
+                            "תוספת לקוח",
+                          )}
                         </div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{formatAmount(projectUrgencyTotals.installer)}</div>
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-text">
+                          {formatAmount(projectUrgencyContractTotals.client)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle p-3">
+                        <div className="text-[11px] uppercase text-text-secondary">
+                          {copy(
+                            "Installer uplift",
+                            "Надбавка монтажника",
+                            "תוספת מתקין",
+                          )}
+                        </div>
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-text">
+                          {formatAmount(projectUrgencyContractTotals.installer)}
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-3 overflow-auto rounded-lg border border-border">
+                    <div className="mt-3 divide-y divide-border-subtle overflow-hidden rounded-lg border border-border md:hidden">
+                      {projectUrgencySurchargesQuery.isLoading ? (
+                        <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                          {copy(
+                            "Loading urgency surcharge rows...",
+                            "Загружаем строки срочной надбавки...",
+                            "טוען שורות תוספת דחיפות...",
+                          )}
+                        </div>
+                      ) : projectUrgencySurcharges.length === 0 ? (
+                        <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                          {copy(
+                            "No urgency surcharge rows for this project.",
+                            "Для этого проекта нет строк срочной надбавки.",
+                            "אין שורות תוספת דחיפות לפרויקט זה.",
+                          )}
+                        </div>
+                      ) : (
+                        projectUrgencySurcharges
+                          .slice(0, 4)
+                          .map((item, index) => (
+                            <article
+                              key={`${item.id || `${item.scope}-${index}`}-mobile`}
+                              className="px-3.5 py-3.5"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="text-[13px] font-semibold leading-5 text-text">
+                                    {item.reason}
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-text-secondary">
+                                    {item.scope === "ORDER_NUMBER"
+                                      ? `${copy("Order", "Заказ", "הזמנה")}${item.order_number ? ` • ${item.order_number}` : ""}`
+                                      : copy("Project", "Проект", "פרויקט")}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="mt-3 grid grid-cols-2 gap-2">
+                                <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                                  <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                                    {copy("Client", "Клиент", "לקוח")}
+                                  </div>
+                                  <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                                    {formatAmount(
+                                      Number(item.client_amount) || 0,
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                                  <div className="text-[10.5px] font-semibold uppercase text-text-secondary">
+                                    {copy("Installer", "Монтажник", "מתקין")}
+                                  </div>
+                                  <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                                    {formatAmount(
+                                      Number(item.installer_amount) || 0,
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </article>
+                          ))
+                      )}
+                    </div>
+                    <div className="mt-3 hidden overflow-auto rounded-lg border border-border md:block">
                       <table className="min-w-[520px] w-full text-[12px] leading-5">
-                        <thead className="bg-muted/40 text-muted-foreground">
+                        <thead className="bg-surface-subtle text-text-secondary">
                           <tr>
-                            <th className="px-3 py-2.5 text-left font-medium">{copy("Scope", "Скоуп", "היקף")}</th>
-                            <th className="px-3 py-2.5 text-left font-medium">{copy("Reason", "Причина", "סיבה")}</th>
-                            <th className="px-3 py-2.5 text-right font-medium">{copy("Client", "Клиент", "לקוח")}</th>
-                            <th className="px-3 py-2.5 text-right font-medium">{copy("Installer", "Монтажник", "מתקין")}</th>
+                            <th className="px-3 py-2.5 text-start font-medium">
+                              {copy("Scope", "Скоуп", "היקף")}
+                            </th>
+                            <th className="px-3 py-2.5 text-start font-medium">
+                              {copy("Reason", "Причина", "סיבה")}
+                            </th>
+                            <th className="px-3 py-2.5 text-end font-medium">
+                              {copy("Client", "Клиент", "לקוח")}
+                            </th>
+                            <th className="px-3 py-2.5 text-end font-medium">
+                              {copy("Installer", "Монтажник", "מתקין")}
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {projectUrgencySurchargesQuery.isLoading ? (
                             <tr>
-                              <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                              <td
+                                className="px-3 py-3 text-text-secondary"
+                                colSpan={4}
+                              >
                                 {copy(
                                   "Loading urgency surcharge rows...",
                                   "Загружаем строки срочной надбавки...",
-                                  "טוען שורות תוספת דחיפות..."
+                                  "טוען שורות תוספת דחיפות...",
                                 )}
                               </td>
                             </tr>
                           ) : projectUrgencySurcharges.length === 0 ? (
                             <tr>
-                              <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                              <td
+                                className="px-3 py-3 text-text-secondary"
+                                colSpan={4}
+                              >
                                 {copy(
                                   "No urgency surcharge rows for this project.",
                                   "Для этого проекта нет строк срочной надбавки.",
-                                  "אין שורות תוספת דחיפות לפרויקט זה."
+                                  "אין שורות תוספת דחיפות לפרויקט זה.",
                                 )}
                               </td>
                             </tr>
                           ) : (
-                            projectUrgencySurcharges.slice(0, 4).map((item, index) => (
-                              <tr key={item.id || `${item.scope}-${index}`} className="border-t border-border/70">
-                                <td className="px-3 py-2.5">
-                                  {item.scope === "ORDER_NUMBER"
-                                    ? `${copy("Order", "Заказ", "הזמנה")}${item.order_number ? ` • ${item.order_number}` : ""}`
-                                    : copy("Project", "Проект", "פרויקט")}
-                                </td>
-                                <td className="px-3 py-2.5 font-medium text-foreground">{item.reason}</td>
-                                <td className="px-3 py-2.5 text-right tabular-nums">{formatAmount(Number(item.client_amount) || 0)}</td>
-                                <td className="px-3 py-2.5 text-right tabular-nums">{formatAmount(Number(item.installer_amount) || 0)}</td>
-                              </tr>
-                            ))
+                            projectUrgencySurcharges
+                              .slice(0, 4)
+                              .map((item, index) => (
+                                <tr
+                                  key={item.id || `${item.scope}-${index}`}
+                                  className="border-t border-border"
+                                >
+                                  <td className="px-3 py-2.5">
+                                    {item.scope === "ORDER_NUMBER"
+                                      ? `${copy("Order", "Заказ", "הזמנה")}${item.order_number ? ` • ${item.order_number}` : ""}`
+                                      : copy("Project", "Проект", "פרויקט")}
+                                  </td>
+                                  <td className="px-3 py-2.5 font-medium text-text">
+                                    {item.reason}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-end tabular-nums">
+                                    {formatAmount(
+                                      Number(item.client_amount) || 0,
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-end tabular-nums">
+                                    {formatAmount(
+                                      Number(item.installer_amount) || 0,
+                                    )}
+                                  </td>
+                                </tr>
+                              ))
                           )}
                         </tbody>
                       </table>
@@ -3812,13 +5491,16 @@ export default function ReportsPage() {
             )}
         </div>
 
-        <div id="reports-project-risk-drilldown" className="glass-card rounded-xl overflow-hidden border border-border">
-          <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
+        <div
+          id="reports-project-risk-drilldown"
+          className={reportsPanelClass("overflow-hidden")}
+        >
+          <div className="px-4 py-3 border-b border-border bg-surface-subtle flex flex-col items-stretch gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="text-[11px] uppercase text-text-secondary">
                 {tt("reports.projectRiskTitle")}
               </div>
-              <div className="text-[13px] text-muted-foreground">
+              <div className="text-[13px] text-text-secondary">
                 {tt("reports.projectRiskSubtitle")}
               </div>
             </div>
@@ -3826,10 +5508,12 @@ export default function ReportsPage() {
               aria-label="Project Risk Drilldown Filter"
               value={projectRiskProjectId}
               onChange={(e) => setProjectRiskProjectId(e.target.value)}
-              className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+              className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] md:w-auto md:max-w-[280px]"
             >
               <option value="">
-                {projectsQuery.isLoading ? tt("reports.loadingProjects") : t("reports.selectProject")}
+                {projectsQuery.isLoading
+                  ? tt("reports.loadingProjects")
+                  : t("reports.selectProject")}
               </option>
               {projectOptions.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -3840,97 +5524,133 @@ export default function ReportsPage() {
           </div>
 
           {projectRiskDrilldownQuery.isLoading && projectRiskProjectId && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {tt("reports.loadingProjectRisk")}
             </div>
           )}
           {projectRiskDrilldownQuery.isError && projectRiskProjectId && (
-            <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
-              {readError(projectRiskDrilldownQuery.error, tt("reports.failedProjectRisk"))}
+            <div className="px-4 py-6 text-[13px] text-status-problem-fg">
+              {readError(
+                projectRiskDrilldownQuery.error,
+                tt("reports.failedProjectRisk"),
+              )}
             </div>
           )}
-          {!projectsQuery.isLoading && projectOptions.length > 0 && !projectRiskProjectId && (
-            <div className="px-4 py-6">
-              <SectionMessage
-                title="Select a project"
-                detail="Choose a project to inspect the exact drivers behind low margin, stalled reasons and risky orders."
-              />
-            </div>
-          )}
+          {!projectsQuery.isLoading &&
+            projectOptions.length > 0 &&
+            !projectRiskProjectId && (
+              <div className="px-4 py-6">
+                <SectionMessage
+                  title="Select a project"
+                  detail="Choose a project to inspect the exact drivers behind low margin, stalled reasons and risky orders."
+                />
+              </div>
+            )}
           {!projectRiskDrilldownQuery.isLoading &&
             !projectRiskDrilldownQuery.isError &&
             projectRiskDrilldown && (
               <div className="p-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="rounded-lg border border-border bg-card p-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      {copy("Actual Margin", "Фактическая маржа", "מרווח בפועל")}
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <div className="text-[11px] uppercase text-text-secondary">
+                      {copy(
+                        "Actual Margin",
+                        "Фактическая маржа",
+                        "מרווח בפועל",
+                      )}
                     </div>
-                    <div className="mt-2 text-[22px] font-semibold text-foreground">
-                      {formatPercent(projectRiskDrilldown.summary.actual_margin_pct)}
+                    <div className="mt-2 text-[22px] font-semibold text-text">
+                      {formatPercent(
+                        projectRiskDrilldown.summary?.actual_margin_pct,
+                      )}
                     </div>
-                    <div className="mt-1 text-[12px] text-muted-foreground">
-                      {copy("Profit gap", "Разрыв по прибыли", "פער רווח")} {formatAmount(projectRiskDrilldown.summary.profit_gap_total)}
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-border bg-card p-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      {copy("Completion / Delayed", "Завершение / задержка", "השלמה / עיכוב")}
-                    </div>
-                    <div className="mt-2 text-[22px] font-semibold text-foreground">
-                      {formatPercent(projectRiskDrilldown.summary.completion_pct)}
-                    </div>
-                    <div className="mt-1 text-[12px] text-muted-foreground">
-                      {projectRiskDrilldown.summary.not_installed_doors} {copy("delayed doors", "дверей в задержке", "דלתות בעיכוב")}
+                    <div className="mt-1 text-[12px] text-text-secondary">
+                      {copy("Profit gap", "Разрыв по прибыли", "פער רווח")}{" "}
+                      {formatAmount(
+                        projectRiskDrilldown.summary?.profit_gap_total,
+                      )}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-border bg-card p-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <div className="text-[11px] uppercase text-text-secondary">
+                      {copy(
+                        "Completion / Delayed",
+                        "Завершение / задержка",
+                        "השלמה / עיכוב",
+                      )}
+                    </div>
+                    <div className="mt-2 text-[22px] font-semibold text-text">
+                      {formatPercent(
+                        projectRiskDrilldown.summary?.completion_pct,
+                      )}
+                    </div>
+                    <div className="mt-1 text-[12px] text-text-secondary">
+                      {projectRiskDrilldown.summary?.not_installed_doors ?? 0}{" "}
+                      {copy(
+                        "delayed doors",
+                        "дверей в задержке",
+                        "דלתות בעיכוב",
+                      )}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <div className="text-[11px] uppercase text-text-secondary">
                       {copy("Issue Pressure", "Давление проблем", "לחץ תקלות")}
                     </div>
-                    <div className="mt-2 text-[22px] font-semibold text-foreground">
-                      {projectRiskDrilldown.summary.open_issues} /{" "}
-                      {projectRiskDrilldown.summary.blocked_open_issues}
+                    <div className="mt-2 text-[22px] font-semibold text-text">
+                      {projectRiskDrilldown.summary?.open_issues ?? 0} /{" "}
+                      {projectRiskDrilldown.summary?.blocked_open_issues ?? 0}
                     </div>
-                    <div className="mt-1 text-[12px] text-muted-foreground">
-                      {copy("Open / blocked issues", "Открытые / заблокированные проблемы", "תקלות פתוחות / חסומות")}
+                    <div className="mt-1 text-[12px] text-text-secondary">
+                      {copy(
+                        "Open / blocked issues",
+                        "Открытые / заблокированные проблемы",
+                        "תקלות פתוחות / חסומות",
+                      )}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-border bg-card p-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <div className="text-[11px] uppercase text-text-secondary">
                       {copy("Data Risk", "Риск данных", "סיכון נתונים")}
                     </div>
-                    <div className="mt-2 text-[22px] font-semibold text-foreground">
-                      {projectRiskDrilldown.summary.missing_planned_rates_doors
-                        + projectRiskDrilldown.summary.missing_actual_rates_doors
-                        + projectRiskDrilldown.summary.missing_addon_plans_facts}
+                    <div className="mt-2 text-[22px] font-semibold text-text">
+                      {(projectRiskDrilldown.summary
+                        ?.missing_planned_rates_doors ?? 0) +
+                        (projectRiskDrilldown.summary
+                          ?.missing_actual_rates_doors ?? 0) +
+                        (projectRiskDrilldown.summary
+                          ?.missing_addon_plans_facts ?? 0)}
                     </div>
-                    <div className="mt-1 text-[12px] text-muted-foreground">
-                      {copy("rates + addon plan gaps", "пробелы по ставкам и add-on плану", "פערי תעריפים ותכנון add-on")}
+                    <div className="mt-1 text-[12px] text-text-secondary">
+                      {copy(
+                        "rates + addon plan gaps",
+                        "пробелы по ставкам и add-on плану",
+                        "פערי תעריפים ותכנון add-on",
+                      )}
                     </div>
                   </div>
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-3">
-                  <div className="rounded-lg border border-border bg-card p-3 xl:col-span-1">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface p-3 xl:col-span-1">
+                    <div className="text-[11px] uppercase text-text-secondary">
                       Drivers
                     </div>
                     <div className="mt-3 space-y-2">
                       {(projectRiskDrilldown.drivers || []).map((driver) => (
                         <div
                           key={driver.code}
-                          className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2"
+                          className="flex items-center justify-between rounded-md border border-border px-3 py-2"
                         >
                           <div>
-                            <div className="text-[12px] font-medium text-foreground">
+                            <div className="text-[12px] font-medium text-text">
                               {driver.label}
                             </div>
-                            <div className="text-[11px] text-muted-foreground">
+                            <div className="text-[11px] text-text-secondary">
                               {driver.severity}
                             </div>
                           </div>
-                          <div className="text-[12px] font-semibold text-foreground">
+                          <div className="text-[12px] font-semibold text-text">
                             {formatAmount(driver.value)}
                           </div>
                         </div>
@@ -3938,80 +5658,208 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-border bg-card overflow-auto xl:col-span-1">
-                    <div className="border-b border-border/70 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                      {copy("Stalled Reasons", "Причины задержки", "סיבות לעיכוב")}
+                  <div className="rounded-lg border border-border bg-surface overflow-hidden xl:col-span-1">
+                    <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
+                      {copy(
+                        "Stalled Reasons",
+                        "Причины задержки",
+                        "סיבות לעיכוב",
+                      )}
                     </div>
-                    <table className="w-full text-[12px]">
-                      <thead className="bg-muted/40 text-muted-foreground">
+                    <div className="divide-y divide-border-subtle md:hidden">
+                      {(projectRiskDrilldown.top_reasons || []).length === 0 ? (
+                        <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                          No stalled reasons.
+                        </div>
+                      ) : (
+                        (projectRiskDrilldown.top_reasons || []).map((item) => (
+                          <article
+                            key={`mobile-${item.reason_id || item.reason_name}`}
+                            className="px-3.5 py-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
+                                {item.reason_name}
+                              </div>
+                              <div className="shrink-0 rounded-full bg-surface-subtle px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
+                                {copy("Doors", "Двери", "דלתות")}: {item.doors}
+                              </div>
+                            </div>
+                            <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy(
+                                  "Profit Leak",
+                                  "Потеря прибыли",
+                                  "דליפת רווח",
+                                )}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {formatAmount(item.profit_delayed_total)}
+                              </div>
+                            </div>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                    <table className="hidden w-full text-[12px] md:table">
+                      <thead className="bg-surface-subtle text-text-secondary">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">{copy("Reason", "Причина", "סיבה")}</th>
-                          <th className="text-right px-3 py-2 font-medium">{copy("Doors", "Двери", "דלתות")}</th>
-                          <th className="text-right px-3 py-2 font-medium">{copy("Profit Leak", "Потеря прибыли", "דליפת רווח")}</th>
+                          <th className="text-start px-3 py-2 font-medium">
+                            {copy("Reason", "Причина", "סיבה")}
+                          </th>
+                          <th className="text-end px-3 py-2 font-medium">
+                            {copy("Doors", "Двери", "דלתות")}
+                          </th>
+                          <th className="text-end px-3 py-2 font-medium">
+                            {copy(
+                              "Profit Leak",
+                              "Потеря прибыли",
+                              "דליפת רווח",
+                            )}
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {(projectRiskDrilldown.top_reasons || []).length === 0 ? (
+                        {(projectRiskDrilldown.top_reasons || []).length ===
+                        0 ? (
                           <tr>
-                            <td className="px-3 py-3 text-muted-foreground" colSpan={3}>
+                            <td
+                              className="px-3 py-3 text-text-secondary"
+                              colSpan={3}
+                            >
                               No stalled reasons.
                             </td>
                           </tr>
                         ) : (
-                          (projectRiskDrilldown.top_reasons || []).map((item) => (
-                            <tr
-                              key={item.reason_id || item.reason_name}
-                              className="border-t border-border/70"
-                            >
-                              <td className="px-3 py-2.5 font-medium text-foreground">
-                                {item.reason_name}
-                              </td>
-                              <td className="px-3 py-2 text-right">{item.doors}</td>
-                              <td className="px-3 py-2 text-right">
-                                {formatAmount(item.profit_delayed_total)}
-                              </td>
-                            </tr>
-                          ))
+                          (projectRiskDrilldown.top_reasons || []).map(
+                            (item) => (
+                              <tr
+                                key={item.reason_id || item.reason_name}
+                                className="border-t border-border"
+                              >
+                                <td className="px-3 py-2.5 font-medium text-text">
+                                  {item.reason_name}
+                                </td>
+                                <td className="px-3 py-2 text-end">
+                                  {item.doors}
+                                </td>
+                                <td className="px-3 py-2 text-end">
+                                  {formatAmount(item.profit_delayed_total)}
+                                </td>
+                              </tr>
+                            ),
+                          )
                         )}
                       </tbody>
                     </table>
                   </div>
 
-                  <div className="rounded-lg border border-border bg-card overflow-auto xl:col-span-1">
-                    <div className="border-b border-border/70 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface overflow-hidden xl:col-span-1">
+                    <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
                       Risky Orders
                     </div>
-                    <table className="w-full text-[12px]">
-                      <thead className="bg-muted/40 text-muted-foreground">
+                    <div className="divide-y divide-border-subtle md:hidden">
+                      {(projectRiskDrilldown.risky_orders || []).length ===
+                      0 ? (
+                        <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                          {copy(
+                            "No risky orders.",
+                            "Рискованных заказов нет.",
+                            "אין הזמנות מסוכנות.",
+                          )}
+                        </div>
+                      ) : (
+                        (projectRiskDrilldown.risky_orders || []).map(
+                          (item) => (
+                            <article
+                              key={`mobile-${item.order_number}`}
+                              className="px-3.5 py-3"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
+                                  {item.order_number}
+                                </div>
+                                <div className="shrink-0 rounded-full bg-surface-subtle px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
+                                  {formatPercent(item.completion_pct)}
+                                </div>
+                              </div>
+                              <div className="mt-3 grid grid-cols-2 gap-2">
+                                <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                                  <div className="text-[10px] uppercase text-text-secondary">
+                                    {copy("Gap", "Разрыв", "פער")}
+                                  </div>
+                                  <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                    {formatAmount(item.revenue_gap_total)}
+                                  </div>
+                                </div>
+                                <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                                  <div className="text-[10px] uppercase text-text-secondary">
+                                    {copy("Issues", "Проблемы", "תקלות")}
+                                  </div>
+                                  <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                    {item.open_issues}
+                                  </div>
+                                </div>
+                              </div>
+                            </article>
+                          ),
+                        )
+                      )}
+                    </div>
+                    <table className="hidden w-full text-[12px] md:table">
+                      <thead className="bg-surface-subtle text-text-secondary">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">{copy("Order", "Заказ", "הזמנה")}</th>
-                          <th className="text-right px-3 py-2 font-medium">{copy("Gap", "Разрыв", "פער")}</th>
-                          <th className="text-right px-3 py-2 font-medium">{copy("Issues", "Проблемы", "תקלות")}</th>
-                          <th className="text-right px-3 py-2 font-medium">{copy("Completion", "Завершение", "השלמה")}</th>
+                          <th className="text-start px-3 py-2 font-medium">
+                            {copy("Order", "Заказ", "הזמנה")}
+                          </th>
+                          <th className="text-end px-3 py-2 font-medium">
+                            {copy("Gap", "Разрыв", "פער")}
+                          </th>
+                          <th className="text-end px-3 py-2 font-medium">
+                            {copy("Issues", "Проблемы", "תקלות")}
+                          </th>
+                          <th className="text-end px-3 py-2 font-medium">
+                            {copy("Completion", "Завершение", "השלמה")}
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {(projectRiskDrilldown.risky_orders || []).length === 0 ? (
+                        {(projectRiskDrilldown.risky_orders || []).length ===
+                        0 ? (
                           <tr>
-                            <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                              {copy("No risky orders.", "Рискованных заказов нет.", "אין הזמנות מסוכנות.")}
+                            <td
+                              className="px-3 py-3 text-text-secondary"
+                              colSpan={4}
+                            >
+                              {copy(
+                                "No risky orders.",
+                                "Рискованных заказов нет.",
+                                "אין הזמנות מסוכנות.",
+                              )}
                             </td>
                           </tr>
                         ) : (
-                          (projectRiskDrilldown.risky_orders || []).map((item) => (
-                            <tr key={item.order_number} className="border-t border-border/70">
-                              <td className="px-3 py-2.5 font-medium text-foreground">
-                                {item.order_number}
-                              </td>
-                              <td className="px-3 py-2 text-right">
-                                {formatAmount(item.revenue_gap_total)}
-                              </td>
-                              <td className="px-3 py-2 text-right">{item.open_issues}</td>
-                              <td className="px-3 py-2 text-right">
-                                {formatPercent(item.completion_pct)}
-                              </td>
-                            </tr>
-                          ))
+                          (projectRiskDrilldown.risky_orders || []).map(
+                            (item) => (
+                              <tr
+                                key={item.order_number}
+                                className="border-t border-border"
+                              >
+                                <td className="px-3 py-2.5 font-medium text-text">
+                                  {item.order_number}
+                                </td>
+                                <td className="px-3 py-2 text-end">
+                                  {formatAmount(item.revenue_gap_total)}
+                                </td>
+                                <td className="px-3 py-2 text-end">
+                                  {item.open_issues}
+                                </td>
+                                <td className="px-3 py-2 text-end">
+                                  {formatPercent(item.completion_pct)}
+                                </td>
+                              </tr>
+                            ),
+                          )
                         )}
                       </tbody>
                     </table>
@@ -4021,144 +5869,308 @@ export default function ReportsPage() {
             )}
         </div>
 
-        <div id="reports-installers-kpi" className="glass-card rounded-xl overflow-hidden border border-border">
-          <div className="px-4 py-3 border-b border-border bg-muted/30">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+        <div
+          id="reports-project-margin-executive"
+          className={reportsPanelClass("overflow-hidden")}
+        >
+          <div className="px-4 py-3 border-b border-border bg-surface-subtle">
+            <div className="text-[11px] uppercase text-text-secondary">
               {tt("reports.projectMarginExecutiveTitle")}
             </div>
-            <div className="text-[13px] text-muted-foreground">
+            <div className="text-[13px] text-text-secondary">
               {tt("reports.projectMarginExecutiveSubtitle")}
             </div>
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 p-4">
-            <div className="overflow-auto rounded-lg border border-border">
-              <div className="px-3 py-2 border-b border-border bg-muted/30 text-[12px] font-medium">
+            <div className="overflow-hidden rounded-lg border border-border">
+              <div className="px-3 py-2 border-b border-border bg-surface-subtle text-[12px] font-medium">
                 {tt("reports.topMarginProjects")}
               </div>
               {topProjectsMarginQuery.isLoading ? (
-                <div className="px-3 py-4 text-[13px] text-muted-foreground">
+                <div className="px-3 py-4 text-[13px] text-text-secondary">
                   {tt("reports.loadingTopMarginProjects")}
                 </div>
               ) : topProjectsMarginQuery.isError ? (
-                <div className="px-3 py-4 text-[13px] text-[hsl(var(--destructive))]">
-                  {readError(topProjectsMarginQuery.error, tt("reports.failedTopMarginProjects"))}
+                <div className="px-3 py-4 text-[13px] text-status-problem-fg">
+                  {readError(
+                    topProjectsMarginQuery.error,
+                    tt("reports.failedTopMarginProjects"),
+                  )}
                 </div>
               ) : (
-                <table className="w-full text-[12px]">
-                  <thead className="bg-muted/40 text-muted-foreground">
-                    <tr>
-                      <th className="text-left px-3 py-2 font-medium">{copy("Project", "Проект", "פרויקט")}</th>
-                      <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
-                      <th className="text-right px-3 py-2 font-medium">{copy("Margin", "Маржа", "מרווח")}</th>
-                      <th className="text-right px-3 py-2 font-medium">{copy("Completion", "Завершение", "השלמה")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <>
+                  <div className="divide-y divide-border-subtle md:hidden">
                     {topProjectsMargin.length === 0 ? (
-                      <tr>
-                        <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                          {tt("reports.noProfitableProjects")}
-                        </td>
-                      </tr>
+                      <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                        {tt("reports.noProfitableProjects")}
+                      </div>
                     ) : (
                       topProjectsMargin.map((item) => (
-                        <tr key={`top-${item.project_id}`} className="border-t border-border/70">
-                          <td className="px-3 py-2.5">
-                            <div className="font-medium text-foreground">{item.project_name}</div>
-                            <div className="text-[11px] text-muted-foreground">
-                              {tt("reports.statusIssues")
-                                .replace("{status}", item.project_status)
-                                .replace("{issues}", String(item.open_issues))}
+                        <article
+                          key={`mobile-top-${item.project_id}`}
+                          className="px-3.5 py-3"
+                        >
+                          <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
+                            {item.project_name}
+                          </div>
+                          <div className="mt-1 text-[11px] leading-4 text-text-secondary">
+                            {tt("reports.statusIssues")
+                              .replace("{status}", item.project_status)
+                              .replace("{issues}", String(item.open_issues))}
+                          </div>
+                          <div className="mt-3 grid grid-cols-3 gap-2">
+                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy("Profit", "Прибыль", "רווח")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {formatAmount(item.profit_total)}
+                              </div>
                             </div>
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            {formatAmount(item.profit_total)}
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            {formatPercent(item.margin_pct)}
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            {formatPercent(item.completion_pct)}
-                          </td>
-                        </tr>
+                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy("Margin", "Маржа", "מרווח")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {formatPercent(item.margin_pct)}
+                              </div>
+                            </div>
+                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy("Completion", "Завершение", "השלמה")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {formatPercent(item.completion_pct)}
+                              </div>
+                            </div>
+                          </div>
+                        </article>
                       ))
                     )}
-                  </tbody>
-                </table>
+                  </div>
+                  <table className="hidden w-full text-[12px] md:table">
+                    <thead className="bg-surface-subtle text-text-secondary">
+                      <tr>
+                        <th className="text-start px-3 py-2 font-medium">
+                          {copy("Project", "Проект", "פרויקט")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Profit", "Прибыль", "רווח")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Margin", "Маржа", "מרווח")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Completion", "Завершение", "השלמה")}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topProjectsMargin.length === 0 ? (
+                        <tr>
+                          <td
+                            className="px-3 py-3 text-text-secondary"
+                            colSpan={4}
+                          >
+                            {tt("reports.noProfitableProjects")}
+                          </td>
+                        </tr>
+                      ) : (
+                        topProjectsMargin.map((item) => (
+                          <tr
+                            key={`top-${item.project_id}`}
+                            className="border-t border-border"
+                          >
+                            <td className="px-3 py-2.5">
+                              <div className="font-medium text-text">
+                                {item.project_name}
+                              </div>
+                              <div className="text-[11px] text-text-secondary">
+                                {tt("reports.statusIssues")
+                                  .replace("{status}", item.project_status)
+                                  .replace(
+                                    "{issues}",
+                                    String(item.open_issues),
+                                  )}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-end">
+                              {formatAmount(item.profit_total)}
+                            </td>
+                            <td className="px-3 py-2 text-end">
+                              {formatPercent(item.margin_pct)}
+                            </td>
+                            <td className="px-3 py-2 text-end">
+                              {formatPercent(item.completion_pct)}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </>
               )}
             </div>
 
-            <div className="overflow-auto rounded-lg border border-border">
-              <div className="px-3 py-2 border-b border-border bg-muted/30 text-[12px] font-medium">
+            <div className="overflow-hidden rounded-lg border border-border">
+              <div className="px-3 py-2 border-b border-border bg-surface-subtle text-[12px] font-medium">
                 {tt("reports.lowMarginRiskProjects")}
               </div>
               {riskProjectsMarginQuery.isLoading ? (
-                <div className="px-3 py-4 text-[13px] text-muted-foreground">
+                <div className="px-3 py-4 text-[13px] text-text-secondary">
                   {tt("reports.loadingLowMarginProjects")}
                 </div>
               ) : riskProjectsMarginQuery.isError ? (
-                <div className="px-3 py-4 text-[13px] text-[hsl(var(--destructive))]">
-                  {readError(riskProjectsMarginQuery.error, tt("reports.failedLowMarginProjects"))}
+                <div className="px-3 py-4 text-[13px] text-status-problem-fg">
+                  {readError(
+                    riskProjectsMarginQuery.error,
+                    tt("reports.failedLowMarginProjects"),
+                  )}
                 </div>
               ) : (
-                <table className="w-full text-[12px]">
-                  <thead className="bg-muted/40 text-muted-foreground">
-                    <tr>
-                      <th className="text-left px-3 py-2 font-medium">{copy("Project", "Проект", "פרויקט")}</th>
-                      <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
-                      <th className="text-right px-3 py-2 font-medium">{copy("Margin", "Маржа", "מרווח")}</th>
-                      <th className="text-right px-3 py-2 font-medium">{copy("Data Risk", "Риск данных", "סיכון נתונים")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <>
+                  <div className="divide-y divide-border-subtle md:hidden">
                     {riskProjectsMargin.length === 0 ? (
-                      <tr>
-                        <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                          {tt("reports.noLowMarginProjects")}
-                        </td>
-                      </tr>
+                      <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                        {tt("reports.noLowMarginProjects")}
+                      </div>
                     ) : (
                       riskProjectsMargin.map((item) => (
-                        <tr key={`risk-${item.project_id}`} className="border-t border-border/70">
-                          <td className="px-3 py-2.5">
-                            <div className="font-medium text-foreground">{item.project_name}</div>
-                            <div className="text-[11px] text-muted-foreground">
-                              {tt("reports.completionIssues")
-                                .replace("{completion}", formatPercent(item.completion_pct))
-                                .replace("{issues}", String(item.open_issues))}
+                        <article
+                          key={`mobile-risk-${item.project_id}`}
+                          className="px-3.5 py-3"
+                        >
+                          <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
+                            {item.project_name}
+                          </div>
+                          <div className="mt-1 text-[11px] leading-4 text-text-secondary">
+                            {tt("reports.completionIssues")
+                              .replace(
+                                "{completion}",
+                                formatPercent(item.completion_pct),
+                              )
+                              .replace("{issues}", String(item.open_issues))}
+                          </div>
+                          <div className="mt-3 grid grid-cols-3 gap-2">
+                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy("Profit", "Прибыль", "רווח")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {formatAmount(item.profit_total)}
+                              </div>
                             </div>
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            {formatAmount(item.profit_total)}
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            {formatPercent(item.margin_pct)}
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            {item.missing_rates_installed_doors + item.missing_addon_plans_facts}
-                          </td>
-                        </tr>
+                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy("Margin", "Маржа", "מרווח")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {formatPercent(item.margin_pct)}
+                              </div>
+                            </div>
+                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy(
+                                  "Data Risk",
+                                  "Риск данных",
+                                  "סיכון נתונים",
+                                )}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {item.missing_rates_installed_doors +
+                                  item.missing_addon_plans_facts}
+                              </div>
+                            </div>
+                          </div>
+                        </article>
                       ))
                     )}
-                  </tbody>
-                </table>
+                  </div>
+                  <table className="hidden w-full text-[12px] md:table">
+                    <thead className="bg-surface-subtle text-text-secondary">
+                      <tr>
+                        <th className="text-start px-3 py-2 font-medium">
+                          {copy("Project", "Проект", "פרויקט")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Profit", "Прибыль", "רווח")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Margin", "Маржа", "מרווח")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Data Risk", "Риск данных", "סיכון נתונים")}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {riskProjectsMargin.length === 0 ? (
+                        <tr>
+                          <td
+                            className="px-3 py-3 text-text-secondary"
+                            colSpan={4}
+                          >
+                            {tt("reports.noLowMarginProjects")}
+                          </td>
+                        </tr>
+                      ) : (
+                        riskProjectsMargin.map((item) => (
+                          <tr
+                            key={`risk-${item.project_id}`}
+                            className="border-t border-border"
+                          >
+                            <td className="px-3 py-2.5">
+                              <div className="font-medium text-text">
+                                {item.project_name}
+                              </div>
+                              <div className="text-[11px] text-text-secondary">
+                                {tt("reports.completionIssues")
+                                  .replace(
+                                    "{completion}",
+                                    formatPercent(item.completion_pct),
+                                  )
+                                  .replace(
+                                    "{issues}",
+                                    String(item.open_issues),
+                                  )}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-end">
+                              {formatAmount(item.profit_total)}
+                            </td>
+                            <td className="px-3 py-2 text-end">
+                              {formatPercent(item.margin_pct)}
+                            </td>
+                            <td className="px-3 py-2 text-end">
+                              {item.missing_rates_installed_doors +
+                                item.missing_addon_plans_facts}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </>
               )}
             </div>
           </div>
         </div>
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
-          <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-start justify-between gap-3">
+        <div
+          id="reports-installer-profitability-matrix"
+          className={reportsPanelClass("overflow-hidden")}
+        >
+          <div className="px-4 py-3 border-b border-border bg-surface-subtle flex items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="text-[11px] uppercase text-text-secondary">
                 {tt("reports.riskConcentrationTitle")}
               </div>
-              <div className="text-[13px] text-muted-foreground">
+              <div className="text-[13px] text-text-secondary">
                 {tt("reports.riskConcentrationSubtitle")}
               </div>
             </div>
-            <div className="text-right text-[11px] text-muted-foreground">
+            <div className="text-end text-[11px] text-text-secondary">
               {riskConcentration?.generated_at
                 ? formatDateTime(riskConcentration.generated_at)
                 : tt("reports.notAvailableShort")}
@@ -4166,114 +6178,200 @@ export default function ReportsPage() {
           </div>
 
           {riskConcentrationQuery.isLoading ? (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {tt("reports.loadingRiskConcentration")}
             </div>
           ) : riskConcentrationQuery.isError ? (
-            <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
-              {readError(riskConcentrationQuery.error, tt("reports.failedRiskConcentration"))}
+            <div className="px-4 py-6 text-[13px] text-status-problem-fg">
+              {readError(
+                riskConcentrationQuery.error,
+                tt("reports.failedRiskConcentration"),
+              )}
             </div>
           ) : (
             <div className="p-4 space-y-4">
               <div className="grid gap-3 md:grid-cols-4">
-                <div className="rounded-lg border border-border bg-card p-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.delayedProfitLabel")}
                   </div>
-                  <div className="mt-2 text-[22px] font-semibold text-[hsl(var(--destructive))]">
-                    {formatAmount(riskConcentration?.summary.delayed_profit_total)}
+                  <div className="mt-2 text-[22px] font-semibold text-status-problem-fg">
+                    {formatAmount(
+                      riskConcentration?.summary?.delayed_profit_total,
+                    )}
                   </div>
-                  <div className="mt-1 text-[12px] text-muted-foreground">
+                  <div className="mt-1 text-[12px] text-text-secondary">
                     {tt("reports.openIssueRisk").replace(
                       "{amount}",
-                      formatAmount(riskConcentration?.summary.open_issue_profit_at_risk)
+                      formatAmount(
+                        riskConcentration?.summary?.open_issue_profit_at_risk,
+                      ),
                     )}
                   </div>
                 </div>
-                <div className="rounded-lg border border-border bg-card p-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.blockedIssueRisk")}
                   </div>
-                  <div className="mt-2 text-[22px] font-semibold text-[hsl(var(--warning-foreground))]">
-                    {formatAmount(riskConcentration?.summary.blocked_issue_profit_at_risk)}
+                  <div className="mt-2 text-[22px] font-semibold text-status-warning-fg">
+                    {formatAmount(
+                      riskConcentration?.summary?.blocked_issue_profit_at_risk,
+                    )}
                   </div>
-                  <div className="mt-1 text-[12px] text-muted-foreground">
+                  <div className="mt-1 text-[12px] text-text-secondary">
                     {tt("reports.worstInstaller").replace(
                       "{amount}",
-                      formatAmount(riskConcentration?.summary.worst_installer_profit_total)
+                      formatAmount(
+                        riskConcentration?.summary
+                          ?.worst_installer_profit_total,
+                      ),
                     )}
                   </div>
                 </div>
-                <div className="rounded-lg border border-border bg-card p-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.riskyProjectsOrders")}
                   </div>
-                  <div className="mt-2 text-[22px] font-semibold text-foreground">
-                    {riskConcentration?.summary.risky_projects ?? 0} /{" "}
-                    {riskConcentration?.summary.risky_orders ?? 0}
+                  <div className="mt-2 text-[22px] font-semibold text-text">
+                    {riskConcentration?.summary?.risky_projects ?? 0} /{" "}
+                    {riskConcentration?.summary?.risky_orders ?? 0}
                   </div>
-                  <div className="mt-1 text-[12px] text-muted-foreground">
+                  <div className="mt-1 text-[12px] text-text-secondary">
                     {tt("reports.worstProject").replace(
                       "{amount}",
-                      formatAmount(riskConcentration?.summary.worst_project_profit_total)
+                      formatAmount(
+                        riskConcentration?.summary?.worst_project_profit_total,
+                      ),
                     )}
                   </div>
                 </div>
-                <div className="rounded-lg border border-border bg-card p-3">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <div className="text-[11px] uppercase text-text-secondary">
                     Risky Installers
                   </div>
-                  <div className="mt-2 text-[22px] font-semibold text-foreground">
-                    {riskConcentration?.summary.risky_installers ?? 0}
+                  <div className="mt-2 text-[22px] font-semibold text-text">
+                    {riskConcentration?.summary?.risky_installers ?? 0}
                   </div>
-                  <div className="mt-1 text-[12px] text-muted-foreground">
-                    Worst order {formatAmount(riskConcentration?.summary.worst_order_profit_total)}
+                  <div className="mt-1 text-[12px] text-text-secondary">
+                    Worst order{" "}
+                    {formatAmount(
+                      riskConcentration?.summary?.worst_order_profit_total,
+                    )}
                   </div>
                 </div>
               </div>
 
               {(riskConcentration?.projects || []).length === 0 &&
-              (riskConcentration?.orders || []).length === 0 &&
-              (riskConcentration?.installers || []).length === 0 && (
-                <SectionMessage
-                  title="No concentrated risk yet"
-                  detail="This tenant does not currently have enough delayed doors, open issues or low-margin rows to populate the cross-cutting executive risk view."
-                />
-              )}
+                (riskConcentration?.orders || []).length === 0 &&
+                (riskConcentration?.installers || []).length === 0 && (
+                  <SectionMessage
+                    title="No concentrated risk yet"
+                    detail="This tenant does not currently have enough delayed doors, open issues or low-margin rows to populate the cross-cutting executive risk view."
+                  />
+                )}
 
               <div className="grid gap-4 xl:grid-cols-3">
-                <div className="rounded-lg border border-border bg-card overflow-auto">
-                  <div className="border-b border-border/70 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface overflow-hidden">
+                  <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
                     Projects at Risk
                   </div>
-                  <table className="w-full text-[12px]">
-                    <thead className="bg-muted/40 text-muted-foreground">
+                  <div className="divide-y divide-border-subtle md:hidden">
+                    {(riskConcentration?.projects || []).length === 0 ? (
+                      <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                        No risky projects.
+                      </div>
+                    ) : (
+                      (riskConcentration?.projects || []).map((item) => (
+                        <article
+                          key={`mobile-${item.project_id}`}
+                          className="px-3.5 py-3"
+                        >
+                          <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
+                            {item.project_name}
+                          </div>
+                          <div className="mt-1 text-[11px] text-text-secondary">
+                            Completion {formatPercent(item.completion_pct)}
+                          </div>
+                          <div className="mt-3 grid grid-cols-3 gap-2">
+                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy("Profit", "Прибыль", "רווח")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {formatAmount(item.profit_total)}
+                              </div>
+                            </div>
+                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy("Margin", "Маржа", "מרווח")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {formatPercent(item.margin_pct)}
+                              </div>
+                            </div>
+                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy("Issues", "Проблемы", "תקלות")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {item.open_issues}
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                  <table className="hidden w-full text-[12px] md:table">
+                    <thead className="bg-surface-subtle text-text-secondary">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">{copy("Project", "Проект", "פרויקט")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{copy("Margin", "Маржа", "מרווח")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{copy("Issues", "Проблемы", "תקלות")}</th>
+                        <th className="text-start px-3 py-2 font-medium">
+                          {copy("Project", "Проект", "פרויקט")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Profit", "Прибыль", "רווח")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Margin", "Маржа", "מרווח")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Issues", "Проблемы", "תקלות")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {(riskConcentration?.projects || []).length === 0 ? (
                         <tr>
-                          <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                          <td
+                            className="px-3 py-3 text-text-secondary"
+                            colSpan={4}
+                          >
                             No risky projects.
                           </td>
                         </tr>
                       ) : (
                         (riskConcentration?.projects || []).map((item) => (
-                          <tr key={item.project_id} className="border-t border-border/70">
+                          <tr
+                            key={item.project_id}
+                            className="border-t border-border"
+                          >
                             <td className="px-3 py-2.5">
-                              <div className="font-medium text-foreground">{item.project_name}</div>
-                              <div className="text-[11px] text-muted-foreground">
+                              <div className="font-medium text-text">
+                                {item.project_name}
+                              </div>
+                              <div className="text-[11px] text-text-secondary">
                                 Completion {formatPercent(item.completion_pct)}
                               </div>
                             </td>
-                            <td className="px-3 py-2 text-right">{formatAmount(item.profit_total)}</td>
-                            <td className="px-3 py-2 text-right">{formatPercent(item.margin_pct)}</td>
-                            <td className="px-3 py-2 text-right">{item.open_issues}</td>
+                            <td className="px-3 py-2 text-end">
+                              {formatAmount(item.profit_total)}
+                            </td>
+                            <td className="px-3 py-2 text-end">
+                              {formatPercent(item.margin_pct)}
+                            </td>
+                            <td className="px-3 py-2 text-end">
+                              {item.open_issues}
+                            </td>
                           </tr>
                         ))
                       )}
@@ -4281,35 +6379,94 @@ export default function ReportsPage() {
                   </table>
                 </div>
 
-                <div className="rounded-lg border border-border bg-card overflow-auto">
-                  <div className="border-b border-border/70 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface overflow-hidden">
+                  <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
                     Orders at Risk
                   </div>
-                  <table className="w-full text-[12px]">
-                    <thead className="bg-muted/40 text-muted-foreground">
+                  <div className="divide-y divide-border-subtle md:hidden">
+                    {(riskConcentration?.orders || []).length === 0 ? (
+                      <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                        No risky orders.
+                      </div>
+                    ) : (
+                      (riskConcentration?.orders || []).map((item) => (
+                        <article
+                          key={`mobile-${item.order_number}`}
+                          className="px-3.5 py-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
+                              {item.order_number}
+                            </div>
+                            <div className="shrink-0 rounded-full bg-surface-subtle px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
+                              {formatPercent(item.completion_pct)}
+                            </div>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy("Profit", "Прибыль", "רווח")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {formatAmount(item.profit_total)}
+                              </div>
+                            </div>
+                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy("Delayed", "Задержка", "עיכוב")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {item.not_installed_doors}
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                  <table className="hidden w-full text-[12px] md:table">
+                    <thead className="bg-surface-subtle text-text-secondary">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">{copy("Order", "Заказ", "הזמנה")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{copy("Delayed", "Задержка", "עיכוב")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{copy("Completion", "Завершение", "השלמה")}</th>
+                        <th className="text-start px-3 py-2 font-medium">
+                          {copy("Order", "Заказ", "הזמנה")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Profit", "Прибыль", "רווח")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Delayed", "Задержка", "עיכוב")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Completion", "Завершение", "השלמה")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {(riskConcentration?.orders || []).length === 0 ? (
                         <tr>
-                          <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                          <td
+                            className="px-3 py-3 text-text-secondary"
+                            colSpan={4}
+                          >
                             No risky orders.
                           </td>
                         </tr>
                       ) : (
                         (riskConcentration?.orders || []).map((item) => (
-                          <tr key={item.order_number} className="border-t border-border/70">
-                            <td className="px-3 py-2.5 font-medium text-foreground">
+                          <tr
+                            key={item.order_number}
+                            className="border-t border-border"
+                          >
+                            <td className="px-3 py-2.5 font-medium text-text">
                               {item.order_number}
                             </td>
-                            <td className="px-3 py-2 text-right">{formatAmount(item.profit_total)}</td>
-                            <td className="px-3 py-2 text-right">{item.not_installed_doors}</td>
-                            <td className="px-3 py-2 text-right">
+                            <td className="px-3 py-2 text-end">
+                              {formatAmount(item.profit_total)}
+                            </td>
+                            <td className="px-3 py-2 text-end">
+                              {item.not_installed_doors}
+                            </td>
+                            <td className="px-3 py-2 text-end">
                               {formatPercent(item.completion_pct)}
                             </td>
                           </tr>
@@ -4319,39 +6476,105 @@ export default function ReportsPage() {
                   </table>
                 </div>
 
-                <div className="rounded-lg border border-border bg-card overflow-auto">
-                  <div className="border-b border-border/70 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="rounded-lg border border-border bg-surface overflow-hidden">
+                  <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
                     Installers at Risk
                   </div>
-                  <table className="w-full text-[12px]">
-                    <thead className="bg-muted/40 text-muted-foreground">
+                  <div className="divide-y divide-border-subtle md:hidden">
+                    {(riskConcentration?.installers || []).length === 0 ? (
+                      <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                        No risky installers.
+                      </div>
+                    ) : (
+                      (riskConcentration?.installers || []).map((item) => (
+                        <article
+                          key={`mobile-${item.installer_id}`}
+                          className="px-3.5 py-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="text-[13px] font-semibold leading-5 text-text">
+                                {item.installer_name}
+                              </div>
+                              <div className="mt-1 text-[11px] text-text-secondary">
+                                Issues {item.open_issues}
+                              </div>
+                            </div>
+                            <span
+                              className={cn(
+                                "shrink-0 rounded border px-2 py-0.5 text-[11px] font-semibold",
+                                installerPerformanceBandClass(
+                                  item.performance_band,
+                                ),
+                              )}
+                            >
+                              {item.performance_band}
+                            </span>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy("Profit", "Прибыль", "רווח")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {formatAmount(item.profit_total)}
+                              </div>
+                            </div>
+                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                              <div className="text-[10px] uppercase text-text-secondary">
+                                {copy("Margin", "Маржа", "מרווח")}
+                              </div>
+                              <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                {formatPercent(item.margin_pct)}
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                  <table className="hidden w-full text-[12px] md:table">
+                    <thead className="bg-surface-subtle text-text-secondary">
                       <tr>
-                        <th className="text-left px-3 py-2 font-medium">{copy("Installer", "Монтажник", "מתקין")}</th>
-                        <th className="text-left px-3 py-2 font-medium">{copy("Band", "Сегмент", "קטגוריה")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
-                        <th className="text-right px-3 py-2 font-medium">{copy("Margin", "Маржа", "מרווח")}</th>
+                        <th className="text-start px-3 py-2 font-medium">
+                          {copy("Installer", "Монтажник", "מתקין")}
+                        </th>
+                        <th className="text-start px-3 py-2 font-medium">
+                          {copy("Band", "Сегмент", "קטגוריה")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Profit", "Прибыль", "רווח")}
+                        </th>
+                        <th className="text-end px-3 py-2 font-medium">
+                          {copy("Margin", "Маржа", "מרווח")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {(riskConcentration?.installers || []).length === 0 ? (
                         <tr>
-                          <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                          <td
+                            className="px-3 py-3 text-text-secondary"
+                            colSpan={4}
+                          >
                             No risky installers.
                           </td>
                         </tr>
                       ) : (
                         (riskConcentration?.installers || []).map((item) => {
-                          const bandClass =
-                            item.performance_band === "STRONG"
-                              ? "text-[hsl(var(--success))] bg-[hsl(var(--success)/0.12)] border-[hsl(var(--success)/0.28)]"
-                              : item.performance_band === "RISK"
-                                ? "text-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.12)] border-[hsl(var(--destructive)/0.28)]"
-                                : "text-[hsl(var(--warning-foreground))] bg-[hsl(var(--warning)/0.12)] border-[hsl(var(--warning)/0.28)]";
+                          const bandClass = installerPerformanceBandClass(
+                            item.performance_band,
+                          );
                           return (
-                            <tr key={item.installer_id} className="border-t border-border/70">
+                            <tr
+                              key={item.installer_id}
+                              className="border-t border-border"
+                            >
                               <td className="px-3 py-2.5">
-                                <div className="font-medium text-foreground">{item.installer_name}</div>
-                                <div className="text-[11px] text-muted-foreground">
+                                <div className="font-medium text-text">
+                                  {item.installer_name}
+                                </div>
+                                <div className="text-[11px] text-text-secondary">
                                   Issues {item.open_issues}
                                 </div>
                               </td>
@@ -4359,14 +6582,18 @@ export default function ReportsPage() {
                                 <span
                                   className={cn(
                                     "inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold",
-                                    bandClass
+                                    bandClass,
                                   )}
                                 >
                                   {item.performance_band}
                                 </span>
                               </td>
-                              <td className="px-3 py-2 text-right">{formatAmount(item.profit_total)}</td>
-                              <td className="px-3 py-2 text-right">{formatPercent(item.margin_pct)}</td>
+                              <td className="px-3 py-2 text-end">
+                                {formatAmount(item.profit_total)}
+                              </td>
+                              <td className="px-3 py-2 text-end">
+                                {formatPercent(item.margin_pct)}
+                              </td>
                             </tr>
                           );
                         })
@@ -4379,22 +6606,29 @@ export default function ReportsPage() {
           )}
         </div>
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
-          <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
+        <div
+          id="reports-installer-cross-view"
+          className={reportsPanelClass("overflow-hidden")}
+        >
+          <div className="px-4 py-3 border-b border-border bg-surface-subtle flex flex-col items-stretch gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="text-[11px] uppercase text-text-secondary">
                 {tt("reports.installerProfitabilityMatrix")}
               </div>
-              <div className="text-[13px] text-muted-foreground">
+              <div className="text-[13px] text-text-secondary">
                 {tt("reports.installerProfitabilitySubtitle")}
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center xl:justify-end">
               <select
                 aria-label="Installer Matrix Sort"
                 value={installerMatrixSortBy}
-                onChange={(e) => setInstallerMatrixSortBy(e.target.value as InstallerMatrixSortBy)}
-                className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+                onChange={(e) =>
+                  setInstallerMatrixSortBy(
+                    e.target.value as InstallerMatrixSortBy,
+                  )
+                }
+                className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] xl:w-auto xl:max-w-[220px]"
               >
                 {INSTALLER_MATRIX_SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -4405,8 +6639,10 @@ export default function ReportsPage() {
               <select
                 aria-label="Installer Matrix Direction"
                 value={installerMatrixSortDir}
-                onChange={(e) => setInstallerMatrixSortDir(e.target.value as SortDir)}
-                className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+                onChange={(e) =>
+                  setInstallerMatrixSortDir(e.target.value as SortDir)
+                }
+                className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] xl:w-auto xl:max-w-[220px]"
               >
                 {SORT_DIR_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -4418,99 +6654,224 @@ export default function ReportsPage() {
           </div>
 
           {installerProfitabilityMatrixQuery.isLoading ? (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {tt("reports.loadingInstallerProfitability")}
             </div>
           ) : installerProfitabilityMatrixQuery.isError ? (
-            <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
+            <div className="px-4 py-6 text-[13px] text-status-problem-fg">
               {readError(
                 installerProfitabilityMatrixQuery.error,
                 copy(
                   "Failed to load installer profitability matrix",
                   "Не удалось загрузить матрицу прибыльности монтажников",
-                  "טעינת מטריצת רווחיות המתקינים נכשלה"
-                )
+                  "טעינת מטריצת רווחיות המתקינים נכשלה",
+                ),
               )}
             </div>
           ) : installerProfitabilityMatrix.length === 0 ? (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {copy(
                 "No installer profitability rows.",
                 "Нет строк прибыльности по монтажникам.",
-                "אין שורות רווחיות למתקינים."
+                "אין שורות רווחיות למתקינים.",
               )}
             </div>
           ) : (
-            <div className="overflow-auto">
-              <table className="w-full text-[12px]">
-                <thead className="bg-muted/40 text-muted-foreground">
-                  <tr>
-                    <th className="text-left px-3 py-2 font-medium">{copy("Installer", "Монтажник", "מתקין")}</th>
-                    <th className="text-left px-3 py-2 font-medium">{copy("Band", "Сегмент", "קטגוריה")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Installed", "Смонтировано", "הותקן")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Revenue", "Выручка", "הכנסה")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Margin", "Маржа", "מרווח")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Profit / Door", "Прибыль / дверь", "רווח / דלת")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Issues", "Проблемы", "תקלות")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Data Risk", "Риск данных", "סיכון נתונים")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {installerProfitabilityMatrix.map((item) => {
-                    const bandClass =
-                      item.performance_band === "STRONG"
-                        ? "text-[hsl(var(--success))] bg-[hsl(var(--success)/0.12)] border-[hsl(var(--success)/0.28)]"
-                        : item.performance_band === "RISK"
-                          ? "text-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.12)] border-[hsl(var(--destructive)/0.28)]"
-                          : "text-[hsl(var(--warning-foreground))] bg-[hsl(var(--warning)/0.12)] border-[hsl(var(--warning)/0.28)]";
-                    return (
-                      <tr key={item.installer_id} className="border-t border-border/70">
-                        <td className="px-3 py-2.5">
-                          <div className="font-medium text-foreground">{item.installer_name}</div>
-                          <div className="text-[11px] text-muted-foreground">
-                            {tt("reports.projectsAddons")
-                              .replace("{projects}", String(item.active_projects))
-                              .replace("{addons}", formatAmount(item.addons_done_qty))}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <span
-                            className={cn(
-                              "inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold",
-                              bandClass
+            <>
+              <div className="divide-y divide-border-subtle md:hidden">
+                {installerProfitabilityMatrix.map((item) => (
+                  <article
+                    key={`mobile-${item.installer_id}`}
+                    className="px-4 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold leading-5 text-text">
+                          {item.installer_name}
+                        </div>
+                        <div className="mt-1 text-[11px] leading-4 text-text-secondary">
+                          {tt("reports.projectsAddons")
+                            .replace("{projects}", String(item.active_projects))
+                            .replace(
+                              "{addons}",
+                              formatAmount(item.addons_done_qty),
                             )}
-                          >
-                            {item.performance_band}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 text-right">{item.installed_doors}</td>
-                        <td className="px-3 py-2 text-right">{formatAmount(item.revenue_total)}</td>
-                        <td className="px-3 py-2 text-right">{formatAmount(item.profit_total)}</td>
-                        <td className="px-3 py-2 text-right">{formatPercent(item.margin_pct)}</td>
-                        <td className="px-3 py-2 text-right">
-                          {formatAmount(item.avg_profit_per_door)}
-                        </td>
-                        <td className="px-3 py-2 text-right">{item.open_issues}</td>
-                        <td className="px-3 py-2 text-right">
-                          {item.missing_rates_installed_doors + item.missing_addon_plans_facts}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+                      </div>
+                      <span
+                        className={cn(
+                          "shrink-0 rounded border px-2 py-0.5 text-[11px] font-semibold",
+                          installerPerformanceBandClass(item.performance_band),
+                        )}
+                      >
+                        {item.performance_band}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Installed", "Смонтировано", "הותקן")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {item.installed_doors}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Revenue", "Выручка", "הכנסה")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {formatAmount(item.revenue_total)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Profit", "Прибыль", "רווח")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {formatAmount(item.profit_total)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Margin", "Маржа", "מרווח")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {formatPercent(item.margin_pct)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Issues", "Проблемы", "תקלות")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {item.open_issues}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Data Risk", "Риск данных", "סיכון נתונים")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {item.missing_rates_installed_doors +
+                            item.missing_addon_plans_facts}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="hidden overflow-auto md:block">
+                <table className="w-full text-[12px]">
+                  <thead className="bg-surface-subtle text-text-secondary">
+                    <tr>
+                      <th className="text-start px-3 py-2 font-medium">
+                        {copy("Installer", "Монтажник", "מתקין")}
+                      </th>
+                      <th className="text-start px-3 py-2 font-medium">
+                        {copy("Band", "Сегмент", "קטגוריה")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Installed", "Смонтировано", "הותקן")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Revenue", "Выручка", "הכנסה")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Profit", "Прибыль", "רווח")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Margin", "Маржа", "מרווח")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Profit / Door", "Прибыль / дверь", "רווח / דלת")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Issues", "Проблемы", "תקלות")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Data Risk", "Риск данных", "סיכון נתונים")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {installerProfitabilityMatrix.map((item) => {
+                      const bandClass = installerPerformanceBandClass(
+                        item.performance_band,
+                      );
+                      return (
+                        <tr
+                          key={item.installer_id}
+                          className="border-t border-border"
+                        >
+                          <td className="px-3 py-2.5">
+                            <div className="font-medium text-text">
+                              {item.installer_name}
+                            </div>
+                            <div className="text-[11px] text-text-secondary">
+                              {tt("reports.projectsAddons")
+                                .replace(
+                                  "{projects}",
+                                  String(item.active_projects),
+                                )
+                                .replace(
+                                  "{addons}",
+                                  formatAmount(item.addons_done_qty),
+                                )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span
+                              className={cn(
+                                "inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold",
+                                bandClass,
+                              )}
+                            >
+                              {item.performance_band}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {item.installed_doors}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {formatAmount(item.revenue_total)}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {formatAmount(item.profit_total)}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {formatPercent(item.margin_pct)}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {formatAmount(item.avg_profit_per_door)}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {item.open_issues}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {item.missing_rates_installed_doors +
+                              item.missing_addon_plans_facts}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
-          <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
+        <div
+          id="reports-installers-kpi"
+          className={reportsPanelClass("overflow-hidden")}
+        >
+          <div className="px-4 py-3 border-b border-border bg-surface-subtle flex flex-col items-stretch gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="text-[11px] uppercase text-text-secondary">
                 {tt("reports.installerCrossViewTitle")}
               </div>
-              <div className="text-[13px] text-muted-foreground">
+              <div className="text-[13px] text-text-secondary">
                 {tt("reports.installerCrossViewSubtitle")}
               </div>
             </div>
@@ -4518,8 +6879,12 @@ export default function ReportsPage() {
               <select
                 aria-label="Installer Project Sort"
                 value={installerProjectSortBy}
-                onChange={(e) => setInstallerProjectSortBy(e.target.value as InstallerProjectSortBy)}
-                className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+                onChange={(e) =>
+                  setInstallerProjectSortBy(
+                    e.target.value as InstallerProjectSortBy,
+                  )
+                }
+                className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] xl:w-auto xl:max-w-[180px]"
               >
                 {INSTALLER_PROJECT_SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -4530,8 +6895,10 @@ export default function ReportsPage() {
               <select
                 aria-label="Installer Project Direction"
                 value={installerProjectSortDir}
-                onChange={(e) => setInstallerProjectSortDir(e.target.value as SortDir)}
-                className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+                onChange={(e) =>
+                  setInstallerProjectSortDir(e.target.value as SortDir)
+                }
+                className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] xl:w-auto xl:max-w-[120px]"
               >
                 {SORT_DIR_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -4543,18 +6910,18 @@ export default function ReportsPage() {
           </div>
 
           {installerProjectProfitabilityQuery.isLoading ? (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {tt("reports.loadingInstallerCrossView")}
             </div>
           ) : installerProjectProfitabilityQuery.isError ? (
-            <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
+            <div className="px-4 py-6 text-[13px] text-status-problem-fg">
               {readError(
                 installerProjectProfitabilityQuery.error,
                 copy(
                   "Failed to load installer-project cross-view",
                   "Не удалось загрузить cross-view по монтажникам и проектам",
-                  "טעינת cross-view למתקינים ופרויקטים נכשלה"
-                )
+                  "טעינת cross-view למתקינים ופרויקטים נכשלה",
+                ),
               )}
             </div>
           ) : installerProjectProfitability.length === 0 ? (
@@ -4563,87 +6930,202 @@ export default function ReportsPage() {
                 title={copy(
                   "No installer-project cross-view rows",
                   "Нет строк cross-view по монтажникам и проектам",
-                  "אין שורות cross-view למתקינים ופרויקטים"
+                  "אין שורות cross-view למתקינים ופרויקטים",
                 )}
                 detail={copy(
                   "This view appears after installed doors or add-on facts create measurable profitability per installer and project.",
                   "Этот блок появляется после того, как смонтированные двери или add-on факты формируют измеримую прибыльность по монтажнику и проекту.",
-                  "בלוק זה מופיע לאחר שדלתות מותקנות או עובדות add-on יוצרות רווחיות מדידה לפי מתקין ופרויקט."
+                  "בלוק זה מופיע לאחר שדלתות מותקנות או עובדות add-on יוצרות רווחיות מדידה לפי מתקין ופרויקט.",
                 )}
               />
             </div>
           ) : (
-            <div className="overflow-auto">
-              <table className="w-full text-[12px]">
-                <thead className="bg-muted/40 text-muted-foreground">
-                  <tr>
-                    <th className="text-left px-3 py-2 font-medium">
-                      {copy("Installer / Project", "Монтажник / проект", "מתקין / פרויקט")}
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium">{copy("Band", "Сегмент", "קטגוריה")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Installed", "Смонтировано", "הותקן")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Revenue", "Выручка", "הכנסה")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Margin", "Маржа", "מרווח")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Profit / Door", "Прибыль / дверь", "רווח / דלת")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Issues", "Проблемы", "תקלות")}</th>
-                    <th className="text-right px-3 py-2 font-medium">{copy("Data Risk", "Риск данных", "סיכון נתונים")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {installerProjectProfitability.map((item) => {
-                    const bandClass =
-                      item.performance_band === "STRONG"
-                        ? "text-[hsl(var(--success))] bg-[hsl(var(--success)/0.12)] border-[hsl(var(--success)/0.28)]"
-                        : item.performance_band === "RISK"
-                          ? "text-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.12)] border-[hsl(var(--destructive)/0.28)]"
-                          : "text-[hsl(var(--warning-foreground))] bg-[hsl(var(--warning)/0.12)] border-[hsl(var(--warning)/0.28)]";
-                    return (
-                      <tr
-                        key={`${item.installer_id}-${item.project_id}`}
-                        className="border-t border-border/70"
+            <>
+              <div className="divide-y divide-border-subtle md:hidden">
+                {installerProjectProfitability.map((item) => (
+                  <article
+                    key={`mobile-${item.installer_id}-${item.project_id}`}
+                    className="px-4 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold leading-5 text-text">
+                          {item.installer_name}
+                        </div>
+                        <div className="mt-1 text-[11px] leading-4 text-text-secondary">
+                          {item.project_name}
+                        </div>
+                      </div>
+                      <span
+                        className={cn(
+                          "shrink-0 rounded border px-2 py-0.5 text-[11px] font-semibold",
+                          installerPerformanceBandClass(item.performance_band),
+                        )}
                       >
-                        <td className="px-3 py-2.5">
-                          <div className="font-medium text-foreground">{item.installer_name}</div>
-                          <div className="text-[11px] text-muted-foreground">{item.project_name}</div>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <span
-                            className={cn(
-                              "inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold",
-                              bandClass
-                            )}
-                          >
-                            {item.performance_band}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 text-right">{item.installed_doors}</td>
-                        <td className="px-3 py-2 text-right">{formatAmount(item.revenue_total)}</td>
-                        <td className="px-3 py-2 text-right">{formatAmount(item.profit_total)}</td>
-                        <td className="px-3 py-2 text-right">{formatPercent(item.margin_pct)}</td>
-                        <td className="px-3 py-2 text-right">
-                          {formatAmount(item.avg_profit_per_door)}
-                        </td>
-                        <td className="px-3 py-2 text-right">{item.open_issues}</td>
-                        <td className="px-3 py-2 text-right">
-                          {item.missing_rates_installed_doors + item.missing_addon_plans_facts}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        {item.performance_band}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Installed", "Смонтировано", "הותקן")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {item.installed_doors}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Revenue", "Выручка", "הכנסה")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {formatAmount(item.revenue_total)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Profit", "Прибыль", "רווח")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {formatAmount(item.profit_total)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Margin", "Маржа", "מרווח")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {formatPercent(item.margin_pct)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Issues", "Проблемы", "תקלות")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {item.open_issues}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Data Risk", "Риск данных", "סיכון נתונים")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {item.missing_rates_installed_doors +
+                            item.missing_addon_plans_facts}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="hidden overflow-auto md:block">
+                <table className="w-full text-[12px]">
+                  <thead className="bg-surface-subtle text-text-secondary">
+                    <tr>
+                      <th className="text-start px-3 py-2 font-medium">
+                        {copy(
+                          "Installer / Project",
+                          "Монтажник / проект",
+                          "מתקין / פרויקט",
+                        )}
+                      </th>
+                      <th className="text-start px-3 py-2 font-medium">
+                        {copy("Band", "Сегмент", "קטגוריה")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Installed", "Смонтировано", "הותקן")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Revenue", "Выручка", "הכנסה")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Profit", "Прибыль", "רווח")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Margin", "Маржа", "מרווח")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Profit / Door", "Прибыль / дверь", "רווח / דלת")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Issues", "Проблемы", "תקלות")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Data Risk", "Риск данных", "סיכון נתונים")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {installerProjectProfitability.map((item) => {
+                      const bandClass = installerPerformanceBandClass(
+                        item.performance_band,
+                      );
+                      return (
+                        <tr
+                          key={`${item.installer_id}-${item.project_id}`}
+                          className="border-t border-border"
+                        >
+                          <td className="px-3 py-2.5">
+                            <div className="font-medium text-text">
+                              {item.installer_name}
+                            </div>
+                            <div className="text-[11px] text-text-secondary">
+                              {item.project_name}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span
+                              className={cn(
+                                "inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold",
+                                bandClass,
+                              )}
+                            >
+                              {item.performance_band}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {item.installed_doors}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {formatAmount(item.revenue_total)}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {formatAmount(item.profit_total)}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {formatPercent(item.margin_pct)}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {formatAmount(item.avg_profit_per_door)}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {item.open_issues}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {item.missing_rates_installed_doors +
+                              item.missing_addon_plans_facts}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
-          <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
+        <div
+          id="reports-order-numbers-kpi"
+          className={reportsPanelClass("overflow-hidden")}
+        >
+          <div className="px-4 py-3 border-b border-border bg-surface-subtle flex flex-col items-stretch gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="text-[11px] uppercase text-text-secondary">
                 {tt("reports.installersKpiTitle")}
               </div>
-              <div className="text-[13px] text-muted-foreground">
+              <div className="text-[13px] text-text-secondary">
                 {tt("reports.installersKpiSubtitle")}
               </div>
             </div>
@@ -4654,7 +7136,7 @@ export default function ReportsPage() {
                   setInstallersSortBy(e.target.value as InstallersSortBy);
                   setInstallersKpiOffset(0);
                 }}
-                className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+                className="h-9 rounded-md border border-border bg-surface px-2 text-[13px]"
               >
                 {INSTALLERS_SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -4668,7 +7150,7 @@ export default function ReportsPage() {
                   setInstallersSortDir(e.target.value as SortDir);
                   setInstallersKpiOffset(0);
                 }}
-                className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+                className="h-9 rounded-md border border-border bg-surface px-2 text-[13px]"
               >
                 {SORT_DIR_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -4678,66 +7160,142 @@ export default function ReportsPage() {
               </select>
               <button
                 onClick={() => exportInstallersKpiMutation.mutate()}
-                disabled={!canExportFinancialReports || exportInstallersKpiMutation.isPending}
+                disabled={
+                  !canExportFinancialReports ||
+                  exportInstallersKpiMutation.isPending
+                }
                 title={ratesScopeHint}
-                className="h-9 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
+                className="h-9 w-full rounded-md border border-border bg-surface px-3 text-[12px] disabled:opacity-50 xl:w-auto"
               >
                 {tt("reports.exportInstallersCsv")}
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-[1fr_120px_120px_120px_120px_110px] gap-3 px-4 py-3 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
+          <div className="hidden md:grid grid-cols-[1fr_120px_120px_120px_120px_110px] gap-3 px-4 py-3 border-b border-border text-[11px] uppercase text-text-secondary">
             <span>{copy("Installer", "Монтажник", "מתקין")}</span>
-            <span className="text-right">{copy("Installed", "Смонтировано", "הותקן")}</span>
-            <span className="text-right">{copy("Payroll", "ФОТ", "שכר")}</span>
-            <span className="text-right">{copy("Revenue", "Выручка", "הכנסה")}</span>
-            <span className="text-right">{copy("Profit", "Прибыль", "רווח")}</span>
-            <span className="text-right">{copy("Missing Rates", "Нет ставок", "חסרים תעריפים")}</span>
+            <span className="text-end">
+              {copy("Installed", "Смонтировано", "הותקן")}
+            </span>
+            <span className="text-end">{copy("Payroll", "ФОТ", "שכר")}</span>
+            <span className="text-end">
+              {copy("Revenue", "Выручка", "הכנסה")}
+            </span>
+            <span className="text-end">
+              {copy("Profit", "Прибыль", "רווח")}
+            </span>
+            <span className="text-end">
+              {copy("Missing Rates", "Нет ставок", "חסרים תעריפים")}
+            </span>
           </div>
 
           {installersKpiQuery.isLoading && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {tt("reports.loadingInstallersKpi")}
             </div>
           )}
           {installersKpiQuery.isError && (
-            <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
+            <div className="px-4 py-6 text-[13px] text-status-problem-fg">
               {readError(
                 installersKpiQuery.error,
                 copy(
                   "Failed to load installers KPI",
                   "Не удалось загрузить KPI монтажников",
-                  "טעינת KPI המתקינים נכשלה"
-                )
+                  "טעינת KPI המתקינים נכשלה",
+                ),
               )}
             </div>
           )}
           {!installersKpiQuery.isLoading &&
             !installersKpiQuery.isError &&
             installersKpiItems.length === 0 && (
-              <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                No installers KPI rows.
+              <div className="px-4 py-6 text-[13px] text-text-secondary">
+                {copy(
+                  "No installers KPI rows.",
+                  "Нет строк KPI по монтажникам.",
+                  "אין שורות KPI למתקינים.",
+                )}
               </div>
             )}
           {!installersKpiQuery.isLoading &&
             !installersKpiQuery.isError &&
             installersKpiItems.map((item) => (
-              <div
-                key={item.installer_id}
-                className="grid grid-cols-[1fr_120px_120px_120px_120px_110px] gap-3 px-4 py-3 border-t border-border/70 text-[13px] items-center"
-              >
-                <div className="font-medium text-foreground">{item.installer_name}</div>
-                <div className="text-right">{item.installed_doors}</div>
-                <div className="text-right">{formatAmount(item.payroll_total)}</div>
-                <div className="text-right">{formatAmount(item.revenue_total)}</div>
-                <div className="text-right">{formatAmount(item.profit_total)}</div>
-                <div className="text-right">{item.missing_rates_installed_doors}</div>
+              <div key={item.installer_id} className="border-t border-border">
+                <article className="px-4 py-3 md:hidden">
+                  <div className="text-[13px] font-semibold leading-5 text-text">
+                    {item.installer_name}
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                      <div className="text-[10px] uppercase text-text-secondary">
+                        {copy("Installed", "Смонтировано", "הותקן")}
+                      </div>
+                      <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                        {formatCount(item.installed_doors)}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                      <div className="text-[10px] uppercase text-text-secondary">
+                        {copy("Payroll", "ФОТ", "שכר")}
+                      </div>
+                      <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                        {formatAmount(item.payroll_total)}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                      <div className="text-[10px] uppercase text-text-secondary">
+                        {copy("Revenue", "Выручка", "הכנסה")}
+                      </div>
+                      <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                        {formatAmount(item.revenue_total)}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                      <div className="text-[10px] uppercase text-text-secondary">
+                        {copy("Profit", "Прибыль", "רווח")}
+                      </div>
+                      <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                        {formatAmount(item.profit_total)}
+                      </div>
+                    </div>
+                    <div className="col-span-2 rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                      <div className="text-[10px] uppercase text-text-secondary">
+                        {copy("Missing Rates", "Нет ставок", "חסרים תעריפים")}
+                      </div>
+                      <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                        {formatCount(item.missing_rates_installed_doors)}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <div className="hidden md:grid grid-cols-[1fr_120px_120px_120px_120px_110px] gap-3 px-4 py-3 text-[13px] items-center">
+                  <div className="font-medium text-text">
+                    {item.installer_name}
+                  </div>
+                  <div className="text-end">
+                    {formatCount(item.installed_doors)}
+                  </div>
+                  <div className="text-end">
+                    {formatAmount(item.payroll_total)}
+                  </div>
+                  <div className="text-end">
+                    {formatAmount(item.revenue_total)}
+                  </div>
+                  <div className="text-end">
+                    {formatAmount(item.profit_total)}
+                  </div>
+                  <div className="text-end">
+                    {formatCount(item.missing_rates_installed_doors)}
+                  </div>
+                </div>
               </div>
             ))}
-          <div className="px-4 py-3 border-t border-border/70 flex items-center justify-between text-[12px]">
-            <div className="text-muted-foreground">
-              {tt("reports.rowsCount").replace("{count}", String(installersKpiItems.length))}
+          <div className="px-4 py-3 border-t border-border flex items-center justify-between text-[12px]">
+            <div className="text-text-secondary">
+              {tt("reports.rowsCount").replace(
+                "{count}",
+                String(installersKpiItems.length),
+              )}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -4745,14 +7303,14 @@ export default function ReportsPage() {
                 onClick={() =>
                   setInstallersKpiOffset((x) => Math.max(0, x - KPI_PAGE_SIZE))
                 }
-                className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
+                className="h-8 px-3 rounded-md border border-border bg-surface disabled:opacity-50"
               >
                 {tt("reports.prev")}
               </button>
               <button
                 disabled={!installersKpiCanNext}
                 onClick={() => setInstallersKpiOffset((x) => x + KPI_PAGE_SIZE)}
-                className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
+                className="h-8 px-3 rounded-md border border-border bg-surface disabled:opacity-50"
               >
                 {tt("reports.next")}
               </button>
@@ -4760,17 +7318,17 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
-          <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
+        <div className={reportsPanelClass("overflow-hidden")}>
+          <div className="px-4 py-3 border-b border-border bg-surface-subtle flex items-center justify-between gap-3">
             <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="text-[11px] uppercase text-text-secondary">
                 {tt("reports.installerDrilldownTitle")}
               </div>
-              <div className="text-[13px] text-muted-foreground">
+              <div className="text-[13px] text-text-secondary">
                 {copy(
                   "Profitability, projects, orders and addon impact for the selected installer",
                   "Доходность, проекты, заказы и влияние доп. работ по выбранному монтажнику",
-                  "רווחיות, פרויקטים, הזמנות והשפעת תוספות עבור המתקין שנבחר"
+                  "רווחיות, פרויקטים, הזמנות והשפעת תוספות עבור המתקין שנבחר",
                 )}
               </div>
             </div>
@@ -4778,16 +7336,24 @@ export default function ReportsPage() {
               aria-label={copy(
                 "Installer KPI Details Filter",
                 "Фильтр деталей KPI монтажника",
-                "מסנן פרטי KPI למתקין"
+                "מסנן פרטי KPI למתקין",
               )}
               value={installerDetailsId}
               onChange={(e) => setInstallerDetailsId(e.target.value)}
-              className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+              className="h-9 rounded-md border border-border bg-surface px-2 text-[13px]"
             >
               <option value="">
                 {installersKpiQuery.isLoading
-                  ? copy("Loading installers…", "Загружаем монтажников…", "טוען מתקינים…")
-                  : copy("Select installer", "Выберите монтажника", "בחר מתקין")}
+                  ? copy(
+                      "Loading installers…",
+                      "Загружаем монтажников…",
+                      "טוען מתקינים…",
+                    )
+                  : copy(
+                      "Select installer",
+                      "Выберите монтажника",
+                      "בחר מתקין",
+                    )}
               </option>
               {installersKpiItems.map((item) => (
                 <option key={item.installer_id} value={item.installer_id}>
@@ -4798,35 +7364,38 @@ export default function ReportsPage() {
           </div>
 
           {installersKpiQuery.isLoading && installersKpiItems.length === 0 && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {copy(
                 "Loading installer drill-down…",
                 "Загружаем drill-down по монтажнику…",
-                "טוען drill-down למתקין…"
+                "טוען drill-down למתקין…",
               )}
             </div>
           )}
           {!installersKpiQuery.isLoading && installersKpiItems.length === 0 && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {copy(
                 "No installers available for drill-down.",
                 "Нет монтажников для drill-down.",
-                "אין מתקינים זמינים ל-drill-down."
+                "אין מתקינים זמינים ל-drill-down.",
               )}
             </div>
           )}
           {installerDetailsQuery.isLoading && installerDetailsId && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {copy(
                 "Loading installer details…",
                 "Загружаем детали монтажника…",
-                "טוען פרטי מתקין…"
+                "טוען פרטי מתקין…",
               )}
             </div>
           )}
           {installerDetailsQuery.isError && installerDetailsId && (
-            <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
-              {readError(installerDetailsQuery.error, tt("reports.failedInstallerDetails"))}
+            <div className="px-4 py-6 text-[13px] text-status-problem-fg">
+              {readError(
+                installerDetailsQuery.error,
+                tt("reports.failedInstallerDetails"),
+              )}
             </div>
           )}
           {!installerDetailsQuery.isLoading &&
@@ -4838,103 +7407,219 @@ export default function ReportsPage() {
                     type="button"
                     variant="outline"
                     className="h-9"
-                    onClick={() => router.push(`/installers?installer_id=${installerDetails.installer_id}`)}
+                    onClick={() =>
+                      router.push(
+                        `/installers?installer_id=${installerDetails.installer_id}`,
+                      )
+                    }
                   >
-                    {copy("Open installer card", "Открыть карточку монтажника", "פתח כרטיס מתקין")}
+                    {copy(
+                      "Open installer card",
+                      "Открыть карточку монтажника",
+                      "פתח כרטיס מתקין",
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9"
+                    onClick={() =>
+                      router.push(
+                        `/earnings-ledger?installer_id=${installerDetails.installer_id}`,
+                      )
+                    }
+                  >
+                    <ReceiptText className="h-3.5 w-3.5" />
+                    {copy(
+                      "Open payroll ledger",
+                      "Открыть начисления",
+                      "פתח יומן תשלומים",
+                    )}
                   </Button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="rounded-lg border border-border bg-card p-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <div className="text-[11px] uppercase text-text-secondary">
                       {tt("reports.revenuePayrollProfit")}
                     </div>
-                    <div className="mt-2 text-[18px] font-semibold text-foreground">
+                    <div className="mt-2 text-[18px] font-semibold text-text">
                       {formatAmount(installerDetails.revenue_total)}
                     </div>
-                    <div className="mt-1 text-[12px] text-muted-foreground">
-                      {copy("Payroll", "Payroll", "שכר")} {formatAmount(installerDetails.payroll_total)} |{" "}
-                      {copy("Profit", "Прибыль", "רווח")} {formatAmount(installerDetails.profit_total)}
+                    <div className="mt-1 text-[12px] text-text-secondary">
+                      {copy("Payroll", "Payroll", "שכר")}{" "}
+                      {formatAmount(installerDetails.payroll_total)} |{" "}
+                      {copy("Profit", "Прибыль", "רווח")}{" "}
+                      {formatAmount(installerDetails.profit_total)}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-border bg-card p-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <div className="text-[11px] uppercase text-text-secondary">
                       {tt("reports.projectsOrders")}
                     </div>
-                    <div className="mt-2 text-[18px] font-semibold text-foreground">
-                      {installerDetails.active_projects} / {installerDetails.order_numbers}
+                    <div className="mt-2 text-[18px] font-semibold text-text">
+                      {formatCount(installerDetails.active_projects)} /{" "}
+                      {formatCount(installerDetails.order_numbers)}
                     </div>
-                    <div className="mt-1 text-[12px] text-muted-foreground">
+                    <div className="mt-1 text-[12px] text-text-secondary">
                       {tt("reports.installedDoors").replace(
                         "{count}",
-                        String(installerDetails.installed_doors)
+                        String(installerDetails.installed_doors),
                       )}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-border bg-card p-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <div className="text-[11px] uppercase text-text-secondary">
                       {tt("reports.openIssuesMissingRates")}
                     </div>
-                    <div className="mt-2 text-[18px] font-semibold text-foreground">
-                      {installerDetails.open_issues} / {installerDetails.missing_rates_installed_doors}
+                    <div className="mt-2 text-[18px] font-semibold text-text">
+                      {installerDetails.open_issues} /{" "}
+                      {installerDetails.missing_rates_installed_doors}
                     </div>
-                    <div className="mt-1 text-[12px] text-muted-foreground">
+                    <div className="mt-1 text-[12px] text-text-secondary">
                       {tt("reports.lastInstall")}{" "}
                       {installerDetails.last_installed_at
                         ? formatDateTime(installerDetails.last_installed_at)
                         : tt("reports.notAvailableShort")}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-border bg-card p-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <div className="text-[11px] uppercase text-text-secondary">
                       {tt("reports.addonsImpact")}
                     </div>
-                    <div className="mt-2 text-[18px] font-semibold text-foreground">
+                    <div className="mt-2 text-[18px] font-semibold text-text">
                       Qty {formatAmount(installerDetails.addons_done_qty)}
                     </div>
-                    <div className="mt-1 text-[12px] text-muted-foreground">
+                    <div className="mt-1 text-[12px] text-text-secondary">
                       {tt("reports.addonsProfitMissingPlans")
-                        .replace("{profit}", formatAmount(installerDetails.addon_profit_total))
-                        .replace("{count}", String(installerDetails.missing_addon_plans_facts))}
+                        .replace(
+                          "{profit}",
+                          formatAmount(installerDetails.addon_profit_total),
+                        )
+                        .replace(
+                          "{count}",
+                          String(installerDetails.missing_addon_plans_facts),
+                        )}
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  <div className="overflow-auto rounded-lg border border-border">
-                    <table className="w-full text-[12px]">
-                      <thead className="bg-muted/40 text-muted-foreground">
+                  <div className="overflow-hidden rounded-lg border border-border">
+                    <div className="divide-y divide-border-subtle md:hidden">
+                      {installerDetails.top_projects.length === 0 ? (
+                        <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                          {copy(
+                            "No project drill-down rows.",
+                            "Нет строк по проектному drill-down.",
+                            "אין שורות drill-down לפרויקט.",
+                          )}
+                        </div>
+                      ) : (
+                        installerDetails.top_projects.map((item) => (
+                          <article
+                            key={`mobile-${item.project_id}`}
+                            className="px-3.5 py-3"
+                          >
+                            <div className="text-[13px] font-semibold leading-5 text-text">
+                              {item.project_name}
+                            </div>
+                            <div className="mt-1 text-[11px] leading-4 text-text-secondary">
+                              {item.last_installed_at
+                                ? formatDateTime(item.last_installed_at)
+                                : copy(
+                                    "No install date",
+                                    "Нет даты установки",
+                                    "אין תאריך התקנה",
+                                  )}
+                            </div>
+                            <div className="mt-3 grid grid-cols-3 gap-2">
+                              <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                                <div className="text-[10px] uppercase text-text-secondary">
+                                  {copy("Installed", "Установлено", "הותקן")}
+                                </div>
+                                <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                  {item.installed_doors}
+                                </div>
+                              </div>
+                              <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                                <div className="text-[10px] uppercase text-text-secondary">
+                                  {copy("Issues", "Проблемы", "תקלות")}
+                                </div>
+                                <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                  {item.open_issues}
+                                </div>
+                              </div>
+                              <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                                <div className="text-[10px] uppercase text-text-secondary">
+                                  {copy("Profit", "Прибыль", "רווח")}
+                                </div>
+                                <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                  {formatAmount(item.profit_total)}
+                                </div>
+                              </div>
+                            </div>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                    <table className="hidden w-full text-[12px] md:table">
+                      <thead className="bg-surface-subtle text-text-secondary">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">{copy("Project", "Проект", "פרויקט")}</th>
-                          <th className="text-right px-3 py-2 font-medium">{copy("Installed", "Установлено", "הותקן")}</th>
-                          <th className="text-right px-3 py-2 font-medium">{copy("Issues", "Проблемы", "תקלות")}</th>
-                          <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
+                          <th className="text-start px-3 py-2 font-medium">
+                            {copy("Project", "Проект", "פרויקט")}
+                          </th>
+                          <th className="text-end px-3 py-2 font-medium">
+                            {copy("Installed", "Установлено", "הותקן")}
+                          </th>
+                          <th className="text-end px-3 py-2 font-medium">
+                            {copy("Issues", "Проблемы", "תקלות")}
+                          </th>
+                          <th className="text-end px-3 py-2 font-medium">
+                            {copy("Profit", "Прибыль", "רווח")}
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {installerDetails.top_projects.length === 0 ? (
                           <tr>
-                            <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                            <td
+                              className="px-3 py-3 text-text-secondary"
+                              colSpan={4}
+                            >
                               {copy(
                                 "No project drill-down rows.",
                                 "Нет строк по проектному drill-down.",
-                                "אין שורות drill-down לפרויקט."
+                                "אין שורות drill-down לפרויקט.",
                               )}
                             </td>
                           </tr>
                         ) : (
                           installerDetails.top_projects.map((item) => (
-                            <tr key={item.project_id} className="border-t border-border/70">
+                            <tr
+                              key={item.project_id}
+                              className="border-t border-border"
+                            >
                               <td className="px-3 py-2.5">
-                                <div className="font-medium text-foreground">{item.project_name}</div>
-                                <div className="text-[11px] text-muted-foreground">
+                                <div className="font-medium text-text">
+                                  {item.project_name}
+                                </div>
+                                <div className="text-[11px] text-text-secondary">
                                   {item.last_installed_at
                                     ? formatDateTime(item.last_installed_at)
-                                    : copy("No install date", "Нет даты установки", "אין תאריך התקנה")}
+                                    : copy(
+                                        "No install date",
+                                        "Нет даты установки",
+                                        "אין תאריך התקנה",
+                                      )}
                                 </div>
                               </td>
-                              <td className="px-3 py-2 text-right">{item.installed_doors}</td>
-                              <td className="px-3 py-2 text-right">{item.open_issues}</td>
-                              <td className="px-3 py-2 text-right">
+                              <td className="px-3 py-2 text-end">
+                                {item.installed_doors}
+                              </td>
+                              <td className="px-3 py-2 text-end">
+                                {item.open_issues}
+                              </td>
+                              <td className="px-3 py-2 text-end">
                                 {formatAmount(item.profit_total)}
                               </td>
                             </tr>
@@ -4944,38 +7629,102 @@ export default function ReportsPage() {
                     </table>
                   </div>
 
-                  <div className="overflow-auto rounded-lg border border-border">
-                    <table className="w-full text-[12px]">
-                      <thead className="bg-muted/40 text-muted-foreground">
+                  <div className="overflow-hidden rounded-lg border border-border">
+                    <div className="divide-y divide-border-subtle md:hidden">
+                      {installerDetails.order_breakdown.length === 0 ? (
+                        <div className="px-3.5 py-3 text-[12px] text-text-secondary">
+                          {copy(
+                            "No order breakdown rows.",
+                            "Нет строк по разбивке заказов.",
+                            "אין שורות פירוט להזמנות.",
+                          )}
+                        </div>
+                      ) : (
+                        installerDetails.order_breakdown.map((item) => (
+                          <article
+                            key={`mobile-${item.order_number}`}
+                            className="px-3.5 py-3"
+                          >
+                            <div className="text-[13px] font-semibold leading-5 text-text">
+                              {item.order_number}
+                            </div>
+                            <div className="mt-3 grid grid-cols-3 gap-2">
+                              <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                                <div className="text-[10px] uppercase text-text-secondary">
+                                  {copy("Installed", "Установлено", "הותקן")}
+                                </div>
+                                <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                  {item.installed_doors}
+                                </div>
+                              </div>
+                              <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                                <div className="text-[10px] uppercase text-text-secondary">
+                                  {copy("Revenue", "Выручка", "הכנסה")}
+                                </div>
+                                <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                  {formatAmount(item.revenue_total)}
+                                </div>
+                              </div>
+                              <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                                <div className="text-[10px] uppercase text-text-secondary">
+                                  {copy("Profit", "Прибыль", "רווח")}
+                                </div>
+                                <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                                  {formatAmount(item.profit_total)}
+                                </div>
+                              </div>
+                            </div>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                    <table className="hidden w-full text-[12px] md:table">
+                      <thead className="bg-surface-subtle text-text-secondary">
                         <tr>
-                          <th className="text-left px-3 py-2 font-medium">{copy("Order", "Заказ", "הזמנה")}</th>
-                          <th className="text-right px-3 py-2 font-medium">{copy("Installed", "Установлено", "הותקן")}</th>
-                          <th className="text-right px-3 py-2 font-medium">{copy("Revenue", "Выручка", "הכנסה")}</th>
-                          <th className="text-right px-3 py-2 font-medium">{copy("Profit", "Прибыль", "רווח")}</th>
+                          <th className="text-start px-3 py-2 font-medium">
+                            {copy("Order", "Заказ", "הזמנה")}
+                          </th>
+                          <th className="text-end px-3 py-2 font-medium">
+                            {copy("Installed", "Установлено", "הותקן")}
+                          </th>
+                          <th className="text-end px-3 py-2 font-medium">
+                            {copy("Revenue", "Выручка", "הכנסה")}
+                          </th>
+                          <th className="text-end px-3 py-2 font-medium">
+                            {copy("Profit", "Прибыль", "רווח")}
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {installerDetails.order_breakdown.length === 0 ? (
                           <tr>
-                            <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
+                            <td
+                              className="px-3 py-3 text-text-secondary"
+                              colSpan={4}
+                            >
                               {copy(
                                 "No order breakdown rows.",
                                 "Нет строк по разбивке заказов.",
-                                "אין שורות פירוט להזמנות."
+                                "אין שורות פירוט להזמנות.",
                               )}
                             </td>
                           </tr>
                         ) : (
                           installerDetails.order_breakdown.map((item) => (
-                            <tr key={item.order_number} className="border-t border-border/70">
-                              <td className="px-3 py-2.5 font-medium text-foreground">
+                            <tr
+                              key={item.order_number}
+                              className="border-t border-border"
+                            >
+                              <td className="px-3 py-2.5 font-medium text-text">
                                 {item.order_number}
                               </td>
-                              <td className="px-3 py-2 text-right">{item.installed_doors}</td>
-                              <td className="px-3 py-2 text-right">
+                              <td className="px-3 py-2 text-end">
+                                {item.installed_doors}
+                              </td>
+                              <td className="px-3 py-2 text-end">
                                 {formatAmount(item.revenue_total)}
                               </td>
-                              <td className="px-3 py-2 text-right">
+                              <td className="px-3 py-2 text-end">
                                 {formatAmount(item.profit_total)}
                               </td>
                             </tr>
@@ -4989,21 +7738,25 @@ export default function ReportsPage() {
             )}
         </div>
 
-        <div className="glass-card rounded-xl overflow-hidden border border-border">
-          <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-3">
+        <div className={reportsPanelClass("overflow-hidden")}>
+          <div className="px-4 py-3 border-b border-border bg-surface-subtle flex flex-col items-stretch gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                {copy("Order Numbers KPI", "KPI по номерам заказов", "KPI לפי מספרי הזמנה")}
+              <div className="text-[11px] uppercase text-text-secondary">
+                {copy(
+                  "Order Numbers KPI",
+                  "KPI по номерам заказов",
+                  "KPI לפי מספרי הזמנה",
+                )}
               </div>
-              <div className="text-[13px] text-muted-foreground">
+              <div className="text-[13px] text-text-secondary">
                 {copy(
                   "Money and operational control by order number",
                   "Деньги и операционный контроль по номеру заказа",
-                  "כסף ובקרה תפעולית לפי מספר הזמנה"
+                  "כסף ובקרה תפעולית לפי מספר הזמנה",
                 )}
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center xl:justify-end">
               <select
                 aria-label="Order Project Filter"
                 value={orderNumbersProjectId}
@@ -5011,10 +7764,12 @@ export default function ReportsPage() {
                   setOrderNumbersProjectId(e.target.value);
                   setOrderNumbersKpiOffset(0);
                 }}
-                className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+                className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] xl:w-auto xl:max-w-[220px]"
               >
                 <option value="">
-                  {projectsQuery.isLoading ? tt("reports.loadingProjects") : t("common.all")}
+                  {projectsQuery.isLoading
+                    ? tt("reports.loadingProjects")
+                    : t("common.all")}
                 </option>
                 {projectOptions.map((project) => (
                   <option key={project.id} value={project.id}>
@@ -5028,8 +7783,12 @@ export default function ReportsPage() {
                   setOrderNumbersQuery(e.target.value);
                   setOrderNumbersKpiOffset(0);
                 }}
-                placeholder={copy("Search order…", "Поиск заказа…", "חפש הזמנה…")}
-                className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+                placeholder={copy(
+                  "Search order…",
+                  "Поиск заказа…",
+                  "חפש הזמנה…",
+                )}
+                className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] xl:w-auto xl:max-w-[220px]"
               />
               <select
                 value={orderNumbersSortBy}
@@ -5037,7 +7796,7 @@ export default function ReportsPage() {
                   setOrderNumbersSortBy(e.target.value as OrderNumbersSortBy);
                   setOrderNumbersKpiOffset(0);
                 }}
-                className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+                className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] xl:w-auto xl:max-w-[180px]"
               >
                 {ORDER_NUMBERS_SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -5051,7 +7810,7 @@ export default function ReportsPage() {
                   setOrderNumbersSortDir(e.target.value as SortDir);
                   setOrderNumbersKpiOffset(0);
                 }}
-                className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+                className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] xl:w-auto xl:max-w-[120px]"
               >
                 {SORT_DIR_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -5061,91 +7820,192 @@ export default function ReportsPage() {
               </select>
               <button
                 onClick={() => exportOrderNumbersKpiMutation.mutate()}
-                disabled={!canExportFinancialReports || exportOrderNumbersKpiMutation.isPending}
+                disabled={
+                  !canExportFinancialReports ||
+                  exportOrderNumbersKpiMutation.isPending
+                }
                 title={ratesScopeHint}
-                className="h-9 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
+                className="h-9 w-full rounded-md border border-border bg-surface px-3 text-[12px] disabled:opacity-50 xl:w-auto"
               >
                 {tt("reports.exportOrdersCsv")}
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-[1fr_80px_90px_90px_80px_120px_120px_120px_110px] gap-3 px-4 py-3 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
+          <div className="hidden xl:grid grid-cols-[1fr_80px_90px_90px_80px_120px_120px_120px_110px] gap-3 px-4 py-3 border-b border-border text-[11px] uppercase text-text-secondary">
             <span>{copy("Order", "Заказ", "הזמנה")}</span>
-            <span className="text-right">{copy("Total", "Всего", "סה\"כ")}</span>
-            <span className="text-right">{copy("Installed", "Установлено", "הותקן")}</span>
-            <span className="text-right">{copy("Not Installed", "Не установлено", "לא הותקן")}</span>
-            <span className="text-right">{copy("Issues", "Проблемы", "תקלות")}</span>
-            <span className="text-right">{copy("Planned", "План", "מתוכנן")}</span>
-            <span className="text-right">{copy("Payroll", "Payroll", "שכר")}</span>
-            <span className="text-right">{copy("Profit", "Прибыль", "רווח")}</span>
-            <span className="text-right">{copy("Completion", "Готовность", "השלמה")}</span>
+            <span className="text-end">{copy("Total", "Всего", 'סה"כ')}</span>
+            <span className="text-end">
+              {copy("Installed", "Установлено", "הותקן")}
+            </span>
+            <span className="text-end">
+              {copy("Not Installed", "Не установлено", "לא הותקן")}
+            </span>
+            <span className="text-end">
+              {copy("Issues", "Проблемы", "תקלות")}
+            </span>
+            <span className="text-end">
+              {copy("Planned", "План", "מתוכנן")}
+            </span>
+            <span className="text-end">
+              {copy("Payroll", "Payroll", "שכר")}
+            </span>
+            <span className="text-end">
+              {copy("Profit", "Прибыль", "רווח")}
+            </span>
+            <span className="text-end">
+              {copy("Completion", "Готовность", "השלמה")}
+            </span>
           </div>
 
           {orderNumbersKpiQuery.isLoading && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {copy(
                 "Loading order numbers KPI…",
                 "Загружаем KPI по номерам заказов…",
-                "טוען KPI למספרי הזמנות…"
+                "טוען KPI למספרי הזמנות…",
               )}
             </div>
           )}
           {orderNumbersKpiQuery.isError && (
-            <div className="px-4 py-6 text-[13px] text-[hsl(var(--destructive))]">
+            <div className="px-4 py-6 text-[13px] text-status-problem-fg">
               {readError(
                 orderNumbersKpiQuery.error,
                 copy(
                   "Failed to load order numbers KPI",
                   "Не удалось загрузить KPI по номерам заказов",
-                  "טעינת KPI למספרי הזמנות נכשלה"
-                )
+                  "טעינת KPI למספרי הזמנות נכשלה",
+                ),
               )}
             </div>
           )}
           {!orderNumbersKpiQuery.isLoading &&
             !orderNumbersKpiQuery.isError &&
             orderNumbersKpiItems.length === 0 && (
-              <div className="px-4 py-6 text-[13px] text-muted-foreground">
-                {copy("No order KPI rows.", "Нет строк KPI по заказам.", "אין שורות KPI להזמנות.")}
+              <div className="px-4 py-6 text-[13px] text-text-secondary">
+                {copy(
+                  "No order KPI rows.",
+                  "Нет строк KPI по заказам.",
+                  "אין שורות KPI להזמנות.",
+                )}
               </div>
             )}
           {!orderNumbersKpiQuery.isLoading &&
             !orderNumbersKpiQuery.isError &&
             orderNumbersKpiItems.map((item) => (
-              <div
-                key={item.order_number}
-                className="grid grid-cols-[1fr_80px_90px_90px_80px_120px_120px_120px_110px] gap-3 px-4 py-3 border-t border-border/70 text-[13px] items-center"
-              >
-                <div className="font-medium text-foreground">{item.order_number}</div>
-                <div className="text-right">{item.total_doors}</div>
-                <div className="text-right">{item.installed_doors}</div>
-                <div className="text-right">{item.not_installed_doors}</div>
-                <div className="text-right">{item.open_issues}</div>
-                <div className="text-right">{formatAmount(item.planned_revenue_total)}</div>
-                <div className="text-right">{formatAmount(item.payroll_total)}</div>
-                <div className="text-right">{formatAmount(item.profit_total)}</div>
-                <div className="text-right">{item.completion_pct}%</div>
+              <div key={item.order_number} className="border-t border-border">
+                <article className="px-4 py-3 xl:hidden">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
+                      {item.order_number}
+                    </div>
+                    <div className="shrink-0 rounded-full bg-surface-subtle px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
+                      {item.completion_pct}%
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                      <div className="text-[10px] uppercase text-text-secondary">
+                        {copy("Total", "Всего", 'סה"כ')}
+                      </div>
+                      <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                        {item.total_doors}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                      <div className="text-[10px] uppercase text-text-secondary">
+                        {copy("Installed", "Установлено", "הותקן")}
+                      </div>
+                      <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                        {item.installed_doors}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                      <div className="text-[10px] uppercase text-text-secondary">
+                        {copy("Not Installed", "Не установлено", "לא הותקן")}
+                      </div>
+                      <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                        {item.not_installed_doors}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                      <div className="text-[10px] uppercase text-text-secondary">
+                        {copy("Issues", "Проблемы", "תקלות")}
+                      </div>
+                      <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                        {item.open_issues}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                      <div className="text-[10px] uppercase text-text-secondary">
+                        {copy("Payroll", "Payroll", "שכר")}
+                      </div>
+                      <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                        {formatAmount(item.payroll_total)}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                      <div className="text-[10px] uppercase text-text-secondary">
+                        {copy("Profit", "Прибыль", "רווח")}
+                      </div>
+                      <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                        {formatAmount(item.profit_total)}
+                      </div>
+                    </div>
+                    <div className="col-span-3 rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                      <div className="text-[10px] uppercase text-text-secondary">
+                        {copy("Planned", "План", "מתוכנן")}
+                      </div>
+                      <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                        {formatAmount(item.planned_revenue_total)}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <div className="hidden xl:grid grid-cols-[1fr_80px_90px_90px_80px_120px_120px_120px_110px] gap-3 px-4 py-3 text-[13px] items-center">
+                  <div className="font-medium text-text">
+                    {item.order_number}
+                  </div>
+                  <div className="text-end">{item.total_doors}</div>
+                  <div className="text-end">{item.installed_doors}</div>
+                  <div className="text-end">{item.not_installed_doors}</div>
+                  <div className="text-end">{item.open_issues}</div>
+                  <div className="text-end">
+                    {formatAmount(item.planned_revenue_total)}
+                  </div>
+                  <div className="text-end">
+                    {formatAmount(item.payroll_total)}
+                  </div>
+                  <div className="text-end">
+                    {formatAmount(item.profit_total)}
+                  </div>
+                  <div className="text-end">{item.completion_pct}%</div>
+                </div>
               </div>
             ))}
-          <div className="px-4 py-3 border-t border-border/70 flex items-center justify-between text-[12px]">
-            <div className="text-muted-foreground">
-              {copy("Total matched", "Всего совпадений", "סה\"כ התאמות")}: {orderNumbersKpiQuery.data?.total || 0}
+          <div className="px-4 py-3 border-t border-border flex items-center justify-between text-[12px]">
+            <div className="text-text-secondary">
+              {copy("Total matched", "Всего совпадений", 'סה"כ התאמות')}:{" "}
+              {orderNumbersKpiQuery.data?.total || 0}
             </div>
             <div className="flex items-center gap-2">
               <button
                 disabled={!orderNumbersKpiCanPrev}
                 onClick={() =>
-                  setOrderNumbersKpiOffset((x) => Math.max(0, x - KPI_PAGE_SIZE))
+                  setOrderNumbersKpiOffset((x) =>
+                    Math.max(0, x - KPI_PAGE_SIZE),
+                  )
                 }
-                className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
+                className="h-8 px-3 rounded-md border border-border bg-surface disabled:opacity-50"
               >
                 {tt("reports.prev")}
               </button>
               <button
                 disabled={!orderNumbersKpiCanNext}
-                onClick={() => setOrderNumbersKpiOffset((x) => x + KPI_PAGE_SIZE)}
-                className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
+                onClick={() =>
+                  setOrderNumbersKpiOffset((x) => x + KPI_PAGE_SIZE)
+                }
+                className="h-8 px-3 rounded-md border border-border bg-surface disabled:opacity-50"
               >
                 {tt("reports.next")}
               </button>
@@ -5154,16 +8014,18 @@ export default function ReportsPage() {
         </div>
 
         <div id="reports-delivery-risk" className="grid gap-3 md:grid-cols-4">
-          <div className="glass-card rounded-xl border border-border p-4">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
+          <div className={reportsPanelClass("p-4")}>
+            <div className="text-[11px] uppercase text-text-secondary mb-2">
               Delivery
             </div>
             {deliveryQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">{copy("Loading…", "Загрузка…", "טוען…")}</div>
+              <div className="text-[13px] text-text-secondary">
+                {copy("Loading…", "Загрузка…", "טוען…")}
+              </div>
             ) : (
               <div className="space-y-1 text-[13px]">
                 <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-accent" />
+                  <MessageSquare className="w-4 h-4 text-link" />
                   <span>WA pending: {delivery?.whatsapp_pending ?? 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -5171,7 +8033,7 @@ export default function ReportsPage() {
                   <span>WA delivered: {delivery?.whatsapp_delivered ?? 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-[hsl(var(--destructive))]" />
+                  <MessageSquare className="w-4 h-4 text-status-problem-fg" />
                   <span>WA failed: {delivery?.whatsapp_failed ?? 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -5179,28 +8041,33 @@ export default function ReportsPage() {
                   <span>Email sent: {delivery?.email_sent ?? 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-[hsl(var(--destructive))]" />
+                  <Mail className="w-4 h-4 text-status-problem-fg" />
                   <span>Email failed: {delivery?.email_failed ?? 0}</span>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="glass-card rounded-xl border border-border p-4">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
+          <div className={reportsPanelClass("p-4")}>
+            <div className="text-[11px] uppercase text-text-secondary mb-2">
               Outbox Queue
             </div>
             {outboxSummaryQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">{copy("Loading…", "Загрузка…", "טוען…")}</div>
+              <div className="text-[13px] text-text-secondary">
+                {copy("Loading…", "Загрузка…", "טוען…")}
+              </div>
             ) : (
               <div className="space-y-1 text-[13px]">
                 <div>Total: {outboxSummary?.total ?? 0}</div>
                 <div>Failed total: {outboxSummary?.failed_total ?? 0}</div>
-                <div>Pending overdue &gt;15m: {outboxSummary?.pending_overdue_15m ?? 0}</div>
-                <div className="text-muted-foreground">
+                <div>
+                  Pending overdue &gt;15m:{" "}
+                  {outboxSummary?.pending_overdue_15m ?? 0}
+                </div>
+                <div className="text-text-secondary">
                   Channels: {compactMap(outboxSummary?.by_channel)}
                 </div>
-                <div className="text-muted-foreground">
+                <div className="text-text-secondary">
                   Status: {compactMap(outboxSummary?.by_status)}
                 </div>
               </div>
@@ -5209,30 +8076,32 @@ export default function ReportsPage() {
 
           <div
             id="reports-delivery-scope"
-            className="glass-card rounded-xl border border-border p-4 md:col-span-2"
+            className={reportsPanelClass("p-4 md:col-span-2")}
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
+                <div className="text-[11px] uppercase text-text-secondary mb-2">
                   Delivery Scope
                 </div>
                 <div className="space-y-1 text-[13px]">
                   <div>
                     Channel:{" "}
-                    <span className="font-medium text-card-foreground">
+                    <span className="font-medium text-text">
                       {scopedDeliveryChannel || "all channels"}
                     </span>
                   </div>
                   <div>
                     Webhook provider:{" "}
-                    <span className="font-medium text-card-foreground">
+                    <span className="font-medium text-text">
                       {scopedWebhookProvider || "all providers"}
                     </span>
                   </div>
                   {scopedOutboxId ? (
                     <div>
                       Outbox:{" "}
-                      <span className="font-medium text-card-foreground">{scopedOutboxId}</span>
+                      <span className="font-medium text-text">
+                        {scopedOutboxId}
+                      </span>
                     </div>
                   ) : null}
                 </div>
@@ -5242,27 +8111,30 @@ export default function ReportsPage() {
                   onClick={() => {
                     const params = new URLSearchParams();
                     params.set("focus", "delivery");
-                    params.set("ops_preset", activeOpsPreset || "delivery-risk");
+                    params.set(
+                      "ops_preset",
+                      activeOpsPreset || "delivery-risk",
+                    );
                     if (scopedOutboxId) {
                       params.set("outbox_id", scopedOutboxId);
                     }
                     router.push(`/reports?${params.toString()}`);
                   }}
-                  className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
+                  className="h-8 px-3 rounded-md border border-border bg-surface text-[12px]"
                 >
                   Clear delivery scope
                 </button>
               )}
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <div className="rounded-lg border border-border/70 bg-background/60 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="rounded-lg border border-border bg-surface-subtle p-3">
+                <div className="text-[11px] uppercase text-text-secondary">
                   {t("reports.failedOutboxLane")}
                 </div>
-                <div className="mt-2 text-[13px] text-card-foreground">
+                <div className="mt-2 text-[13px] text-text">
                   {t("reports.failedMessagesInCurrentScope").replace(
                     "{count}",
-                    String(failedItems.length)
+                    String(failedItems.length),
                   )}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -5273,10 +8145,10 @@ export default function ReportsPage() {
                           actionable: true,
                           deliveryChannel: scopedDeliveryChannel || undefined,
                           webhookProvider: scopedWebhookProvider || undefined,
-                        })
+                        }),
                       )
                     }
-                    className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
+                    className="h-8 px-3 rounded-md border border-border bg-surface text-[12px]"
                   >
                     {t("reports.openScopedOps")}
                   </button>
@@ -5288,10 +8160,10 @@ export default function ReportsPage() {
                             actionable: true,
                             deliveryChannel: scopedDeliveryChannel || undefined,
                             webhookProvider: scopedWebhookProvider || undefined,
-                          })
+                          }),
                         )
                       }
-                      className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
+                      className="h-8 px-3 rounded-md border border-border bg-surface text-[12px]"
                     >
                       {t("reports.continueRecovery")}
                     </button>
@@ -5299,24 +8171,26 @@ export default function ReportsPage() {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-border/70 bg-background/60 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="rounded-lg border border-border bg-surface-subtle p-3">
+                <div className="text-[11px] uppercase text-text-secondary">
                   {t("reports.webhookLane")}
                 </div>
                 {webhookSignalsQuery.isLoading ? (
-                  <div className="mt-2 text-[13px] text-muted-foreground">{t("reports.loadingWebhookScope")}</div>
+                  <div className="mt-2 text-[13px] text-text-secondary">
+                    {t("reports.loadingWebhookScope")}
+                  </div>
                 ) : scopedWebhookSignals.length === 0 ? (
-                  <div className="mt-2 text-[13px] text-muted-foreground">
+                  <div className="mt-2 text-[13px] text-text-secondary">
                     {t("reports.noWebhookSignalsCurrentScope")}
                   </div>
                 ) : (
                   <div className="mt-2 space-y-2">
                     {scopedWebhookSignals.slice(0, 3).map((item) => (
                       <div key={item.id} className="text-[13px]">
-                        <div className="font-medium text-card-foreground">
+                        <div className="font-medium text-text">
                           {item.provider} | {item.result}
                         </div>
-                        <div className="text-muted-foreground">
+                        <div className="text-text-secondary">
                           {item.event_type}
                           {item.status ? ` | status ${item.status}` : ""}
                           {item.error ? ` | ${item.error}` : ""}
@@ -5327,14 +8201,16 @@ export default function ReportsPage() {
                 )}
               </div>
 
-              <div className="rounded-lg border border-border/70 bg-background/60 p-3 md:col-span-2">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="rounded-lg border border-border bg-surface-subtle p-3 md:col-span-2">
+                <div className="text-[11px] uppercase text-text-secondary">
                   {t("reports.recoveryTrail")}
                 </div>
                 {retryAuditsQuery.isLoading ? (
-                  <div className="mt-2 text-[13px] text-muted-foreground">{t("reports.loadingRetryAuditTrail")}</div>
+                  <div className="mt-2 text-[13px] text-text-secondary">
+                    {t("reports.loadingRetryAuditTrail")}
+                  </div>
                 ) : scopedRetryAuditItems.length === 0 ? (
-                  <div className="mt-2 text-[13px] text-muted-foreground">
+                  <div className="mt-2 text-[13px] text-text-secondary">
                     {scopedOutboxId
                       ? t("reports.noRecoveryActionsForOutbox")
                       : t("reports.noDeliveryRecoveryActionsYet")}
@@ -5344,17 +8220,20 @@ export default function ReportsPage() {
                     {scopedRetryAuditItems.slice(0, 3).map((item) => (
                       <div
                         key={item.id}
-                        className="rounded-md border border-border/60 bg-card/60 px-3 py-2 text-[13px]"
+                        className="rounded-md border border-border-subtle bg-surface px-3 py-2 text-[13px]"
                       >
-                        <div className="font-medium text-card-foreground">
+                        <div className="font-medium text-text">
                           Outbox {item.outbox_id}
                         </div>
-                        <div className="text-muted-foreground">
-                          {formatDateTime(item.created_at)} | actor {item.actor_user_id}
+                        <div className="text-text-secondary">
+                          {formatDateTime(item.created_at)} | actor{" "}
+                          {item.actor_user_id}
                         </div>
-                        <div className="text-muted-foreground">
-                          {item.before_status || "unknown"} {"->"} {item.after_status || "unknown"}
-                          {item.before_delivery_status || item.after_delivery_status
+                        <div className="text-text-secondary">
+                          {item.before_status || "unknown"} {"->"}{" "}
+                          {item.after_status || "unknown"}
+                          {item.before_delivery_status ||
+                          item.after_delivery_status
                             ? ` | delivery ${item.before_delivery_status || "unknown"} -> ${item.after_delivery_status || "unknown"}`
                             : ""}
                         </div>
@@ -5364,12 +8243,14 @@ export default function ReportsPage() {
                               router.push(
                                 buildOperationsHref({
                                   actionable: true,
-                                  deliveryChannel: scopedDeliveryChannel || undefined,
-                                  webhookProvider: scopedWebhookProvider || undefined,
-                                })
+                                  deliveryChannel:
+                                    scopedDeliveryChannel || undefined,
+                                  webhookProvider:
+                                    scopedWebhookProvider || undefined,
+                                }),
                               )
                             }
-                            className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
+                            className="h-8 px-3 rounded-md border border-border bg-surface text-[12px]"
                           >
                             {t("reports.openRecoveryLane")}
                           </button>
@@ -5378,12 +8259,14 @@ export default function ReportsPage() {
                               router.push(
                                 buildOperationsHref({
                                   actionable: true,
-                                  deliveryChannel: scopedDeliveryChannel || undefined,
-                                  webhookProvider: scopedWebhookProvider || undefined,
-                                })
+                                  deliveryChannel:
+                                    scopedDeliveryChannel || undefined,
+                                  webhookProvider:
+                                    scopedWebhookProvider || undefined,
+                                }),
                               )
                             }
-                            className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
+                            className="h-8 px-3 rounded-md border border-border bg-surface text-[12px]"
                           >
                             {t("reports.continueInOps")}
                           </button>
@@ -5396,39 +8279,49 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <div className="glass-card rounded-xl border border-border p-4">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
+          <div className={reportsPanelClass("p-4")}>
+            <div className="text-[11px] uppercase text-text-secondary mb-2">
               {t("reports.catalogAudit")}
             </div>
             {auditCatalogsQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">{t("reports.loading")}</div>
+              <div className="text-[13px] text-text-secondary">
+                {t("reports.loading")}
+              </div>
             ) : (
               <div className="space-y-1 text-[13px]">
-                <div>{t("reports.totalChanges")}: {auditSummary?.total ?? 0}</div>
-                <div className="text-muted-foreground">
+                <div>
+                  {t("reports.totalChanges")}: {auditSummary?.total ?? 0}
+                </div>
+                <div className="text-text-secondary">
                   {t("reports.entities")}: {compactMap(auditSummary?.by_entity)}
                 </div>
-                <div className="text-muted-foreground">
+                <div className="text-text-secondary">
                   {t("reports.actions")}: {compactMap(auditSummary?.by_action)}
                 </div>
               </div>
             )}
           </div>
 
-          <div className="glass-card rounded-xl border border-border p-4">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
+          <div className={reportsPanelClass("p-4")}>
+            <div className="text-[11px] uppercase text-text-secondary mb-2">
               {t("reports.issueAudit")}
             </div>
             {issueAuditQuery.isLoading ? (
-              <div className="text-[13px] text-muted-foreground">{t("reports.loading")}</div>
+              <div className="text-[13px] text-text-secondary">
+                {t("reports.loading")}
+              </div>
             ) : (
               <div className="space-y-1 text-[13px]">
-                <div>{t("reports.totalChanges")}: {issueAuditSummary?.total ?? 0}</div>
-                <div className="text-muted-foreground">
-                  {t("reports.entities")}: {compactMap(issueAuditSummary?.by_entity)}
+                <div>
+                  {t("reports.totalChanges")}: {issueAuditSummary?.total ?? 0}
                 </div>
-                <div className="text-muted-foreground">
-                  {t("reports.actions")}: {compactMap(issueAuditSummary?.by_action)}
+                <div className="text-text-secondary">
+                  {t("reports.entities")}:{" "}
+                  {compactMap(issueAuditSummary?.by_entity)}
+                </div>
+                <div className="text-text-secondary">
+                  {t("reports.actions")}:{" "}
+                  {compactMap(issueAuditSummary?.by_action)}
                 </div>
               </div>
             )}
@@ -5437,53 +8330,96 @@ export default function ReportsPage() {
 
         <div
           id="reports-failed-outbox"
-          className="glass-card rounded-xl overflow-x-auto border border-border"
+          className={reportsPanelClass("overflow-hidden")}
         >
-          <div className="px-4 py-3 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
+          <div className="px-4 py-3 border-b border-border bg-surface-subtle text-[11px] uppercase text-text-secondary">
             {t("reports.failedOutboxQueue")}
           </div>
           {failedOutboxQuery.isLoading && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {t("reports.loadingFailedMessages")}
             </div>
           )}
           {!failedOutboxQuery.isLoading && failedItems.length === 0 && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {scopedDeliveryChannel
-                ? t("reports.noFailedOutboxMessagesFor").replace("{scope}", scopedDeliveryChannel)
+                ? t("reports.noFailedOutboxMessagesFor").replace(
+                    "{scope}",
+                    scopedDeliveryChannel,
+                  )
                 : t("reports.noFailedOutboxMessages")}
             </div>
           )}
           {!failedOutboxQuery.isLoading &&
             failedItems.map((item) => (
-              <div
-                key={item.id}
-                className="grid min-w-[860px] grid-cols-[120px_120px_120px_160px_1fr_120px] gap-3 px-4 py-3 border-t border-border/70 text-[13px] items-center"
-              >
-                <div className="font-medium">{item.channel}</div>
-                <div>{item.status}</div>
-                <div>{item.delivery_status}</div>
-                <div className="text-muted-foreground">
-                  {item.attempts}/{item.max_attempts}
+              <div key={item.id} className="border-t border-border">
+                <article className="px-4 py-3 md:hidden">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-semibold leading-5 text-text">
+                        {item.channel}
+                      </div>
+                      <div className="mt-1 text-[11px] leading-4 text-text-secondary">
+                        {item.status} | {item.delivery_status}
+                      </div>
+                    </div>
+                    <div className="shrink-0 rounded-full bg-surface-subtle px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
+                      {item.attempts}/{item.max_attempts}
+                    </div>
+                  </div>
+                  <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-2.5 py-2 text-[12px] leading-5 text-text-secondary">
+                    {item.last_error ||
+                      copy(
+                        "No error payload",
+                        "Нет payload ошибки",
+                        "אין payload לשגיאה",
+                      )}
+                  </div>
+                  <button
+                    onClick={() => retryMutation.mutate(item.id)}
+                    disabled={
+                      !canRunPrivilegedActions || retryMutation.isPending
+                    }
+                    title={privilegedActionHint}
+                    className="mt-3 h-8 px-3 rounded-md border border-border bg-surface text-[12px] inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    {copy("Retry", "Повторить", "נסה שוב")}
+                  </button>
+                </article>
+                <div className="hidden md:grid grid-cols-[120px_120px_120px_160px_1fr_120px] gap-3 px-4 py-3 text-[13px] items-center">
+                  <div className="font-medium">{item.channel}</div>
+                  <div>{item.status}</div>
+                  <div>{item.delivery_status}</div>
+                  <div className="text-text-secondary">
+                    {item.attempts}/{item.max_attempts}
+                  </div>
+                  <div className="text-text-secondary truncate">
+                    {item.last_error ||
+                      copy(
+                        "No error payload",
+                        "Нет payload ошибки",
+                        "אין payload לשגיאה",
+                      )}
+                  </div>
+                  <button
+                    onClick={() => retryMutation.mutate(item.id)}
+                    disabled={
+                      !canRunPrivilegedActions || retryMutation.isPending
+                    }
+                    title={privilegedActionHint}
+                    className="h-8 px-3 rounded-md border border-border bg-surface text-[12px] inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    {copy("Retry", "Повторить", "נסה שוב")}
+                  </button>
                 </div>
-                <div className="text-muted-foreground truncate">
-                  {item.last_error || copy("No error payload", "Нет payload ошибки", "אין payload לשגיאה")}
-                </div>
-                <button
-                  onClick={() => retryMutation.mutate(item.id)}
-                  disabled={!canRunPrivilegedActions || retryMutation.isPending}
-                  title={privilegedActionHint}
-                  className="h-8 px-3 rounded-md border border-border bg-card text-[12px] inline-flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  {copy("Retry", "Повторить", "נסה שוב")}
-                </button>
               </div>
             ))}
         </div>
 
-        <div className="glass-card rounded-xl overflow-x-auto border border-border">
-          <div className="grid min-w-[720px] grid-cols-[180px_130px_130px_130px_1fr] gap-3 px-4 py-3 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
+        <div className={reportsPanelClass("overflow-hidden")}>
+          <div className="hidden md:grid grid-cols-[180px_130px_130px_130px_1fr] gap-3 px-4 py-3 border-b border-border bg-surface-subtle text-[11px] uppercase text-text-secondary">
             <span>{copy("Time", "Время", "זמן")}</span>
             <span>{copy("Level", "Уровень", "רמה")}</span>
             <span>{copy("Metric", "Метрика", "מדד")}</span>
@@ -5492,14 +8428,18 @@ export default function ReportsPage() {
           </div>
 
           {alertsQuery.isLoading && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {copy("Loading alerts…", "Загружаем алерты…", "טוען התראות…")}
             </div>
           )}
 
           {!alertsQuery.isLoading && items.length === 0 && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              {copy("No limit alerts yet.", "Алертов по лимитам пока нет.", "אין עדיין התראות מגבלה.")}
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
+              {copy(
+                "No limit alerts yet.",
+                "Алертов по лимитам пока нет.",
+                "אין עדיין התראות מגבלה.",
+              )}
             </div>
           )}
 
@@ -5507,67 +8447,143 @@ export default function ReportsPage() {
             items.map((item) => {
               const isDanger = item.level === "DANGER";
               const levelClass = isDanger
-                ? "text-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.12)] border-[hsl(var(--destructive)/0.25)]"
-                : "text-[hsl(var(--warning-foreground))] bg-[hsl(var(--warning)/0.12)] border-[hsl(var(--warning)/0.28)]";
+                ? "text-status-problem-fg bg-status-problem-bg border-status-problem-border"
+                : "text-status-warning-fg bg-status-warning-bg border-status-warning-border";
               return (
-                <div
-                  key={item.id}
-                  className={cn(
-                    "grid grid-cols-[180px_130px_130px_130px_1fr] gap-3 px-4 py-3 border-t border-border/70 text-[13px] row-hover",
-                    item.is_unread && "bg-[hsl(var(--accent)/0.06)]"
-                  )}
-                >
-                  <div className="text-muted-foreground">{formatDateTime(item.created_at)}</div>
-                  <div>
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[11px] font-semibold",
-                        levelClass
-                      )}
-                    >
-                      {isDanger ? (
-                        <ShieldAlert className="w-3.5 h-3.5" />
-                      ) : (
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                      )}
-                      {item.level}
-                    </span>
-                  </div>
-                  <div className="font-medium text-card-foreground capitalize">
-                    {metricLabel(item.metric)}
-                  </div>
-                  <div className="text-muted-foreground">
-                    {item.current ?? "-"} / {item.max ?? "-"}
-                    {item.utilization_pct !== null ? ` (${item.utilization_pct}%)` : ""}
-                  </div>
-                  <div className="text-card-foreground">
-                    <span className="font-medium">{item.action}</span>
-                    {item.plan_code ? (
-                      <span className="text-muted-foreground"> | plan {item.plan_code}</span>
-                    ) : null}
-                    {item.is_unread ? (
-                      <span className="ml-2 inline-flex w-2 h-2 rounded-full bg-accent align-middle" />
-                    ) : null}
+                <div key={item.id} className="border-t border-border">
+                  <article
+                    className={cn(
+                      "px-4 py-3 md:hidden",
+                      item.is_unread && "bg-[var(--dmx-accent-tint)]",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold leading-5 text-text capitalize">
+                          {metricLabel(item.metric)}
+                        </div>
+                        <div className="mt-1 text-[11px] leading-4 text-text-secondary">
+                          {formatDateTime(item.created_at)}
+                        </div>
+                      </div>
+                      <span
+                        className={cn(
+                          "inline-flex shrink-0 items-center gap-1.5 px-2 py-1 rounded-md border text-[11px] font-semibold",
+                          levelClass,
+                        )}
+                      >
+                        {isDanger ? (
+                          <ShieldAlert className="w-3.5 h-3.5" />
+                        ) : (
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                        )}
+                        {item.level}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Usage", "Использование", "שימוש")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {item.current ?? "-"} / {item.max ?? "-"}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          %
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {item.utilization_pct !== null
+                            ? `${item.utilization_pct}%`
+                            : "-"}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 text-[12px] leading-5 text-text">
+                      <span className="font-medium">{item.action}</span>
+                      {item.plan_code ? (
+                        <span className="text-text-secondary">
+                          {" "}
+                          | {copy("plan", "план", "תוכנית")} {item.plan_code}
+                        </span>
+                      ) : null}
+                    </div>
+                  </article>
+                  <div
+                    className={cn(
+                      "hidden md:grid grid-cols-[180px_130px_130px_130px_1fr] gap-3 px-4 py-3 text-[13px] row-hover",
+                      item.is_unread && "bg-[var(--dmx-accent-tint)]",
+                    )}
+                  >
+                    <div className="text-text-secondary">
+                      {formatDateTime(item.created_at)}
+                    </div>
+                    <div>
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[11px] font-semibold",
+                          levelClass,
+                        )}
+                      >
+                        {isDanger ? (
+                          <ShieldAlert className="w-3.5 h-3.5" />
+                        ) : (
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                        )}
+                        {item.level}
+                      </span>
+                    </div>
+                    <div className="font-medium text-text capitalize">
+                      {metricLabel(item.metric)}
+                    </div>
+                    <div className="text-text-secondary">
+                      {item.current ?? "-"} / {item.max ?? "-"}
+                      {item.utilization_pct !== null
+                        ? ` (${item.utilization_pct}%)`
+                        : ""}
+                    </div>
+                    <div className="text-text">
+                      <span className="font-medium">{item.action}</span>
+                      {item.plan_code ? (
+                        <span className="text-text-secondary">
+                          {" "}
+                          | {copy("plan", "план", "תוכנית")} {item.plan_code}
+                        </span>
+                      ) : null}
+                      {item.is_unread ? (
+                        <span className="ml-2 inline-flex w-2 h-2 rounded-full bg-accent align-middle" />
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               );
             })}
         </div>
 
-        <div className="glass-card rounded-xl overflow-x-auto border border-border">
-          <div className="px-4 py-3 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
-            {copy("Catalog Audit Report", "Аудит справочников", "דוח ביקורת קטלוג")}
+        <div
+          id="reports-audit-catalogs"
+          className={reportsPanelClass("overflow-hidden")}
+        >
+          <div className="px-4 py-3 border-b border-border bg-surface-subtle text-[11px] uppercase text-text-secondary">
+            {copy(
+              "Catalog Audit Report",
+              "Аудит справочников",
+              "דוח ביקורת קטלוג",
+            )}
           </div>
-          <div className="px-4 py-3 border-b border-border/70 grid gap-2 md:grid-cols-[180px_220px_150px_150px_auto] items-center">
+          <div className="px-4 py-3 border-b border-border grid gap-2 md:grid-cols-[180px_220px_150px_150px_auto] items-center">
             <select
               value={auditEntityType}
               onChange={(e) => {
                 setAuditEntityType(e.target.value);
                 setAuditOffset(0);
               }}
-              className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+              className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px]"
             >
-              <option value="">{copy("All entities", "Все сущности", "כל הישויות")}</option>
+              <option value="">
+                {copy("All entities", "Все сущности", "כל הישויות")}
+              </option>
               {AUDIT_ENTITY_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -5580,9 +8596,11 @@ export default function ReportsPage() {
                 setAuditAction(e.target.value);
                 setAuditOffset(0);
               }}
-              className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+              className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px]"
             >
-              <option value="">{copy("All actions", "Все действия", "כל הפעולות")}</option>
+              <option value="">
+                {copy("All actions", "Все действия", "כל הפעולות")}
+              </option>
               {AUDIT_ACTION_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -5596,7 +8614,7 @@ export default function ReportsPage() {
                 setAuditOffset(0);
               }}
               type="date"
-              className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+              className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px]"
             />
             <input
               value={auditDateTo}
@@ -5605,16 +8623,16 @@ export default function ReportsPage() {
                 setAuditOffset(0);
               }}
               type="date"
-              className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+              className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px]"
             />
             <div className="flex flex-wrap items-center justify-end gap-2">
               <button
-                onClick={() =>
-                  exportAuditMutation.mutate()
+                onClick={() => exportAuditMutation.mutate()}
+                disabled={
+                  !canRunPrivilegedActions || exportAuditMutation.isPending
                 }
-                disabled={!canRunPrivilegedActions || exportAuditMutation.isPending}
                 title={privilegedActionHint}
-                className="h-9 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
+                className="h-9 px-3 rounded-md border border-border bg-surface text-[12px] disabled:opacity-50"
               >
                 {copy("Export CSV", "Экспорт CSV", "ייצוא CSV")}
               </button>
@@ -5626,57 +8644,88 @@ export default function ReportsPage() {
                   setAuditDateTo("");
                   setAuditOffset(0);
                 }}
-                className="h-9 px-3 rounded-md border border-border bg-card text-[12px]"
+                className="h-9 px-3 rounded-md border border-border bg-surface text-[12px]"
               >
                 {copy("Reset", "Сбросить", "איפוס")}
               </button>
             </div>
           </div>
 
-          <div className="grid min-w-[640px] grid-cols-[170px_120px_1fr_1fr] gap-3 px-4 py-3 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
+          <div className="hidden md:grid grid-cols-[170px_120px_1fr_1fr] gap-3 px-4 py-3 border-b border-border text-[11px] uppercase text-text-secondary">
             <span>{copy("Time", "Время", "זמן")}</span>
             <span>{copy("Entity", "Сущность", "ישות")}</span>
             <span>{copy("Action", "Действие", "פעולה")}</span>
             <span>{copy("Reason", "Причина", "סיבה")}</span>
           </div>
           {auditCatalogsQuery.isLoading && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
               {copy("Loading audit…", "Загружаем аудит…", "טוען audit…")}
             </div>
           )}
           {!auditCatalogsQuery.isLoading && auditItems.length === 0 && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              {copy("No catalog audit entries.", "Записей аудита справочников нет.", "אין רשומות ביקורת קטלוג.")}
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
+              {copy(
+                "No catalog audit entries.",
+                "Записей аудита справочников нет.",
+                "אין רשומות ביקורת קטלוג.",
+              )}
             </div>
           )}
           {!auditCatalogsQuery.isLoading &&
             auditItems.map((item) => (
-              <div
-                key={item.id}
-                className="grid min-w-[640px] grid-cols-[170px_120px_1fr_1fr] gap-3 px-4 py-3 border-t border-border/70 text-[13px] items-center"
-              >
-                <div className="text-muted-foreground">{formatDateTime(item.created_at)}</div>
-                <div className="font-medium">{item.entity_type}</div>
-                <div>{item.action}</div>
-                <div className="text-muted-foreground">{item.reason || "-"}</div>
+              <div key={item.id} className="border-t border-border">
+                <article className="px-4 py-3 md:hidden">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
+                      {item.entity_type}
+                    </div>
+                    <div className="shrink-0 rounded-full bg-surface-subtle px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
+                      {formatDateTime(item.created_at)}
+                    </div>
+                  </div>
+                  <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                    <div className="text-[10px] uppercase text-text-secondary">
+                      {copy("Action", "Действие", "פעולה")}
+                    </div>
+                    <div className="mt-1 text-[13px] font-medium text-text">
+                      {item.action}
+                    </div>
+                  </div>
+                  <div className="mt-2 text-[12px] leading-5 text-text-secondary">
+                    {item.reason || "-"}
+                  </div>
+                </article>
+                <div className="hidden md:grid grid-cols-[170px_120px_1fr_1fr] gap-3 px-4 py-3 text-[13px] items-center">
+                  <div className="text-text-secondary">
+                    {formatDateTime(item.created_at)}
+                  </div>
+                  <div className="font-medium">{item.entity_type}</div>
+                  <div>{item.action}</div>
+                  <div className="text-text-secondary">
+                    {item.reason || "-"}
+                  </div>
+                </div>
               </div>
             ))}
-          <div className="px-4 py-3 border-t border-border/70 flex flex-wrap items-center justify-between gap-2 text-[12px]">
-            <div className="text-muted-foreground">
-              {copy("Total matched", "Всего совпадений", "סה\"כ התאמות")}: {auditSummary?.total || 0}
+          <div className="px-4 py-3 border-t border-border flex flex-wrap items-center justify-between gap-2 text-[12px]">
+            <div className="text-text-secondary">
+              {copy("Total matched", "Всего совпадений", 'סה"כ התאמות')}:{" "}
+              {auditSummary?.total || 0}
             </div>
             <div className="flex items-center gap-2">
               <button
                 disabled={!auditCanPrev}
-                onClick={() => setAuditOffset((x) => Math.max(0, x - AUDIT_PREVIEW_LIMIT))}
-                className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
+                onClick={() =>
+                  setAuditOffset((x) => Math.max(0, x - AUDIT_PREVIEW_LIMIT))
+                }
+                className="h-8 px-3 rounded-md border border-border bg-surface disabled:opacity-50"
               >
                 {tt("reports.prev")}
               </button>
               <button
                 disabled={!auditCanNext}
                 onClick={() => setAuditOffset((x) => x + AUDIT_PREVIEW_LIMIT)}
-                className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
+                className="h-8 px-3 rounded-md border border-border bg-surface disabled:opacity-50"
               >
                 {tt("reports.next")}
               </button>
@@ -5684,20 +8733,25 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="glass-card rounded-xl overflow-x-auto border border-border">
-          <div className="px-4 py-3 border-b border-border bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
+        <div
+          id="reports-issue-audit"
+          className={reportsPanelClass("overflow-hidden")}
+        >
+          <div className="px-4 py-3 border-b border-border bg-surface-subtle text-[11px] uppercase text-text-secondary">
             {copy("Issue Audit Report", "Аудит проблем", "דוח ביקורת תקלות")}
           </div>
-          <div className="px-4 py-3 border-b border-border/70 grid gap-2 md:grid-cols-[220px_240px_150px_150px_auto] items-center">
+          <div className="px-4 py-3 border-b border-border grid gap-2 md:grid-cols-[220px_240px_150px_150px_auto] items-center">
             <select
               value={issueAuditAction}
               onChange={(e) => {
                 setIssueAuditAction(e.target.value);
                 setIssueAuditOffset(0);
               }}
-              className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+              className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px]"
             >
-              <option value="">{copy("All actions", "Все действия", "כל הפעולות")}</option>
+              <option value="">
+                {copy("All actions", "Все действия", "כל הפעולות")}
+              </option>
               {ISSUE_AUDIT_ACTION_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -5711,7 +8765,7 @@ export default function ReportsPage() {
                 setIssueAuditOffset(0);
               }}
               placeholder={copy("Issue UUID", "UUID проблемы", "UUID תקלה")}
-              className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+              className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px]"
             />
             <input
               value={issueAuditDateFrom}
@@ -5720,7 +8774,7 @@ export default function ReportsPage() {
                 setIssueAuditOffset(0);
               }}
               type="date"
-              className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+              className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px]"
             />
             <input
               value={issueAuditDateTo}
@@ -5729,14 +8783,16 @@ export default function ReportsPage() {
                 setIssueAuditOffset(0);
               }}
               type="date"
-              className="h-9 rounded-md border border-border bg-card px-2 text-[13px]"
+              className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px]"
             />
             <div className="flex flex-wrap items-center justify-end gap-2">
               <button
                 onClick={() => exportIssueAuditMutation.mutate()}
-                disabled={!canRunPrivilegedActions || exportIssueAuditMutation.isPending}
+                disabled={
+                  !canRunPrivilegedActions || exportIssueAuditMutation.isPending
+                }
                 title={privilegedActionHint}
-                className="h-9 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
+                className="h-9 px-3 rounded-md border border-border bg-surface text-[12px] disabled:opacity-50"
               >
                 {copy("Export CSV", "Экспорт CSV", "ייצוא CSV")}
               </button>
@@ -5748,36 +8804,47 @@ export default function ReportsPage() {
                   setIssueAuditDateTo("");
                   setIssueAuditOffset(0);
                 }}
-                className="h-9 px-3 rounded-md border border-border bg-card text-[12px]"
+                className="h-9 px-3 rounded-md border border-border bg-surface text-[12px]"
               >
                 {copy("Reset", "Сбросить", "איפוס")}
               </button>
             </div>
           </div>
-          {issueAuditIssueIdTrimmed.length > 0 && !issueAuditIssueIdNormalized ? (
-            <div className="px-4 pt-2 text-[12px] text-[hsl(var(--warning-foreground))]">
+          {issueAuditIssueIdTrimmed.length > 0 &&
+          !issueAuditIssueIdNormalized ? (
+            <div className="px-4 pt-2 text-[12px] text-status-warning-fg">
               {copy(
                 "Issue UUID format is invalid, filter is not applied.",
                 "Формат UUID проблемы неверный, фильтр не применяется.",
-                "פורמט UUID התקלה לא תקין, המסנן לא הוחל."
+                "פורמט UUID התקלה לא תקין, המסנן לא הוחל.",
               )}
             </div>
           ) : null}
 
-          <div className="grid min-w-[760px] grid-cols-[170px_1fr_1fr_220px] gap-3 px-4 py-3 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
+          <div className="hidden md:grid grid-cols-[170px_1fr_1fr_220px] gap-3 px-4 py-3 border-b border-border text-[11px] uppercase text-text-secondary">
             <span>{copy("Time", "Время", "זמן")}</span>
             <span>{copy("Action", "Действие", "פעולה")}</span>
-            <span>{copy("Changed fields", "Изменённые поля", "שדות שהשתנו")}</span>
+            <span>
+              {copy("Changed fields", "Изменённые поля", "שדות שהשתנו")}
+            </span>
             <span>{copy("Controls", "Управление", "פקדים")}</span>
           </div>
           {issueAuditQuery.isLoading && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              {copy("Loading issue audit…", "Загружаем аудит проблем…", "טוען audit תקלות…")}
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
+              {copy(
+                "Loading issue audit…",
+                "Загружаем аудит проблем…",
+                "טוען audit תקלות…",
+              )}
             </div>
           )}
           {!issueAuditQuery.isLoading && issueAuditItems.length === 0 && (
-            <div className="px-4 py-6 text-[13px] text-muted-foreground">
-              {copy("No issue audit entries.", "Записей аудита проблем нет.", "אין רשומות ביקורת תקלות.")}
+            <div className="px-4 py-6 text-[13px] text-text-secondary">
+              {copy(
+                "No issue audit entries.",
+                "Записей аудита проблем нет.",
+                "אין רשומות ביקורת תקלות.",
+              )}
             </div>
           )}
           {!issueAuditQuery.isLoading &&
@@ -5785,32 +8852,103 @@ export default function ReportsPage() {
               const changedFields = changedFieldKeys(item.before, item.after);
               const isExpanded = expandedIssueAuditId === item.id;
               return (
-                <div key={item.id} className="border-t border-border/70">
-                  <div className="grid min-w-[760px] grid-cols-[170px_1fr_1fr_220px] gap-3 px-4 py-3 text-[13px] items-start">
-                    <div className="text-muted-foreground">{formatDateTime(item.created_at)}</div>
-                    <div>
-                      <div className="font-medium">{item.action}</div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5">
-                        {item.reason || copy("No reason", "Без причины", "ללא סיבה")}
+                <div key={item.id} className="border-t border-border">
+                  <article className="px-4 py-3 md:hidden">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold leading-5 text-text">
+                          {item.action}
+                        </div>
+                        <div className="mt-1 text-[11px] leading-4 text-text-secondary">
+                          {formatDateTime(item.created_at)}
+                        </div>
                       </div>
+                      <button
+                        onClick={() =>
+                          setExpandedIssueAuditId((current) =>
+                            current === item.id ? null : item.id,
+                          )
+                        }
+                        className="h-8 shrink-0 rounded-md border border-border bg-surface px-3 text-[12px]"
+                      >
+                        {isExpanded
+                          ? copy("Hide Diff", "Скрыть diff", "הסתר diff")
+                          : copy("Show Diff", "Показать diff", "הצג diff")}
+                      </button>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="mt-2 text-[12px] leading-5 text-text-secondary">
+                      {item.reason ||
+                        copy("No reason", "Без причины", "ללא סיבה")}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
                       {changedFields.length === 0 ? (
-                        <span className="text-[12px] text-muted-foreground">
-                          {copy("No detected changes", "Изменений не обнаружено", "לא זוהו שינויים")}
+                        <span className="text-[12px] text-text-secondary">
+                          {copy(
+                            "No detected changes",
+                            "Изменений не обнаружено",
+                            "לא זוהו שינויים",
+                          )}
                         </span>
                       ) : (
                         changedFields.slice(0, 4).map((field) => (
                           <span
                             key={field}
-                            className="inline-flex h-6 items-center rounded-md border border-border bg-background px-2 text-[11px]"
+                            className="inline-flex h-6 items-center rounded-md border border-border bg-surface px-2 text-[11px]"
                           >
                             {field}
                           </span>
                         ))
                       )}
                       {changedFields.length > 4 ? (
-                        <span className="inline-flex h-6 items-center rounded-md border border-border bg-background px-2 text-[11px] text-muted-foreground">
+                        <span className="inline-flex h-6 items-center rounded-md border border-border bg-surface px-2 text-[11px] text-text-secondary">
+                          +{changedFields.length - 4}
+                        </span>
+                      ) : null}
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (item.entity_id) {
+                          router.push(`/issues?issue_id=${item.entity_id}`);
+                        }
+                      }}
+                      disabled={!item.entity_id}
+                      className="mt-3 h-8 rounded-md border border-border bg-surface px-3 text-[12px] disabled:opacity-50"
+                    >
+                      {copy("Open Issue", "Открыть проблему", "פתח תקלה")}
+                    </button>
+                  </article>
+                  <div className="hidden md:grid grid-cols-[170px_1fr_1fr_220px] gap-3 px-4 py-3 text-[13px] items-start">
+                    <div className="text-text-secondary">
+                      {formatDateTime(item.created_at)}
+                    </div>
+                    <div>
+                      <div className="font-medium">{item.action}</div>
+                      <div className="text-[11px] text-text-secondary mt-0.5">
+                        {item.reason ||
+                          copy("No reason", "Без причины", "ללא סיבה")}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {changedFields.length === 0 ? (
+                        <span className="text-[12px] text-text-secondary">
+                          {copy(
+                            "No detected changes",
+                            "Изменений не обнаружено",
+                            "לא זוהו שינויים",
+                          )}
+                        </span>
+                      ) : (
+                        changedFields.slice(0, 4).map((field) => (
+                          <span
+                            key={field}
+                            className="inline-flex h-6 items-center rounded-md border border-border bg-surface px-2 text-[11px]"
+                          >
+                            {field}
+                          </span>
+                        ))
+                      )}
+                      {changedFields.length > 4 ? (
+                        <span className="inline-flex h-6 items-center rounded-md border border-border bg-surface px-2 text-[11px] text-text-secondary">
                           +{changedFields.length - 4}
                         </span>
                       ) : null}
@@ -5823,17 +8961,17 @@ export default function ReportsPage() {
                           }
                         }}
                         disabled={!item.entity_id}
-                        className="h-8 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
+                        className="h-8 px-3 rounded-md border border-border bg-surface text-[12px] disabled:opacity-50"
                       >
                         {copy("Open Issue", "Открыть проблему", "פתח תקלה")}
                       </button>
                       <button
                         onClick={() =>
                           setExpandedIssueAuditId((current) =>
-                            current === item.id ? null : item.id
+                            current === item.id ? null : item.id,
                           )
                         }
-                        className="h-8 px-3 rounded-md border border-border bg-card text-[12px]"
+                        className="h-8 px-3 rounded-md border border-border bg-surface text-[12px]"
                       >
                         {isExpanded
                           ? copy("Hide Diff", "Скрыть diff", "הסתר diff")
@@ -5844,19 +8982,19 @@ export default function ReportsPage() {
                   {isExpanded ? (
                     <div className="px-4 pb-3">
                       <div className="grid gap-2 md:grid-cols-2">
-                        <div className="rounded-lg border border-border/70 bg-background/60">
-                          <div className="px-3 py-2 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
+                        <div className="rounded-lg border border-border bg-surface-subtle">
+                          <div className="px-3 py-2 border-b border-border text-[11px] uppercase text-text-secondary">
                             {copy("Before", "До", "לפני")}
                           </div>
-                          <pre className="p-3 text-[11px] leading-5 whitespace-pre-wrap break-all text-muted-foreground overflow-x-auto">
+                          <pre className="p-3 text-[11px] leading-5 whitespace-pre-wrap break-all text-text-secondary overflow-x-auto">
                             {prettyJson(item.before)}
                           </pre>
                         </div>
-                        <div className="rounded-lg border border-border/70 bg-background/60">
-                          <div className="px-3 py-2 border-b border-border/70 text-[11px] uppercase tracking-wide text-muted-foreground">
+                        <div className="rounded-lg border border-border bg-surface-subtle">
+                          <div className="px-3 py-2 border-b border-border text-[11px] uppercase text-text-secondary">
                             {copy("After", "После", "אחרי")}
                           </div>
-                          <pre className="p-3 text-[11px] leading-5 whitespace-pre-wrap break-all text-muted-foreground overflow-x-auto">
+                          <pre className="p-3 text-[11px] leading-5 whitespace-pre-wrap break-all text-text-secondary overflow-x-auto">
                             {prettyJson(item.after)}
                           </pre>
                         </div>
@@ -5866,24 +9004,29 @@ export default function ReportsPage() {
                 </div>
               );
             })}
-          <div className="px-4 py-3 border-t border-border/70 flex flex-wrap items-center justify-between gap-2 text-[12px]">
-            <div className="text-muted-foreground">
-              {copy("Total matched", "Всего совпадений", "סה\"כ התאמות")}: {issueAuditSummary?.total || 0}
+          <div className="px-4 py-3 border-t border-border flex flex-wrap items-center justify-between gap-2 text-[12px]">
+            <div className="text-text-secondary">
+              {copy("Total matched", "Всего совпадений", 'סה"כ התאמות')}:{" "}
+              {issueAuditSummary?.total || 0}
             </div>
             <div className="flex items-center gap-2">
               <button
                 disabled={!issueAuditCanPrev}
                 onClick={() =>
-                  setIssueAuditOffset((x) => Math.max(0, x - AUDIT_PREVIEW_LIMIT))
+                  setIssueAuditOffset((x) =>
+                    Math.max(0, x - AUDIT_PREVIEW_LIMIT),
+                  )
                 }
-                className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
+                className="h-8 px-3 rounded-md border border-border bg-surface disabled:opacity-50"
               >
                 {tt("reports.prev")}
               </button>
               <button
                 disabled={!issueAuditCanNext}
-                onClick={() => setIssueAuditOffset((x) => x + AUDIT_PREVIEW_LIMIT)}
-                className="h-8 px-3 rounded-md border border-border bg-card disabled:opacity-50"
+                onClick={() =>
+                  setIssueAuditOffset((x) => x + AUDIT_PREVIEW_LIMIT)
+                }
+                className="h-8 px-3 rounded-md border border-border bg-surface disabled:opacity-50"
               >
                 {tt("reports.next")}
               </button>
@@ -5892,25 +9035,30 @@ export default function ReportsPage() {
         </div>
 
         <div className="flex items-center justify-between">
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-[12px] text-text-secondary">
             {alertsQuery.data?.last_read_at
-              ? `Last read at: ${formatDateTime(alertsQuery.data.last_read_at)}`
-              : "Alerts are not marked as read yet."}
+              ? copy("Last read at", "Прочитано в", "נקרא לאחרונה ב") +
+                `: ${formatDateTime(alertsQuery.data.last_read_at)}`
+              : copy(
+                  "Alerts are not marked as read yet.",
+                  "Алерты ещё не были отмечены как прочитанные.",
+                  "ההתראות עדיין לא סומנו כנקראו.",
+                )}
           </div>
           <div className="flex items-center gap-2">
             <button
               disabled={!canGoPrev}
               onClick={() => setOffset((x) => Math.max(0, x - PAGE_SIZE))}
-              className="h-8 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
+              className="h-8 px-3 rounded-md border border-border bg-surface text-[12px] disabled:opacity-50"
             >
-              Prev
+              {tt("reports.prev")}
             </button>
             <button
               disabled={!canGoNext}
               onClick={() => setOffset((x) => x + PAGE_SIZE)}
-              className="h-8 px-3 rounded-md border border-border bg-card text-[12px] disabled:opacity-50"
+              className="h-8 px-3 rounded-md border border-border bg-surface text-[12px] disabled:opacity-50"
             >
-              Next
+              {tt("reports.next")}
             </button>
           </div>
         </div>
@@ -5918,4 +9066,3 @@ export default function ReportsPage() {
     </DashboardLayout>
   );
 }
-

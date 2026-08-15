@@ -1,5 +1,6 @@
-﻿import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
@@ -128,6 +129,12 @@ describe("IssuesPage", () => {
       </QueryClientProvider>
     );
 
+    const issuesControl = await screen.findByTestId("issues-control-v26");
+    expect(within(issuesControl).getByText("SLA breached")).toBeInTheDocument();
+    expect(
+      within(issuesControl).getByRole("button", { name: /Export CSV/i })
+    ).toBeInTheDocument();
+
     expect(await screen.findByText("Install blocked", {}, { timeout: 5000 })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Status filter"), {
@@ -255,11 +262,79 @@ describe("IssuesPage", () => {
     expect(screen.getByText("B-202 / 8fa68e09-d216-4b3c-b5ef-206efe47d458")).toBeInTheDocument();
   }, 15000);
 
-  it("disables privileged workflow actions for installer role", async () => {
+  it("does not select another issue when issue_id deep link is unavailable", async () => {
+    searchParamsMock.mockReturnValue(new URLSearchParams("issue_id=missing-issue"));
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/api/v1/admin/installers")) {
+        return [];
+      }
+      if (path.includes("/api/v1/admin/issues")) {
+        return {
+          items: [
+            {
+              id: "issue-1",
+              company_id: "company-1",
+              door_id: "door-1",
+              project_id: "project-1",
+              door_unit_label: "A-101",
+              status: "OPEN",
+              workflow_state: "NEW",
+              priority: "P3",
+              owner_user_id: null,
+              due_at: null,
+              is_overdue: false,
+              title: "Install blocked",
+              details: "Client requested delay",
+              created_at: "2026-02-20T10:00:00Z",
+              updated_at: "2026-02-22T10:00:00Z",
+            },
+          ],
+        };
+      }
+      return {};
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <IssuesPage />
+      </QueryClientProvider>
+    );
+
+    expect(
+      await screen.findByText(
+        "Requested issue missing-issue is not available in the current issue list. Another issue was not selected automatically.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Install blocked")).toBeInTheDocument();
+    expect(screen.getByText("Select an issue to edit workflow.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show issue list" }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          "Requested issue missing-issue is not available in the current issue list. Another issue was not selected automatically.",
+        ),
+      ).not.toBeInTheDocument();
+    });
+  }, 15000);
+
+  it("keeps viewer workflow actions read-only", async () => {
     authSessionMock.mockReturnValue({
-      role: "INSTALLER",
-      admin_scope: null,
+      role: "ADMIN",
+      admin_scope: "VIEWER",
       can_view_rates: false,
+      can_manage_imports: true,
+      can_manage_users: true,
     });
 
     apiFetchMock.mockImplementation(async (path: string) => {
@@ -307,7 +382,7 @@ describe("IssuesPage", () => {
     );
 
     expect(
-      await screen.findByText("Installer role has read-only access to issue workflow controls.", {}, { timeout: 5000 })
+      await screen.findByText("Your access level has read-only access to issue workflow controls.", {}, { timeout: 5000 })
     ).toBeInTheDocument();
     fireEvent.click(screen.getByText("Install blocked"));
     expect(await screen.findByRole("button", { name: "Save Workflow" })).toBeDisabled();

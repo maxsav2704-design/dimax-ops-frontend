@@ -16,6 +16,8 @@ import JournalFormPage from "./views/JournalFormPage";
 import LoginPage from "./views/LoginPage";
 import ProjectsPage from "./views/ProjectsPage";
 import ReportsPage from "./views/ReportsPage";
+import DocumentsPage from "./views/DocumentsPage";
+import EarningsLedgerPage from "./views/EarningsLedgerPage";
 import SettingsPage from "./views/SettingsPage";
 import NotFound from "./views/NotFound";
 
@@ -118,6 +120,22 @@ const App = () => (
             element={
               <RequireAuth>
                 <ReportsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/documents"
+            element={
+              <RequireAuth>
+                <DocumentsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/earnings-ledger"
+            element={
+              <RequireAuth>
+                <EarningsLedgerPage />
               </RequireAuth>
             }
           />

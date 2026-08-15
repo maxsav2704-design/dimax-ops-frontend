@@ -33,7 +33,6 @@ const projectDetails = {
       id: "door-1",
       unit_label: "A-101",
       door_type_id: "door-type-1",
-      our_price: "100.00",
       order_number: "ORD-1",
       house_number: "1",
       floor_label: "1",
@@ -44,12 +43,12 @@ const projectDetails = {
       reason_id: null,
       comment: null,
       is_locked: false,
+      version: 0,
     },
     {
       id: "door-2",
       unit_label: "B-202",
       door_type_id: "door-type-1",
-      our_price: "120.00",
       order_number: "ORD-2",
       house_number: "2",
       floor_label: "2",
@@ -60,6 +59,7 @@ const projectDetails = {
       reason_id: null,
       comment: null,
       is_locked: true,
+      version: 1,
     },
   ],
   issues_open: [],
@@ -70,19 +70,19 @@ const projectDetails = {
   },
 } as const;
 
-function setupApiMock(details = projectDetails) {
+function setupApiMock(details: unknown = projectDetails) {
   apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
     if (path === "/api/v1/installer/projects/project-1") {
       return details;
     }
     if (path === "/api/v1/installer/doors/door-1/install" && init?.method === "POST") {
-      return { ok: true };
+      return { ok: true, id: "door-1", status: "INSTALLED", version: 1 };
     }
     if (
       path === "/api/v1/installer/doors/door-1/not-installed" &&
       init?.method === "POST"
     ) {
-      return { ok: true };
+      return { ok: true, id: "door-1", status: "NOT_INSTALLED", version: 1 };
     }
     if (
       path === "/api/v1/installer/addons/projects/project-1/facts" &&
@@ -218,6 +218,30 @@ describe("InstallerProjectPage", () => {
       "href",
       "/installer/earnings?project_id=project-1"
     );
+  }, 15000);
+
+  it("does not render project price fields in installer project add-on plan", async () => {
+    setupApiMock({
+      ...projectDetails,
+      addons: {
+        ...projectDetails.addons,
+        plan: [
+          {
+            addon_type_id: "addon-1",
+            qty_planned: "2.00",
+            client_price: "80.00",
+            installer_price: "40.00",
+          },
+        ],
+      },
+    });
+    renderSubject();
+
+    expect(await screen.findByText("Project One")).toBeInTheDocument();
+    expect(screen.getByText("Planned qty: 2.00")).toBeInTheDocument();
+    expect(screen.queryByText(/Installer price/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("40.00")).not.toBeInTheDocument();
+    expect(screen.queryByText("80.00")).not.toBeInTheDocument();
   }, 15000);
 
   it("prefers structured installer project details when nested objects are present", async () => {

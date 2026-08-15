@@ -8,6 +8,17 @@ Run all tests:
 npm run test
 ```
 
+Run the complete pull-request gate:
+
+```bash
+npm run quality-gate
+```
+
+The gate validates production env rules, confirms discovery of all local Vitest
+and Playwright files through `scripts/validate-test-discovery.mjs`, runs the full
+test suite, and creates the Next production build. GitHub requires
+`Frontend Quality Gate / quality-gate` on protected branches.
+
 Run installer-focused tests only:
 
 ```bash
@@ -51,6 +62,17 @@ npm run test:e2e:installer:strict:local
 `seed_dev` now creates/repairs installer links and sync state automatically.
 Do not use manual SQL inserts for `installers` in the normal local flow.
 Preferred path is `..\workspace.cmd installer-gate`, because it also refreshes `.env.e2e.local`.
+
+Visual brand smoke:
+
+```bash
+cd ..
+.\workspace.cmd visual-brand-smoke
+```
+
+This command uses the seeded preview values, creates a temporary Next production build,
+checks the login, admin and installer brand shells, saves screenshots under
+`artifacts/visual-brand`, and removes temporary build/test artifacts after a successful run.
 
 Installer smoke test file:
 

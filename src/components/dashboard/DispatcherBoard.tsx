@@ -1,4 +1,4 @@
-﻿import {
+import {
   AlertTriangle,
   ArrowRight,
   CalendarDays,
@@ -6,7 +6,10 @@
   MapPinned,
   Users2,
 } from "lucide-react";
-
+import { KpiCard as DimaxKpiCard } from "@/components/dimax";
+import { getDashboardCopy } from "@/components/dashboard/copy";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { useI18n } from "@/lib/i18n";
 type DispatcherSummary = {
   total_projects: number;
   total_doors: number;
@@ -20,7 +23,6 @@ type DispatcherSummary = {
   busy_installers: number;
   scheduled_visits_7d: number;
 };
-
 type DispatcherProjectRecommendation = {
   installer_id: string;
   installer_name: string;
@@ -30,7 +32,6 @@ type DispatcherProjectRecommendation = {
   open_issues: number;
   next_event_at: string | null;
 };
-
 type DispatcherProject = {
   project_id: string;
   project_name: string;
@@ -50,7 +51,6 @@ type DispatcherProject = {
   next_visit_title: string | null;
   recommended_installers: DispatcherProjectRecommendation[];
 };
-
 type DispatcherInstaller = {
   installer_id: string;
   installer_name: string;
@@ -65,7 +65,6 @@ type DispatcherInstaller = {
   next_event_at: string | null;
   next_event_title: string | null;
 };
-
 interface DispatcherBoardProps {
   summary: DispatcherSummary;
   projects: DispatcherProject[];
@@ -75,37 +74,6 @@ interface DispatcherBoardProps {
   onOpenInstallers?: () => void;
   onOpenCalendar?: () => void;
 }
-
-function formatDateTime(value: string | null): string {
-  if (!value) {
-    return "Not scheduled";
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "Not scheduled";
-  }
-  return date.toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
-
-function badgeTone(value: string): string {
-  if (value === "BLOCKED" || value === "INACTIVE") {
-    return "bg-destructive/10 text-destructive border-destructive/20";
-  }
-  if (value === "UNASSIGNED" || value === "BUSY" || value === "AT_RISK") {
-    return "bg-amber-500/10 text-amber-300 border-amber-500/20";
-  }
-  if (value === "DONE" || value === "AVAILABLE") {
-    return "bg-emerald-500/10 text-emerald-300 border-emerald-500/20";
-  }
-  return "bg-accent/10 text-accent border-accent/20";
-}
-
 export function DispatcherBoard({
   summary,
   projects,
@@ -115,312 +83,413 @@ export function DispatcherBoard({
   onOpenInstallers,
   onOpenCalendar,
 }: DispatcherBoardProps) {
+  const { locale } = useI18n();
+  const copy = getDashboardCopy(locale).dispatcher;
+  const panelClassName = "rounded-lg border border-border bg-surface";
+  const formatDateTime = (value: string | null): string => {
+    if (!value) {
+      return copy.notScheduled;
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return copy.notScheduled;
+    }
+    return date.toLocaleString(
+      locale === "he" ? "he-IL" : locale === "ru" ? "ru-RU" : "en-US",
+      {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      },
+    );
+  };
   return (
-    <div
+    <section
       data-testid="dispatcher-board"
-      className="glass-card card-lift mb-6 rounded-[1.2rem] p-5 animate-fade-in"
+      className="mb-4 overflow-hidden rounded-lg border border-border bg-surface animate-fade-in"
     >
-      <div className="flex flex-col gap-4 border-b border-border/70 pb-5 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/[0.06] px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-accent/80">
-            Dispatcher Board
-          </div>
-          <h3 className="mt-3 text-lg font-semibold tracking-tight text-card-foreground">
-            Live operator control for doors, blockers and crew load
-          </h3>
-          <p className="mt-1 max-w-3xl text-[13px] leading-6 text-muted-foreground">
-            Use this board to decide which project needs crew now, where blockers are growing,
-            and which installer can absorb the next assignment.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2.5">
-          <button
-            onClick={onOpenProjects}
-            className="btn-premium rounded-xl border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
-          >
-            Open projects
-          </button>
-          <button
-            onClick={onOpenInstallers}
-            className="btn-premium rounded-xl border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
-          >
-            Open installers
-          </button>
-          <button
-            onClick={onOpenCalendar}
-            className="btn-premium rounded-xl border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
-          >
-            Open calendar
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <div className="metric-tile">
-          <div className="metric-label">Projects</div>
-          <div className="metric-value text-[1.75rem]">{summary.total_projects}</div>
-          <div className="metric-subtext">Needs dispatch: {summary.projects_needing_dispatch}</div>
-        </div>
-        <div className="metric-tile">
-          <div className="metric-label">Doors</div>
-          <div className="metric-value text-[1.75rem]">{summary.total_doors}</div>
-          <div className="metric-subtext">Pending: {summary.pending_doors}</div>
-        </div>
-        <div className="metric-tile-success">
-          <div className="metric-label">Installed</div>
-          <div className="metric-value text-[1.75rem]">{summary.installed_doors}</div>
-          <div className="metric-subtext">Unassigned: {summary.unassigned_doors}</div>
-        </div>
-        <div className="metric-tile-danger">
-          <div className="metric-label">Issues</div>
-          <div className="metric-value text-[1.75rem]">{summary.open_issues}</div>
-          <div className="metric-subtext">Blocked: {summary.blocked_issues}</div>
-        </div>
-        <div className="metric-tile-soft">
-          <div className="metric-label">Available Crew</div>
-          <div className="metric-value text-[1.75rem]">{summary.available_installers}</div>
-          <div className="metric-subtext">Busy: {summary.busy_installers}</div>
-        </div>
-        <div className="metric-tile-warning">
-          <div className="metric-label">Next 7d Visits</div>
-          <div className="metric-value text-[1.75rem]">{summary.scheduled_visits_7d}</div>
-          <div className="metric-subtext">Installation schedule</div>
-        </div>
-      </div>
-
-      <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-5">
+      {" "}
+      <div className="flex flex-col gap-3 border-b border-border-subtle px-4 py-3 lg:flex-row lg:items-start lg:justify-between">
+        {" "}
+        <div className="text-start">
+          {" "}
+          <div className="text-[10.5px] font-medium uppercase text-text-secondary">
+            {" "}
+            {copy.eyebrow}{" "}
+          </div>{" "}
+          <h3 className="mt-1 text-[13.5px] font-medium leading-5 text-text">
+            {copy.title}
+          </h3>{" "}
+          <p className="mt-1 max-w-3xl text-[12px] leading-5 text-text-secondary">
+            {copy.description}
+          </p>{" "}
+        </div>{" "}
+        <div className="flex flex-wrap gap-2">
+          {" "}
+          <button onClick={onOpenProjects} className="dmx-secondary-action">
+            {" "}
+            {copy.openProjects}{" "}
+          </button>{" "}
+          <button onClick={onOpenInstallers} className="dmx-secondary-action">
+            {" "}
+            {copy.openInstallers}{" "}
+          </button>{" "}
+          <button onClick={onOpenCalendar} className="dmx-secondary-action">
+            {" "}
+            {copy.openCalendar}{" "}
+          </button>{" "}
+        </div>{" "}
+      </div>{" "}
+      <div className="grid grid-cols-2 gap-2.5 px-4 py-3 md:grid-cols-3 xl:grid-cols-6">
+        {" "}
+        <DimaxKpiCard
+          label={copy.metrics.projects}
+          value={summary.total_projects}
+          hint={`${copy.metrics.needsDispatch}: ${summary.projects_needing_dispatch}`}
+          barColor="blue"
+        />{" "}
+        <DimaxKpiCard
+          label={copy.metrics.doors}
+          value={summary.total_doors}
+          hint={`${copy.metrics.pending}: ${summary.pending_doors}`}
+          barColor="yellow"
+        />{" "}
+        <DimaxKpiCard
+          label={copy.metrics.installed}
+          value={summary.installed_doors}
+          hint={`${copy.metrics.unassigned}: ${summary.unassigned_doors}`}
+          barColor="green"
+        />{" "}
+        <DimaxKpiCard
+          label={copy.metrics.issues}
+          value={summary.open_issues}
+          hint={`${copy.metrics.blocked}: ${summary.blocked_issues}`}
+          barColor="red"
+          emphasis={summary.open_issues > 0 ? "problem" : "default"}
+        />{" "}
+        <DimaxKpiCard
+          label={copy.metrics.availableCrew}
+          value={summary.available_installers}
+          hint={`${copy.metrics.busy}: ${summary.busy_installers}`}
+          barColor="orange"
+        />{" "}
+        <DimaxKpiCard
+          label={copy.metrics.nextVisits7d}
+          value={summary.scheduled_visits_7d}
+          hint={copy.metrics.installationSchedule}
+          barColor="yellow"
+        />{" "}
+      </div>{" "}
+      <div className="grid grid-cols-1 gap-3 border-t border-border-subtle p-4 xl:grid-cols-5">
+        {" "}
         <div className="xl:col-span-3">
-          <div className="surface-panel panel-pad-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h4 className="text-sm font-semibold text-card-foreground">Projects needing dispatch</h4>
-                <p className="mt-1 text-[12px] leading-6 text-muted-foreground">
-                  Prioritized by blockers, unassigned doors and pending backlog.
-                </p>
-              </div>
-              <ClipboardList className="h-4 w-4 text-accent" strokeWidth={1.8} />
-            </div>
-
+          {" "}
+          <div className={`${panelClassName} h-full overflow-hidden p-4`}>
+            {" "}
+            <div className="mb-4 flex items-center justify-between gap-3">
+              {" "}
+              <div className="text-start">
+                {" "}
+                <h4 className="text-[13.5px] font-medium leading-5 text-text">
+                  {copy.projectsSection.title}
+                </h4>{" "}
+                <p className="mt-1 text-[12px] leading-5 text-text-secondary">
+                  {copy.projectsSection.description}
+                </p>{" "}
+              </div>{" "}
+              <ClipboardList
+                className="h-4 w-4 text-text-secondary"
+                strokeWidth={1.8}
+              />{" "}
+            </div>{" "}
             <div className="space-y-3">
+              {" "}
               {projects.length > 0 ? (
                 projects.map((project) => (
-                  <div key={project.project_id} className="rounded-[1.1rem] border border-border/70 bg-background/50 p-4">
+                  <div
+                    key={project.project_id}
+                    className="rounded-lg border border-border bg-surface-subtle p-3"
+                  >
+                    {" "}
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
+                      {" "}
+                      <div className="text-start">
+                        {" "}
                         <div className="flex flex-wrap items-center gap-2">
-                          <h5 className="text-[14px] font-semibold text-card-foreground">
+                          {" "}
+                          <h5 className="text-[13px] font-medium text-text">
                             {project.project_name}
-                          </h5>
-                          <span
-                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${badgeTone(
-                              project.dispatch_status
-                            )}`}
-                          >
-                            {project.dispatch_status}
-                          </span>
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-3 text-[12px] leading-6 text-muted-foreground">
+                          </h5>{" "}
+                          <StatusBadge
+                            status={project.dispatch_status}
+                            domain="project"
+                          />{" "}
+                        </div>{" "}
+                        <div className="mt-1 flex flex-wrap items-center gap-3 text-[11.5px] leading-5 text-text-secondary">
+                          {" "}
                           <span className="inline-flex items-center gap-1">
-                            <MapPinned className="h-3.5 w-3.5" strokeWidth={1.7} />
-                            {project.address}
-                          </span>
-                          <span>Contact: {project.contact_name || "Not set"}</span>
-                          <span>Status: {project.project_status}</span>
-                        </div>
-                      </div>
+                            {" "}
+                            <MapPinned
+                              className="h-3.5 w-3.5"
+                              strokeWidth={1.7}
+                            />{" "}
+                            {project.address}{" "}
+                          </span>{" "}
+                          <span>
+                            {copy.projectsSection.contact}:{" "}
+                            {project.contact_name || "—"}
+                          </span>{" "}
+                          <span className="inline-flex items-center gap-1">
+                            {" "}
+                            {copy.projectsSection.status}:{" "}
+                            <StatusBadge
+                              status={project.project_status}
+                              domain="project"
+                            />{" "}
+                          </span>{" "}
+                        </div>{" "}
+                      </div>{" "}
                       <button
                         onClick={() => onOpenProject?.(project.project_id)}
-                        className="btn-premium inline-flex items-center gap-2 self-start rounded-xl border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
+                        className="dmx-secondary-action self-start"
                       >
-                        Open project
-                        <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.7} />
-                      </button>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-2 text-[12px] text-muted-foreground md:grid-cols-4">
-                      <div className="rounded-lg border border-border/60 bg-card/60 px-3 py-2">
-                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground/70">
-                          Pending
-                        </div>
-                        <div className="mt-1 text-sm font-semibold text-card-foreground">
+                        {" "}
+                        {copy.projectsSection.openProject}{" "}
+                        <ArrowRight
+                          className="h-3.5 w-3.5"
+                          strokeWidth={1.7}
+                        />{" "}
+                      </button>{" "}
+                    </div>{" "}
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-[12px] text-text-secondary md:grid-cols-4">
+                      {" "}
+                      <div className="rounded-lg border border-border bg-surface px-3 py-2">
+                        {" "}
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy.projectsSection.pending}
+                        </div>{" "}
+                        <div className="mt-1 text-[13px] font-medium text-text">
                           {project.pending_doors}
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-border/60 bg-card/60 px-3 py-2">
-                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground/70">
-                          Assigned
-                        </div>
-                        <div className="mt-1 text-sm font-semibold text-card-foreground">
+                        </div>{" "}
+                      </div>{" "}
+                      <div className="rounded-lg border border-border bg-surface px-3 py-2">
+                        {" "}
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy.projectsSection.assigned}
+                        </div>{" "}
+                        <div className="mt-1 text-[13px] font-medium text-text">
                           {project.assigned_open_doors}
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-border/60 bg-card/60 px-3 py-2">
-                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground/70">
-                          Unassigned
-                        </div>
-                        <div className="mt-1 text-sm font-semibold text-card-foreground">
+                        </div>{" "}
+                      </div>{" "}
+                      <div className="rounded-lg border border-border bg-surface px-3 py-2">
+                        {" "}
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy.projectsSection.unassigned}
+                        </div>{" "}
+                        <div className="mt-1 text-[13px] font-medium text-text">
                           {project.unassigned_doors}
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-border/60 bg-card/60 px-3 py-2">
-                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground/70">
-                          Completion
-                        </div>
-                        <div className="mt-1 text-sm font-semibold text-card-foreground">
+                        </div>{" "}
+                      </div>{" "}
+                      <div className="rounded-lg border border-border bg-surface px-3 py-2">
+                        {" "}
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy.projectsSection.completion}
+                        </div>{" "}
+                        <div className="mt-1 text-[13px] font-medium text-text">
                           {project.completion_pct.toFixed(0)}%
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap items-center gap-3 text-[12px] text-muted-foreground">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-1 text-destructive">
-                        <AlertTriangle className="h-3.5 w-3.5" strokeWidth={1.7} />
-                        Issues: {project.open_issues}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-amber-300">
-                        Blocked: {project.blocked_issues}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-accent">
-                        <CalendarDays className="h-3.5 w-3.5" strokeWidth={1.7} />
-                        {project.next_visit_title || "No scheduled visit"}{" / "}
-                        {formatDateTime(project.next_visit_at)}
-                      </span>
-                    </div>
-
+                        </div>{" "}
+                      </div>{" "}
+                    </div>{" "}
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11.5px] text-text-secondary">
+                      {" "}
+                      <span className="inline-flex items-center gap-1 rounded-full border border-status-problem-border bg-status-problem-bg px-2.5 py-1 text-status-problem-fg">
+                        {" "}
+                        <AlertTriangle
+                          className="h-3.5 w-3.5"
+                          strokeWidth={1.7}
+                        />{" "}
+                        {copy.projectsSection.issues}:{" "}
+                        {project.open_issues}{" "}
+                      </span>{" "}
+                      <span className="inline-flex items-center gap-1 rounded-full border border-status-warning-border bg-status-warning-bg px-2.5 py-1 text-status-warning-fg">
+                        {" "}
+                        {copy.projectsSection.blocked}:{" "}
+                        {project.blocked_issues}{" "}
+                      </span>{" "}
+                      <span className="inline-flex items-center gap-1 rounded-full border border-status-progress-border bg-status-progress-bg px-2.5 py-1 text-status-progress-fg">
+                        {" "}
+                        <CalendarDays
+                          className="h-3.5 w-3.5"
+                          strokeWidth={1.7}
+                        />{" "}
+                        {project.next_visit_title ||
+                          copy.projectsSection.noScheduledVisit}
+                        {" / "} {formatDateTime(project.next_visit_at)}{" "}
+                      </span>{" "}
+                    </div>{" "}
                     <div className="mt-4">
-                      <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                        Suggested installers
-                      </div>
+                      {" "}
+                      <div className="mb-2 text-[10px] uppercase text-text-secondary">
+                        {" "}
+                        {copy.projectsSection.suggestedInstallers}{" "}
+                      </div>{" "}
                       {project.recommended_installers.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
+                          {" "}
                           {project.recommended_installers.map((installer) => (
                             <div
                               key={`${project.project_id}-${installer.installer_id}`}
-                              className="rounded-lg border border-border/60 bg-card/60 px-3 py-2"
+                              className="rounded-lg border border-border bg-surface px-3 py-2 text-start"
                             >
+                              {" "}
                               <div className="flex items-center gap-2">
-                                <span className="text-[12px] font-medium text-card-foreground">
+                                {" "}
+                                <span className="text-[12px] font-medium text-text">
                                   {installer.installer_name}
-                                </span>
-                                <span
-                                  className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${badgeTone(
-                                    installer.availability_band
-                                  )}`}
-                                >
-                                  {installer.availability_band}
-                                </span>
-                              </div>
-                              <div className="mt-1 text-[11px] leading-5 text-muted-foreground">
-                                Projects: {installer.active_projects}{" / Doors: "}
-                                {installer.assigned_open_doors}{" / Issues: "} {installer.open_issues}
-                              </div>
+                                </span>{" "}
+                                <StatusBadge
+                                  status={installer.availability_band}
+                                  domain="installer"
+                                />{" "}
+                              </div>{" "}
+                              <div className="mt-1 text-[11px] leading-5 text-text-secondary">
+                                {" "}
+                                {copy.projectsSection.projects}:{" "}
+                                {installer.active_projects}
+                                {" / "} {copy.projectsSection.doors}:{" "}
+                                {installer.assigned_open_doors}
+                                {" / "} {copy.projectsSection.issues}:{" "}
+                                {installer.open_issues}{" "}
+                              </div>{" "}
                             </div>
-                          ))}
+                          ))}{" "}
                         </div>
                       ) : (
-                        <div className="rounded-lg border border-dashed border-border/70 px-3 py-3 text-[12px] text-muted-foreground">
-                          No active installer recommendations yet.
+                        <div className="rounded-lg border border-dashed border-border px-3 py-3 text-[12px] text-text-secondary">
+                          {" "}
+                          {copy.projectsSection.noRecommendations}{" "}
                         </div>
-                      )}
-                    </div>
+                      )}{" "}
+                    </div>{" "}
                   </div>
                 ))
               ) : (
-                <div className="rounded-xl border border-dashed border-border/70 px-4 py-8 text-center text-[13px] text-muted-foreground">
-                  No project dispatch data available yet.
+                <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-[13px] text-text-secondary">
+                  {" "}
+                  {copy.projectsSection.noProjects}{" "}
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-
+              )}{" "}
+            </div>{" "}
+          </div>{" "}
+        </div>{" "}
         <div className="xl:col-span-2">
-          <div className="surface-panel panel-pad-sm h-full">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h4 className="text-sm font-semibold text-card-foreground">Crew availability</h4>
-                <p className="mt-1 text-[12px] leading-6 text-muted-foreground">
-                  Who can absorb more work right now.
-                </p>
-              </div>
-              <Users2 className="h-4 w-4 text-accent" strokeWidth={1.8} />
-            </div>
-
+          {" "}
+          <div className={`${panelClassName} h-full overflow-hidden p-4`}>
+            {" "}
+            <div className="mb-4 flex items-center justify-between gap-3">
+              {" "}
+              <div className="text-start">
+                {" "}
+                <h4 className="text-[13.5px] font-medium leading-5 text-text">
+                  {copy.installersSection.title}
+                </h4>{" "}
+                <p className="mt-1 text-[12px] leading-5 text-text-secondary">
+                  {copy.installersSection.description}
+                </p>{" "}
+              </div>{" "}
+              <Users2
+                className="h-4 w-4 text-text-secondary"
+                strokeWidth={1.8}
+              />{" "}
+            </div>{" "}
             <div className="space-y-3">
+              {" "}
               {installers.length > 0 ? (
                 installers.map((installer) => (
                   <div
                     key={installer.installer_id}
-                    className="rounded-xl border border-border/70 bg-background/50 p-3"
+                    className="rounded-lg border border-border bg-surface-subtle p-3 text-start"
                   >
+                    {" "}
                     <div className="flex items-start justify-between gap-3">
+                      {" "}
                       <div>
+                        {" "}
                         <div className="flex flex-wrap items-center gap-2">
-                          <div className="text-[13px] font-semibold text-card-foreground">
+                          {" "}
+                          <div className="text-[13px] font-medium text-text">
                             {installer.installer_name}
-                          </div>
-                          <span
-                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${badgeTone(
-                              installer.availability_band
-                            )}`}
-                          >
-                            {installer.availability_band}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-[11px] leading-5 text-muted-foreground">
-                          {installer.phone || installer.email || "No contact data"}{" / Status: "}
-                          {installer.status || "ACTIVE"}
-                        </div>
-                      </div>
-                    </div>
-
+                          </div>{" "}
+                          <StatusBadge
+                            status={installer.availability_band}
+                            domain="installer"
+                          />{" "}
+                        </div>{" "}
+                        <div className="mt-1 text-[11px] leading-5 text-text-secondary">
+                          {" "}
+                          {installer.phone ||
+                            installer.email ||
+                            copy.installersSection.noContactData}
+                          {" / "} {copy.installersSection.status}:{" "}
+                          {installer.status ||
+                            copy.installersSection.activeFallback}{" "}
+                        </div>{" "}
+                      </div>{" "}
+                    </div>{" "}
                     <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                      <div className="rounded-lg border border-border/60 bg-card/60 px-2 py-2">
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
-                          Projects
-                        </div>
-                        <div className="mt-1 text-[13px] font-semibold text-card-foreground">
+                      {" "}
+                      <div className="rounded-lg border border-border bg-surface px-2 py-2">
+                        {" "}
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy.installersSection.projects}
+                        </div>{" "}
+                        <div className="mt-1 text-[13px] font-medium text-text">
                           {installer.active_projects}
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-border/60 bg-card/60 px-2 py-2">
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
-                          Open Doors
-                        </div>
-                        <div className="mt-1 text-[13px] font-semibold text-card-foreground">
+                        </div>{" "}
+                      </div>{" "}
+                      <div className="rounded-lg border border-border bg-surface px-2 py-2">
+                        {" "}
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy.installersSection.openDoors}
+                        </div>{" "}
+                        <div className="mt-1 text-[13px] font-medium text-text">
                           {installer.assigned_open_doors}
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-border/60 bg-card/60 px-2 py-2">
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
-                          Issues
-                        </div>
-                        <div className="mt-1 text-[13px] font-semibold text-card-foreground">
+                        </div>{" "}
+                      </div>{" "}
+                      <div className="rounded-lg border border-border bg-surface px-2 py-2">
+                        {" "}
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy.installersSection.issues}
+                        </div>{" "}
+                        <div className="mt-1 text-[13px] font-medium text-text">
                           {installer.open_issues}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 rounded-lg border border-accent/15 bg-accent/[0.05] px-3 py-2 text-[12px] leading-6 text-muted-foreground">
-                      Next slot:{" "}
-                      <span className="font-medium text-card-foreground">
-                        {installer.next_event_title || "No scheduled event"}
-                      </span>
-                      {" / "}
-                      {formatDateTime(installer.next_event_at)}
-                    </div>
+                        </div>{" "}
+                      </div>{" "}
+                    </div>{" "}
+                    <div className="mt-3 rounded-lg border border-status-progress-border bg-status-progress-bg px-3 py-2 text-[12px] leading-5 text-status-progress-fg">
+                      {" "}
+                      {copy.installersSection.nextSlot}:{" "}
+                      <span className="font-medium text-text">
+                        {" "}
+                        {installer.next_event_title ||
+                          copy.installersSection.noScheduledEvent}{" "}
+                      </span>{" "}
+                      {" / "} {formatDateTime(installer.next_event_at)}{" "}
+                    </div>{" "}
                   </div>
                 ))
               ) : (
-                <div className="rounded-xl border border-dashed border-border/70 px-4 py-8 text-center text-[13px] text-muted-foreground">
-                  No installer load data available yet.
+                <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-[13px] text-text-secondary">
+                  {" "}
+                  {copy.installersSection.noInstallers}{" "}
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+              )}{" "}
+            </div>{" "}
+          </div>{" "}
+        </div>{" "}
+      </div>{" "}
+    </section>
   );
 }
-

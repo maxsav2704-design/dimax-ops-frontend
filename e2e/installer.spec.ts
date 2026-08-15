@@ -21,7 +21,7 @@ async function loginInstaller(page) {
     { timeout: 30_000 }
   );
 
-  await page.getByRole("button", { name: "Sign In" }).click();
+  await page.locator('button[type="submit"]').click();
   const loginResponse = await loginResponsePromise;
   expect(loginResponse.ok()).toBeTruthy();
   const loginBody = (await loginResponse.json()) as { access_token?: string };
@@ -71,7 +71,9 @@ test.describe.serial("Installer web smoke", () => {
     await page.getByRole("button", { name: "Today" }).click();
     await page.getByRole("button", { name: "Next 30 days" }).click();
 
-    await page.getByRole("link", { name: "Workspace" }).click();
+    await page
+      .getByRole("link", { name: "Workspace", exact: true })
+      .click();
     await expect(page.getByRole("heading", { name: "Installer Workspace" })).toBeVisible({
       timeout: 30_000,
     });
@@ -86,7 +88,9 @@ test.describe.serial("Installer web smoke", () => {
     await expect(page.getByRole("heading", { name: "My Schedule" })).toBeVisible({
       timeout: 30_000,
     });
-    await page.getByRole("link", { name: "Workspace" }).click();
+    await page
+      .getByRole("link", { name: "Workspace", exact: true })
+      .click();
 
     const projectsResponse = await request.get(`${API_BASE_URL}/api/v1/installer/projects`, {
       headers: {
@@ -106,57 +110,68 @@ test.describe.serial("Installer web smoke", () => {
 
     const targetProject = projectsBody.items[0];
 
-    const cardScheduleLink = page.locator('a[href^="/installer/calendar?project_id="]').first();
+    const cardScheduleLink = page.locator(
+      `a[href="/installer/calendar?project_id=${targetProject.id}"]`
+    );
     await expect(cardScheduleLink).toBeVisible({ timeout: 30_000 });
     await cardScheduleLink.click();
-    await expect(page).toHaveURL(/\/installer\/calendar\?project_id=/, { timeout: 30_000 });
-    await expect(page.getByRole("heading", { name: "My Schedule" })).toBeVisible({
-      timeout: 30_000,
-    });
-    await page.getByRole("link", { name: "Workspace" }).click();
-    await expect(page.getByRole("heading", { name: "Installer Workspace" })).toBeVisible({
-      timeout: 30_000,
-    });
-
-    const todayOnProjectLink = page.locator(
-      `a[href="/installer/calendar?preset=today&project_id=${targetProject.id}"]`
-    );
-    await expect(todayOnProjectLink).toBeVisible({ timeout: 30_000 });
-    await todayOnProjectLink.click();
     await expect(page).toHaveURL(
-      new RegExp(`/installer/calendar\\?preset=today&project_id=${targetProject.id}`)
+      new RegExp(`/installer/calendar\\?project_id=${targetProject.id}$`),
+      { timeout: 30_000 }
     );
     await expect(page.getByRole("heading", { name: "My Schedule" })).toBeVisible({
       timeout: 30_000,
     });
-    await page.getByRole("link", { name: "Workspace" }).click();
+    await page
+      .getByRole("link", { name: "Workspace", exact: true })
+      .click();
     await expect(page.getByRole("heading", { name: "Installer Workspace" })).toBeVisible({
       timeout: 30_000,
     });
 
-    const priorityDoorsLink = page.locator(
-      `a[href="/installer/projects/${targetProject.id}#project-doors"]`
+    const projectEarningsLink = page.locator(
+      `a[href="/installer/earnings?project_id=${targetProject.id}"]`
     );
-    await expect(priorityDoorsLink).toBeVisible({ timeout: 30_000 });
-    await priorityDoorsLink.click();
+    await expect(projectEarningsLink).toBeVisible({ timeout: 30_000 });
+    await projectEarningsLink.click();
     await expect(page).toHaveURL(
-      new RegExp(`/installer/projects/${targetProject.id}#project-doors$`)
+      new RegExp(`/installer/earnings\\?project_id=${targetProject.id}$`)
     );
-    await expect(page.getByText("Door filters")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: "Installer earnings" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await page
+      .getByRole("link", { name: "Workspace", exact: true })
+      .click();
+    await expect(page.getByRole("heading", { name: "Installer Workspace" })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const projectLink = page
+      .locator(`a[href="/installer/projects/${targetProject.id}"]`)
+      .filter({ hasText: "Open project" })
+      .first();
+    await expect(projectLink).toBeVisible({ timeout: 30_000 });
+    await projectLink.click();
+    await expect(page).toHaveURL(
+      new RegExp(`/installer/projects/${targetProject.id}$`)
+    );
+    await expect(
+      page.getByRole("heading", { name: "Door filters", exact: true })
+    ).toBeVisible({ timeout: 30_000 });
     await expect(page.locator("#project-doors")).toBeVisible({ timeout: 30_000 });
 
-    await page.goto(`/installer/projects/${targetProject.id}`);
-    await expect(page.getByText("Door filters")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("Add-on fact")).toBeVisible({ timeout: 30_000 });
     await expect(
-      page.locator("a,button").filter({ hasText: /^Open Waze$/ }).first()
+      page.getByRole("heading", { name: "Add-on fact", exact: true })
     ).toBeVisible({ timeout: 30_000 });
-    await expect(
-      page.locator("a,button").filter({ hasText: /^Open WhatsApp$/ }).first()
-    ).toBeVisible({ timeout: 30_000 });
-    await expect(
-      page.locator("a,button").filter({ hasText: /^Call contact$/ }).first()
-    ).toBeVisible({ timeout: 30_000 });
+    const projectAction = (name: string) =>
+      page
+        .getByRole("link", { name, exact: true })
+        .or(page.getByRole("button", { name, exact: true }))
+        .first();
+    await expect(projectAction("Open Waze")).toBeVisible({ timeout: 30_000 });
+    await expect(projectAction("Open WhatsApp")).toBeVisible({ timeout: 30_000 });
+    await expect(projectAction("Call contact")).toBeVisible({ timeout: 30_000 });
 
     const problemProject = projectsBody.items.find((project) => project.status === "PROBLEM");
     if (problemProject) {

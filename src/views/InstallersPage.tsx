@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -6,6 +6,7 @@ import {
   Link2,
   Pencil,
   Plus,
+  ReceiptText,
   Search,
   Trash2,
   Unlink2,
@@ -13,10 +14,19 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { DimaxPageHeader } from "@/components/DimaxPageHeader";
+import {
+  KpiCard as DimaxKpiCard,
+  WidgetCard,
+} from "@/components/dimax";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
-import { canRunPrivilegedAdminActions, canViewRates } from "@/lib/admin-access";
+import {
+  canManageUsers,
+  canRunPrivilegedAdminActions,
+  canViewRates,
+} from "@/lib/admin-access";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -103,6 +113,18 @@ function formatDate(value: string): string {
   return date.toLocaleDateString();
 }
 
+function installersNoticeClass(tone: "success" | "error" | "warning"): string {
+  return cn(
+    "mb-4 flex items-start gap-2 rounded-lg border px-4 py-3 text-[13px]",
+    tone === "success" &&
+      "border-status-ok-border bg-status-ok-bg text-status-ok-fg",
+    tone === "error" &&
+      "border-status-problem-border bg-status-problem-bg text-status-problem-fg",
+    tone === "warning" &&
+      "border-status-warning-border bg-status-warning-bg text-status-warning-fg",
+  );
+}
+
 function InstallerCard({
   installer,
   onEdit,
@@ -128,50 +150,66 @@ function InstallerCard({
     .toUpperCase();
 
   return (
-    <article className="surface-panel panel-pad-sm flex h-full flex-col gap-4">
+    <article className="flex h-full flex-col gap-4 rounded-lg border border-border bg-surface p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/15 text-[12px] font-semibold text-accent shadow-[inset_0_1px_0_hsl(0_0%_100%/0.35)]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface-sunken text-[12px] font-semibold text-text">
             {initials || "IN"}
           </div>
           <div className="min-w-0">
-            <h3 className="text-[15px] font-semibold tracking-tight text-card-foreground">
+            <h3 className="text-[15px] font-semibold text-text">
               {installer.full_name}
             </h3>
-            <p className="mt-0.5 text-[12px] leading-6 text-muted-foreground">{installer.status}</p>
+            <p className="mt-0.5 text-[12px] leading-6 text-text-secondary">
+              {installer.status}
+            </p>
           </div>
         </div>
         <span
           className={cn(
-            "inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
+            "inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase",
             installer.is_active
-              ? "bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.25)]"
-              : "bg-muted text-muted-foreground border-border"
+              ? "border-status-ok-border bg-status-ok-bg text-status-ok-fg"
+              : "border-status-blocked-border bg-status-blocked-bg text-status-blocked-fg",
           )}
         >
           {installer.is_active ? "Active" : "Inactive"}
         </span>
       </div>
 
-      <div className="grid gap-2 text-[12px] text-muted-foreground">
-        <div className="rounded-xl border border-border/60 bg-background/55 px-3 py-2">
-          <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">Phone</div>
-          <div className="mt-1 leading-6 text-card-foreground">{installer.phone || "-"}</div>
+      <div className="grid gap-2 text-[12px] text-text-secondary">
+        <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
+          <div className="text-[11px] font-medium uppercase text-text-secondary">
+            Phone
+          </div>
+          <div className="mt-1 leading-6 text-text">
+            {installer.phone || "-"}
+          </div>
         </div>
-        <div className="rounded-xl border border-border/60 bg-background/55 px-3 py-2">
-          <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">Email</div>
-          <div className="mt-1 break-all leading-6 text-card-foreground">{installer.email || "-"}</div>
+        <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
+          <div className="text-[11px] font-medium uppercase text-text-secondary">
+            Email
+          </div>
+          <div className="mt-1 break-all leading-6 text-text">
+            {installer.email || "-"}
+          </div>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
-          <div className="rounded-xl border border-border/60 bg-background/55 px-3 py-2">
-            <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">User link</div>
-            <div className="mt-1 break-all leading-6 text-card-foreground">
+          <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
+            <div className="text-[11px] font-medium uppercase text-text-secondary">
+              User link
+            </div>
+            <div className="mt-1 break-all leading-6 text-text">
               {installer.user_id || "not linked"}
             </div>
           </div>
-          <div className="rounded-xl border border-border/60 bg-background/55 px-3 py-2">
-            <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">Updated</div>
-            <div className="mt-1 leading-6 text-card-foreground">{formatDate(installer.updated_at)}</div>
+          <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
+            <div className="text-[11px] font-medium uppercase text-text-secondary">
+              Updated
+            </div>
+            <div className="mt-1 leading-6 text-text">
+              {formatDate(installer.updated_at)}
+            </div>
           </div>
         </div>
       </div>
@@ -182,7 +220,7 @@ function InstallerCard({
           disabled={editDisabled}
           title={editHint}
           aria-label={`Edit ${installer.full_name}`}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background/80 transition-colors hover:border-accent/35 hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+          className="dmx-secondary-action h-9 w-9 px-0 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Pencil className="w-4 h-4" />
         </button>
@@ -191,7 +229,7 @@ function InstallerCard({
           disabled={deleteDisabled}
           title={deleteHint}
           aria-label={`Delete ${installer.full_name}`}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background/80 text-[hsl(var(--destructive))] transition-colors hover:border-[hsl(var(--destructive)/0.4)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="dmx-secondary-action h-9 w-9 px-0 text-status-problem-fg hover:border-status-problem-border disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -302,25 +340,47 @@ export default function InstallersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { locale, t } = useI18n();
+  const copy = (en: string, ru: string, he: string) => {
+    if (locale === "ru") return ru;
+    if (locale === "he") return he;
+    return en;
+  };
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive"
+  >("all");
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   const [form, setForm] = useState<InstallerFormState>(emptyForm());
-  const [editingInstaller, setEditingInstaller] = useState<Installer | null>(null);
+  const [editingInstaller, setEditingInstaller] = useState<Installer | null>(
+    null,
+  );
   const [notice, setNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [deepLinkApplied, setDeepLinkApplied] = useState(false);
   const session = useAuthSession();
-  const canManageInstallers = canRunPrivilegedAdminActions(session);
-  const canManageRates = canViewRates(session);
-  const canOpenInstallerDetails = canManageInstallers || canManageRates;
+  const canManageInstallers = canManageUsers(session);
+  const canViewInstallerRates = canViewRates(session);
+  const canManageRates =
+    canViewInstallerRates && canRunPrivilegedAdminActions(session);
+  const canOpenInstallerDetails =
+    canManageInstallers || canViewInstallerRates;
   const privilegedActionHint = canManageInstallers
     ? undefined
-    : "Installer role is read-only in installers";
-  const rateActionHint = canManageRates ? undefined : "Rate access is restricted for your scope";
+    : "Your access level is read-only in installers";
+  const rateActionHint = canManageRates
+    ? undefined
+    : canViewInstallerRates
+      ? "Rate changes are read-only for your scope"
+      : "Rate access is restricted for your scope";
+  const runRateWrite = <T,>(action: () => Promise<T>): Promise<T> => {
+    if (!canManageRates) {
+      return Promise.reject(new Error("Installer rate write access is required."));
+    }
+    return action();
+  };
   const deepLinkInstallerId = (searchParams?.get("installer_id") || "").trim();
 
   const [linkUserId, setLinkUserId] = useState("");
@@ -347,14 +407,17 @@ export default function InstallersPage() {
         params.set("is_active", statusFilter === "active" ? "true" : "false");
       }
       params.set("limit", "200");
-      return apiFetch<Installer[]>(`/api/v1/admin/installers?${params.toString()}`);
+      return apiFetch<Installer[]>(
+        `/api/v1/admin/installers?${params.toString()}`,
+      );
     },
     refetchInterval: 30_000,
   });
 
   const doorTypesQuery = useQuery({
     queryKey: ["installer-door-types"],
-    queryFn: () => apiFetch<DoorType[]>("/api/v1/admin/door-types?is_active=true&limit=500"),
+    queryFn: () =>
+      apiFetch<DoorType[]>("/api/v1/admin/door-types?is_active=true&limit=200"),
     enabled: isEditOpen && Boolean(editingInstaller),
   });
 
@@ -362,9 +425,9 @@ export default function InstallersPage() {
     queryKey: ["installer-rates", editingInstaller?.id],
     queryFn: () =>
       apiFetch<InstallerRate[]>(
-        `/api/v1/admin/installer-rates?installer_id=${editingInstaller?.id}&limit=500`
+        `/api/v1/admin/installer-rates?installer_id=${editingInstaller?.id}&limit=200`,
       ),
-    enabled: isEditOpen && Boolean(editingInstaller?.id) && canManageRates,
+    enabled: isEditOpen && Boolean(editingInstaller?.id) && canViewInstallerRates,
   });
 
   useEffect(() => {
@@ -391,7 +454,17 @@ export default function InstallersPage() {
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, locale, locale === "ru" ? "?? ??????? ??????? ??????????." : locale === "he" ? "?? ???? ????? ?????." : "Failed to create installer."));
+      setActionError(
+        readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось создать монтажника."
+            : locale === "he"
+              ? "לא ניתן ליצור מתקין."
+              : "Failed to create installer.",
+        ),
+      );
     },
   });
 
@@ -400,10 +473,13 @@ export default function InstallersPage() {
       if (!editingInstaller) {
         throw new Error("No installer selected");
       }
-      return apiFetch<Installer>(`/api/v1/admin/installers/${editingInstaller.id}`, {
-        method: "PATCH",
-        body: JSON.stringify(toPayload(form)),
-      });
+      return apiFetch<Installer>(
+        `/api/v1/admin/installers/${editingInstaller.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(toPayload(form)),
+        },
+      );
     },
     onSuccess: async () => {
       setNotice("Installer profile updated.");
@@ -412,13 +488,25 @@ export default function InstallersPage() {
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, locale, locale === "ru" ? "?? ??????? ???????? ??????????." : locale === "he" ? "?? ???? ????? ?????." : "Failed to update installer."));
+      setActionError(
+        readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось обновить монтажника."
+            : locale === "he"
+              ? "לא ניתן לעדכן את המתקין."
+              : "Failed to update installer.",
+        ),
+      );
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (installerId: string) =>
-      apiFetch<void>(`/api/v1/admin/installers/${installerId}`, { method: "DELETE" }),
+      apiFetch<void>(`/api/v1/admin/installers/${installerId}`, {
+        method: "DELETE",
+      }),
     onSuccess: async () => {
       setNotice("Installer deleted.");
       setActionError(null);
@@ -426,7 +514,17 @@ export default function InstallersPage() {
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, locale, locale === "ru" ? "?? ??????? ??????? ??????????." : locale === "he" ? "?? ???? ????? ?????." : "Failed to delete installer."));
+      setActionError(
+        readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось удалить монтажника."
+            : locale === "he"
+              ? "לא ניתן למחוק את המתקין."
+              : "Failed to delete installer.",
+        ),
+      );
     },
   });
 
@@ -435,10 +533,13 @@ export default function InstallersPage() {
       if (!editingInstaller) {
         throw new Error("No installer selected");
       }
-      return apiFetch<Installer>(`/api/v1/admin/installers/${editingInstaller.id}/link-user`, {
-        method: "POST",
-        body: JSON.stringify({ user_id: linkUserId.trim() }),
-      });
+      return apiFetch<Installer>(
+        `/api/v1/admin/installers/${editingInstaller.id}/link-user`,
+        {
+          method: "POST",
+          body: JSON.stringify({ user_id: linkUserId.trim() }),
+        },
+      );
     },
     onSuccess: async (installer) => {
       setNotice("Installer user link updated.");
@@ -448,7 +549,17 @@ export default function InstallersPage() {
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, locale, locale === "ru" ? "?? ??????? ??????? ?????????? ? ?????????????." : locale === "he" ? "?? ???? ???? ????? ??????." : "Failed to link installer user."));
+      setActionError(
+        readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось связать пользователя с монтажником."
+            : locale === "he"
+              ? "לא ניתן לקשר משתמש למתקין."
+              : "Failed to link installer user.",
+        ),
+      );
     },
   });
 
@@ -457,9 +568,12 @@ export default function InstallersPage() {
       if (!editingInstaller) {
         throw new Error("No installer selected");
       }
-      return apiFetch<Installer>(`/api/v1/admin/installers/${editingInstaller.id}/link-user`, {
-        method: "DELETE",
-      });
+      return apiFetch<Installer>(
+        `/api/v1/admin/installers/${editingInstaller.id}/link-user`,
+        {
+          method: "DELETE",
+        },
+      );
     },
     onSuccess: async (installer) => {
       setNotice("Installer user link removed.");
@@ -470,7 +584,17 @@ export default function InstallersPage() {
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, locale, locale === "ru" ? "?? ??????? ???????? ???????????? ?? ??????????." : locale === "he" ? "?? ???? ???? ?? ?????? ???????." : "Failed to unlink installer user."));
+      setActionError(
+        readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось отвязать пользователя от монтажника."
+            : locale === "he"
+              ? "לא ניתן לנתק את המשתמש מהמתקין."
+              : "Failed to unlink installer user.",
+        ),
+      );
     },
   });
 
@@ -479,66 +603,110 @@ export default function InstallersPage() {
       if (!editingInstaller) {
         throw new Error("No installer selected");
       }
-      return apiFetch<InstallerRate>("/api/v1/admin/installer-rates", {
+      return runRateWrite(() => apiFetch<InstallerRate>("/api/v1/admin/installer-rates", {
         method: "POST",
         body: JSON.stringify({
           installer_id: editingInstaller.id,
           door_type_id: newRateDoorTypeId,
           price: newRatePrice,
         }),
-      });
+      }));
     },
     onSuccess: async () => {
       setNotice("Installer rate added.");
       setActionError(null);
       setNewRatePrice("");
-      await queryClient.invalidateQueries({ queryKey: ["installer-rates", editingInstaller?.id] });
+      await queryClient.invalidateQueries({
+        queryKey: ["installer-rates", editingInstaller?.id],
+      });
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, locale, locale === "ru" ? "?? ??????? ???????? ?????? ??????????." : locale === "he" ? "?? ???? ?????? ????? ??????." : "Failed to add installer rate."));
+      setActionError(
+        readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось добавить ставку монтажника."
+            : locale === "he"
+              ? "לא ניתן להוסיף תעריף למתקין."
+              : "Failed to add installer rate.",
+        ),
+      );
     },
   });
 
   const updateRateMutation = useMutation({
     mutationFn: (rateId: string) =>
-      apiFetch<InstallerRate>(`/api/v1/admin/installer-rates/${rateId}`, {
+      runRateWrite(() => apiFetch<InstallerRate>(`/api/v1/admin/installer-rates/${rateId}`, {
         method: "PATCH",
         body: JSON.stringify({ price: rateDrafts[rateId] }),
-      }),
+      })),
     onSuccess: async () => {
       setNotice("Installer rate updated.");
       setActionError(null);
-      await queryClient.invalidateQueries({ queryKey: ["installer-rates", editingInstaller?.id] });
+      await queryClient.invalidateQueries({
+        queryKey: ["installer-rates", editingInstaller?.id],
+      });
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, locale, locale === "ru" ? "?? ??????? ???????? ?????? ??????????." : locale === "he" ? "?? ???? ????? ?? ????? ??????." : "Failed to update installer rate."));
+      setActionError(
+        readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось обновить ставку монтажника."
+            : locale === "he"
+              ? "לא ניתן לעדכן את תעריף המתקין."
+              : "Failed to update installer rate.",
+        ),
+      );
     },
   });
 
   const deleteRateMutation = useMutation({
     mutationFn: (rateId: string) =>
-      apiFetch<void>(`/api/v1/admin/installer-rates/${rateId}`, { method: "DELETE" }),
+      runRateWrite(() => apiFetch<void>(`/api/v1/admin/installer-rates/${rateId}`, {
+        method: "DELETE",
+      })),
     onSuccess: async () => {
       setNotice("Installer rate deleted.");
       setActionError(null);
-      await queryClient.invalidateQueries({ queryKey: ["installer-rates", editingInstaller?.id] });
+      await queryClient.invalidateQueries({
+        queryKey: ["installer-rates", editingInstaller?.id],
+      });
     },
     onError: (error) => {
       setNotice(null);
-      setActionError(readableApiError(error, locale, locale === "ru" ? "?? ??????? ??????? ?????? ??????????." : locale === "he" ? "?? ???? ????? ?? ????? ??????." : "Failed to delete installer rate."));
+      setActionError(
+        readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось удалить ставку монтажника."
+            : locale === "he"
+              ? "לא ניתן למחוק את תעריף המתקין."
+              : "Failed to delete installer rate.",
+        ),
+      );
     },
   });
 
   const installers = installersQuery.data || [];
 
   useEffect(() => {
+    setDeepLinkApplied(false);
+  }, [deepLinkInstallerId]);
+
+  useEffect(() => {
     if (!deepLinkInstallerId || deepLinkApplied || installersQuery.isLoading) {
       return;
     }
 
-    const matchedInstaller = installers.find((installer) => installer.id === deepLinkInstallerId) || null;
+    const matchedInstaller =
+      installers.find((installer) => installer.id === deepLinkInstallerId) ||
+      null;
     setDeepLinkApplied(true);
     if (!matchedInstaller || !canOpenInstallerDetails) {
       return;
@@ -586,8 +754,16 @@ export default function InstallersPage() {
     return { total: installers.length, active, inactive };
   }, [installers]);
   const focusedInstaller = useMemo(
-    () => installers.find((installer) => installer.id === deepLinkInstallerId) || null,
-    [deepLinkInstallerId, installers]
+    () =>
+      installers.find((installer) => installer.id === deepLinkInstallerId) ||
+      null,
+    [deepLinkInstallerId, installers],
+  );
+  const deepLinkInstallerMissing = Boolean(
+    deepLinkInstallerId &&
+      installersQuery.isFetched &&
+      !installersQuery.isLoading &&
+      !focusedInstaller,
   );
 
   const onOpenCreate = () => {
@@ -616,107 +792,133 @@ export default function InstallersPage() {
 
   return (
     <DashboardLayout>
-      <div className="page-shell page-stack motion-stagger">
-        <section className="page-hero relative overflow-hidden">
-          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
-          <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl">
-              <div className="page-eyebrow">{t("installers.eyebrow")}</div>
-              <h1 className="mt-3 font-display text-3xl tracking-[-0.04em] text-foreground sm:text-4xl">
-                {t("installers.title")}
-              </h1>
-              <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">
-                {t("installers.subtitle")}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="metric-chip">{t("installers.total")} {metrics.total}</span>
-                <span className="metric-chip">{t("common.active")} {metrics.active}</span>
-                {canManageRates ? <span className="metric-chip">{t("installers.rateControls")}</span> : null}
-              </div>
-              {focusedInstaller ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="metric-chip">Focused installer {focusedInstaller.id}</span>
-                  <button
-                    type="button"
-                    onClick={() => router.push("/installers")}
-                    className="inline-flex items-center rounded-lg border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
-                  >
-                    Show all installers
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            <div className="surface-subtle min-w-[320px] max-w-xl space-y-4 p-4 sm:p-5">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{t("installers.scope")}</div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">{statusFilter}</div>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{t("installers.searchLabel")}</div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">
-                    {search.trim() ? t("common.filtered") : t("common.portfolio")}
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{t("common.mode")}</div>
-                  <div className="mt-1 text-lg font-semibold text-foreground">
-                    {canManageInstallers ? t("common.manage") : canManageRates ? "Rates only" : t("common.readOnly")}
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={onOpenCreate}
-                disabled={!canManageInstallers}
-                title={privilegedActionHint}
-                className="btn-premium h-11 rounded-xl px-4 text-[13px] font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <Plus className="w-4 h-4" />
-                {t("installers.addInstaller")}
-              </button>
-            </div>
-          </div>
-        </section>
+      <div className="page-shell page-stack-tight motion-stagger">
+        <DimaxPageHeader
+          eyebrow={t("installers.eyebrow")}
+          title={t("installers.title")}
+          badge={`${t("installers.total")} ${metrics.total}`}
+          subtitle={t("installers.subtitle")}
+          actions={
+            <button
+              onClick={onOpenCreate}
+              disabled={!canManageInstallers}
+              title={privilegedActionHint}
+              className="dmx-primary-action h-9 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Plus className="h-4 w-4" />
+              {t("installers.addInstaller")}
+            </button>
+          }
+        />
 
-        <div className="toolbar-panel">
+        <div className="grid gap-3 md:grid-cols-4">
+          <DimaxKpiCard
+            label={t("installers.total")}
+            value={metrics.total}
+            hint={t("common.portfolio")}
+            barColor="blue"
+          />
+          <DimaxKpiCard
+            label={t("common.active")}
+            value={metrics.active}
+            hint={t("installers.rateControls")}
+            barColor="green"
+          />
+          <DimaxKpiCard
+            label={t("common.inactive")}
+            value={metrics.inactive}
+            hint={`${t("installers.scope")}: ${statusFilter}`}
+            barColor="yellow"
+          />
+          <DimaxKpiCard
+            label={t("common.mode")}
+            value={
+              canManageInstallers
+                ? t("common.manage")
+                : canViewInstallerRates
+                  ? "Rates only"
+                  : t("common.readOnly")
+            }
+            hint={search.trim() ? t("common.filtered") : t("common.portfolio")}
+            barColor={canManageInstallers ? "orange" : "red"}
+          />
+        </div>
+
+        {focusedInstaller ? (
+          <div className="toolbar-panel toolbar-row justify-between">
+            <span className="rounded-full border border-status-progress-border bg-status-progress-bg px-3 py-1 text-[12px] font-medium text-status-progress-fg">
+              Focused installer {focusedInstaller.id}
+            </span>
+            <button
+              type="button"
+              onClick={() => router.push("/installers")}
+              className="dmx-secondary-action"
+            >
+              Show all installers
+            </button>
+          </div>
+        ) : null}
+        {deepLinkInstallerMissing ? (
+          <div className="flex flex-col gap-3 rounded-lg border border-status-warning-border bg-status-warning-bg px-4 py-3 text-[13px] text-status-warning-fg sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-start gap-2">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                {copy(
+                  `Requested installer ${deepLinkInstallerId} is not available in the current installers list. Another installer was not opened automatically.`,
+                  `Монтажник ${deepLinkInstallerId} недоступен в текущем списке. Другой монтажник не был открыт автоматически.`,
+                  `המתקין ${deepLinkInstallerId} אינו זמין ברשימה הנוכחית. מתקין אחר לא נפתח אוטומטית.`,
+                )}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push("/installers")}
+              className="dmx-secondary-action shrink-0"
+            >
+              {copy("Show all installers", "Показать всех монтажников", "הצג את כל המתקינים")}
+            </button>
+          </div>
+        ) : null}
+
+        <div className="toolbar-panel toolbar-row">
           <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("installers.searchPlaceholder")}
-              className="control-input pl-9"
+              className="control-input ps-9"
             />
           </div>
           <button
             onClick={() => setStatusFilter("all")}
+            aria-pressed={statusFilter === "all"}
             className={cn(
-              "h-9 rounded-xl border px-3 text-[12px] font-medium",
               statusFilter === "all"
-                ? "bg-accent text-accent-foreground border-accent"
-                : "bg-background/70 border-border/70 text-muted-foreground"
+                ? "dmx-primary-action h-9"
+                : "dmx-secondary-action h-9",
             )}
           >
             {t("common.all")}
           </button>
           <button
             onClick={() => setStatusFilter("active")}
+            aria-pressed={statusFilter === "active"}
             className={cn(
-              "h-9 rounded-xl border px-3 text-[12px] font-medium",
               statusFilter === "active"
-                ? "bg-accent text-accent-foreground border-accent"
-                : "bg-background/70 border-border/70 text-muted-foreground"
+                ? "dmx-primary-action h-9"
+                : "dmx-secondary-action h-9",
             )}
           >
             {t("common.active")}
           </button>
           <button
             onClick={() => setStatusFilter("inactive")}
+            aria-pressed={statusFilter === "inactive"}
             className={cn(
-              "h-9 rounded-xl border px-3 text-[12px] font-medium",
               statusFilter === "inactive"
-                ? "bg-accent text-accent-foreground border-accent"
-                : "bg-background/70 border-border/70 text-muted-foreground"
+                ? "dmx-primary-action h-9"
+                : "dmx-secondary-action h-9",
             )}
           >
             {t("common.inactive")}
@@ -724,39 +926,48 @@ export default function InstallersPage() {
         </div>
 
         {hasError && (
-          <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
+          <div className={installersNoticeClass("error")}>
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{readableApiError(installersQuery.error, locale, t("installers.error"))}</span>
+            <span>
+              {readableApiError(
+                installersQuery.error,
+                locale,
+                t("installers.error"),
+              )}
+            </span>
           </div>
         )}
         {actionError && (
-          <div className="mb-4 rounded-lg border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--destructive))] flex items-start gap-2">
+          <div className={installersNoticeClass("error")}>
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{actionError}</span>
           </div>
         )}
         {notice && (
-          <div className="mb-4 rounded-lg border border-[hsl(var(--success)/0.35)] bg-[hsl(var(--success)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--success))] flex items-start gap-2">
+          <div className={installersNoticeClass("success")}>
             <UserRound className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{notice}</span>
           </div>
         )}
         {!canManageInstallers && (
-          <div className="mb-4 rounded-lg border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] px-4 py-3 text-[13px] text-[hsl(var(--warning-foreground))]">
-            {canManageRates
-              ? "Installer profile changes are read-only for your scope, but rate controls remain available."
-              : t("installers.readOnlyNotice")}
+          <div className={installersNoticeClass("warning")}>
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>
+              {canViewInstallerRates
+                ? "Installer profile changes are read-only for your scope, but rate data remain available."
+                : t("installers.readOnlyNotice")}
+            </span>
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {installersQuery.isLoading && (
-            <div className="surface-panel text-[13px] text-muted-foreground">
+            <div className="rounded-lg border border-border bg-surface p-4 text-[13px] text-text-secondary">
               {t("installers.loading")}
             </div>
           )}
           {!installersQuery.isLoading && installers.length === 0 && (
-            <div className="surface-panel col-span-full p-6 text-center text-[13px] text-muted-foreground">
+            <div className="col-span-full rounded-lg border border-border bg-surface p-6 text-center text-[13px] text-text-secondary">
               <div className="flex items-center justify-center mb-2">
                 <UserRound className="w-5 h-5" />
               </div>
@@ -771,7 +982,9 @@ export default function InstallersPage() {
               onDelete={() => deleteMutation.mutate(installer.id)}
               editDisabled={!canOpenInstallerDetails}
               deleteDisabled={!canManageInstallers}
-              editHint={canOpenInstallerDetails ? undefined : privilegedActionHint}
+              editHint={
+                canOpenInstallerDetails ? undefined : privilegedActionHint
+              }
               deleteHint={privilegedActionHint}
             />
           ))}
@@ -782,29 +995,39 @@ export default function InstallersPage() {
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
           <div className="modal-shell max-w-[760px]">
             <div className="modal-header">
-              <h2 className="text-[16px] font-semibold">{t("installers.createInstaller")}</h2>
+              <h2 className="text-[16px] font-semibold">
+                {t("installers.createInstaller")}
+              </h2>
               <button
                 onClick={() => setIsCreateOpen(false)}
-                className="inline-flex h-9 items-center rounded-xl border border-border/70 px-3 text-[12px] font-medium text-muted-foreground transition-colors hover:border-accent/35 hover:text-accent"
+                className="dmx-secondary-action h-9"
               >
                 Close
               </button>
             </div>
 
-            <InstallerBaseForm form={form} onChange={setForm} disabled={!canManageInstallers} />
+            <InstallerBaseForm
+              form={form}
+              onChange={setForm}
+              disabled={!canManageInstallers}
+            />
 
             <div className="modal-footer">
               <button
                 onClick={() => setIsCreateOpen(false)}
-                className="inline-flex h-10 items-center rounded-xl border border-border/70 px-4 text-[13px] font-medium text-muted-foreground transition-colors hover:border-accent/35 hover:text-accent"
+                className="dmx-secondary-action h-10"
               >
                 Cancel
               </button>
               <button
                 onClick={() => createMutation.mutate()}
-                disabled={!canManageInstallers || !form.full_name.trim() || createMutation.isPending}
+                disabled={
+                  !canManageInstallers ||
+                  !form.full_name.trim() ||
+                  createMutation.isPending
+                }
                 title={privilegedActionHint}
-                className="inline-flex h-10 items-center rounded-xl bg-accent px-4 text-[13px] font-medium text-accent-foreground shadow-[0_16px_34px_-18px_hsl(var(--accent)/0.55)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="dmx-primary-action h-10 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Save
               </button>
@@ -823,153 +1046,205 @@ export default function InstallersPage() {
                   setIsEditOpen(false);
                   setEditingInstaller(null);
                 }}
-                className="inline-flex h-9 items-center rounded-xl border border-border/70 px-3 text-[12px] font-medium text-muted-foreground transition-colors hover:border-accent/35 hover:text-accent"
+                className="dmx-secondary-action h-9"
               >
                 Close
               </button>
             </div>
 
-            <InstallerBaseForm form={form} onChange={setForm} disabled={!canManageInstallers} />
+            <InstallerBaseForm
+              form={form}
+              onChange={setForm}
+              disabled={!canManageInstallers}
+            />
 
-            <div className="surface-panel panel-pad-sm mt-5 space-y-3">
-              <div className="panel-heading">
-                <div>
-                  <h3 className="panel-title">User Link</h3>
-                  <p className="panel-subtitle">Bind the installer card to a platform user account.</p>
-                </div>
-              </div>
-              <div className="text-[12px] leading-6 text-muted-foreground">
+            <WidgetCard
+              title="User Link"
+              headerMeta="Bind the installer card to a platform user account."
+              className="mt-5"
+            >
+              <div className="text-[12px] leading-6 text-text-secondary">
                 Current linked user: {editingInstaller?.user_id || "none"}
               </div>
               {editingInstaller && (
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => router.push(`/reports?installer_id=${editingInstaller.id}`)}
-                    className="inline-flex h-9 items-center rounded-xl border border-border/70 bg-background/80 px-3 text-[12px] font-medium transition-colors hover:border-accent/35 hover:text-accent"
+                    onClick={() =>
+                      router.push(
+                        `/reports?installer_id=${editingInstaller.id}`,
+                      )
+                    }
+                    className="dmx-secondary-action h-9"
                   >
                     Open KPI report
                   </button>
+                  {canViewInstallerRates ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        router.push(
+                          `/earnings-ledger?installer_id=${editingInstaller.id}`,
+                        )
+                      }
+                      className="dmx-secondary-action h-9"
+                    >
+                      <ReceiptText className="h-3.5 w-3.5" />
+                      Open payroll ledger
+                    </button>
+                  ) : null}
                 </div>
               )}
               <div className="flex flex-wrap items-center gap-2">
                 <input
                   value={linkUserId}
+                  disabled={!canManageInstallers}
                   onChange={(e) => setLinkUserId(e.target.value)}
                   placeholder="User UUID for link"
                   className="control-input h-10 min-w-[280px] flex-1"
                 />
                 <button
                   onClick={() => linkUserMutation.mutate()}
-                  disabled={!canManageInstallers || !linkUserId.trim() || linkUserMutation.isPending}
+                  disabled={
+                    !canManageInstallers ||
+                    !linkUserId.trim() ||
+                    linkUserMutation.isPending
+                  }
                   title={privilegedActionHint}
-                  className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/70 bg-background/80 px-3 text-[12px] font-medium transition-colors hover:border-accent/35 hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+                  className="dmx-secondary-action h-10 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Link2 className="w-3.5 h-3.5" />
                   Link
                 </button>
                 <button
                   onClick={() => unlinkUserMutation.mutate()}
-                  disabled={!canManageInstallers || !editingInstaller?.user_id || unlinkUserMutation.isPending}
+                  disabled={
+                    !canManageInstallers ||
+                    !editingInstaller?.user_id ||
+                    unlinkUserMutation.isPending
+                  }
                   title={privilegedActionHint}
-                  className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/70 bg-background/80 px-3 text-[12px] font-medium transition-colors hover:border-accent/35 hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+                  className="dmx-secondary-action h-10 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Unlink2 className="w-3.5 h-3.5" />
                   Unlink
                 </button>
               </div>
-            </div>
+            </WidgetCard>
 
-            {canManageRates ? (
-            <div className="surface-panel panel-pad-sm mt-5 space-y-4">
-              <div className="panel-heading">
-                <div>
-                  <h3 className="panel-title">Installer Rates</h3>
-                  <p className="panel-subtitle">Keep rate rows aligned with current door-type pricing.</p>
-                </div>
-                <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2 text-right text-[12px] text-muted-foreground">
-                  {rates.length} rows
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_140px_130px]">
-                <select
-                  value={newRateDoorTypeId}
-                  onChange={(e) => setNewRateDoorTypeId(e.target.value)}
-                  className="control-input h-10"
-                >
-                  {(doorTypes || []).map((doorType) => (
-                    <option key={doorType.id} value={doorType.id}>
-                      {doorType.code} - {doorType.name}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  value={newRatePrice}
-                  onChange={(e) => setNewRatePrice(e.target.value)}
-                  placeholder="Price"
-                  className="control-input h-10"
-                />
-                <button
-                  onClick={() => createRateMutation.mutate()}
-                  disabled={!canManageRates || !newRateDoorTypeId || !newRatePrice || createRateMutation.isPending}
-                  title={rateActionHint}
-                  className="inline-flex h-10 items-center justify-center rounded-xl bg-accent px-4 text-[12px] font-medium text-accent-foreground shadow-[0_16px_34px_-18px_hsl(var(--accent)/0.55)] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Add Rate
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                {ratesQuery.isLoading && (
-                  <div className="text-[12px] leading-6 text-muted-foreground">Loading rates...</div>
-                )}
-                {!ratesQuery.isLoading && rates.length === 0 && (
-                  <div className="text-[12px] leading-6 text-muted-foreground">No rates configured yet.</div>
-                )}
-                {rates.map((rate) => {
-                  const doorType = doorTypeMap.get(rate.door_type_id);
-                  return (
-                    <div
-                      key={rate.id}
-                      className="grid gap-2 rounded-2xl border border-border/70 bg-background/60 px-3 py-3 md:grid-cols-[minmax(0,1fr)_120px_auto_auto] md:items-center"
+            {canViewInstallerRates ? (
+              <WidgetCard
+                title="Installer Rates"
+                headerMeta="Keep rate rows aligned with current door-type pricing."
+                actionSlot={
+                  <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2 text-end text-[12px] text-text-secondary">
+                    {rates.length} rows
+                  </div>
+                }
+                className="mt-5"
+              >
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_140px_130px]">
+                    <select
+                      value={newRateDoorTypeId}
+                      disabled={!canManageRates}
+                      onChange={(e) => setNewRateDoorTypeId(e.target.value)}
+                      className="control-input h-10"
                     >
-                      <div className="min-w-0 text-[12px] font-medium leading-6 text-card-foreground">
-                        {doorType ? `${doorType.code} - ${doorType.name}` : rate.door_type_id}
+                      {(doorTypes || []).map((doorType) => (
+                        <option key={doorType.id} value={doorType.id}>
+                          {doorType.code} - {doorType.name}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      value={newRatePrice}
+                      disabled={!canManageRates}
+                      onChange={(e) => setNewRatePrice(e.target.value)}
+                      placeholder="Price"
+                      className="control-input h-10"
+                    />
+                    <button
+                      onClick={() => createRateMutation.mutate()}
+                      disabled={
+                        !canManageRates ||
+                        !newRateDoorTypeId ||
+                        !newRatePrice ||
+                        createRateMutation.isPending
+                      }
+                      title={rateActionHint}
+                      className="dmx-primary-action h-10 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Add Rate
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {ratesQuery.isLoading && (
+                      <div className="text-[12px] leading-6 text-text-secondary">
+                        Loading rates...
                       </div>
-                      <input
-                        value={rateDrafts[rate.id] ?? String(rate.price)}
-                        onChange={(e) =>
-                          setRateDrafts((prev) => ({ ...prev, [rate.id]: e.target.value }))
-                        }
-                        className="control-input h-9 w-full px-2.5 tabular-nums"
-                      />
-                      <button
-                        onClick={() => updateRateMutation.mutate(rate.id)}
-                        disabled={!canManageRates || updateRateMutation.isPending}
-                        title={rateActionHint}
-                        className="inline-flex h-9 items-center rounded-xl border border-border/70 bg-background/80 px-3 text-[12px] font-medium transition-colors hover:border-accent/35 hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => deleteRateMutation.mutate(rate.id)}
-                        disabled={!canManageRates || deleteRateMutation.isPending}
-                        title={rateActionHint}
-                        className="inline-flex h-9 items-center rounded-xl border border-border/70 bg-background/80 px-3 text-[12px] font-medium text-[hsl(var(--destructive))] transition-colors hover:border-[hsl(var(--destructive)/0.4)] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                    )}
+                    {!ratesQuery.isLoading && rates.length === 0 && (
+                      <div className="text-[12px] leading-6 text-text-secondary">
+                        No rates configured yet.
+                      </div>
+                    )}
+                    {rates.map((rate) => {
+                      const doorType = doorTypeMap.get(rate.door_type_id);
+                      return (
+                        <div
+                          key={rate.id}
+                          className="grid gap-2 rounded-lg border border-border bg-surface-subtle px-3 py-3 md:grid-cols-[minmax(0,1fr)_120px_auto_auto] md:items-center"
+                        >
+                          <div className="min-w-0 text-[12px] font-medium leading-6 text-text">
+                            {doorType
+                              ? `${doorType.code} - ${doorType.name}`
+                              : rate.door_type_id}
+                          </div>
+                          <input
+                            value={rateDrafts[rate.id] ?? String(rate.price)}
+                            disabled={!canManageRates}
+                            onChange={(e) =>
+                              setRateDrafts((prev) => ({
+                                ...prev,
+                                [rate.id]: e.target.value,
+                              }))
+                            }
+                            className="control-input h-9 w-full px-2.5 tabular-nums"
+                          />
+                          <button
+                            onClick={() => updateRateMutation.mutate(rate.id)}
+                            disabled={
+                              !canManageRates || updateRateMutation.isPending
+                            }
+                            title={rateActionHint}
+                            className="dmx-secondary-action h-9 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => deleteRateMutation.mutate(rate.id)}
+                            disabled={
+                              !canManageRates || deleteRateMutation.isPending
+                            }
+                            title={rateActionHint}
+                            className="dmx-secondary-action h-9 text-status-problem-fg hover:border-status-problem-border disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </WidgetCard>
             ) : (
-              <div className="surface-panel panel-pad-sm mt-5">
-                <p className="text-[12px] leading-6 text-muted-foreground">
+              <WidgetCard title="Installer Rates" className="mt-5">
+                <p className="text-[12px] leading-6 text-text-secondary">
                   Rate controls are hidden for your current admin scope.
                 </p>
-              </div>
+              </WidgetCard>
             )}
 
             <div className="modal-footer">
@@ -978,15 +1253,19 @@ export default function InstallersPage() {
                   setIsEditOpen(false);
                   setEditingInstaller(null);
                 }}
-                className="inline-flex h-10 items-center rounded-xl border border-border/70 px-4 text-[13px] font-medium text-muted-foreground transition-colors hover:border-accent/35 hover:text-accent"
+                className="dmx-secondary-action h-10"
               >
                 Cancel
               </button>
               <button
                 onClick={() => updateMutation.mutate()}
-                disabled={!canManageInstallers || !form.full_name.trim() || updateMutation.isPending}
+                disabled={
+                  !canManageInstallers ||
+                  !form.full_name.trim() ||
+                  updateMutation.isPending
+                }
                 title={privilegedActionHint}
-                className="inline-flex h-10 items-center rounded-xl bg-accent px-4 text-[13px] font-medium text-accent-foreground shadow-[0_16px_34px_-18px_hsl(var(--accent)/0.55)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="dmx-primary-action h-10 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Save Installer
               </button>
@@ -997,5 +1276,3 @@ export default function InstallersPage() {
     </DashboardLayout>
   );
 }
-
-

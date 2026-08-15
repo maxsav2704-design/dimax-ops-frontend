@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-function parseArgs(argv) {
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+const PLACEHOLDER_PATTERN = /example\.com|replace|placeholder|changeme|change-me|todo/iu;
+
+export function parseArgs(argv) {
   const result = {
     envFile: "",
+    backendEnvFile: "",
     allowHttp: false,
     help: false,
   };
@@ -16,6 +21,9 @@ function parseArgs(argv) {
     } else if (arg === "--env-file") {
       result.envFile = argv[index + 1] || "";
       index += 1;
+    } else if (arg === "--backend-env-file") {
+      result.backendEnvFile = argv[index + 1] || "";
+      index += 1;
     } else if (arg === "--allow-http") {
       result.allowHttp = true;
     }
@@ -24,7 +32,7 @@ function parseArgs(argv) {
   return result;
 }
 
-function loadEnvFile(filePath) {
+export function loadEnvFile(filePath) {
   if (!filePath) {
     return {};
   }
@@ -56,17 +64,15 @@ function loadEnvFile(filePath) {
   return result;
 }
 
-function mergeEnv(fileEnv) {
-  const merged = { ...process.env };
-  for (const [key, value] of Object.entries(fileEnv)) {
-    if (!merged[key] || String(merged[key]).trim() === "") {
-      merged[key] = value;
-    }
-  }
-  return merged;
+function hasPlaceholderValue(value) {
+  return PLACEHOLDER_PATTERN.test(String(value || ""));
 }
 
-function validateApiBaseUrl(name, value, allowHttp) {
+function normalizedBaseUrl(value) {
+  return String(value || "").trim().replace(/\/+$/u, "");
+}
+
+export function validateApiBaseUrl(name, value, allowHttp = false) {
   const errors = [];
   if (!value || !String(value).trim()) {
     return [`${name} is required`];
@@ -79,65 +85,125 @@ function validateApiBaseUrl(name, value, allowHttp) {
     return [`${name} must be a full URL`];
   }
 
-  if (!allowHttp && parsed.protocol !== "https:") {
-    errors.push(`${name} must use https in production`);
+  const allowedProtocols = allowHttp ? new Set(["http:", "https:"]) : new Set(["https:"]);
+  if (!allowedProtocols.has(parsed.protocol)) {
+    errors.push(
+      allowHttp
+        ? `${name} must use http or https`
+        : `${name} must use https in production`
+    );
   }
-
-  if (["localhost", "127.0.0.1"].includes(parsed.hostname)) {
+  if (LOCAL_HOSTS.has(parsed.hostname)) {
     errors.push(`${name} must not point to localhost in production`);
+  }
+  if (parsed.username || parsed.password) {
+    errors.push(`${name} must not contain URL credentials`);
+  }
+  if (parsed.search || parsed.hash) {
+    errors.push(`${name} must not contain a query string or fragment`);
+  }
+  if (hasPlaceholderValue(value)) {
+    errors.push(`${name} must not use placeholder/example production value`);
   }
 
   return errors;
 }
 
-function printHelp() {
-  console.log("Frontend production env validator");
-  console.log("Usage:");
-  console.log("  node scripts/validate-production-env.mjs --env-file .env.production.local");
-  console.log("Optional flags:");
-  console.log("  --allow-http   allow http scheme (only for non-production smoke)");
+export function validateProductionEnvironment(
+  env,
+  { allowHttp = false, backendPublicBaseUrl = "" } = {}
+) {
+  const errors = [];
+  const nextBaseUrl = String(env.NEXT_PUBLIC_API_BASE_URL || "").trim();
+  const viteBaseUrl = String(env.VITE_API_BASE_URL || "").trim();
+
+  errors.push(
+    ...validateApiBaseUrl("NEXT_PUBLIC_API_BASE_URL", nextBaseUrl, allowHttp)
+  );
+
+  if (viteBaseUrl) {
+    errors.push(...validateApiBaseUrl("VITE_API_BASE_URL", viteBaseUrl, allowHttp));
+    if (normalizedBaseUrl(nextBaseUrl) !== normalizedBaseUrl(viteBaseUrl)) {
+      errors.push(
+        "NEXT_PUBLIC_API_BASE_URL and VITE_API_BASE_URL must match when both are set"
+      );
+    }
+  }
+
+  if (
+    backendPublicBaseUrl &&
+    normalizedBaseUrl(nextBaseUrl) !== normalizedBaseUrl(backendPublicBaseUrl)
+  ) {
+    errors.push("NEXT_PUBLIC_API_BASE_URL must match backend PUBLIC_BASE_URL");
+  }
+
+  return errors;
 }
 
-const args = parseArgs(process.argv.slice(2));
-if (args.help) {
-  printHelp();
-  process.exit(0);
+function printHelp(output) {
+  output.log("Frontend production env validator");
+  output.log("Usage:");
+  output.log(
+    [
+      "  node scripts/validate-production-env.mjs",
+      "--env-file .env.production.local",
+      "--backend-env-file ../backend/.env.production.local",
+    ].join(" ")
+  );
+  output.log("Optional flags:");
+  output.log("  --allow-http   allow http scheme (only for non-production smoke)");
 }
 
-let fileEnv = {};
-if (args.envFile) {
+export function run(
+  argv = process.argv.slice(2),
+  processEnvironment = process.env,
+  output = console
+) {
+  const args = parseArgs(argv);
+  if (args.help) {
+    printHelp(output);
+    return 0;
+  }
+
+  let env;
+  let backendPublicBaseUrl = "";
   try {
-    fileEnv = loadEnvFile(path.resolve(process.cwd(), args.envFile));
+    env = args.envFile
+      ? loadEnvFile(path.resolve(process.cwd(), args.envFile))
+      : { ...processEnvironment };
+    if (args.backendEnvFile) {
+      const backendEnv = loadEnvFile(
+        path.resolve(process.cwd(), args.backendEnvFile)
+      );
+      backendPublicBaseUrl = String(backendEnv.PUBLIC_BASE_URL || "").trim();
+      if (!backendPublicBaseUrl) {
+        output.error("Backend production env validation failed:");
+        output.error("- PUBLIC_BASE_URL is required in the backend env file");
+        return 1;
+      }
+    }
   } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(2);
+    output.error(error instanceof Error ? error.message : String(error));
+    return 2;
   }
-}
 
-const env = mergeEnv(fileEnv);
-const nextBaseUrl = String(env.NEXT_PUBLIC_API_BASE_URL || "").trim();
-const viteBaseUrl = String(env.VITE_API_BASE_URL || "").trim();
-const resolvedBaseUrl = nextBaseUrl || viteBaseUrl;
-const errors = [];
-
-if (nextBaseUrl && viteBaseUrl && nextBaseUrl !== viteBaseUrl) {
-  errors.push("NEXT_PUBLIC_API_BASE_URL and VITE_API_BASE_URL must match when both are set");
-}
-
-errors.push(
-  ...validateApiBaseUrl(
-    nextBaseUrl ? "NEXT_PUBLIC_API_BASE_URL" : "VITE_API_BASE_URL",
-    resolvedBaseUrl,
-    args.allowHttp
-  )
-);
-
-if (errors.length > 0) {
-  console.error("Frontend production env validation failed:");
-  for (const item of errors) {
-    console.error(`- ${item}`);
+  const errors = validateProductionEnvironment(env, {
+    allowHttp: args.allowHttp,
+    backendPublicBaseUrl,
+  });
+  if (errors.length > 0) {
+    output.error("Frontend production env validation failed:");
+    for (const item of errors) {
+      output.error(`- ${item}`);
+    }
+    return 1;
   }
-  process.exit(1);
+
+  output.log("Frontend production env is valid.");
+  return 0;
 }
 
-console.log("Frontend production env is valid.");
+const scriptPath = process.argv[1] ? path.resolve(process.argv[1]) : "";
+if (scriptPath === fileURLToPath(import.meta.url)) {
+  process.exitCode = run();
+}

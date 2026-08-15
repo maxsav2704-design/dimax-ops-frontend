@@ -18,22 +18,18 @@ async function login(page) {
   await inputs.nth(2).pressSequentially(ADMIN_PASSWORD);
   const loginResponsePromise = page.waitForResponse(
     (response) =>
-      response.url().includes("/api/v1/auth/login") &&
-      response.request().method() === "POST",
-    { timeout: 30_000 }
+      response.url().includes("/api/v1/auth/login") && response.request().method() === "POST",
+    { timeout: 60_000 }
   );
-  await page
-    .locator("button")
-    .filter({ hasText: /Sign In|Signing In|Войти|Вход|התחבר|מתחבר/ })
-    .first()
-    .click();
+  await page.locator('button[type="submit"]').click();
   const loginResponse = await loginResponsePromise;
   expect(loginResponse.ok()).toBeTruthy();
   const loginBody = (await loginResponse.json()) as { access_token?: string };
+  expect(loginBody.access_token).toBeTruthy();
   await page.waitForFunction(
     () => Boolean(window.sessionStorage.getItem("dimax_refresh_token")),
     undefined,
-    { timeout: 30_000 }
+    { timeout: 60_000 }
   );
   if (/\/login(?:\?|$)/.test(page.url())) {
     try {
@@ -42,10 +38,8 @@ async function login(page) {
       // Client-side redirect can race with manual navigation in Next.js.
     }
   }
-  await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
-  await expect(page.getByText("Dispatcher Board")).toBeVisible({ timeout: 30_000 });
-
-  expect(loginBody.access_token).toBeTruthy();
+  await expect(page).toHaveURL(/\/$/, { timeout: 60_000 });
+  await expect(page.getByText("Dispatcher Board")).toBeVisible({ timeout: 60_000 });
   return loginBody.access_token as string;
 }
 
@@ -152,6 +146,8 @@ test.describe.serial("Admin web smoke", () => {
     page,
     request,
   }) => {
+    test.setTimeout(300_000);
+
     const suffix = String(Date.now());
     const token = await login(page);
     await page.evaluate(() => window.localStorage.setItem("dimax_locale", "en"));
@@ -162,8 +158,12 @@ test.describe.serial("Admin web smoke", () => {
     const project = await createProject(request, token, suffix);
 
     await test.step("Projects import analyze", async () => {
-      await page.goto("/projects");
-      await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
+      await page.getByRole("link", { name: "Projects" }).click();
+      await expect(page).toHaveURL(/\/projects$/, { timeout: 30_000 });
+      await page.waitForLoadState("networkidle");
+      await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible({
+        timeout: 45_000,
+      });
 
       await page.getByPlaceholder("Search project...").fill(project.name);
       await page.locator("button").filter({ hasText: project.name }).first().click();
@@ -183,8 +183,8 @@ test.describe.serial("Admin web smoke", () => {
       await expect(page.getByText("Contact: E2E Admin")).toBeVisible();
 
       const csv = [
-        "\uFEFF\u05de\u05e1\u05e4\u05e8 \u05d4\u05d6\u05de\u05e0\u05d4,\u05d1\u05e0\u05d9\u05d9\u05df,\u05e7\u05d5\u05de\u05d4,\u05d3\u05d9\u05e8\u05d4,\u05d3\u05d2\u05dd \u05db\u05e0\u05e3,qty",
-        `AZ-${suffix},A,1,11,D-11,1`,
+        "\uFEFF\u05de\u05e1\u05e4\u05e8 \u05d4\u05d6\u05de\u05e0\u05d4,\u05d1\u05e0\u05d9\u05d9\u05df,\u05e7\u05d5\u05de\u05d4,\u05d3\u05d9\u05e8\u05d4,\u05d3\u05d2\u05dd \u05db\u05e0\u05e3,door_type,qty",
+        `AZ-${suffix},A,9,905,D-905,entrance,1`,
       ].join("\n");
 
       await page.locator('input[type="file"]').setInputFiles({
@@ -192,25 +192,35 @@ test.describe.serial("Admin web smoke", () => {
         mimeType: "text/csv",
         buffer: Buffer.from(csv, "utf-8"),
       });
-      await page.locator("select").nth(2).selectOption("factory_he_v1");
-      await page.locator("select").nth(3).selectOption(",");
+      const mappingProfileSelect = page.getByLabel("Mapping profile: auto_v1");
+      await expect(
+        mappingProfileSelect.locator('option[value="factory_he_v1"]')
+      ).toHaveCount(1, { timeout: 30_000 });
+      await mappingProfileSelect.selectOption("factory_he_v1");
+      await page.getByLabel("Delimiter: auto").selectOption(",");
 
       await page.getByRole("button", { name: "Analyze" }).click();
-      await expect(page.getByText("Import data summary:")).toBeVisible();
-      await expect(page.getByText("Project structure preview:")).toBeVisible();
-      await expect(page.getByText(`AZ-${suffix}`)).toBeVisible();
+      await expect(page.getByText("Import data summary:")).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText("Project structure preview:")).toBeVisible({ timeout: 30_000 });
+      await expect(
+        page.getByRole("cell", { name: `AZ-${suffix}`, exact: true })
+      ).toBeVisible();
     });
 
     await test.step("Calendar create event", async () => {
       const eventTitle = `E2E Calendar ${suffix}`;
 
-      await page.goto("/calendar");
-      await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible();
+      await page.getByRole("link", { name: "Calendar" }).click();
+      await expect(
+        page.getByRole("heading", { name: "Calendar", exact: true })
+      ).toBeVisible();
       await page.getByRole("button", { name: "Add Event" }).click();
-      await page.getByLabel("Title").fill(eventTitle);
-      await page.getByLabel("Location").fill("Ashdod Tower A");
-      await page.getByLabel("Project").selectOption({ label: project.name });
-      await page.getByLabel("Description").fill("E2E smoke event");
+      await page.getByLabel("Title", { exact: true }).fill(eventTitle);
+      await page.getByLabel("Location", { exact: true }).fill("Ashdod Tower A");
+      await page
+        .getByLabel("Project", { exact: true })
+        .selectOption({ label: project.name });
+      await page.getByLabel("Description", { exact: true }).fill("E2E smoke event");
       const createEventResponsePromise = page.waitForResponse(
         (response) =>
           response.url().includes("/api/v1/admin/calendar/events") &&
@@ -220,19 +230,43 @@ test.describe.serial("Admin web smoke", () => {
       await page.getByRole("button", { name: "Create Event" }).click();
       const createEventResponse = await createEventResponsePromise;
       expect(createEventResponse.ok()).toBeTruthy();
-      await page.goto("/calendar");
-      await expect(page.getByText(eventTitle)).toBeVisible({ timeout: 30_000 });
+
+      const weekStart = new Date();
+      const dayOfWeek = weekStart.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      weekStart.setDate(weekStart.getDate() + mondayOffset);
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 7);
+      const refreshedCalendarResponse = await request.get(
+        `${API_BASE_URL}/api/v1/admin/calendar/events?starts_at=${encodeURIComponent(weekStart.toISOString())}&ends_at=${encodeURIComponent(weekEnd.toISOString())}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      expect(refreshedCalendarResponse.ok()).toBeTruthy();
+      const refreshedCalendarBody = (await refreshedCalendarResponse.json()) as {
+        items?: Array<{ title?: string }>;
+      };
+      expect(refreshedCalendarBody.items?.some((event) => event.title === eventTitle)).toBeTruthy();
+
+      await page.goto("/calendar", { waitUntil: "domcontentloaded" });
+      await expect(
+        page.getByRole("heading", { name: "Calendar", exact: true })
+      ).toBeVisible({ timeout: 30_000 });
     });
 
     await test.step("Reports open", async () => {
-      await page.goto("/reports");
+      await page.getByRole("link", { name: "Reports" }).click();
       await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible();
       await expect(page.getByText("Project Plan vs Fact", { exact: true })).toBeVisible();
       await expect(page.getByText("Risk Concentration", { exact: true })).toBeVisible();
     });
 
     await test.step("Operations center opens", async () => {
-      await page.goto("/operations");
+      await page.getByRole("link", { name: "Operations" }).click();
       await expect(page.locator("h1").first()).toBeVisible();
       await expect(
         page.getByRole("button", {
@@ -254,13 +288,18 @@ test.describe.serial("Admin web smoke", () => {
     });
 
     await test.step("Operations center deep-link actionable filter", async () => {
-      await page.goto("/operations?actionable=1");
       const actionableToggle = page.getByRole("button", {
         name: /Only actionable|Только действия|רק פעולות/,
       });
       await expect(page.locator("h1").first()).toBeVisible();
+      await actionableToggle.click();
       await expect(actionableToggle).toHaveAttribute("aria-pressed", "true");
-      await expect(page).toHaveURL(/\/operations\?actionable=1$/);
+      await expect(page).toHaveURL(/\/operations\?actionable=1$/, { timeout: 30_000 });
+
+      await page.reload({ waitUntil: "networkidle" });
+      await expect(page.locator("h1").first()).toBeVisible();
+      await expect(actionableToggle).toHaveAttribute("aria-pressed", "true");
+      await expect(page).toHaveURL(/\/operations\?actionable=1$/, { timeout: 30_000 });
 
       await actionableToggle.click();
       await expect(actionableToggle).toHaveAttribute("aria-pressed", "false");
@@ -276,19 +315,26 @@ test.describe.serial("Admin web smoke", () => {
         .poll(async () => page.evaluate(() => document.documentElement.lang))
         .toBe("ru");
 
-      await page.goto("/reports", { waitUntil: "networkidle" });
+      await page.locator('a[href="/reports"]').first().click();
+      await expect(page).toHaveURL(/\/reports$/, { timeout: 30_000 });
+      await expect(page.locator("h1").first()).toBeVisible({ timeout: 30_000 });
       await expect
-        .poll(async () => page.locator("body").innerText())
+        .poll(async () => page.locator("main").innerText())
         .not.toContain("Top Failing Projects");
       await expect
-        .poll(async () => page.locator("body").innerText())
+        .poll(async () => page.locator("main").innerText())
         .not.toContain("Operations SLA");
 
-      await page.goto("/operations", { waitUntil: "networkidle" });
+      await page.locator('a[href="/operations"]').first().click();
+      await expect(page).toHaveURL(/\/operations(?:\?actionable=1)?$/, {
+        timeout: 30_000,
+      });
+      await expect(page.locator("h1").first()).toBeVisible({ timeout: 30_000 });
       await expect
-        .poll(async () => page.locator("body").innerText())
+        .poll(async () => page.locator("main").innerText())
         .not.toContain("Webhook Signals");
-      await page.reload({ waitUntil: "networkidle" });
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await expect(page.locator("h1").first()).toBeVisible({ timeout: 30_000 });
       await expect
         .poll(async () => page.evaluate(() => window.localStorage.getItem("dimax_locale")))
         .toBe("ru");

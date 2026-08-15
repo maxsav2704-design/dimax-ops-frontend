@@ -98,6 +98,43 @@ function mockWebhookSignals(path: string) {
       ],
     };
   }
+  if (
+    path ===
+    "/api/v1/admin/reports/audit-catalogs?entity_type=sync_state&action=SYNC_STATE_RESET&limit=6"
+  ) {
+    return {
+      items: [
+        {
+          id: "sync-audit-1",
+          created_at: "2026-03-07T09:12:00Z",
+          actor_user_id: "admin-1",
+          entity_type: "sync_state",
+          entity_id: "installer-2",
+          action: "SYNC_STATE_RESET",
+          reason: "admin_cold_resync",
+          before: {
+            installer_id: "installer-2",
+            installer_name: "Avi Cohen",
+            user_id: "user-2",
+            last_cursor_ack: 18,
+            device_id: "device-1",
+            app_version: "1.2.0",
+          },
+          after: {
+            installer_id: "installer-2",
+            installer_name: "Avi Cohen",
+            user_id: "user-2",
+            last_cursor_ack: 0,
+          },
+        },
+      ],
+      summary: {
+        total: 1,
+        by_entity: { sync_state: 1 },
+        by_action: { SYNC_STATE_RESET: 1 },
+      },
+    };
+  }
   return null;
 }
 
@@ -129,18 +166,120 @@ describe("OperationsPage", () => {
             dead: 1,
             never_seen: 0,
             danger_pct: 28.57,
+            failed_events: 1,
+            queue_pending: 0,
+            queue_conflicts: 1,
+            queue_blocked: 0,
+            queue_auth_required: 1,
+            problem_total: 3,
           },
           alerts_sent: 3,
           top_laggers: [
             {
               installer_id: "installer-2",
+              installer_name: "Avi Cohen",
+              installer_phone: "+972501112233",
               status: "danger",
               lag: 9,
               days_offline: 2,
               last_seen_at: "2026-03-07T08:00:00Z",
+              failed_events: 1,
+              queue_pending: 0,
+              queue_conflicts: 1,
+              queue_blocked: 0,
+              queue_auth_required: 1,
+              problem_count: 3,
             },
           ],
           top_offline: [],
+        };
+      }
+      if (path.startsWith("/api/v1/admin/sync/problems?")) {
+        const url = new URL(path, "https://dimax.test");
+        const statusFilter = url.searchParams.get("status");
+        const installerFilter = url.searchParams.get("installer_id");
+        const items = [
+          {
+            id: "sync-event-1",
+            source: "sync_event",
+            installer_id: "installer-2",
+            installer_name: "Avi Cohen",
+            installer_phone: "+972501112233",
+            user_id: "user-2",
+            project_id: "project-1",
+            client_event_id: "event-1",
+            event_type: "DOOR_SET_STATUS",
+            entity_type: null,
+            entity_id: null,
+            operation_type: null,
+            status: "FAILED",
+            conflict_code: null,
+            error: "Door is not assigned to this installer",
+            problem_code: "CONFLICT_ASSIGNMENT_CHANGED",
+            problem_title: "Assignment changed",
+            operator_action:
+              "Verify the current installer assignment, then request cold resync if the work still belongs to this installer. Do not retry the stale event blindly.",
+            retry_allowed: false,
+            manual_review_required: true,
+            device_id: null,
+            base_version: null,
+            payload: { door_id: "door-1" },
+            created_at: "2026-03-07T08:30:00Z",
+            client_happened_at: "2026-03-07T08:29:00Z",
+            applied_at: "2026-03-07T08:31:00Z",
+            synced_at: null,
+          },
+          {
+            id: "queue-1",
+            source: "sync_queue",
+            installer_id: "installer-2",
+            installer_name: "Avi Cohen",
+            installer_phone: "+972501112233",
+            user_id: "user-2",
+            project_id: null,
+            client_event_id: null,
+            event_type: null,
+            entity_type: "door",
+            entity_id: "door-2",
+            operation_type: "DOOR_SET_STATUS",
+            status: "CONFLICT",
+            conflict_code: "CONFLICT_ASSIGNMENT_CHANGED",
+            error: "CONFLICT_ASSIGNMENT_CHANGED",
+            problem_code: "CONFLICT_ASSIGNMENT_CHANGED",
+            problem_title: "Assignment changed",
+            operator_action:
+              "Verify the current installer assignment, then request cold resync if the work still belongs to this installer. Do not retry the stale event blindly.",
+            retry_allowed: false,
+            manual_review_required: true,
+            device_id: "device-1",
+            base_version: 2,
+            payload: { status: "INSTALLED" },
+            created_at: "2026-03-07T08:32:00Z",
+            client_happened_at: null,
+            applied_at: null,
+            synced_at: null,
+          },
+        ].filter((item) => {
+          if (installerFilter && item.installer_id !== installerFilter) {
+            return false;
+          }
+          if (statusFilter === "failed") {
+            return item.source === "sync_event";
+          }
+          if (statusFilter === "conflict") {
+            return item.status === "CONFLICT";
+          }
+          if (statusFilter === "pending") {
+            return item.status === "PENDING" || item.status === "BLOCKED";
+          }
+          if (statusFilter === "auth_required") {
+            return item.status === "AUTH_REQUIRED";
+          }
+          return true;
+        });
+        return {
+          items,
+          total: items.length,
         };
       }
       if (path === "/api/v1/admin/outbox/summary") {
@@ -197,12 +336,35 @@ describe("OperationsPage", () => {
           offset: 0,
         };
       }
+      if (path === "/api/v1/admin/sync/states/user-2/reset") {
+        return {
+          installer_id: "installer-2",
+          installer_name: "Avi Cohen",
+          installer_phone: "+972501112233",
+          installer_active: true,
+          last_cursor_ack: 0,
+          last_seen_at: "2026-03-07T08:00:00Z",
+          lag: 18,
+          health_status: "WARN",
+          health_days_offline: 0,
+          last_alert_at: null,
+        };
+      }
       throw new Error(`Unexpected path: ${path}`);
     });
 
     renderSubject();
 
     expect(await screen.findByText("Operations Center")).toBeInTheDocument();
+    expect(screen.getByTestId("operations-recovery-center")).toBeInTheDocument();
+    expect(screen.getByText("Operations recovery")).toBeInTheDocument();
+    expect(screen.getByText("Selected actionable recovery")).toBeInTheDocument();
+    expect(screen.getByText("2 selected")).toBeInTheDocument();
+    expect(screen.getByText("1 sync watchlist")).toBeInTheDocument();
+    expect(screen.getByText("Active incidents")).toBeInTheDocument();
+    expect(screen.getByText("Integrations")).toBeInTheDocument();
+    expect(screen.getByText("Import runs")).toBeInTheDocument();
+    expect(screen.getByText("Sync queue by installer")).toBeInTheDocument();
     expect(screen.getByText("Sync danger")).toBeInTheDocument();
     expect(screen.getByText("Failed imports")).toBeInTheDocument();
     expect(screen.getByText("Failed outbox")).toBeInTheDocument();
@@ -211,13 +373,14 @@ describe("OperationsPage", () => {
     expect(screen.getByText("Delivery Drilldown")).toBeInTheDocument();
     expect(screen.getByText("Webhook Signals")).toBeInTheDocument();
     expect(screen.getByText("Delivery Recovery Audit")).toBeInTheDocument();
+    expect(screen.getByText("Sync Recovery Audit")).toBeInTheDocument();
     expect(screen.getByText("Data Freshness")).toBeInTheDocument();
-    expect(screen.getByText("fresh")).toBeInTheDocument();
+    expect(await screen.findByText("fresh")).toBeInTheDocument();
     expect(screen.getByText(/Fresh as of/)).toBeInTheDocument();
     expect(screen.queryByText("Last Batch Result")).not.toBeInTheDocument();
     expect(screen.getByText("Retry failed import for Ashdod Towers")).toBeInTheDocument();
     expect(screen.getByText("Recover delivery for ops@dimax.test")).toBeInTheDocument();
-    expect(screen.getByText("Investigate installer installer-2")).toBeInTheDocument();
+    expect(screen.getByText("Investigate installer Avi Cohen")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Retry actionable imports (1)" })
     ).toBeEnabled();
@@ -241,8 +404,48 @@ describe("OperationsPage", () => {
     expect(screen.getByRole("button", { name: "Only EMAIL" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Only sendgrid" })).toBeInTheDocument();
     expect(screen.getByText("operations_center_bulk_retry | actor admin-1")).toBeInTheDocument();
+    expect(screen.getByText("Cold resync | cursor 18 -> 0")).toBeInTheDocument();
+    expect(screen.getByText(/actor admin-1.*device device-1.*app 1.2.0/)).toBeInTheDocument();
+    expect(screen.getAllByText("Avi Cohen").length).toBeGreaterThan(0);
     expect(screen.getByText("installer-2")).toBeInTheDocument();
+    expect(screen.getByText(/972501112233/)).toBeInTheDocument();
     expect(screen.getByText(/lag 9/)).toBeInTheDocument();
+    expect(screen.getAllByText(/failed events 1/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/sync errors 3/)).toBeInTheDocument();
+    expect(await screen.findByText("Recent sync problems")).toBeInTheDocument();
+    expect(screen.getByText("Door is not assigned to this installer")).toBeInTheDocument();
+    expect(screen.getAllByText(/CONFLICT_ASSIGNMENT_CHANGED/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Assignment changed").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Verify the current installer assignment/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Manual review required/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/no blind retry/).length).toBeGreaterThan(0);
+
+    fireEvent.change(screen.getByLabelText("Sync problem status"), {
+      target: { value: "conflict" },
+    });
+    await waitFor(() => {
+      expect(
+        apiFetchMock.mock.calls.some(
+          (call) => call[0] === "/api/v1/admin/sync/problems?limit=25&status=conflict"
+        )
+      ).toBe(true);
+    });
+    expect(await screen.findByText("Showing 1 of 1")).toBeInTheDocument();
+    expect(screen.queryByText("Door is not assigned to this installer")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Cold resync" })[0]);
+    expect(screen.getByText("Request cold resync")).toBeInTheDocument();
+    expect(screen.getByText(/does not change door statuses/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Cold resync requested for Avi Cohen.")).toBeInTheDocument();
+    });
+
+    const syncResetCall = apiFetchMock.mock.calls.find(
+      (call) => call[0] === "/api/v1/admin/sync/states/user-2/reset"
+    );
+    expect(syncResetCall?.[1]).toMatchObject({ method: "POST" });
 
     expect(screen.getByRole("link", { name: "Open import workspace" })).toHaveAttribute(
       "href",
@@ -319,6 +522,84 @@ describe("OperationsPage", () => {
       "/installers"
     );
   }, 45000);
+
+  it("allows cold resync from sync health when there is no detailed problem row", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
+      if (path === "/api/v1/admin/sync/health/summary") {
+        return {
+          max_cursor: 24,
+          counts: {
+            ok: 3,
+            warn: 0,
+            danger: 1,
+            total: 4,
+            dead: 0,
+            never_seen: 0,
+            danger_pct: 25,
+            problem_total: 0,
+          },
+          alerts_sent: 0,
+          top_laggers: [
+            {
+              installer_id: "installer-9",
+              installer_name: "Offline Installer",
+              installer_phone: "+972501119999",
+              status: "danger",
+              lag: 24,
+              days_offline: 3,
+              last_seen_at: "2026-03-07T07:00:00Z",
+              problem_count: 0,
+            },
+          ],
+          top_offline: [],
+        };
+      }
+      if (path === "/api/v1/admin/sync/reset/installer-9") {
+        return { status: "reset_ok" };
+      }
+      if (path === "/api/v1/admin/outbox/summary") {
+        return {
+          total: 0,
+          by_channel: {},
+          by_status: {},
+          by_delivery_status: {},
+          pending_overdue_15m: 0,
+          failed_total: 0,
+        };
+      }
+      if (path === "/api/v1/admin/outbox?status=FAILED&limit=8") {
+        return { items: [] };
+      }
+      if (path === "/api/v1/admin/projects/import-runs/failed-queue?limit=8&offset=0") {
+        return { items: [], total: 0, limit: 8, offset: 0 };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    renderSubject();
+
+    expect(await screen.findByText("Offline Installer")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cold resync" }));
+    expect(screen.getByText("Request cold resync")).toBeInTheDocument();
+    expect(screen.getByText(/Current lag is 24/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Cold resync requested for Offline Installer.")
+      ).toBeInTheDocument();
+    });
+
+    const syncResetCall = apiFetchMock.mock.calls.find(
+      (call) => call[0] === "/api/v1/admin/sync/reset/installer-9"
+    );
+    expect(syncResetCall?.[1]).toMatchObject({ method: "POST" });
+  }, 30000);
 
   it("reads and syncs actionable filter with url state", async () => {
     window.history.replaceState({}, "", "/operations?actionable=1");
@@ -538,6 +819,8 @@ describe("OperationsPage", () => {
     expect(await screen.findByText("Operations Center")).toBeInTheDocument();
     expect(screen.getByText("scoped to EMAIL")).toBeInTheDocument();
     expect(screen.getByText("scoped to sendgrid")).toBeInTheDocument();
+    expect(screen.queryByText("WHATSAPP")).not.toBeInTheDocument();
+    expect(screen.queryByText("twilio")).not.toBeInTheDocument();
     expect(screen.queryByText("+15550000000")).not.toBeInTheDocument();
     expect(screen.queryByText("twilio | channel_mismatch")).not.toBeInTheDocument();
 
@@ -547,6 +830,8 @@ describe("OperationsPage", () => {
       expect(window.location.search).toBe("");
     });
     expect(screen.getByText("+15550000000")).toBeInTheDocument();
+    expect(screen.getByText("WHATSAPP")).toBeInTheDocument();
+    expect(screen.getByText("twilio")).toBeInTheDocument();
     expect(screen.getByText("twilio | channel_mismatch")).toBeInTheDocument();
   }, 12000);
 

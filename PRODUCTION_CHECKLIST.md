@@ -4,7 +4,7 @@
 
 Required:
 
-- `NEXT_PUBLIC_API_BASE_URL` must point to the production API
+- `NEXT_PUBLIC_API_BASE_URL` must point to the same production API URL as backend `PUBLIC_BASE_URL`
 
 Optional compatibility alias:
 
@@ -15,22 +15,28 @@ Rules:
 - if both `NEXT_PUBLIC_API_BASE_URL` and `VITE_API_BASE_URL` are set, they must match
 - production API URL must be `https`
 - production API URL must not point to `localhost` or `127.0.0.1`
+- URL credentials, query strings, and fragments are rejected
+- `VITE_API_BASE_URL` alone is not sufficient for a Next.js client build
 
 Validate before deploy:
 
 ```bash
-node scripts/validate-production-env.mjs --env-file .env.production.local
+node scripts/validate-production-env.mjs --env-file .env.production.local --backend-env-file ../backend/.env.production.local
 ```
 
 Or through npm:
 
 ```bash
-npm run check:env:production -- --env-file .env.production.local
+npm run check:env:production -- --env-file .env.production.local --backend-env-file ../backend/.env.production.local
 ```
 
 Starter example:
 
 - `.env.production.example`
+
+The example file is intentionally not deployable as-is. Copy it to
+`.env.production.local` and replace placeholder domains before running the
+validator.
 
 ## CI and branch protection
 

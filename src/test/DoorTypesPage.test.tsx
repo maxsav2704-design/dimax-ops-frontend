@@ -5,8 +5,9 @@ import type { ReactNode } from "react";
 
 import DoorTypesPage from "@/views/DoorTypesPage";
 
-const { apiFetchMock } = vi.hoisted(() => ({
+const { apiFetchMock, authSessionMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
+  authSessionMock: vi.fn(),
 }));
 
 vi.mock("@/components/DashboardLayout", () => ({
@@ -19,10 +20,22 @@ vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
 }));
 
+vi.mock("@/hooks/use-auth-session", () => ({
+  useAuthSession: authSessionMock,
+}));
+
 describe("DoorTypesPage", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     apiFetchMock.mockReset();
+    authSessionMock.mockReset();
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "OWNER",
+      can_view_rates: true,
+      can_manage_imports: true,
+      can_manage_users: true,
+    });
   });
 
   afterEach(() => {
@@ -74,7 +87,7 @@ describe("DoorTypesPage", () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText("Entry Door")).toBeInTheDocument();
+    expect((await screen.findAllByText("Entry Door")).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Add Door Type" }));
     await screen.findByText("Create Door Type");
@@ -130,7 +143,7 @@ describe("DoorTypesPage", () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText("Entry Door")).toBeInTheDocument();
+    expect((await screen.findAllByText("Entry Door")).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Add Door Type" }));
     await screen.findByText("Create Door Type");
@@ -145,4 +158,37 @@ describe("DoorTypesPage", () => {
     ).toBeInTheDocument();
   }, 20000);
 
+  it("keeps viewer catalog read-only even with capability flags", async () => {
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "VIEWER",
+      can_view_rates: false,
+      can_manage_imports: true,
+      can_manage_users: true,
+    });
+    apiFetchMock.mockResolvedValue([]);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <DoorTypesPage />
+      </QueryClientProvider>,
+    );
+
+    const addButton = await screen.findByRole("button", {
+      name: "Add Door Type",
+    });
+    expect(addButton).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Import" })).toBeDisabled();
+
+    fireEvent.click(addButton);
+    expect(screen.queryByText("Create Door Type")).not.toBeInTheDocument();
+    expect(apiFetchMock).not.toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
 });

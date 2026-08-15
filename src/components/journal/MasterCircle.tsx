@@ -26,14 +26,21 @@ export function MasterCircle({
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-label={
+        state === "complete"
+          ? "Отметить как не выполнено"
+          : state === "partial"
+            ? "Заполнено частично"
+            : "Отметить как выполнено"
+      }
       className={cn(
-        "rounded-full border transition-all duration-150 flex items-center justify-center shrink-0",
+        "flex shrink-0 items-center justify-center rounded-full border transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         dim,
         state === "complete"
-          ? "border-gray-800 bg-gray-800 text-white"
+          ? "border-dimax-ink bg-dimax-ink text-text-inverse"
           : state === "partial"
-            ? "border-gray-500 bg-gray-100 text-gray-600"
-            : "border-gray-300 bg-white text-transparent hover:border-gray-500",
+            ? "border-border-strong bg-surface-sunken text-text-secondary"
+            : "border-border bg-surface text-transparent hover:border-border-strong",
         disabled && "opacity-30 cursor-not-allowed",
         !disabled && "cursor-pointer hover:scale-[1.02]",
         className,

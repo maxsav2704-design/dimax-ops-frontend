@@ -41,13 +41,15 @@ export type InstallerIssueMediaAsset = {
 
 export type InstallerEarningsInstallType = {
   install_type: string;
-  amount: number | string;
+  amount?: number | string;
+  total?: number | string;
 };
 
 export type InstallerEarningsProject = {
   project_id: string | null;
   project_name: string | null;
-  amount: number | string;
+  amount?: number | string;
+  total?: number | string;
 };
 
 export type InstallerEarningsDay = {
@@ -156,7 +158,7 @@ export async function fetchInstallerMediaUrl(mediaId: string): Promise<string> {
 }
 
 export async function fetchInstallerEarningsSummary(): Promise<InstallerEarningsSummary | null> {
-  return safeOptionalFetch<InstallerEarningsSummary>("/api/v1/installer/earnings/summary");
+  return safeOptionalFetch<InstallerEarningsSummary>("/api/v1/installer/earnings/summary?period=month");
 }
 
 export async function fetchInstallerSyncQueue(): Promise<InstallerSyncQueueResponse | null> {

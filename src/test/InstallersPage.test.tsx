@@ -67,11 +67,11 @@ describe("InstallersPage", () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText("Installer role has read-only access to installers and rates.")).toBeInTheDocument();
+    expect(await screen.findByText("Your access level has read-only access to installers and rates.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add Installer" })).toBeDisabled();
   }, 15000);
 
-  it("allows finance scope to open installer details and view rate controls", async () => {
+  it("keeps finance scope rate access read-only", async () => {
     authSessionMock.mockReturnValue({
       role: "ADMIN",
       admin_scope: "FINANCE",
@@ -115,14 +115,17 @@ describe("InstallersPage", () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText("Installer profile changes are read-only for your scope, but rate controls remain available.")).toBeInTheDocument();
+    expect(await screen.findByText("Installer profile changes are read-only for your scope, but rate data remain available.")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Add Installer" })).toBeDisabled();
     const editButton = await screen.findByRole("button", { name: "Edit Installer Finance" });
     expect(editButton).toBeEnabled();
     fireEvent.click(editButton);
     expect(await screen.findByText("Installer Rates")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add Rate" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Open KPI report" }));
     expect(pushMock).toHaveBeenCalledWith("/reports?installer_id=installer-1");
+    fireEvent.click(screen.getByRole("button", { name: "Open payroll ledger" }));
+    expect(pushMock).toHaveBeenCalledWith("/earnings-ledger?installer_id=installer-1");
   }, 15000);
 
   it("opens installer card from deep-link installer_id", async () => {
@@ -131,6 +134,8 @@ describe("InstallersPage", () => {
       role: "ADMIN",
       admin_scope: "OWNER",
       can_view_rates: true,
+      can_manage_imports: true,
+      can_manage_users: true,
     });
     apiFetchMock.mockImplementation(async (path: string) => {
       const url = String(path);
@@ -177,11 +182,81 @@ describe("InstallersPage", () => {
     expect(pushMock).toHaveBeenCalledWith("/installers");
   });
 
+  it("does not open another installer when deep-link installer_id is unavailable", async () => {
+    searchParamsMock.mockReturnValue(
+      new URLSearchParams("installer_id=missing-installer"),
+    );
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "OWNER",
+      can_view_rates: true,
+      can_manage_imports: true,
+      can_manage_users: true,
+    });
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+      if (url.includes("/api/v1/admin/installers?")) {
+        return [
+          {
+            id: "installer-1",
+            company_id: "company-1",
+            full_name: "Installer One",
+            phone: "050-1234567",
+            email: "one@example.com",
+            status: "ACTIVE",
+            is_active: true,
+            user_id: "user-1",
+            created_at: "2026-03-21T10:00:00Z",
+            updated_at: "2026-03-21T11:00:00Z",
+            deleted_at: null,
+          },
+        ];
+      }
+      if (url.includes("/api/v1/admin/door-types")) {
+        return [{ id: "door-type-1", code: "STD", name: "Standard" }];
+      }
+      if (url.includes("/api/v1/admin/installer-rates")) {
+        return [];
+      }
+      return [];
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallersPage />
+      </QueryClientProvider>
+    );
+
+    expect(
+      await screen.findByText(
+        "Requested installer missing-installer is not available in the current installers list. Another installer was not opened automatically.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Installer One")).toBeInTheDocument();
+    expect(screen.queryByText("Edit Installer")).not.toBeInTheDocument();
+    expect(
+      apiFetchMock.mock.calls.some((call) =>
+        String(call[0]).includes(
+          "/api/v1/admin/installer-rates?installer_id=installer-1",
+        ),
+      ),
+    ).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Show all installers" }));
+    expect(pushMock).toHaveBeenCalledWith("/installers");
+  });
+
   it("creates installer and shows readable success notice", async () => {
     authSessionMock.mockReturnValue({
       role: "ADMIN",
       admin_scope: "OWNER",
       can_view_rates: true,
+      can_manage_imports: true,
+      can_manage_users: true,
     });
     apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
       const url = String(path);

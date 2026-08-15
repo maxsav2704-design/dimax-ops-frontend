@@ -1,17 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createDownloadResponse } from "@/test/download-response";
+
 const {
   getAccessTokenMock,
   getRefreshTokenMock,
   persistAccessTokenMock,
   persistRefreshTokenMock,
   clearStoredSessionMock,
+  getOrCreateDeviceIdMock,
 } = vi.hoisted(() => ({
   getAccessTokenMock: vi.fn(),
   getRefreshTokenMock: vi.fn(),
   persistAccessTokenMock: vi.fn(),
   persistRefreshTokenMock: vi.fn(),
   clearStoredSessionMock: vi.fn(),
+  getOrCreateDeviceIdMock: vi.fn(),
 }));
 
 vi.mock("@/lib/auth-session", () => ({
@@ -22,7 +26,23 @@ vi.mock("@/lib/auth-session", () => ({
   clearStoredSession: clearStoredSessionMock,
 }));
 
+vi.mock("@/lib/device-id", () => ({
+  getOrCreateDeviceId: getOrCreateDeviceIdMock,
+}));
+
 import { ApiError, apiDownload, apiFetch, logoutSession } from "./api";
+
+const storageState = new Map<string, string>();
+
+const storageMock = {
+  getItem: (key: string) => storageState.get(key) ?? null,
+  setItem: (key: string, value: string) => {
+    storageState.set(key, value);
+  },
+  removeItem: (key: string) => {
+    storageState.delete(key);
+  },
+};
 
 function jsonResponse(body: unknown, status = 200, statusText = "OK"): Response {
   return {
@@ -40,6 +60,13 @@ describe("apiFetch", () => {
     persistAccessTokenMock.mockReset();
     persistRefreshTokenMock.mockReset();
     clearStoredSessionMock.mockReset();
+    getOrCreateDeviceIdMock.mockReset();
+    getOrCreateDeviceIdMock.mockReturnValue("test-device-id");
+    storageState.clear();
+    Object.defineProperty(window, "localStorage", {
+      value: storageMock,
+      configurable: true,
+    });
   });
 
   afterEach(() => {
@@ -48,7 +75,9 @@ describe("apiFetch", () => {
 
   it("sets application/json content type for json requests", async () => {
     getAccessTokenMock.mockReturnValue(null);
-    const fetchMock = vi.fn(async () => jsonResponse({ ok: true }));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      jsonResponse({ ok: true })
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     await apiFetch<{ ok: boolean }>("/api/v1/test", {
@@ -64,7 +93,9 @@ describe("apiFetch", () => {
 
   it("does not force content type for multipart/form-data", async () => {
     getAccessTokenMock.mockReturnValue(null);
-    const fetchMock = vi.fn(async () => jsonResponse({ ok: true }));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      jsonResponse({ ok: true })
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const form = new FormData();
@@ -99,7 +130,7 @@ describe("apiFetch", () => {
 
     const refreshInit = fetchMock.mock.calls[1]?.[1] as RequestInit;
     expect(refreshInit.method).toBe("POST");
-    expect(refreshInit.body).toBe(JSON.stringify({ refresh_token: "refresh-token" }));
+    expect(refreshInit.body).toBe(JSON.stringify({ refresh_token: "refresh-token", device_id: "test-device-id" }));
     const retriedInit = fetchMock.mock.calls[2]?.[1] as RequestInit;
     const retriedHeaders = new Headers(retriedInit?.headers);
     expect(retriedHeaders.get("Authorization")).toBe("Bearer fresh-token");
@@ -155,7 +186,7 @@ describe("apiFetch", () => {
       .mockResolvedValueOnce(jsonResponse({ detail: "expired" }, 401, "UNAUTHORIZED"))
       .mockResolvedValueOnce(jsonResponse({ access_token: "fresh-token", refresh_token: "rotated-refresh" }))
       .mockResolvedValueOnce(
-        new Response(new Blob(["id,value\n1,42"], { type: "text/csv" }), {
+        createDownloadResponse("id,value\n1,42", "text/csv", {
           status: 200,
           headers: {
             "content-disposition": 'attachment; filename="export.csv"',

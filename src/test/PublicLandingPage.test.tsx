@@ -19,6 +19,8 @@ const storageMock = {
 describe("PublicLandingPage", () => {
   beforeEach(() => {
     storageState.clear();
+    document.documentElement.lang = "";
+    document.documentElement.dir = "ltr";
     Object.defineProperty(window, "localStorage", {
       value: storageMock,
       configurable: true,
@@ -76,5 +78,47 @@ describe("PublicLandingPage", () => {
       "href",
       "/login?next=/installer"
     );
+  }, 20000);
+
+  it("renders Russian landing copy from the shared i18n dictionary", async () => {
+    storageState.set("dimax_locale", "ru");
+
+    render(
+      <LanguageProvider>
+        <PublicLandingPage />
+      </LanguageProvider>
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Операционный контроль объектов, дверей и монтажников в одной системе.",
+      })
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Открыть защищенный вход" })[0]).toHaveAttribute(
+      "href",
+      "/login"
+    );
+    expect(screen.getAllByText("Операционный центр")[0]).toBeInTheDocument();
+  }, 20000);
+
+  it("renders Hebrew landing copy with RTL document direction", async () => {
+    storageState.set("dimax_locale", "he");
+
+    render(
+      <LanguageProvider>
+        <PublicLandingPage />
+      </LanguageProvider>
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "שליטה תפעולית בפרויקטים, דלתות ומתקינים במערכת אחת.",
+      })
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "פתח כניסה מאובטחת" })[0]).toHaveAttribute(
+      "href",
+      "/login"
+    );
+    expect(document.documentElement.dir).toBe("rtl");
   }, 20000);
 });

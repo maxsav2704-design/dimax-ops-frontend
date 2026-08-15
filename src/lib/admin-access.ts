@@ -18,7 +18,13 @@ export type AdminModule =
 
 type AuthLike =
   | AuthSession
-  | { role: UserRole; admin_scope?: AuthSession["admin_scope"]; can_view_rates?: boolean }
+  | {
+      role: UserRole;
+      admin_scope?: AuthSession["admin_scope"];
+      can_view_rates?: boolean;
+      can_manage_imports?: boolean;
+      can_manage_users?: boolean;
+    }
   | UserRole
   | null;
 
@@ -33,6 +39,7 @@ const ADMIN_HOME_FALLBACKS: readonly string[] = [
   "/door-types",
   "/reasons",
   "/reports",
+  "/earnings-ledger",
   "/operations",
   "/settings",
 ];
@@ -54,18 +61,37 @@ function normalizeSession(auth: AuthLike): AuthSession | null {
     return null;
   }
   if (typeof auth === "string") {
-    if (auth === "INSTALLER") {
-      return { role: "INSTALLER", admin_scope: null, can_view_rates: false };
-    }
-    return { role: "ADMIN", admin_scope: "OWNER", can_view_rates: true };
+    return auth === "INSTALLER"
+      ? {
+          role: "INSTALLER",
+          admin_scope: null,
+          can_view_rates: false,
+          can_manage_imports: false,
+          can_manage_users: false,
+        }
+      : {
+          role: "ADMIN",
+          admin_scope: null,
+          can_view_rates: false,
+          can_manage_imports: false,
+          can_manage_users: false,
+        };
   }
   if (auth.role === "INSTALLER") {
-    return { role: "INSTALLER", admin_scope: null, can_view_rates: false };
+    return {
+      role: "INSTALLER",
+      admin_scope: null,
+      can_view_rates: false,
+      can_manage_imports: false,
+      can_manage_users: false,
+    };
   }
   return {
     role: "ADMIN",
-    admin_scope: auth.admin_scope ?? "OWNER",
-    can_view_rates: auth.can_view_rates === true || auth.admin_scope === "OWNER" || auth.admin_scope === "FINANCE",
+    admin_scope: auth.admin_scope ?? null,
+    can_view_rates: auth.can_view_rates === true,
+    can_manage_imports: auth.can_manage_imports === true,
+    can_manage_users: auth.can_manage_users === true,
   };
 }
 
@@ -101,6 +127,9 @@ export function pathToAdminModule(pathname: string): AdminModule {
   if (normalizedPath.startsWith("/reports")) {
     return "reports";
   }
+  if (normalizedPath.startsWith("/earnings-ledger")) {
+    return "reports";
+  }
   if (normalizedPath.startsWith("/operations")) {
     return "operations";
   }
@@ -113,7 +142,7 @@ export function pathToAdminModule(pathname: string): AdminModule {
 export function canAccessAdminModule(auth: AuthLike, module: AdminModule): boolean {
   const session = normalizeSession(auth);
   if (!session) {
-    return true;
+    return false;
   }
   if (session.role !== "ADMIN") {
     return false;
@@ -139,7 +168,7 @@ export function canAccessAdminPath(auth: AuthLike, pathname: string): boolean {
 export function canRunPrivilegedAdminActions(auth: AuthLike): boolean {
   const session = normalizeSession(auth);
   if (!session) {
-    return true;
+    return false;
   }
   if (session.role !== "ADMIN") {
     return false;
@@ -153,6 +182,18 @@ export function canViewRates(auth: AuthLike): boolean {
     return false;
   }
   return session.can_view_rates;
+}
+
+export function canManageImports(auth: AuthLike): boolean {
+  const session = normalizeSession(auth);
+  return (
+    canRunPrivilegedAdminActions(session) && session?.can_manage_imports === true
+  );
+}
+
+export function canManageUsers(auth: AuthLike): boolean {
+  const session = normalizeSession(auth);
+  return canRunPrivilegedAdminActions(session) && session?.can_manage_users === true;
 }
 
 export function resolveAdminHomePath(auth: AuthLike): string {

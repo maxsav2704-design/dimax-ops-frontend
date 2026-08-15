@@ -10,6 +10,8 @@ type AuthMeResponse = {
   role: "ADMIN" | "INSTALLER";
   admin_scope?: "OWNER" | "OPERATIONS" | "FINANCE" | "VIEWER" | null;
   can_view_rates?: boolean | null;
+  can_manage_imports?: boolean | null;
+  can_manage_users?: boolean | null;
 };
 
 export function useAuthSession(): AuthSession | null {

@@ -5,6 +5,7 @@ import {
   persistAccessToken,
   persistRefreshToken,
 } from "@/lib/auth-session";
+import { getOrCreateDeviceId } from "@/lib/device-id";
 
 export { getAccessToken } from "@/lib/auth-session";
 
@@ -99,6 +100,7 @@ async function requestAccessTokenRefresh(): Promise<string | null> {
         },
         body: JSON.stringify({
           refresh_token: refreshToken,
+          device_id: getOrCreateDeviceId(),
         }),
         credentials: "include",
       });

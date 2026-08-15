@@ -5,9 +5,10 @@ import type { ReactNode } from "react";
 
 import JournalPage from "@/views/JournalPage";
 
-const { apiFetchMock, pushMock } = vi.hoisted(() => ({
+const { apiFetchMock, pushMock, authSessionMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
   pushMock: vi.fn(),
+  authSessionMock: vi.fn(),
 }));
 
 vi.mock("@/components/DashboardLayout", () => ({
@@ -21,7 +22,7 @@ vi.mock("@/lib/api", () => ({
 }));
 
 vi.mock("@/hooks/use-auth-session", () => ({
-  useAuthSession: () => ({ role: "ADMIN", admin_scope: "OWNER", can_view_rates: true }),
+  useAuthSession: authSessionMock,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -271,6 +272,14 @@ describe("JournalPage", () => {
     vi.restoreAllMocks();
     apiFetchMock.mockReset();
     pushMock.mockReset();
+    authSessionMock.mockReset();
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "OWNER",
+      can_view_rates: true,
+      can_manage_imports: true,
+      can_manage_users: true,
+    });
     apiFetchMock.mockImplementation(buildApiMock());
     const storage = new Map<string, string>();
     Object.defineProperty(window, "localStorage", {
@@ -408,5 +417,32 @@ describe("JournalPage", () => {
     });
 
     expect(await screen.findByText("Delivery item moved back to queue.")).toBeInTheDocument();
+  });
+
+  it("keeps viewer journal read-only without requesting restricted data", async () => {
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "VIEWER",
+      can_view_rates: false,
+      can_manage_imports: true,
+      can_manage_users: true,
+    });
+
+    renderJournalPage();
+
+    expect(await screen.findByText("Final Handover Pack")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Journal subject")).toBeDisabled();
+    expect(screen.getByLabelText("Journal message")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+
+    await waitFor(() => {
+      const restrictedCalls = apiFetchMock.mock.calls.filter((call) => {
+        const url = String(call[0]);
+        return url.includes("/api/v1/admin/settings/") || url.includes("/api/v1/admin/outbox");
+      });
+      expect(restrictedCalls).toHaveLength(0);
+    });
   });
 });

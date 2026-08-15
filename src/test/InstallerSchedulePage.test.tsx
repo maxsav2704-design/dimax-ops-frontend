@@ -123,7 +123,9 @@ describe("InstallerSchedulePage", () => {
 
     expect(await screen.findByText("Delivery Project 2")).toBeInTheDocument();
     expect(screen.queryByText("Install Project 1")).not.toBeInTheDocument();
-    expect(screen.getByText("Focused project project-2")).toBeInTheDocument();
+    expect(
+      screen.getByText((_, element) => element?.textContent === "Focused project project-2")
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Show full calendar" })).toHaveAttribute(
       "href",
       "/installer/calendar"

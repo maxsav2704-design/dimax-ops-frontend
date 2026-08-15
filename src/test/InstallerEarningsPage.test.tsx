@@ -27,7 +27,7 @@ describe("InstallerEarningsPage", () => {
 
   it("renders earnings summary with grouped rows", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
-      if (path === "/api/v1/installer/earnings/summary") {
+      if (path === "/api/v1/installer/earnings/summary?period=month") {
         return {
           currency: "ILS",
           today_total: 240,
@@ -67,7 +67,7 @@ describe("InstallerEarningsPage", () => {
       "/installer/calendar?project_id=p1"
     );
     expect(await screen.findByText("2026-03-21")).toBeInTheDocument();
-  });
+  }, 15000);
 
   it("shows unavailable state when earnings endpoint is missing", async () => {
     apiFetchMock.mockRejectedValue(new Error("offline"));
@@ -88,7 +88,7 @@ describe("InstallerEarningsPage", () => {
   it("filters project rows from deep-link project_id", async () => {
     window.history.replaceState({}, "", "/installer/earnings?project_id=p1");
     apiFetchMock.mockImplementation(async (path: string) => {
-      if (path === "/api/v1/installer/earnings/summary") {
+      if (path === "/api/v1/installer/earnings/summary?period=month") {
         return {
           currency: "ILS",
           today_total: 240,

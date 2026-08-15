@@ -7,12 +7,16 @@ export type AuthSession = {
   role: UserRole;
   admin_scope: AdminScope | null;
   can_view_rates: boolean;
+  can_manage_imports: boolean;
+  can_manage_users: boolean;
 };
 
 type RawAuthSession = {
   role?: unknown;
   admin_scope?: unknown;
   can_view_rates?: unknown;
+  can_manage_imports?: unknown;
+  can_manage_users?: unknown;
 };
 
 const ACCESS_TOKEN_STORAGE_KEYS = ["dimax_access_token", "access_token", "token"] as const;
@@ -108,6 +112,8 @@ export function normalizeAuthSession(value: RawAuthSession | null | undefined): 
       role: "INSTALLER",
       admin_scope: null,
       can_view_rates: false,
+      can_manage_imports: false,
+      can_manage_users: false,
     };
   }
   const adminScope =
@@ -116,10 +122,12 @@ export function normalizeAuthSession(value: RawAuthSession | null | undefined): 
     value.admin_scope === "FINANCE" ||
     value.admin_scope === "VIEWER"
       ? value.admin_scope
-      : "OWNER";
+      : null;
   return {
     role: "ADMIN",
     admin_scope: adminScope,
-    can_view_rates: value.can_view_rates === true || adminScope === "OWNER" || adminScope === "FINANCE",
+    can_view_rates: value.can_view_rates === true,
+    can_manage_imports: value.can_manage_imports === true,
+    can_manage_users: value.can_manage_users === true,
   };
 }

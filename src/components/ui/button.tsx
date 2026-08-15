@@ -5,25 +5,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-[13px] font-medium leading-none ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-[13px] font-medium leading-none ring-offset-canvas transition-[background-color,border-color,color,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-offset-0 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-accent text-accent-foreground shadow-[0_16px_34px_-18px_hsl(var(--accent)/0.55)] hover:-translate-y-0.5 hover:shadow-[0_20px_38px_-18px_hsl(var(--accent)/0.6)]",
+          "border border-transparent bg-accent text-accent-foreground hover:bg-[var(--dmx-accent-hover)]",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-[0_14px_28px_-18px_hsl(var(--destructive)/0.5)] hover:-translate-y-0.5 hover:bg-destructive/92",
+          "border border-status-problem-border bg-status-problem-bg text-status-problem-fg hover:border-status-problem-fg",
         outline:
-          "border border-input bg-card/82 text-foreground shadow-[inset_0_1px_0_hsl(0_0%_100%/0.45)] hover:-translate-y-0.5 hover:border-accent/35 hover:bg-card",
+          "border border-border-strong bg-surface text-text hover:bg-surface-subtle",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-[inset_0_1px_0_hsl(0_0%_100%/0.35)] hover:-translate-y-0.5 hover:bg-secondary/90",
-        ghost: "hover:bg-accent/10 hover:text-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+          "border border-border bg-surface-sunken text-text hover:bg-surface-subtle",
+        ghost: "text-text-secondary hover:bg-surface-sunken hover:text-text",
+        link: "text-link underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-4",
-        sm: "h-8 rounded-lg px-3 text-[12px]",
-        lg: "h-11 rounded-xl px-6 text-sm",
+        sm: "h-8 px-3 text-[12px]",
+        lg: "h-11 px-6 text-sm",
         icon: "h-10 w-10",
       },
     },
@@ -43,7 +43,13 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    );
   },
 );
 Button.displayName = "Button";

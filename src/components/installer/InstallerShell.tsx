@@ -1,15 +1,19 @@
 "use client";
-
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarDays, CircleAlert, FolderKanban, LogOut, Wallet, Workflow } from "lucide-react";
+import {
+  CalendarDays,
+  CircleAlert,
+  FolderKanban,
+  LogOut,
+  Wallet,
+  Workflow,
+} from "lucide-react";
 import type { ReactNode } from "react";
-
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { logoutSession } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-
 export function InstallerShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -47,34 +51,39 @@ export function InstallerShell({ children }: { children: ReactNode }) {
       isActive: (path: string) => path === "/installer/sync-queue",
     },
   ];
-
   return (
-    <div className="relative min-h-screen bg-background text-foreground">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 shell-grid opacity-35" />
-        <div className="absolute left-[8%] top-0 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
-        <div className="absolute right-[10%] top-24 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
-      </div>
-      <div className="relative mx-auto flex w-full max-w-[1500px] flex-col gap-6 px-4 py-4 lg:flex-row lg:px-6">
-        <aside className="surface-panel w-full overflow-hidden lg:sticky lg:top-4 lg:min-h-[calc(100vh-2rem)] lg:w-[300px]">
-          <div className="border-b border-border/70 px-6 pb-5 pt-6">
+    <div className="min-h-screen overflow-x-hidden bg-canvas text-text">
+      {" "}
+      <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 px-3 py-3 lg:flex-row lg:px-4">
+        {" "}
+        <aside className="w-full overflow-hidden rounded-lg border border-border bg-surface lg:sticky lg:top-4 lg:min-h-[calc(100vh-2rem)] lg:w-[300px]">
+          {" "}
+          <div className="border-b border-border px-4 py-4 lg:px-5 lg:pb-5 lg:pt-5">
+            {" "}
             <div className="flex items-center gap-3">
-              <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-[hsl(var(--accent)/0.72)] text-sm font-semibold text-accent-foreground shadow-[0_18px_36px_-18px_hsl(var(--accent)/0.72)]">
-                D
-              </div>
+              {" "}
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border-strong bg-text text-sm font-semibold text-text-inverse">
+                {" "}
+                D{" "}
+              </div>{" "}
               <div>
-                <div className="font-display text-base font-semibold">DIMAX Installer</div>
-                <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-                  {t("installerShell.webWorkspace")}
-                </div>
-              </div>
-            </div>
-            <div className="mt-5 rounded-2xl border border-border/70 bg-background/60 px-4 py-3 text-[13px] leading-6 text-muted-foreground">
-              {t("installerShell.fieldView")}
-            </div>
-          </div>
-
-          <nav className="space-y-2 px-4 py-5">
+                {" "}
+                <div className="text-base font-semibold text-text">
+                  DIMAX Installer
+                </div>{" "}
+                <div className="text-[10.5px] uppercase text-text-secondary">
+                  {" "}
+                  {t("installerShell.webWorkspace")}{" "}
+                </div>{" "}
+              </div>{" "}
+            </div>{" "}
+            <div className="mt-5 hidden rounded-lg border border-border bg-surface-subtle px-4 py-3 text-[13px] leading-6 text-text-secondary lg:block">
+              {" "}
+              {t("installerShell.fieldView")}{" "}
+            </div>{" "}
+          </div>{" "}
+          <nav className="grid grid-cols-3 gap-2 px-3 py-3 lg:block lg:space-y-1.5 lg:px-3 lg:py-4">
+            {" "}
             {navItems.map((item) => {
               const active = item.isActive(pathname || "");
               return (
@@ -82,23 +91,24 @@ export function InstallerShell({ children }: { children: ReactNode }) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-2xl px-3.5 py-3 text-[13px] font-medium leading-6 transition-all duration-200",
+                    "flex min-w-0 items-center justify-center gap-2 rounded-lg border px-2 py-2.5 text-[12px] font-medium leading-5 transition-colors duration-150 lg:justify-start lg:gap-3 lg:px-3.5 lg:py-3 lg:text-[13px] lg:leading-6",
                     active
-                      ? "bg-gradient-to-r from-accent/16 via-accent/10 to-transparent text-foreground shadow-[inset_0_0_0_1px_hsl(var(--accent)/0.18)]"
-                      : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                      ? "border-border-strong bg-surface-sunken text-text"
+                      : "border-transparent text-text-secondary hover:border-border hover:bg-surface-subtle hover:text-text",
                   )}
                 >
-                  <item.icon className="h-4 w-4" />
-                  {item.title}
+                  {" "}
+                  <item.icon className="h-4 w-4" /> {item.title}{" "}
                 </Link>
               );
-            })}
-          </nav>
-
-          <div className="mt-auto border-t border-border/70 px-4 py-4">
-            <div className="mb-3">
-              <LanguageSwitcher compact />
-            </div>
+            })}{" "}
+          </nav>{" "}
+          <div className="mt-auto flex items-center gap-2 border-t border-border px-3 py-3 lg:block lg:px-4 lg:py-4">
+            {" "}
+            <div className="shrink-0 lg:mb-3">
+              {" "}
+              <LanguageSwitcher compact />{" "}
+            </div>{" "}
             <button
               type="button"
               onClick={() => {
@@ -106,18 +116,18 @@ export function InstallerShell({ children }: { children: ReactNode }) {
                   router.replace("/login");
                 });
               }}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background/80 px-3 py-2.5 text-sm text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-background"
+              className="dmx-secondary-action h-9 flex-1 lg:h-10 lg:w-full"
             >
-              <LogOut className="h-4 w-4" />
-              {t("common.signOut")}
-            </button>
-          </div>
-        </aside>
-
-        <main className="motion-page min-w-0 flex-1">
-          {children}
-        </main>
-      </div>
+              {" "}
+              <LogOut className="h-4 w-4" /> {t("common.signOut")}{" "}
+            </button>{" "}
+          </div>{" "}
+        </aside>{" "}
+        <main className="motion-page w-full min-w-0 max-w-full flex-1">
+          {" "}
+          {children}{" "}
+        </main>{" "}
+      </div>{" "}
     </div>
   );
 }

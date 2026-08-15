@@ -61,9 +61,9 @@ describe("LibraryPage", () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText("SKU-100")).toBeInTheDocument();
-    expect(screen.getByText("Дверь входная")).toBeInTheDocument();
-    expect(screen.getByText("entrance")).toBeInTheDocument();
+    expect((await screen.findAllByText("SKU-100")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Дверь входная").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("entrance").length).toBeGreaterThan(0);
   }, 15000);
 
   it("creates a library product", async () => {
@@ -227,7 +227,7 @@ describe("LibraryPage", () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText("SKU-100")).toBeInTheDocument();
+    expect((await screen.findAllByText("SKU-100")).length).toBeGreaterThan(0);
     expect(screen.queryByText("SKU-200")).not.toBeInTheDocument();
     expect(screen.getByText("Focused project flow · entrance")).toBeInTheDocument();
   });

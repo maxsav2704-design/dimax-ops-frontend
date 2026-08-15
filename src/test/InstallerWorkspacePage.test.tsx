@@ -31,6 +31,76 @@ describe("InstallerWorkspacePage", () => {
     vi.useRealTimers();
   });
 
+  it("uses rich workspace endpoint payload without composed fallback", async () => {
+    const base = new Date();
+    base.setHours(12, 0, 0, 0);
+    const startsAt = new Date(base.getTime() + 60 * 60 * 1000).toISOString();
+    const endsAt = new Date(base.getTime() + 2 * 60 * 60 * 1000).toISOString();
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/installer/workspace") {
+        return {
+          projects: [
+            {
+              id: "project-1",
+              name: "Workspace Contract Tower",
+              address: "Harbor 11",
+              status: "IN_PROGRESS",
+              waze_url: null,
+            },
+          ],
+          events: [
+            {
+              id: "event-1",
+              title: "Workspace visit",
+              starts_at: startsAt,
+              ends_at: endsAt,
+              event_type: "INSTALLATION",
+              project_id: "project-1",
+            },
+          ],
+          task_events: [
+            {
+              id: "event-1",
+              title: "Workspace visit",
+              starts_at: startsAt,
+              ends_at: endsAt,
+              event_type: "INSTALLATION",
+              project_id: "project-1",
+            },
+          ],
+          issues: [],
+          earnings_summary: {
+            currency: "ILS",
+            today_total: 120,
+            month_total: 120,
+            by_install_type: [],
+            by_project: [],
+            by_day: [],
+          },
+          sync_queue: { items: [] },
+        };
+      }
+      throw new Error(`Unexpected fallback path: ${path}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallerWorkspacePage />
+      </QueryClientProvider>
+    );
+
+    expect((await screen.findAllByText("Workspace Contract Tower")).length).toBeGreaterThan(0);
+    expect(await screen.findByText("Workspace visit")).toBeInTheDocument();
+    const paths = (apiFetchMock.mock.calls as Array<[string]>).map(([path]) => path);
+    expect(paths).toContain("/api/v1/installer/workspace");
+    expect(paths).not.toContain("/api/v1/installer/projects");
+  }, 15000);
+
   it("renders installer projects and events", async () => {
     const base = new Date();
     base.setHours(12, 0, 0, 0);

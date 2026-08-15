@@ -4,29 +4,50 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import { RefreshCcw } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  FolderOpen,
+  MessageSquareWarning,
+  RefreshCcw,
+  WalletCards,
+} from "lucide-react";
 
-import { readableApiError, readableConflictCode } from "@/lib/api-error-display";
+import {
+  KpiCard as DimaxKpiCard,
+  WidgetCard,
+} from "@/components/dimax";
+import { LtrText } from "@/components/ui/LtrText";
+import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  readableApiError,
+  readableConflictCode,
+} from "@/lib/api-error-display";
+import { formatLocaleDateTime, formatLocaleNumber } from "@/lib/formatting";
 import { fetchInstallerSyncQueue } from "@/lib/installer-api";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) {
-    return "—";
-  }
+function syncNoticeClass(): string {
+  return "rounded-lg border border-status-problem-border bg-status-problem-bg px-4 py-3 text-sm text-status-problem-fg";
+}
 
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
+const syncPrimaryActionClass =
+  "dmx-primary-action h-10 disabled:cursor-not-allowed disabled:opacity-60";
 
-  return parsed.toLocaleString([], {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+const syncSmallActionClass =
+  "dmx-secondary-action h-9 disabled:cursor-not-allowed disabled:opacity-60";
+
+function syncQueueItemClass(status: string, hasConflict: boolean): string {
+  const normalized = status.trim().toUpperCase();
+  return cn(
+    "rounded-lg border p-4 transition-colors",
+    hasConflict || normalized === "FAILED"
+      ? "border-status-problem-border bg-status-problem-bg"
+      : normalized === "BLOCKED"
+        ? "border-status-blocked-border bg-status-blocked-bg"
+        : "border-border bg-surface hover:border-border-strong hover:bg-surface-subtle",
+  );
 }
 
 export default function InstallerSyncQueuePage() {
@@ -36,6 +57,24 @@ export default function InstallerSyncQueuePage() {
     if (locale === "ru") return ru;
     if (locale === "he") return he;
     return en;
+  };
+  const syncStatusLabel = (status: string) => {
+    const normalized = status.trim().toUpperCase();
+    switch (normalized) {
+      case "PENDING":
+        return copy("Pending", "Ожидает", "ממתין");
+      case "FAILED":
+        return copy("Failed", "Ошибка", "נכשל");
+      case "BLOCKED":
+        return copy("Blocked", "Заблокировано", "חסום");
+      case "SYNCED":
+      case "SUCCESS":
+        return copy("Synced", "Синхронизировано", "סונכרן");
+      case "CONFLICT":
+        return copy("Conflict", "Конфликт", "קונפליקט");
+      default:
+        return status || "-";
+    }
   };
   const focusedProjectId = (searchParams?.get("project_id") || "").trim();
 
@@ -53,203 +92,290 @@ export default function InstallerSyncQueuePage() {
     return allItems.filter(
       (item) =>
         item.project_id === focusedProjectId ||
-        (item.entity_type === "project" && item.entity_id === focusedProjectId)
+        (item.entity_type === "project" && item.entity_id === focusedProjectId),
     );
   }, [allItems, focusedProjectId]);
-  const stats = useMemo(() => ({
-    total: items.length,
-    pending: items.filter((item) => item.status === "PENDING").length,
-    failed: items.filter((item) => item.status === "FAILED").length,
-    blocked: items.filter((item) => item.status === "BLOCKED").length,
-  }), [items]);
+  const stats = useMemo(
+    () => ({
+      total: items.length,
+      pending: items.filter((item) => item.status === "PENDING").length,
+      failed: items.filter((item) => item.status === "FAILED").length,
+      blocked: items.filter((item) => item.status === "BLOCKED").length,
+    }),
+    [items],
+  );
 
   return (
-    <div className="motion-stagger space-y-6">
-      <section className="page-hero relative overflow-hidden">
-        <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.18),transparent_62%)] lg:block" />
-        <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
+    <div className="motion-stagger page-stack">
+      <section className="rounded-lg border border-border bg-surface p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
-            <div className="page-eyebrow">{copy("Sync queue", "Очередь синка", "תור סנכרון")}</div>
-            <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.04em]">
-              {copy("Installer sync queue", "Очередь синка монтажника", "תור הסנכרון של המתקין")}
+            <div className="page-eyebrow">
+              {copy("Sync queue", "Очередь синка", "תור סנכרון")}
+            </div>
+            <h1 className="dmx-page-title mt-4 flex items-center gap-2">
+              <RefreshCcw aria-hidden="true" className="h-6 w-6" />
+              {copy(
+                "Installer sync queue",
+                "Очередь синка монтажника",
+                "תור הסנכרון של המתקין",
+              )}
             </h1>
-            <p className="mt-3 text-sm leading-7 text-muted-foreground">
+            <p className="dmx-page-subtitle mt-3 max-w-2xl">
               {copy(
                 "Pending, failed and blocked actions in one simple list.",
                 "Ожидающие, неудачные и заблокированные действия в одном простом списке.",
-                "פעולות ממתינות, נכשלות וחסומות ברשימה פשוטה אחת."
+                "פעולות ממתינות, נכשלות וחסומות ברשימה פשוטה אחת.",
               )}
             </p>
             {focusedProjectId ? (
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="metric-chip">
-                  {copy("Focused project", "Фокус на проекте", "פרויקט במיקוד")} {focusedProjectId}
+                  {copy("Focused project", "Фокус на проекте", "פרויקט במיקוד")}{" "}
+                  {focusedProjectId}
                 </span>
                 <Link
                   href="/installer/sync-queue"
-                  className="inline-flex items-center rounded-lg border border-border/70 bg-background/75 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                  className={syncSmallActionClass}
                 >
-                  {copy("Show full sync queue", "Показать всю очередь синка", "הצג את כל תור הסנכרון")}
+                  {copy(
+                    "Show full sync queue",
+                    "Показать всю очередь синка",
+                    "הצג את כל תור הסנכרון",
+                  )}
                 </Link>
               </div>
             ) : null}
           </div>
-          <div className="flex gap-2">
-            <Link
-              href="/installer"
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-border/70 bg-background/75 px-4 text-sm font-medium transition-colors hover:bg-muted"
-            >
-              {copy("Back to workspace", "Назад в рабочее место", "חזרה למרחב העבודה")}
+          <div className="toolbar-row">
+            <Link href="/installer" className={syncSmallActionClass}>
+              <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+              {copy(
+                "Back to workspace",
+                "Назад в рабочее место",
+                "חזרה למרחב העבודה",
+              )}
             </Link>
             <button
               type="button"
               onClick={() => void syncQuery.refetch()}
               disabled={syncQuery.isFetching}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border/70 bg-background/75 px-4 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+              className={syncPrimaryActionClass}
             >
-              <RefreshCcw className="h-4 w-4" />
-              {syncQuery.isFetching ? copy("Refreshing...", "Обновляем...", "מרענן...") : copy("Refresh", "Обновить", "רענן")}
+              <RefreshCcw aria-hidden="true" className="h-4 w-4" />
+              {syncQuery.isFetching
+                ? copy("Refreshing…", "Обновляем…", "מרענן…")
+                : copy("Refresh", "Обновить", "רענן")}
             </button>
           </div>
         </div>
       </section>
 
       {syncQuery.isError && (
-        <div className="rounded-xl border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--destructive))]">
+        <div className={syncNoticeClass()}>
           {readableApiError(
             syncQuery.error,
             locale,
             copy(
               "Failed to load sync queue.",
               "Не удалось загрузить очередь синка.",
-              "לא ניתן לטעון את תור הסנכרון."
-            )
+              "לא ניתן לטעון את תור הסנכרון.",
+            ),
           )}
         </div>
       )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="metric-tile">
-          <div className="metric-label">{copy("Total", "Всего", "סה\"כ")}</div>
-          <div className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-foreground tabular-nums">{stats.total}</div>
-        </div>
-        <div className="metric-tile">
-          <div className="metric-label">{copy("Pending", "Ожидают", "ממתינות")}</div>
-          <div className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-foreground tabular-nums">{stats.pending}</div>
-        </div>
-        <div className="metric-tile">
-          <div className="metric-label">{copy("Failed", "Ошибки", "נכשלו")}</div>
-          <div className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-foreground tabular-nums">{stats.failed}</div>
-        </div>
-        <div className="metric-tile">
-          <div className="metric-label">{copy("Blocked", "Заблокированы", "חסומות")}</div>
-          <div className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-foreground tabular-nums">{stats.blocked}</div>
-        </div>
+        <DimaxKpiCard
+          label={copy("Total", "Всего", 'סה"כ')}
+          value={<LtrText>{formatLocaleNumber(stats.total, locale)}</LtrText>}
+          hint={copy("Queue items", "Элементы очереди", "פריטי תור")}
+          barColor="blue"
+        />
+        <DimaxKpiCard
+          label={copy("Pending", "Ожидают", "ממתינות")}
+          value={<LtrText>{formatLocaleNumber(stats.pending, locale)}</LtrText>}
+          hint={copy("Waiting to sync", "Ждут синка", "ממתין לסנכרון")}
+          barColor="yellow"
+        />
+        <DimaxKpiCard
+          label={copy("Failed", "Ошибки", "נכשלו")}
+          value={<LtrText>{formatLocaleNumber(stats.failed, locale)}</LtrText>}
+          hint={copy("Needs attention", "Нужна проверка", "דורש טיפול")}
+          barColor="red"
+          emphasis={stats.failed > 0 ? "problem" : "default"}
+        />
+        <DimaxKpiCard
+          label={copy("Blocked", "Заблокированы", "חסומות")}
+          value={<LtrText>{formatLocaleNumber(stats.blocked, locale)}</LtrText>}
+          hint={copy("Conflict or dependency", "Конфликт или зависимость", "קונפליקט או תלות")}
+          barColor="orange"
+        />
       </div>
 
       {syncQuery.isLoading && (
-        <div className="surface-panel text-sm text-muted-foreground">
-          {copy("Loading sync queue...", "Загружаем очередь синка...", "טוען את תור הסנכרון...")}
+        <div className="rounded-lg border border-border bg-surface p-4 text-sm text-text-secondary">
+          {copy(
+            "Loading sync queue…",
+            "Загружаем очередь синка…",
+            "טוען את תור הסנכרון…",
+          )}
         </div>
       )}
 
       {!syncQuery.isLoading && !syncQuery.data && (
-        <div className="surface-panel text-sm text-muted-foreground">
+        <div className="rounded-lg border border-border bg-surface p-4 text-sm text-text-secondary">
           {copy(
             "Sync queue is currently unavailable.",
             "Очередь синка сейчас недоступна.",
-            "תור הסנכרון אינו זמין כרגע."
+            "תור הסנכרון אינו זמין כרגע.",
           )}
         </div>
       )}
 
       {!syncQuery.isLoading && syncQuery.data && items.length === 0 && (
-        <div className="surface-panel text-sm text-muted-foreground">
+        <div className="rounded-lg border border-border bg-surface p-4 text-sm text-text-secondary">
           {focusedProjectId
             ? copy(
                 "No sync items for the focused project.",
                 "Для выбранного проекта нет элементов в очереди синка.",
-                "אין פריטי סנכרון לפרויקט שבמיקוד."
+                "אין פריטי סנכרון לפרויקט שבמיקוד.",
               )
-            : copy("Sync queue is empty.", "Очередь синка пуста.", "תור הסנכרון ריק.")}
+            : copy(
+                "Sync queue is empty.",
+                "Очередь синка пуста.",
+                "תור הסנכרון ריק.",
+              )}
         </div>
       )}
 
       {!syncQuery.isLoading && items.length > 0 && (
-        <section className="surface-panel space-y-3">
-          <div>
-            <div className="page-eyebrow">{copy("Queue items", "Элементы очереди", "פריטי תור")}</div>
-            <h2 className="mt-2 text-lg font-semibold">{copy("Action list", "Список действий", "רשימת פעולות")}</h2>
-          </div>
+        <WidgetCard
+          title={copy("Action list", "Список действий", "רשימת פעולות")}
+          headerMeta={copy("Queue items", "Элементы очереди", "פריטי תור")}
+        >
           <div className="space-y-3">
             {items.map((item) => (
-              <div key={item.id} className="rounded-2xl border border-border/70 bg-background/70 p-4">
+              <div
+                key={item.id}
+                className={syncQueueItemClass(
+                  item.status,
+                  Boolean(item.conflict_code),
+                )}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-foreground">{item.operation_type}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {item.entity_type}
-                      {item.entity_id ? ` • ${item.entity_id}` : ""}
+                  <div className="min-w-0">
+                    <LtrText className="block truncate text-sm font-semibold text-text">
+                      {item.operation_type}
+                    </LtrText>
+                    <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-text-secondary">
+                      <LtrText>{item.entity_type}</LtrText>
+                      {item.entity_id ? (
+                        <>
+                          <span aria-hidden="true">|</span>
+                          <LtrText>{item.entity_id}</LtrText>
+                        </>
+                      ) : null}
                     </div>
                   </div>
-                  <span className="rounded-lg border border-border/70 bg-background px-2.5 py-1 text-xs font-medium text-foreground">
-                    {item.status}
-                  </span>
+                  <StatusBadge
+                    status={item.status}
+                    label={syncStatusLabel(item.status)}
+                    domain="sync"
+                    className="shrink-0"
+                  />
                 </div>
-                <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+                <div className="mt-3 grid gap-2 text-xs text-text-secondary sm:grid-cols-3">
                   <div>
-                    <span className="font-medium text-foreground">{copy("Created", "Создано", "נוצר")}: </span>
-                    {formatDate(item.created_at)}
+                    <span className="font-medium text-text">
+                      {copy("Created", "Создано", "נוצר")}:{" "}
+                    </span>
+                    <LtrText>
+                      {formatLocaleDateTime(item.created_at, locale)}
+                    </LtrText>
                   </div>
                   <div>
-                    <span className="font-medium text-foreground">{copy("Synced", "Синхронизировано", "סונכרן")}: </span>
-                    {formatDate(item.synced_at)}
+                    <span className="font-medium text-text">
+                      {copy("Synced", "Синхронизировано", "סונכרן")}:{" "}
+                    </span>
+                    <LtrText>
+                      {formatLocaleDateTime(item.synced_at, locale)}
+                    </LtrText>
                   </div>
                   <div>
-                    <span className="font-medium text-foreground">{copy("Conflict", "Конфликт", "קונפליקט")}: </span>
+                    <span className="font-medium text-text">
+                      {copy("Conflict", "Конфликт", "קונפליקט")}:{" "}
+                    </span>
                     {item.conflict_code ? (
-                      <>
-                        {readableConflictCode(item.conflict_code, locale)}
-                        <span className="text-[11px] text-muted-foreground"> ({item.conflict_code})</span>
-                      </>
+                      <span className="inline-flex flex-wrap items-center gap-1 text-status-problem-fg">
+                        <span>
+                          {readableConflictCode(item.conflict_code, locale)}
+                        </span>
+                        <LtrText className="text-[11px] text-text-secondary">
+                          ({item.conflict_code})
+                        </LtrText>
+                      </span>
                     ) : (
                       copy("None", "Нет", "אין")
                     )}
                   </div>
                 </div>
-                {(item.entity_type === "issue" || item.project_id || item.entity_type === "project") && (
+                {(item.entity_type === "issue" ||
+                  item.project_id ||
+                  item.entity_type === "project") && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {item.entity_type === "issue" && item.entity_id ? (
                       <Link
                         href={`/installer/issues?${new URLSearchParams({
                           issue_id: item.entity_id,
                           issue_search: item.entity_id,
-                          ...(item.project_id ? { project_id: item.project_id } : {}),
+                          ...(item.project_id
+                            ? { project_id: item.project_id }
+                            : {}),
                         }).toString()}`}
-                        className="inline-flex items-center rounded-lg border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                        className={syncSmallActionClass}
                       >
+                        <MessageSquareWarning
+                          aria-hidden="true"
+                          className="h-4 w-4"
+                        />
                         {copy("Open issue", "Открыть проблему", "פתח בעיה")}
                       </Link>
                     ) : null}
-                    {(item.project_id || item.entity_type === "project") && (item.project_id || item.entity_id) ? (
+                    {(item.project_id || item.entity_type === "project") &&
+                    (item.project_id || item.entity_id) ? (
                       <>
                         <Link
                           href={`/installer/projects/${encodeURIComponent(item.project_id || item.entity_id || "")}`}
-                          className="inline-flex items-center rounded-lg border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                          className={syncSmallActionClass}
                         >
+                          <FolderOpen aria-hidden="true" className="h-4 w-4" />
                           {copy("Open project", "Открыть проект", "פתח פרויקט")}
                         </Link>
                         <Link
                           href={`/installer/calendar?project_id=${encodeURIComponent(item.project_id || item.entity_id || "")}`}
-                          className="inline-flex items-center rounded-lg border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                          className={syncSmallActionClass}
                         >
-                          {copy("Open calendar", "Открыть календарь", "פתח יומן")}
+                          <CalendarDays
+                            aria-hidden="true"
+                            className="h-4 w-4"
+                          />
+                          {copy(
+                            "Open calendar",
+                            "Открыть календарь",
+                            "פתח יומן",
+                          )}
                         </Link>
                         <Link
                           href={`/installer/earnings?project_id=${encodeURIComponent(item.project_id || item.entity_id || "")}`}
-                          className="inline-flex items-center rounded-lg border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                          className={syncSmallActionClass}
                         >
-                          {copy("Open earnings", "Открыть заработок", "פתח רווחים")}
+                          <WalletCards aria-hidden="true" className="h-4 w-4" />
+                          {copy(
+                            "Open earnings",
+                            "Открыть заработок",
+                            "פתח רווחים",
+                          )}
                         </Link>
                       </>
                     ) : null}
@@ -258,7 +384,7 @@ export default function InstallerSyncQueuePage() {
               </div>
             ))}
           </div>
-        </section>
+        </WidgetCard>
       )}
     </div>
   );

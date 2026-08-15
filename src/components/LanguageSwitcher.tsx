@@ -7,7 +7,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale } = useI18n();
 
   return (
-    <div className="inline-flex shrink-0 items-center gap-1 rounded-2xl border border-border/70 bg-background/70 p-1">
+    <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-surface p-0.5">
       {languageOptions.map((option) => {
         const active = option.locale === locale;
         return (
@@ -18,11 +18,11 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
             aria-pressed={active}
             title={option.fullLabel}
             className={cn(
-              "rounded-xl px-2.5 py-1.5 text-[11px] font-medium transition-all duration-200",
+              "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors duration-150",
               compact ? "min-w-[38px]" : "min-w-[56px]",
               active
-                ? "bg-accent text-accent-foreground shadow-[0_12px_24px_-18px_hsl(var(--accent)/0.7)]"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "bg-accent text-accent-foreground"
+                : "text-text-secondary hover:bg-surface-sunken hover:text-text",
             )}
           >
             {compact ? option.shortLabel : option.fullLabel}
