@@ -1,11 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertTriangle,
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  Download,
   ExternalLink,
   MapPin,
   MessageCircle,
@@ -13,17 +9,12 @@ import {
   Pencil,
   Phone,
   Plus,
-  Printer,
   Trash2,
-  Users,
   X,
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
-import {
-  Breadcrumbs,
-  KpiCard as DimaxKpiCard,
-} from "@/components/dimax";
+import { CalendarScheduleSurface } from "@/components/calendar/CalendarScheduleSurface";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
@@ -130,24 +121,6 @@ const EVENT_TYPE_LABELS: Record<
   consultation: { en: "Consultation", ru: "Консультация", he: "ייעוץ" },
   inspection: { en: "Inspection", ru: "Осмотр", he: "בדיקה" },
 };
-
-const EVENT_TONE_CLASS: Record<EventType, string> = {
-  installation: "border-s-[#ffc83a] bg-[#fffaea]",
-  delivery: "border-s-[#2b7fff] bg-[#eff6ff]",
-  meeting: "border-s-[#4caf50] bg-[#f0f8f2]",
-  consultation: "border-s-[#4caf50] bg-[#f0f8f2]",
-  inspection: "border-s-[#6b3fa0] bg-[#f6f0fc]",
-};
-
-const LEGEND_ITEMS: Array<{
-  type: EventType;
-  dotClassName: string;
-}> = [
-  { type: "installation", dotClassName: "bg-[#ffc83a]" },
-  { type: "delivery", dotClassName: "bg-[#2b7fff]" },
-  { type: "inspection", dotClassName: "bg-[#6b3fa0]" },
-  { type: "consultation", dotClassName: "bg-[#4caf50]" },
-];
 
 function toIsoLocal(date: string, hhmm: string): string {
   return new Date(`${date}T${hhmm}:00`).toISOString();
@@ -266,14 +239,6 @@ function buildCalendarDays(start: Date, viewMode: CalendarViewMode): Date[] {
     d.setDate(start.getDate() + i);
     return d;
   });
-}
-
-function getIsoWeekNumber(date: Date): number {
-  const copy = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = copy.getUTCDay() || 7;
-  copy.setUTCDate(copy.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(copy.getUTCFullYear(), 0, 1));
-  return Math.ceil(((copy.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 
 function makeDefaultForm(weekStartDate: Date): EventFormState {
@@ -435,15 +400,22 @@ function downloadCsv(filename: string, rows: string[][]): void {
 export default function CalendarPage() {
   const queryClient = useQueryClient();
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCallback(
+    (en: string, ru: string, he: string) =>
+      locale === "ru" ? ru : locale === "he" ? he : en,
+    [locale],
+  );
   const [weekStartDate, setWeekStartDate] = useState<Date>(
     startOfWeek(new Date()),
   );
   const [calendarView, setCalendarView] = useState<CalendarViewMode>("week");
-  const [filterType, setFilterType] = useState<EventType | "all">("all");
+  const [enabledEventTypes, setEnabledEventTypes] = useState<EventType[]>(
+    () => EVENT_TYPE_OPTIONS.map((option) => option.value),
+  );
   const [installerFilter, setInstallerFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isInfoFrameOpen, setIsInfoFrameOpen] = useState(false);
   const [selectedLaneId, setSelectedLaneId] = useState<string | null>(null);
@@ -622,9 +594,18 @@ export default function CalendarPage() {
     [calendarView, periodStartDate],
   );
 
-  const installers = installersQuery.data || [];
-  const activeInstallers = installers.filter((installer) => installer.is_active);
-  const projects = projectsQuery.data?.items || [];
+  const installers = useMemo(
+    () => installersQuery.data || [],
+    [installersQuery.data],
+  );
+  const activeInstallers = useMemo(
+    () => installers.filter((installer) => installer.is_active),
+    [installers],
+  );
+  const projects = useMemo(
+    () => projectsQuery.data?.items || [],
+    [projectsQuery.data?.items],
+  );
 
   const installerById = useMemo(() => {
     return new Map(installers.map((installer) => [installer.id, installer]));
@@ -636,8 +617,9 @@ export default function CalendarPage() {
 
   const visibleEvents = useMemo(() => {
     const rows = eventsQuery.data?.items || [];
+    const normalizedSearch = searchQuery.trim().toLocaleLowerCase();
     return rows
-      .filter((item) => filterType === "all" || item.event_type === filterType)
+      .filter((item) => enabledEventTypes.includes(item.event_type))
       .filter((item) =>
         installerFilter === "all"
           ? true
@@ -646,8 +628,39 @@ export default function CalendarPage() {
       .filter((item) =>
         projectFilter === "all" ? true : item.project_id === projectFilter,
       )
+      .filter((item) => {
+        if (!normalizedSearch) {
+          return true;
+        }
+        const project = projectById.get(item.project_id || "");
+        const installerNames = item.installer_ids
+          .map((id) => installerById.get(id)?.full_name || "")
+          .join(" ");
+        return [
+          item.title,
+          item.location || "",
+          project?.name || "",
+          installerNames,
+        ].some((value) => value.toLocaleLowerCase().includes(normalizedSearch));
+      })
       .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
-  }, [eventsQuery.data?.items, filterType, installerFilter, projectFilter]);
+  }, [
+    enabledEventTypes,
+    eventsQuery.data?.items,
+    installerById,
+    installerFilter,
+    projectById,
+    projectFilter,
+    searchQuery,
+  ]);
+  const scheduleEvents = useMemo(
+    () =>
+      visibleEvents.map((event) => ({
+        ...event,
+        isAtRisk: isProjectAtRisk(projectById.get(event.project_id || "") || null),
+      })),
+    [projectById, visibleEvents],
+  );
 
   useEffect(() => {
     if (visibleEvents.length === 0) {
@@ -660,21 +673,6 @@ export default function CalendarPage() {
       setIsInfoFrameOpen(false);
     }
   }, [selectedEvent, visibleEvents]);
-
-  const eventsByDay = useMemo(() => {
-    const map = new Map<string, CalendarEvent[]>();
-    for (const day of calendarDays) {
-      map.set(fromIsoToDate(day.toISOString()), []);
-    }
-    for (const event of visibleEvents) {
-      const key = fromIsoToDate(event.starts_at);
-      if (!map.has(key)) {
-        map.set(key, []);
-      }
-      map.get(key)!.push(event);
-    }
-    return map;
-  }, [calendarDays, visibleEvents]);
 
   const lanes = useMemo<CalendarLane[]>(() => {
     const knownInstallerIds = new Set(activeInstallers.map((item) => item.id));
@@ -712,19 +710,6 @@ export default function CalendarPage() {
     }
   }, [lanes, selectedLaneId]);
 
-  const visibleEventsCount = visibleEvents.length;
-  const activeDaysCount = useMemo(
-    () =>
-      Array.from(eventsByDay.values()).filter(
-        (dayEvents) => dayEvents.length > 0,
-      ).length,
-    [eventsByDay],
-  );
-  const riskEventsCount = visibleEvents.filter((event) =>
-    isProjectAtRisk(projectById.get(event.project_id || "") || null),
-  ).length;
-  const weekNumber = getIsoWeekNumber(periodStartDate);
-
   const selectedProjectFromList =
     projectById.get(selectedEvent?.project_id || "") || null;
   const selectedProject = projectDetailsQuery.data || selectedProjectFromList;
@@ -742,10 +727,6 @@ export default function CalendarPage() {
       projectDetailsQuery.data?.contact_phone,
   );
   const callPhone = normalizePhone(projectDetailsQuery.data?.contact_phone);
-  const selectedCompletion =
-    selectedPlanFact && selectedPlanFact.total_doors > 0
-      ? Math.min(100, Math.max(0, selectedPlanFact.completion_pct || 0))
-      : null;
   const selectedLane = selectedLaneId
     ? lanes.find((lane) => lane.id === selectedLaneId) || null
     : null;
@@ -795,6 +776,22 @@ export default function CalendarPage() {
     setForm(makeDefaultForm(next));
     setIsInfoFrameOpen(false);
     setSelectedLaneId(null);
+  };
+
+  const onSelectDate = (date: Date) => {
+    const next = normalizePeriodStart(date, calendarView);
+    setWeekStartDate(next);
+    setForm(makeDefaultForm(date));
+    setIsInfoFrameOpen(false);
+    setSelectedLaneId(null);
+  };
+
+  const onToggleEventType = (eventType: EventType) => {
+    setEnabledEventTypes((current) =>
+      current.includes(eventType)
+        ? current.filter((value) => value !== eventType)
+        : [...current, eventType],
+    );
   };
 
   const onSelectCalendarEvent = (event: CalendarEvent) => {
@@ -913,239 +910,11 @@ export default function CalendarPage() {
     calendarLoadFallback,
   );
   const isInvalidTimeRange = form.ends_at_hhmm <= form.starts_at_hhmm;
-  const selectedFilterLabel =
-    filterType === "all"
-      ? copy("All", "Все", "הכול")
-      : localizedEventType(filterType, locale);
-  const viewModeLabel =
-    calendarView === "day"
-      ? copy("Day", "День", "יום")
-      : calendarView === "month"
-        ? copy("Month", "Месяц", "חודש")
-        : copy("Week", "Неделя", "שבוע");
   const periodLabel = formatPeriodRange(periodStartDate, periodEndDate, locale);
-  const periodCompactLabel = formatPeriodRange(
-    periodStartDate,
-    periodEndDate,
-    locale,
-    false,
-  );
-  const calendarGridStyle = {
-    gridTemplateColumns: `168px repeat(${calendarDays.length}, minmax(${
-      calendarView === "month" ? "92px" : "112px"
-    }, 1fr))`,
-  };
 
   return (
     <DashboardLayout>
       <div data-testid="calendar-v27" className="page-shell page-stack-tight motion-stagger">
-        <Breadcrumbs
-          items={[
-            { label: copy("Dashboard", "Дашборд", "לוח בקרה"), href: "/" },
-            { label: copy("Calendar", "Календарь", "יומן") },
-          ]}
-        />
-
-        <section className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div className="min-w-0">
-            <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-link">
-              {copy("Operational planning", "Операционное планирование", "תכנון תפעולי")}
-            </div>
-            <h1 className="mt-1 text-[22px] font-medium leading-tight text-text">
-              {copy("Calendar", "Календарь", "יומן")}
-            </h1>
-            <p className="mt-1 text-[12.5px] text-text-secondary">
-              {viewModeLabel} {calendarView === "week" ? weekNumber : periodLabel} ·{" "}
-              <b className="font-medium text-text">{activeInstallers.length}</b>{" "}
-              {copy("installers active", "активных монтажников", "מתקינים פעילים")}{" "}
-              ·{" "}
-              <span className={riskEventsCount > 0 ? "font-medium text-status-problem-fg" : ""}>
-                {riskEventsCount}{" "}
-                {copy("events at risk", "событий в риске", "אירועים בסיכון")}
-              </span>
-            </p>
-          </div>
-          <div className="toolbar-row shrink-0">
-            <button
-              type="button"
-              onClick={onExportWeek}
-              className="dmx-secondary-action h-9"
-            >
-              <Download className="h-4 w-4" />
-              {copy("Export schedule", "Экспорт графика", "ייצוא לוח")}
-            </button>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="dmx-secondary-action h-9"
-            >
-              <Printer className="h-4 w-4" />
-              {copy("Print schedule", "Печать графика", "הדפס לוח")}
-            </button>
-            <button
-              type="button"
-              onClick={onOpenCreate}
-              disabled={!canManageCalendar}
-              title={privilegedActionHint}
-              className="dmx-primary-action h-9 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Plus className="h-4 w-4" />
-              {copy("Add Event", "Добавить событие", "הוסף אירוע")}
-            </button>
-          </div>
-        </section>
-
-        <div className="grid gap-3 md:grid-cols-4">
-          <DimaxKpiCard
-            label={copy("Planning range", "Диапазон планирования", "טווח תכנון")}
-            value={periodCompactLabel}
-            hint={copy("Planning window", "Окно планирования", "חלון תכנון")}
-            barColor="blue"
-          />
-          <DimaxKpiCard
-            label={copy("Scheduled events", "Запланировано", "אירועים מתוזמנים")}
-            value={visibleEventsCount}
-            hint={copy("After filters", "После фильтров", "אחרי מסננים")}
-            barColor="green"
-          />
-          <DimaxKpiCard
-            label={copy("Active days", "Активные дни", "ימים פעילים")}
-            value={activeDaysCount}
-            hint={copy("This period", "В этом периоде", "בתקופה הזו")}
-            barColor="yellow"
-          />
-          <DimaxKpiCard
-            label={copy("Mode", "Режим", "מצב")}
-            value={
-              canManageCalendar
-                ? copy("Manage", "Управление", "ניהול")
-                : copy("Read only", "Только чтение", "קריאה בלבד")
-            }
-            hint={`${copy("Filter", "Фильтр", "מסנן")}: ${selectedFilterLabel}`}
-            barColor={canManageCalendar ? "orange" : "red"}
-          />
-        </div>
-
-        <section className="rounded-lg border border-border bg-surface px-3 py-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center rounded-full bg-surface-subtle p-0.5">
-              <button
-                type="button"
-                onClick={onPrevWeek}
-                aria-label={copy(
-                  "Previous period",
-                  "Предыдущий период",
-                  "התקופה הקודמת",
-                )}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-text-secondary hover:bg-surface hover:text-text"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={onToday}
-                className="h-7 rounded-full px-3 text-[12px] font-medium text-text hover:bg-surface"
-              >
-                {copy("Today", "Сегодня", "היום")}
-              </button>
-              <button
-                type="button"
-                onClick={onNextWeek}
-                aria-label={copy("Next period", "Следующий период", "התקופה הבאה")}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-text-secondary hover:bg-surface hover:text-text"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="px-1 text-[13px] font-medium tabular-nums text-text">
-              {periodLabel}
-            </div>
-
-            <div className="inline-flex rounded-full bg-surface-subtle p-0.5">
-              {(["day", "week", "month"] as CalendarViewMode[]).map((viewMode) => (
-                <button
-                  key={viewMode}
-                  type="button"
-                  onClick={() => onChangeView(viewMode)}
-                  aria-pressed={calendarView === viewMode}
-                  className={cn(
-                    "h-7 rounded-full px-3 text-[12px] font-medium",
-                    calendarView === viewMode
-                      ? "bg-text text-text-inverse"
-                      : "text-text-secondary hover:bg-surface hover:text-text",
-                  )}
-                >
-                  {viewMode === "day"
-                    ? copy("Day", "День", "יום")
-                    : viewMode === "month"
-                      ? copy("Month", "Месяц", "חודש")
-                      : copy("Week", "Неделя", "שבוע")}
-                </button>
-              ))}
-            </div>
-
-            <select
-              aria-label={copy("Type filter", "Фильтр типа", "מסנן סוג")}
-              value={filterType}
-              onChange={(event) =>
-                setFilterType(event.target.value as EventType | "all")
-              }
-              className="h-8 rounded-full border border-border bg-surface px-3 text-[12px] font-medium text-text"
-            >
-              <option value="all">{copy("type: all", "тип: все", "סוג: הכול")}</option>
-              {EVENT_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {localizedEventType(option.value, locale)}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label={copy(
-                "Installer filter",
-                "Фильтр монтажника",
-                "מסנן מתקין",
-              )}
-              value={installerFilter}
-              onChange={(event) => setInstallerFilter(event.target.value)}
-              className="h-8 rounded-full border border-border bg-surface px-3 text-[12px] font-medium text-text"
-            >
-              <option value="all">
-                {copy("installer: all", "монтажник: все", "מתקין: הכול")}
-              </option>
-              {activeInstallers.map((installer) => (
-                <option key={installer.id} value={installer.id}>
-                  {installer.full_name}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label={copy("Project filter", "Фильтр проекта", "מסנן פרויקט")}
-              value={projectFilter}
-              onChange={(event) => setProjectFilter(event.target.value)}
-              className="h-8 rounded-full border border-border bg-surface px-3 text-[12px] font-medium text-text"
-            >
-              <option value="all">
-                {copy("project: any", "проект: любой", "פרויקט: הכול")}
-              </option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-
-            <div className="ms-auto flex flex-wrap items-center gap-3 text-[11px] text-text-secondary">
-              {LEGEND_ITEMS.map((item) => (
-                <span key={item.type} className="inline-flex items-center gap-1.5">
-                  <span className={cn("h-2.5 w-2.5 rounded-[3px]", item.dotClassName)} />
-                  {localizedEventType(item.type, locale)}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {hasLoadError && (
           <div className={calendarNoticeClass("error")}>{loadErrorMessage}</div>
         )}
@@ -1171,7 +940,7 @@ export default function CalendarPage() {
           <section
             data-testid="calendar-lane-info-frame"
             style={{ opacity: 1, animation: "none" }}
-            className="rounded-lg border border-[#ffc83a] bg-surface px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.10)]"
+            className="rounded-lg border border-accent bg-surface px-4 py-3 shadow-[var(--dmx-shadow-overlay)]"
           >
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
@@ -1298,8 +1067,8 @@ export default function CalendarPage() {
             data-testid="calendar-event-info-frame"
             style={{ opacity: 1, animation: "none" }}
             className={cn(
-              "rounded-lg border bg-surface px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.10)]",
-              selectedRisk ? "border-status-problem-border" : "border-[#ffc83a]",
+              "rounded-lg border bg-surface px-4 py-3 shadow-[var(--dmx-shadow-overlay)]",
+              selectedRisk ? "border-status-problem-border" : "border-accent",
             )}
           >
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -1340,8 +1109,26 @@ export default function CalendarPage() {
                     {copy("Doors", "Двери", "דלתות")}:{" "}
                     <b className="font-medium text-text">
                       {selectedPlanFact
-                        ? `${selectedPlanFact.installed_doors}/${selectedPlanFact.total_doors}`
+                        ? `${selectedPlanFact.installed_doors} / ${selectedPlanFact.total_doors}`
                         : copy("no plan", "нет плана", "אין תוכנית")}
+                    </b>
+                  </span>
+                  <span className="rounded-full border border-border bg-surface-subtle px-2.5 py-1">
+                    {copy("Developer", "Застройщик", "יזם")}: {" "}
+                    <b className="font-medium text-text">
+                      {projectDetailsQuery.data?.developer_company || "-"}
+                    </b>
+                  </span>
+                  <span className="rounded-full border border-border bg-surface-subtle px-2.5 py-1">
+                    {copy("Contact", "Контакт", "איש קשר")}: {" "}
+                    <b className="font-medium text-text">
+                      {projectDetailsQuery.data?.contact_name || "-"}
+                    </b>
+                  </span>
+                  <span className="rounded-full border border-border bg-surface-subtle px-2.5 py-1">
+                    {copy("Payroll", "Начисления", "שכר")}: {" "}
+                    <b className="font-medium text-text">
+                      {selectedPlanFact?.actual_payroll_total ?? "-"}
                     </b>
                   </span>
                   <span className="rounded-full border border-border bg-surface-subtle px-2.5 py-1">
@@ -1443,433 +1230,62 @@ export default function CalendarPage() {
           </section>
         ) : null}
 
-        <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="overflow-hidden rounded-lg border border-border bg-surface">
-            <div className="overflow-x-auto">
-              <div className="min-w-[860px]">
-                <div
-                  className="grid border-b border-border-subtle bg-surface-subtle"
-                  style={calendarGridStyle}
-                >
-                  <div aria-hidden="true" />
-                  {calendarDays.map((day) => {
-                    const key = fromIsoToDate(day.toISOString());
-                    const dayEvents = eventsByDay.get(key) || [];
-                    const todayKey = fromIsoToDate(new Date().toISOString());
-                    const isToday = key === todayKey;
-                    return (
-                      <div
-                        key={key}
-                        className={cn(
-                          "border-s border-border-subtle px-2 py-2 text-center",
-                          isToday && "bg-[#fff5d6]",
-                        )}
-                      >
-                        <div className="text-[10px] font-medium uppercase tracking-[0.04em] text-text-secondary">
-                          {day.toLocaleDateString(
-                            locale === "he"
-                              ? "he-IL"
-                              : locale === "ru"
-                                ? "ru-RU"
-                                : "en-US",
-                            { weekday: "short" },
-                          )}
-                        </div>
-                        <div className="mt-0.5 text-[15px] font-medium tabular-nums text-text">
-                          {day.getDate()}
-                        </div>
-                        <div className="mt-0.5 text-[10px] tabular-nums text-text-tertiary">
-                          {dayEvents.length > 0
-                            ? copy(
-                                `${dayEvents.length} events`,
-                                `${dayEvents.length} событий`,
-                                `${dayEvents.length} אירועים`,
-                              )
-                            : "-"}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+        <CalendarScheduleSurface
+          locale={locale}
+          copy={copy}
+          periodStartDate={periodStartDate}
+          periodEndDate={periodEndDate}
+          calendarDays={calendarDays}
+          calendarView={calendarView}
+          events={scheduleEvents}
+          installers={activeInstallers}
+          projects={projects}
+          crews={lanes.map((lane) => ({
+            id: lane.id,
+            title: lane.title,
+            initials: lane.initials,
+            eventsCount: lane.events.length,
+            busyDays: new Set(
+              lane.events.map((event) => fromIsoToDate(event.starts_at)),
+            ).size,
+            tone: lane.tone,
+            unassigned: lane.unassigned,
+          }))}
+          selectedEventId={selectedEvent?.id || null}
+          enabledEventTypes={enabledEventTypes}
+          installerFilter={installerFilter}
+          projectFilter={projectFilter}
+          searchQuery={searchQuery}
+          areFiltersOpen={areFiltersOpen}
+          canManageCalendar={canManageCalendar}
+          privilegedActionHint={privilegedActionHint}
+          isLoading={eventsQuery.isLoading}
+          eventTypeLabel={(eventType) => localizedEventType(eventType, locale)}
+          laneLoadLabel={(crewId) => {
+            const lane = lanes.find((item) => item.id === crewId);
+            return lane ? localizedLaneLoad(lane, locale) : "";
+          }}
+          onAddEvent={onOpenCreate}
+          onMovePeriod={onMovePeriod}
+          onToday={onToday}
+          onChangeView={onChangeView}
+          onSelectDate={onSelectDate}
+          onToggleEventType={onToggleEventType}
+          onSelectEvent={onSelectCalendarEvent}
+          onSelectCrew={(crewId) => {
+            const lane = lanes.find((item) => item.id === crewId);
+            if (lane) {
+              onSelectLane(lane);
+            }
+          }}
+          onSearchChange={setSearchQuery}
+          onInstallerFilterChange={setInstallerFilter}
+          onProjectFilterChange={setProjectFilter}
+          onToggleFilters={() => setAreFiltersOpen((current) => !current)}
+          onExport={onExportWeek}
+          onPrint={() => window.print()}
+        />
 
-                {lanes.map((lane) => {
-                  const loadPct = Math.min(100, Math.max(8, lane.events.length * 18));
-                  const loadTone =
-                    loadPct >= 90 ? "bg-status-problem-fg" : loadPct >= 70 ? "bg-kpi-orange" : "bg-accent";
-                  return (
-                    <div
-                      key={lane.id}
-                      className="grid min-h-[108px] border-b border-border-subtle last:border-b-0"
-                      style={calendarGridStyle}
-                    >
-                      <button
-                        type="button"
-                        data-testid="calendar-lane-row"
-                        onClick={() => onSelectLane(lane)}
-                        aria-label={copy(
-                          `Open ${lane.title} schedule row`,
-                          `Открыть строку расписания: ${lane.title}`,
-                          `פתח שורת לוח: ${lane.title}`,
-                        )}
-                        className={cn(
-                          "flex min-w-0 flex-col justify-center border-e border-border-subtle bg-surface-subtle px-3 py-2 text-start transition hover:bg-[#fffdf5] focus:outline-none focus:ring-2 focus:ring-[#ffc83a]",
-                          selectedLaneId === lane.id && "bg-[#fff5d6]",
-                        )}
-                      >
-                        <div className="mb-2 flex min-w-0 items-center gap-2">
-                          <div
-                            className={cn(
-                              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-medium",
-                              lane.tone === "a" && "bg-[#fff5d6] text-[#8a5b00]",
-                              lane.tone === "b" && "bg-[#e3f0ff] text-[#1f5fb8]",
-                              lane.tone === "c" && "bg-[#e8f7ee] text-[#2d8f4e]",
-                              lane.tone === "u" && "bg-[#f0f0f2] text-text-tertiary",
-                            )}
-                          >
-                            {lane.initials}
-                          </div>
-                          <div className="min-w-0">
-                            <div
-                              title={lane.title}
-                              className={cn(
-                                "whitespace-normal text-[12px] font-medium leading-snug text-text",
-                                lane.unassigned && "italic text-text-tertiary",
-                              )}
-                            >
-                              {lane.title}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border-subtle">
-                            <span
-                              className={cn("block h-full rounded-full", loadTone)}
-                              style={{ width: `${loadPct}%` }}
-                            />
-                          </div>
-                        </div>
-                        <div className="mt-1 text-[10.5px] font-medium leading-snug text-text-secondary">
-                          {localizedLaneLoad(lane, locale)}
-                        </div>
-                      </button>
-
-                      {calendarDays.map((day) => {
-                        const key = fromIsoToDate(day.toISOString());
-                        const todayKey = fromIsoToDate(new Date().toISOString());
-                        const isToday = key === todayKey;
-                        const cellEvents = lane.events.filter(
-                          (event) => fromIsoToDate(event.starts_at) === key,
-                        );
-                        const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-                        return (
-                          <div
-                            key={`${lane.id}-${key}`}
-                            className={cn(
-                              "flex min-h-[108px] min-w-0 flex-col gap-1 border-s border-border-subtle px-1.5 py-1.5",
-                              isToday && "bg-[#fffaea]",
-                              isWeekend && "bg-surface-subtle/70",
-                            )}
-                          >
-                            {eventsQuery.isLoading ? (
-                              <div className="h-8 rounded-md bg-surface-subtle" />
-                            ) : null}
-                            {cellEvents.map((event) => {
-                              const project = projectById.get(event.project_id || "");
-                              const isRisk = isProjectAtRisk(project);
-                              const isSelected = selectedEvent?.id === event.id;
-                              return (
-                                <button
-                                  type="button"
-                                  data-testid="calendar-event-card"
-                                  key={`${lane.id}-${event.id}`}
-                                  onClick={() => onSelectCalendarEvent(event)}
-                                  className={cn(
-                                    "min-w-0 rounded-md border border-border bg-surface px-2 py-1.5 text-start text-[10.5px] leading-snug shadow-[0_0_0_1px_rgba(0,0,0,0.03)] transition hover:border-border-strong",
-                                    "border-s-[3px]",
-                                    EVENT_TONE_CLASS[event.event_type],
-                                    isRisk && "border-s-status-problem-fg bg-status-problem-bg",
-                                    isSelected && "ring-2 ring-text",
-                                  )}
-                                >
-                                  <div
-                                    className={cn(
-                                      "text-[9.5px] font-medium tabular-nums text-text-secondary",
-                                      isRisk && "text-status-problem-fg",
-                                    )}
-                                  >
-                                    {fromIsoToHHMM(event.starts_at)} - {fromIsoToHHMM(event.ends_at)}
-                                  </div>
-                                  <div
-                                    className={cn(
-                                      "mt-0.5 truncate font-medium text-text",
-                                      isRisk && "text-status-problem-fg",
-                                    )}
-                                  >
-                                    {event.title}
-                                  </div>
-                                  <div className="mt-0.5 truncate text-[9.5px] text-text-secondary">
-                                    {project?.name || event.location || localizedEventType(event.event_type, locale)}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <aside className="overflow-hidden rounded-lg border border-border bg-surface">
-            {selectedEvent ? (
-              <>
-                <div className="border-b border-border-subtle px-4 py-3">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full border px-2.5 py-1 text-[10.5px] font-medium",
-                        selectedRisk
-                          ? "border-status-problem-border bg-status-problem-bg text-status-problem-fg"
-                          : "border-status-warning-border bg-status-warning-bg text-status-warning-fg",
-                      )}
-                    >
-                      {localizedEventType(selectedEvent.event_type, locale)}
-                    </span>
-                    <span className="text-[11px] font-medium tabular-nums text-text-secondary">
-                      {labelDate(selectedEvent.starts_at, locale)} ·{" "}
-                      {fromIsoToHHMM(selectedEvent.starts_at)} -{" "}
-                      {fromIsoToHHMM(selectedEvent.ends_at)}
-                    </span>
-                  </div>
-                  <h2 className="text-[15px] font-medium leading-snug text-text">
-                    {selectedEvent.title}
-                  </h2>
-                  <p className="mt-1 text-[11.5px] leading-5 text-text-secondary">
-                    {selectedEvent.location || selectedProject?.address || "-"}
-                  </p>
-                </div>
-
-                <div className="space-y-4 px-4 py-3">
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {selectedWazeHref ? (
-                      <a
-                        href={selectedWazeHref}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex flex-col items-center gap-1 rounded-lg border border-border bg-surface px-1 py-2 text-center hover:bg-surface-subtle"
-                      >
-                        <Navigation className="h-4 w-4 text-link" />
-                        <span className="text-[11px] font-medium text-text">Waze</span>
-                      </a>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => onUnavailableQuickAction("Waze")}
-                        className="flex flex-col items-center gap-1 rounded-lg border border-border bg-surface px-1 py-2 text-center hover:bg-surface-subtle"
-                      >
-                        <Navigation className="h-4 w-4" />
-                        <span className="text-[11px] font-medium text-text">Waze</span>
-                      </button>
-                    )}
-                    {whatsappPhone ? (
-                      <a
-                        href={`https://wa.me/${whatsappPhone.replace(/^\+/, "")}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex flex-col items-center gap-1 rounded-lg border border-border bg-surface px-1 py-2 text-center hover:bg-surface-subtle"
-                      >
-                        <MessageCircle className="h-4 w-4 text-kpi-green" />
-                        <span className="text-[11px] font-medium text-text">
-                          WhatsApp
-                        </span>
-                      </a>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => onUnavailableQuickAction("WhatsApp")}
-                        className="flex flex-col items-center gap-1 rounded-lg border border-border bg-surface px-1 py-2 text-center hover:bg-surface-subtle"
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                        <span className="text-[11px] font-medium text-text">
-                          WhatsApp
-                        </span>
-                      </button>
-                    )}
-                    {callPhone ? (
-                      <a
-                        href={`tel:${callPhone}`}
-                        className="flex flex-col items-center gap-1 rounded-lg border border-border bg-surface px-1 py-2 text-center hover:bg-surface-subtle"
-                      >
-                        <Phone className="h-4 w-4 text-text-secondary" />
-                        <span className="text-[11px] font-medium text-text">
-                          {copy("Call", "Звонок", "שיחה")}
-                        </span>
-                      </a>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => onUnavailableQuickAction(copy("Call", "Звонок", "שיחה"))}
-                        className="flex flex-col items-center gap-1 rounded-lg border border-border bg-surface px-1 py-2 text-center hover:bg-surface-subtle"
-                      >
-                        <Phone className="h-4 w-4" />
-                        <span className="text-[11px] font-medium text-text">
-                          {copy("Call", "Звонок", "שיחה")}
-                        </span>
-                      </button>
-                    )}
-                  </div>
-
-                  <div>
-                    <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.06em] text-text-secondary">
-                      {copy("Project", "Проект", "פרויקט")}
-                    </div>
-                    <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[12px]">
-                      <span className="text-text-secondary">ID</span>
-                      <span className="truncate text-end font-medium text-text">
-                        {selectedProject?.id || selectedEvent.project_id || "-"}
-                      </span>
-                      <span className="text-text-secondary">
-                        {copy("Name", "Название", "שם")}
-                      </span>
-                      <span className="truncate text-end font-medium text-text">
-                        {selectedProject?.name || "-"}
-                      </span>
-                      <span className="text-text-secondary">
-                        {copy("Developer", "Застройщик", "יזם")}
-                      </span>
-                      <span className="truncate text-end font-medium text-text">
-                        {projectDetailsQuery.data?.developer_company || "-"}
-                      </span>
-                      <span className="text-text-secondary">
-                        {copy("Contact", "Контакт", "איש קשר")}
-                      </span>
-                      <span className="truncate text-end font-medium text-text">
-                        {projectDetailsQuery.data?.contact_name || "-"}
-                      </span>
-                      <span className="text-text-secondary">
-                        {copy("Status", "Статус", "סטטוס")}
-                      </span>
-                      <span className="text-end">
-                        <span
-                          className={cn(
-                            "inline-flex rounded-full px-2.5 py-0.5 text-[10.5px] font-medium",
-                            selectedRisk
-                              ? "bg-status-problem-bg text-status-problem-fg"
-                              : "bg-status-ok-bg text-status-ok-fg",
-                          )}
-                        >
-                          {selectedProject?.status || "-"}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.06em] text-text-secondary">
-                      {copy("Doors", "Двери", "דלתות")}
-                    </div>
-                    {selectedPlanFact ? (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border-subtle">
-                            <span
-                              className="block h-full rounded-full bg-kpi-orange"
-                              style={{ width: `${selectedCompletion ?? 0}%` }}
-                            />
-                          </div>
-                          <span className="text-[11.5px] font-medium tabular-nums text-text">
-                            {selectedPlanFact.installed_doors} /{" "}
-                            {selectedPlanFact.total_doors}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-[10.5px] tabular-nums text-text-tertiary">
-                          {selectedPlanFact.not_installed_doors}{" "}
-                          {copy("remaining", "осталось", "נותרו")} ·{" "}
-                          {copy("payroll", "начисления", "שכר")}{" "}
-                          {selectedPlanFact.actual_payroll_total ?? "-"}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="rounded-lg border border-dashed border-border px-3 py-2 text-[11px] text-text-secondary">
-                        {copy(
-                          "Door plan/fact is available after opening a project-linked event.",
-                          "План/факт дверей доступен для события, привязанного к проекту.",
-                          "תכנון/ביצוע דלתות זמין לאירוע שמקושר לפרויקט.",
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.06em] text-text-secondary">
-                      {copy("Crew", "Бригада", "צוות")}
-                    </div>
-                    <div className="flex items-start gap-2 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-[12px]">
-                      <Users className="mt-0.5 h-4 w-4 shrink-0 text-text-secondary" />
-                      <span className="min-w-0 flex-1 text-text">
-                        {selectedInstallers || copy("Unassigned", "Без монтажника", "לא משויך")}
-                      </span>
-                    </div>
-                  </div>
-
-                  {selectedRisk ? (
-                    <div className="flex items-start gap-2 rounded-lg border border-status-problem-border bg-status-problem-bg px-3 py-2 text-[12px] text-status-problem-fg">
-                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span>
-                        {copy(
-                          "Project status requires dispatcher attention before the visit.",
-                          "Статус проекта требует внимания диспетчера перед визитом.",
-                          "סטטוס הפרויקט דורש תשומת לב לפני הביקור.",
-                        )}
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="flex gap-2 border-t border-border-subtle bg-surface-subtle px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => onOpenEdit(selectedEvent)}
-                    disabled={!canManageCalendar}
-                    title={privilegedActionHint}
-                    className="dmx-secondary-action h-9 flex-1 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <Pencil className="h-4 w-4" />
-                    {copy("Edit", "Изменить", "ערוך")}
-                  </button>
-                  <a
-                    href={
-                      selectedEvent.project_id
-                        ? `/projects?project_id=${selectedEvent.project_id}`
-                        : "/projects"
-                    }
-                    className="dmx-primary-action h-9 flex-1"
-                  >
-                    {copy("Open project", "Открыть проект", "פתח פרויקט")}
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </div>
-              </>
-            ) : (
-              <div className="flex min-h-[360px] flex-col items-center justify-center px-5 text-center">
-                <CalendarDays className="mb-3 h-8 w-8 text-text-tertiary" />
-                <div className="text-[14px] font-medium text-text">
-                  {copy("No event selected", "Событие не выбрано", "לא נבחר אירוע")}
-                </div>
-                <p className="mt-1 text-[12px] leading-5 text-text-secondary">
-                  {copy(
-                    "Select a calendar item to see project, crew and door progress.",
-                    "Выберите событие, чтобы увидеть проект, бригаду и прогресс по дверям.",
-                    "בחר אירוע כדי לראות פרויקט, צוות והתקדמות דלתות.",
-                  )}
-                </p>
-              </div>
-            )}
-          </aside>
-        </section>
       </div>
 
       {(isCreateOpen || isEditOpen) && (

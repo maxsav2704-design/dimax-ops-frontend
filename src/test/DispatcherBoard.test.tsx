@@ -99,11 +99,16 @@ describe("DispatcherBoard", () => {
 
     expect(screen.getByTestId("dispatcher-board")).toBeInTheDocument();
     expect(screen.getByText("Ashdod Towers")).toBeInTheDocument();
-    expect(screen.getAllByText("Alpha Crew").length).toBeGreaterThan(0);
-    expect(screen.getByText("Needs dispatch: 3")).toBeInTheDocument();
+    expect(screen.getByText("Alpha Crew")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Projects waiting for assignment").length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText("3").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Tower A installation/).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole("button", { name: "Open project" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open project: Ashdod Towers" }),
+    );
     expect(onOpenProject).toHaveBeenCalledWith("project-1");
   });
 
@@ -133,7 +138,7 @@ describe("DispatcherBoard", () => {
       </LanguageProvider>
     );
 
-    expect(screen.getByText("לוח תפעול")).toBeInTheDocument();
-    expect(screen.getByText("שליטה חיה בדלתות, חסמים ועומס הצוותים")).toBeInTheDocument();
+    expect(screen.getByText("מה דורש טיפול")).toBeInTheDocument();
+    expect(screen.getByText("אין שיבוצים דחופים.")).toBeInTheDocument();
   });
 });

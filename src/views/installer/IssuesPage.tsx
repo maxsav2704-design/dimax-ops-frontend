@@ -243,7 +243,7 @@ export default function InstallerIssuesPage() {
       );
     },
   });
-  const issues = issuesQuery.data || [];
+  const issues = useMemo(() => issuesQuery.data || [], [issuesQuery.data]);
   useEffect(() => {
     if (typeof window === "undefined") {
       return;

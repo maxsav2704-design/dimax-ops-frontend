@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -212,12 +212,14 @@ describe("Index dashboard", () => {
       ).toBe(true);
     });
 
-    expect(screen.getByText("Admin command dashboard")).toBeInTheDocument();
-    expect(screen.getByText("DIMAX GROUP")).toBeInTheDocument();
-    expect(screen.getByText("Team utilisation")).toBeInTheDocument();
+    expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.getAllByText("Available installers").length).toBeGreaterThan(0);
+    expect(screen.getByText("Installed in 7 days")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /issues \(3\)/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /new project/i }));
+    expect(pushMock).toHaveBeenCalledWith("/projects?create=1");
     expect(screen.getAllByText("Ashdod Towers").length).toBeGreaterThan(0);
     expect(screen.getByTestId("dispatcher-board")).toBeInTheDocument();
-    expect(screen.getByText("Missing installer assignment")).toBeInTheDocument();
     expect(screen.getByText("Door installation")).toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 ﻿"use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   CalendarDays,
@@ -79,11 +79,11 @@ const workspaceSmallActionClass =
   "inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-text transition-colors hover:bg-surface-subtle";
 export default function InstallerWorkspacePage() {
   const { locale, t } = useI18n();
-  const copy = (en: string, ru: string, he: string) => {
+  const copy = useCallback((en: string, ru: string, he: string) => {
     if (locale === "ru") return ru;
     if (locale === "he") return he;
     return en;
-  };
+  }, [locale]);
   const projectStatusLabel = (status: string) => {
     const normalized = status.trim().toUpperCase();
     switch (normalized) {
@@ -106,7 +106,6 @@ export default function InstallerWorkspacePage() {
   const [nowIso] = useState(() => new Date().toISOString());
   const [projectQuickFilter, setProjectQuickFilter] =
     useState<ProjectQuickFilter>("ALL");
-  const [isQueryInitialized, setIsQueryInitialized] = useState(false);
   const [calendarRange] = useState(() => {
     const from = new Date(nowIso);
     const to = new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -135,10 +134,22 @@ export default function InstallerWorkspacePage() {
     refetchInterval: 30_000,
   });
   const workspace = workspaceQuery.data;
-  const projects = workspace?.projects || [];
-  const events = workspace?.events || [];
-  const taskEvents = workspace?.taskEvents || [];
-  const issues = workspace?.issues || [];
+  const projects = useMemo(
+    () => workspace?.projects || [],
+    [workspace?.projects],
+  );
+  const events = useMemo(
+    () => workspace?.events || [],
+    [workspace?.events],
+  );
+  const taskEvents = useMemo(
+    () => workspace?.taskEvents || [],
+    [workspace?.taskEvents],
+  );
+  const issues = useMemo(
+    () => workspace?.issues || [],
+    [workspace?.issues],
+  );
   const earningsSummary = workspace?.earningsSummary || null;
   const syncQueue = workspace?.syncQueue || null;
   const stats = useMemo(() => {
@@ -235,19 +246,19 @@ export default function InstallerWorkspacePage() {
             ? "TODAY_TASKS"
             : "ALL",
     );
-    setIsQueryInitialized(true);
   }, []);
-  useEffect(() => {
-    if (!isQueryInitialized || typeof window === "undefined") {
+  const selectProjectQuickFilter = useCallback((value: ProjectQuickFilter) => {
+    setProjectQuickFilter(value);
+    if (typeof window === "undefined") {
       return;
     }
     const nextParams = new URLSearchParams(window.location.search);
     nextParams.delete("project_filter");
-    if (projectQuickFilter === "PROBLEM") {
+    if (value === "PROBLEM") {
       nextParams.set("project_filter", "problem");
-    } else if (projectQuickFilter === "ACTIVE") {
+    } else if (value === "ACTIVE") {
       nextParams.set("project_filter", "active");
-    } else if (projectQuickFilter === "TODAY_TASKS") {
+    } else if (value === "TODAY_TASKS") {
       nextParams.set("project_filter", "today");
     }
     const nextSearch = nextParams.toString();
@@ -255,7 +266,7 @@ export default function InstallerWorkspacePage() {
       ? `${window.location.pathname}?${nextSearch}`
       : window.location.pathname;
     window.history.replaceState(window.history.state, "", nextUrl);
-  }, [isQueryInitialized, projectQuickFilter]);
+  }, []);
   const priorityItems = useMemo(() => {
     const items: PriorityItem[] = [];
     const seen = new Set<string>();
@@ -351,7 +362,7 @@ export default function InstallerWorkspacePage() {
       if (items.length >= 4) return items;
     }
     return items;
-  }, [copy, nowIso, projects, t, taskEvents]);
+  }, [copy, locale, nowIso, projects, t, taskEvents]);
   async function refetchWorkspace() {
     await workspaceQuery.refetch();
   }
@@ -729,7 +740,7 @@ export default function InstallerWorkspacePage() {
       <div className="grid gap-6 lg:grid-cols-5">
         {" "}
         <section
-          aria-label="My projects list"
+          aria-label={copy("My projects list", "Список моих объектов", "רשימת הפרויקטים שלי")}
           className="space-y-3 lg:col-span-3"
         >
           {" "}
@@ -754,7 +765,7 @@ export default function InstallerWorkspacePage() {
                     key={value}
                     type="button"
                     aria-pressed={active}
-                    onClick={() => setProjectQuickFilter(value)}
+                    onClick={() => selectProjectQuickFilter(value)}
                     className={workspaceQuickFilterClass(active)}
                   >
                     {" "}

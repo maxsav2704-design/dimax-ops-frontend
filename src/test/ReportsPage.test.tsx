@@ -2692,7 +2692,8 @@ describe("ReportsPage", () => {
     expect(screen.getByRole("button", { name: "Export Executive CSV" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Export Installers CSV" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Export Orders CSV" })).toBeDisabled();
-    screen.getAllByRole("button", { name: "Retry" }).forEach((button) => {
+    const retryButtons = await screen.findAllByRole("button", { name: "Retry" });
+    retryButtons.forEach((button) => {
       expect(button).toBeDisabled();
     });
     const exportButtons = screen.getAllByRole("button", { name: "Export CSV" });

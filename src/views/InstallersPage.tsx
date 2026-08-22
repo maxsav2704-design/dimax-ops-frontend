@@ -27,7 +27,7 @@ import {
   canRunPrivilegedAdminActions,
   canViewRates,
 } from "@/lib/admin-access";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Installer = {
@@ -127,6 +127,7 @@ function installersNoticeClass(tone: "success" | "error" | "warning"): string {
 
 function InstallerCard({
   installer,
+  locale,
   onEdit,
   onDelete,
   editDisabled,
@@ -135,6 +136,7 @@ function InstallerCard({
   deleteHint,
 }: {
   installer: Installer;
+  locale: Locale;
   onEdit: () => void;
   onDelete: () => void;
   editDisabled: boolean;
@@ -142,6 +144,8 @@ function InstallerCard({
   editHint?: string;
   deleteHint?: string;
 }) {
+  const copy = (en: string, ru: string, he: string) =>
+    locale === "ru" ? ru : locale === "he" ? he : en;
   const initials = installer.full_name
     .split(" ")
     .map((part) => part[0] || "")
@@ -173,14 +177,16 @@ function InstallerCard({
               : "border-status-blocked-border bg-status-blocked-bg text-status-blocked-fg",
           )}
         >
-          {installer.is_active ? "Active" : "Inactive"}
+          {installer.is_active
+            ? copy("Active", "Активен", "פעיל")
+            : copy("Inactive", "Неактивен", "לא פעיל")}
         </span>
       </div>
 
       <div className="grid gap-2 text-[12px] text-text-secondary">
         <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
           <div className="text-[11px] font-medium uppercase text-text-secondary">
-            Phone
+            {copy("Phone", "Телефон", "טלפון")}
           </div>
           <div className="mt-1 leading-6 text-text">
             {installer.phone || "-"}
@@ -188,7 +194,7 @@ function InstallerCard({
         </div>
         <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
           <div className="text-[11px] font-medium uppercase text-text-secondary">
-            Email
+            {copy("Email", "Эл. почта", "דוא״ל")}
           </div>
           <div className="mt-1 break-all leading-6 text-text">
             {installer.email || "-"}
@@ -197,15 +203,15 @@ function InstallerCard({
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
             <div className="text-[11px] font-medium uppercase text-text-secondary">
-              User link
+              {copy("User link", "Ссылка пользователя", "קישור משתמש")}
             </div>
             <div className="mt-1 break-all leading-6 text-text">
-              {installer.user_id || "not linked"}
+              {installer.user_id || copy("not linked", "не связан", "לא מקושר")}
             </div>
           </div>
           <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
             <div className="text-[11px] font-medium uppercase text-text-secondary">
-              Updated
+              {copy("Updated", "Обновлено", "עודכן")}
             </div>
             <div className="mt-1 leading-6 text-text">
               {formatDate(installer.updated_at)}
@@ -242,17 +248,21 @@ function InstallerBaseForm({
   form,
   onChange,
   disabled,
+  locale,
 }: {
   form: InstallerFormState;
   onChange: (next: InstallerFormState) => void;
   disabled: boolean;
+  locale: Locale;
 }) {
+  const copy = (en: string, ru: string, he: string) =>
+    locale === "ru" ? ru : locale === "he" ? he : en;
   void disabled;
   return (
     <>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="field-stack">
-          <label className="field-label">Full name</label>
+          <label className="field-label">{copy("Full name", "Полное имя", "שם מלא")}</label>
           <input
             value={form.full_name}
             onChange={(e) => onChange({ ...form, full_name: e.target.value })}
@@ -261,20 +271,20 @@ function InstallerBaseForm({
           />
         </div>
         <div className="field-stack">
-          <label className="field-label">Status</label>
+          <label className="field-label">{copy("Status", "Статус", "סטטוס")}</label>
           <select
             value={form.status}
             onChange={(e) => onChange({ ...form, status: e.target.value })}
             disabled={disabled}
             className="control-input"
           >
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="INACTIVE">INACTIVE</option>
-            <option value="BUSY">BUSY</option>
+            <option value="ACTIVE">{copy("ACTIVE", "АКТИВЕН", "פעיל")}</option>
+            <option value="INACTIVE">{copy("INACTIVE", "НЕАКТИВЕН", "לא פעיל")}</option>
+            <option value="BUSY">{copy("BUSY", "ЗАНЯТ", "עסוק")}</option>
           </select>
         </div>
         <div className="field-stack">
-          <label className="field-label">Phone</label>
+          <label className="field-label">{copy("Phone", "Телефон", "טלפון")}</label>
           <input
             value={form.phone}
             onChange={(e) => onChange({ ...form, phone: e.target.value })}
@@ -283,7 +293,7 @@ function InstallerBaseForm({
           />
         </div>
         <div className="field-stack">
-          <label className="field-label">Email</label>
+          <label className="field-label">{copy("Email", "Эл. почта", "דוא״ל")}</label>
           <input
             value={form.email}
             onChange={(e) => onChange({ ...form, email: e.target.value })}
@@ -292,7 +302,7 @@ function InstallerBaseForm({
           />
         </div>
         <div className="field-stack">
-          <label className="field-label">Address</label>
+          <label className="field-label">{copy("Address", "Адрес", "כתובת")}</label>
           <input
             value={form.address}
             onChange={(e) => onChange({ ...form, address: e.target.value })}
@@ -301,7 +311,7 @@ function InstallerBaseForm({
           />
         </div>
         <div className="field-stack">
-          <label className="field-label">Passport ID</label>
+          <label className="field-label">{copy("Passport ID", "Идентификатор паспорта", "מזהה דרכון")}</label>
           <input
             value={form.passport_id}
             onChange={(e) => onChange({ ...form, passport_id: e.target.value })}
@@ -312,7 +322,7 @@ function InstallerBaseForm({
       </div>
 
       <div className="field-stack mt-4">
-        <label className="field-label">Notes</label>
+        <label className="field-label">{copy("Notes", "Примечания", "הערות")}</label>
         <textarea
           rows={2}
           value={form.notes}
@@ -329,7 +339,7 @@ function InstallerBaseForm({
           disabled={disabled}
           onChange={(e) => onChange({ ...form, is_active: e.target.checked })}
         />
-        Is active
+        {copy("Is active", "Активен", "פעיל")}
       </label>
     </>
   );
@@ -693,7 +703,10 @@ export default function InstallersPage() {
     },
   });
 
-  const installers = installersQuery.data || [];
+  const installers = useMemo(
+    () => installersQuery.data || [],
+    [installersQuery.data],
+  );
 
   useEffect(() => {
     setDeepLinkApplied(false);
@@ -733,7 +746,10 @@ export default function InstallersPage() {
     installers,
     installersQuery.isLoading,
   ]);
-  const doorTypes = doorTypesQuery.data || [];
+  const doorTypes = useMemo(
+    () => doorTypesQuery.data || [],
+    [doorTypesQuery.data],
+  );
   const rates = ratesQuery.data || [];
 
   const doorTypeMap = useMemo(() => {
@@ -847,14 +863,14 @@ export default function InstallersPage() {
         {focusedInstaller ? (
           <div className="toolbar-panel toolbar-row justify-between">
             <span className="rounded-full border border-status-progress-border bg-status-progress-bg px-3 py-1 text-[12px] font-medium text-status-progress-fg">
-              Focused installer {focusedInstaller.id}
+              {copy("Focused installer", "Выбранный монтажник", "המתקין שנבחר")} {focusedInstaller.id}
             </span>
             <button
               type="button"
               onClick={() => router.push("/installers")}
               className="dmx-secondary-action"
             >
-              Show all installers
+              {copy("Show all installers", "Показать всех монтажников", "הצג את כל המתקינים")}
             </button>
           </div>
         ) : null}
@@ -978,6 +994,7 @@ export default function InstallersPage() {
             <InstallerCard
               key={installer.id}
               installer={installer}
+              locale={locale}
               onEdit={() => onOpenEdit(installer)}
               onDelete={() => deleteMutation.mutate(installer.id)}
               editDisabled={!canOpenInstallerDetails}
@@ -1002,7 +1019,7 @@ export default function InstallersPage() {
                 onClick={() => setIsCreateOpen(false)}
                 className="dmx-secondary-action h-9"
               >
-                Close
+                {copy("Close", "Закрыть", "סגור")}
               </button>
             </div>
 
@@ -1010,6 +1027,7 @@ export default function InstallersPage() {
               form={form}
               onChange={setForm}
               disabled={!canManageInstallers}
+              locale={locale}
             />
 
             <div className="modal-footer">
@@ -1017,7 +1035,7 @@ export default function InstallersPage() {
                 onClick={() => setIsCreateOpen(false)}
                 className="dmx-secondary-action h-10"
               >
-                Cancel
+                {copy("Cancel", "Отмена", "ביטול")}
               </button>
               <button
                 onClick={() => createMutation.mutate()}
@@ -1029,7 +1047,7 @@ export default function InstallersPage() {
                 title={privilegedActionHint}
                 className="dmx-primary-action h-10 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Save
+                {copy("Save", "Сохранить", "שמור")}
               </button>
             </div>
           </div>
@@ -1040,7 +1058,9 @@ export default function InstallersPage() {
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
           <div className="modal-shell max-h-[92vh] max-w-[980px] overflow-auto">
             <div className="modal-header">
-              <h2 className="text-[16px] font-semibold">Edit Installer</h2>
+              <h2 className="text-[16px] font-semibold">
+                {copy("Edit Installer", "Редактировать монтажника", "עריכת מתקין")}
+              </h2>
               <button
                 onClick={() => {
                   setIsEditOpen(false);
@@ -1048,7 +1068,7 @@ export default function InstallersPage() {
                 }}
                 className="dmx-secondary-action h-9"
               >
-                Close
+                {copy("Close", "Закрыть", "סגור")}
               </button>
             </div>
 
@@ -1056,15 +1076,20 @@ export default function InstallersPage() {
               form={form}
               onChange={setForm}
               disabled={!canManageInstallers}
+              locale={locale}
             />
 
             <WidgetCard
-              title="User Link"
-              headerMeta="Bind the installer card to a platform user account."
+              title={copy("User Link", "Учётная запись", "חשבון משתמש")}
+              headerMeta={copy(
+                "Bind the installer card to a platform user account.",
+                "Свяжите карточку монтажника с учётной записью в системе.",
+                "קשרו את כרטיס המתקין לחשבון משתמש במערכת.",
+              )}
               className="mt-5"
             >
               <div className="text-[12px] leading-6 text-text-secondary">
-                Current linked user: {editingInstaller?.user_id || "none"}
+                {copy("Current linked user:", "Текущий связанный пользователь:", "משתמש מקושר נוכחי:")} {editingInstaller?.user_id || "none"}
               </div>
               {editingInstaller && (
                 <div className="flex flex-wrap gap-2">
@@ -1077,7 +1102,7 @@ export default function InstallersPage() {
                     }
                     className="dmx-secondary-action h-9"
                   >
-                    Open KPI report
+                    {copy("Open KPI report", "Открыть отчет по KPI", "פתח את דוח KPI")}
                   </button>
                   {canViewInstallerRates ? (
                     <button
@@ -1090,7 +1115,7 @@ export default function InstallersPage() {
                       className="dmx-secondary-action h-9"
                     >
                       <ReceiptText className="h-3.5 w-3.5" />
-                      Open payroll ledger
+                      {copy("Open payroll ledger", "Открыть журнал начислений", "פתח יומן תשלומים")}
                     </button>
                   ) : null}
                 </div>
@@ -1100,7 +1125,7 @@ export default function InstallersPage() {
                   value={linkUserId}
                   disabled={!canManageInstallers}
                   onChange={(e) => setLinkUserId(e.target.value)}
-                  placeholder="User UUID for link"
+                  placeholder={copy("User UUID for link", "UUID пользователя", "UUID משתמש")}
                   className="control-input h-10 min-w-[280px] flex-1"
                 />
                 <button
@@ -1114,7 +1139,7 @@ export default function InstallersPage() {
                   className="dmx-secondary-action h-10 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Link2 className="w-3.5 h-3.5" />
-                  Link
+                  {copy("Link", "Привязать", "קשר")}
                 </button>
                 <button
                   onClick={() => unlinkUserMutation.mutate()}
@@ -1127,18 +1152,22 @@ export default function InstallersPage() {
                   className="dmx-secondary-action h-10 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Unlink2 className="w-3.5 h-3.5" />
-                  Unlink
+                  {copy("Unlink", "Отсоединить", "בטל קישור")}
                 </button>
               </div>
             </WidgetCard>
 
             {canViewInstallerRates ? (
               <WidgetCard
-                title="Installer Rates"
-                headerMeta="Keep rate rows aligned with current door-type pricing."
+                title={copy("Installer Rates", "Расценки монтажника", "תעריפי מתקין")}
+                headerMeta={copy(
+                  "Keep rate rows aligned with current door-type pricing.",
+                  "Поддерживайте расценки в соответствии с актуальными типами дверей.",
+                  "שמרו על התאמת התעריפים לסוגי הדלתות העדכניים.",
+                )}
                 actionSlot={
                   <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2 text-end text-[12px] text-text-secondary">
-                    {rates.length} rows
+                    {rates.length} {copy("rows", "строк", "שורות")}
                   </div>
                 }
                 className="mt-5"
@@ -1161,7 +1190,7 @@ export default function InstallersPage() {
                       value={newRatePrice}
                       disabled={!canManageRates}
                       onChange={(e) => setNewRatePrice(e.target.value)}
-                      placeholder="Price"
+                      placeholder={copy("Price", "Цена", "מחיר")}
                       className="control-input h-10"
                     />
                     <button
@@ -1175,19 +1204,19 @@ export default function InstallersPage() {
                       title={rateActionHint}
                       className="dmx-primary-action h-10 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Add Rate
+                      {copy("Add Rate", "Добавить ставку", "הוסף תעריף")}
                     </button>
                   </div>
 
                   <div className="space-y-2">
                     {ratesQuery.isLoading && (
                       <div className="text-[12px] leading-6 text-text-secondary">
-                        Loading rates...
+                        {copy("Loading rates...", "Загрузка ставок...", "טוען תעריפים...")}
                       </div>
                     )}
                     {!ratesQuery.isLoading && rates.length === 0 && (
                       <div className="text-[12px] leading-6 text-text-secondary">
-                        No rates configured yet.
+                        {copy("No rates configured yet.", "Тарифы пока не настроены.", "עדיין לא הוגדרו תעריפים.")}
                       </div>
                     )}
                     {rates.map((rate) => {
@@ -1221,7 +1250,7 @@ export default function InstallersPage() {
                             title={rateActionHint}
                             className="dmx-secondary-action h-9 disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            Save
+                            {copy("Save", "Сохранить", "שמור")}
                           </button>
                           <button
                             onClick={() => deleteRateMutation.mutate(rate.id)}
@@ -1231,7 +1260,7 @@ export default function InstallersPage() {
                             title={rateActionHint}
                             className="dmx-secondary-action h-9 text-status-problem-fg hover:border-status-problem-border disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            Delete
+                            {copy("Delete", "Удалить", "מחק")}
                           </button>
                         </div>
                       );
@@ -1240,9 +1269,13 @@ export default function InstallersPage() {
                 </div>
               </WidgetCard>
             ) : (
-              <WidgetCard title="Installer Rates" className="mt-5">
+              <WidgetCard title={copy("Installer Rates", "Расценки монтажника", "תעריפי מתקין")} className="mt-5">
                 <p className="text-[12px] leading-6 text-text-secondary">
-                  Rate controls are hidden for your current admin scope.
+                  {copy(
+                    "Rate controls are hidden for your current admin scope.",
+                    "Управление ставками недоступно для текущей роли администратора.",
+                    "ניהול התעריפים אינו זמין להרשאת המנהל הנוכחית.",
+                  )}
                 </p>
               </WidgetCard>
             )}
@@ -1255,7 +1288,7 @@ export default function InstallersPage() {
                 }}
                 className="dmx-secondary-action h-10"
               >
-                Cancel
+                {copy("Cancel", "Отмена", "ביטול")}
               </button>
               <button
                 onClick={() => updateMutation.mutate()}
@@ -1267,7 +1300,7 @@ export default function InstallersPage() {
                 title={privilegedActionHint}
                 className="dmx-primary-action h-10 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Save Installer
+                {copy("Save Installer", "Сохранить монтажника", "שמור מתקין")}
               </button>
             </div>
           </div>

@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { fillReadyLoginForm, LOGIN_RESPONSE_TIMEOUT } from "./login-helpers";
+
 const COMPANY_ID = process.env.E2E_COMPANY_ID || "";
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "admin@dimax.dev";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "admin12345";
@@ -9,19 +11,17 @@ async function login(page) {
   await page.goto("/login");
   await page.evaluate(() => window.localStorage.setItem("dimax_locale", "en"));
   await page.reload({ waitUntil: "networkidle" });
-  const inputs = page.locator("input");
-  await inputs.nth(0).click();
-  await inputs.nth(0).pressSequentially(COMPANY_ID);
-  await inputs.nth(1).click();
-  await inputs.nth(1).pressSequentially(ADMIN_EMAIL);
-  await inputs.nth(2).click();
-  await inputs.nth(2).pressSequentially(ADMIN_PASSWORD);
+  const submit = await fillReadyLoginForm(page, {
+    companyId: COMPANY_ID,
+    email: ADMIN_EMAIL,
+    password: ADMIN_PASSWORD,
+  });
   const loginResponsePromise = page.waitForResponse(
     (response) =>
       response.url().includes("/api/v1/auth/login") && response.request().method() === "POST",
-    { timeout: 60_000 }
+    { timeout: LOGIN_RESPONSE_TIMEOUT }
   );
-  await page.locator('button[type="submit"]').click();
+  await submit.click();
   const loginResponse = await loginResponsePromise;
   expect(loginResponse.ok()).toBeTruthy();
   const loginBody = (await loginResponse.json()) as { access_token?: string };
@@ -39,7 +39,9 @@ async function login(page) {
     }
   }
   await expect(page).toHaveURL(/\/$/, { timeout: 60_000 });
-  await expect(page.getByText("Dispatcher Board")).toBeVisible({ timeout: 60_000 });
+  await expect(
+    page.getByRole("heading", { name: "Admin command dashboard", exact: true })
+  ).toBeVisible({ timeout: 60_000 });
   return loginBody.access_token as string;
 }
 
@@ -142,6 +144,34 @@ test.describe("Public entry smoke", () => {
 });
 
 test.describe.serial("Admin web smoke", () => {
+  let cleanupToken: string | null = null;
+  let cleanupProjectId: string | null = null;
+  let cleanupEventId: string | null = null;
+
+  test.beforeEach(() => {
+    cleanupToken = null;
+    cleanupProjectId = null;
+    cleanupEventId = null;
+  });
+
+  test.afterEach(async ({ request }) => {
+    if (!cleanupToken) return;
+    const headers = { Authorization: `Bearer ${cleanupToken}` };
+
+    if (cleanupEventId) {
+      await request.delete(
+        `${API_BASE_URL}/api/v1/admin/calendar/events/${cleanupEventId}`,
+        { headers },
+      );
+    }
+    if (cleanupProjectId) {
+      await request.delete(
+        `${API_BASE_URL}/api/v1/admin/projects/${cleanupProjectId}`,
+        { headers },
+      );
+    }
+  });
+
   test("login, project import analyze, calendar create event, reports open", async ({
     page,
     request,
@@ -150,12 +180,14 @@ test.describe.serial("Admin web smoke", () => {
 
     const suffix = String(Date.now());
     const token = await login(page);
+    cleanupToken = token;
     await page.evaluate(() => window.localStorage.setItem("dimax_locale", "en"));
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect
       .poll(async () => page.evaluate(() => window.localStorage.getItem("dimax_locale")))
       .toBe("en");
     const project = await createProject(request, token, suffix);
+    cleanupProjectId = project.id;
 
     await test.step("Projects import analyze", async () => {
       await page.getByRole("link", { name: "Projects" }).click();
@@ -230,6 +262,8 @@ test.describe.serial("Admin web smoke", () => {
       await page.getByRole("button", { name: "Create Event" }).click();
       const createEventResponse = await createEventResponsePromise;
       expect(createEventResponse.ok()).toBeTruthy();
+      const createdEvent = (await createEventResponse.json()) as { id?: string };
+      cleanupEventId = createdEvent.id || null;
 
       const weekStart = new Date();
       const dayOfWeek = weekStart.getDay();
@@ -304,6 +338,41 @@ test.describe.serial("Admin web smoke", () => {
       await actionableToggle.click();
       await expect(actionableToggle).toHaveAttribute("aria-pressed", "false");
       await expect(page).toHaveURL(/\/operations$/);
+    });
+
+    await test.step("Catalog pages use API-compatible list limits", async () => {
+      const catalogs = [
+        {
+          pagePath: "/door-types",
+          apiPath: "/api/v1/admin/door-types",
+          heading: "Door types",
+        },
+        {
+          pagePath: "/reasons",
+          apiPath: "/api/v1/admin/reasons",
+          heading: "Issue reasons",
+        },
+      ];
+
+      for (const catalog of catalogs) {
+        const responsePromise = page.waitForResponse(
+          (response) => {
+            const url = new URL(response.url());
+            return (
+              response.request().method() === "GET" &&
+              url.pathname === catalog.apiPath &&
+              url.searchParams.get("limit") === "200"
+            );
+          },
+          { timeout: 60_000 },
+        );
+        await page.goto(catalog.pagePath, { waitUntil: "domcontentloaded" });
+        const response = await responsePromise;
+        expect(response.ok()).toBeTruthy();
+        await expect(
+          page.getByRole("heading", { name: catalog.heading, exact: true }),
+        ).toBeVisible({ timeout: 30_000 });
+      }
     });
 
     await test.step("Admin locale persists across reports and operations", async () => {

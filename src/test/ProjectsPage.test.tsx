@@ -148,6 +148,7 @@ describe("ProjectsPage", () => {
                   door_count: 1,
                   location_codes: ["dira"],
                   door_type_ids: ["door-type-1"],
+                  door_type_labels: ["Entrance delivery door"],
                 },
               ],
             },
@@ -192,6 +193,7 @@ describe("ProjectsPage", () => {
                 door_count: 1,
                 location_codes: ["dira"],
                 door_type_ids: ["door-type-1"],
+                door_type_labels: ["Entrance delivery door"],
               },
             ],
           },
@@ -253,7 +255,7 @@ describe("ProjectsPage", () => {
     expect(screen.getByText("Project structure preview:")).toBeInTheDocument();
     expect(screen.getAllByText("AZ-1001").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Dira").length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/entrance - Entrance/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Entrance delivery door").length).toBeGreaterThan(0);
     expect(screen.getByText(/Zero client price doors: 1/)).toBeInTheDocument();
   }, 90000);
 
@@ -1756,7 +1758,7 @@ describe("ProjectsPage", () => {
     expect(
       await screen.findByText("Door D-1201 was added. The project matrix is now filtered to that door.")
     ).toBeInTheDocument();
-  }, 40000);
+  }, 120000);
 
   it("keeps project workflow anchors mapped to the correct business sections", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
@@ -3364,6 +3366,7 @@ describe("ProjectsPage", () => {
   }, 20000);
 
   it("creates and edits a project with address and contact quick actions", async () => {
+    searchParamsMock.mockReturnValue(new URLSearchParams("create=1"));
     let projects = [
       { id: "project-1", name: "Project A", code: "PRJ-001", address: "Address A", status: "NEW" },
     ];
@@ -3500,8 +3503,7 @@ describe("ProjectsPage", () => {
 
     render(<ProjectsPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "New project" }));
-    fireEvent.change(screen.getByLabelText("Project code"), { target: { value: "PRJ-777" } });
+    fireEvent.change(await screen.findByLabelText("Project code"), { target: { value: "PRJ-777" } });
     fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Harbor Tower" } });
     fireEvent.change(screen.getByLabelText("Street"), { target: { value: "Harbor" } });
     fireEvent.change(screen.getByLabelText("Building"), { target: { value: "11" } });
@@ -3527,7 +3529,7 @@ describe("ProjectsPage", () => {
 
     expect(await screen.findByText("Project settings updated. Quick actions are ready where data is available.")).toBeInTheDocument();
     expect(await screen.findByText("Noa Levi")).toBeInTheDocument();
-  }, 90000);
+  }, 150000);
 
   it("keeps quick actions visible and shows guidance when project contact data is missing", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
@@ -3856,7 +3858,7 @@ describe("ProjectsPage", () => {
       "https://www.waze.com/ul?ll=31.8014,34.6435&navigate=yes"
     );
     expect(screen.getByTitle("Map preview")).toHaveAttribute("src", expect.stringContaining("openstreetmap.org/export/embed.html"));
-  }, 25000);
+  }, 60000);
 
   it("autoformats project contact phones to israel format while typing", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {

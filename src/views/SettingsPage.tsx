@@ -241,7 +241,7 @@ export default function SettingsPage() {
           locale,
           copy(
             "Email test send failed",
-            "Не удалось отправить тестовый email",
+            "Не удалось отправить тестовое письмо",
             "שליחת מייל הבדיקה נכשלה",
           ),
         ),
@@ -308,8 +308,8 @@ export default function SettingsPage() {
     locale,
     copy(
       "Failed to load settings. Verify auth and backend availability.",
-      "Не удалось загрузить настройки. Проверьте авторизацию и доступность backend.",
-      "טעינת ההגדרות נכשלה. בדקו הרשאה וזמינות backend.",
+      "Не удалось загрузить настройки. Проверьте авторизацию и доступность сервера.",
+      "טעינת ההגדרות נכשלה. בדקו את ההרשאה ואת זמינות השרת.",
     ),
   );
   return (
@@ -325,7 +325,7 @@ export default function SettingsPage() {
           badge={company?.name || "DIMAX"}
           subtitle={copy(
             "Company profile, provider readiness, token limits, and controlled recovery settings.",
-            "Профиль компании, готовность провайдеров, лимиты токенов и управляемые recovery-настройки.",
+            "Профиль компании, готовность провайдера, лимиты токенов и контролируемые настройки восстановления.",
             "פרופיל חברה, מוכנות ספקים, מגבלות טוקנים והגדרות שחזור מבוקרות.",
           )}
           actions={
@@ -362,7 +362,7 @@ export default function SettingsPage() {
             barColor={canManageSettings ? "green" : "red"}
           />
           <DimaxKpiCard
-            label={copy("Email", "Email", "אימייל")}
+            label={copy("Email", "Эл. почта", "דוא״ל")}
             value={
               integrations?.email_enabled
                 ? copy("on", "вкл", "פעיל")
@@ -439,8 +439,8 @@ export default function SettingsPage() {
               title={copy("Company", "Компания", "חברה")}
               headerMeta={copy(
                 "Canonical identity used by every public handoff and system notice.",
-                "Каноническая сущность, которая используется во всех публичных handoff и системных уведомлениях.",
-                "זהות קנונית המשמשת בכל handoff ציבורי ובהודעות מערכת.",
+                "Канонический идентификатор, используемый при каждой публичной передаче и системном уведомлении.",
+                "זהות קנונית בשימוש בכל מסירה ציבורית והודעת מערכת.",
               )}
               actionSlot={
                 <Settings2 className="h-4 w-4 text-text-secondary" />
@@ -517,7 +517,7 @@ export default function SettingsPage() {
                 <div className="surface-subtle px-3 py-3">
                   {" "}
                   <p className="mb-3 text-[11px] font-medium uppercase text-text-secondary">
-                    {copy("Email / SMTP", "Email / SMTP", "אימייל / SMTP")}
+                    {copy("Email / SMTP", "Эл. почта / SMTP", "דוא״ל / SMTP")}
                   </p>{" "}
                   <div className="space-y-2">
                     {" "}
@@ -542,7 +542,7 @@ export default function SettingsPage() {
                         {" "}
                         {copy(
                           "Email enabled",
-                          "Email включён",
+                          "Электронная почта включена",
                           "אימייל פעיל",
                         )}{" "}
                       </span>{" "}
@@ -584,8 +584,8 @@ export default function SettingsPage() {
                   <p className="mb-3 text-[11px] font-medium uppercase text-text-secondary">
                     {copy(
                       "WhatsApp / Twilio",
-                      "WhatsApp / Twilio",
-                      "WhatsApp / Twilio",
+                      "WhatsApp/Твилио",
+                      "וואטסאפ / טוויליו",
                     )}
                   </p>{" "}
                   <div className="space-y-2">
@@ -596,7 +596,7 @@ export default function SettingsPage() {
                         {" "}
                         {copy(
                           "Twilio configured",
-                          "Twilio настроен",
+                          "Твилио настроено",
                           "Twilio מוגדר",
                         )}{" "}
                       </span>{" "}
@@ -626,7 +626,7 @@ export default function SettingsPage() {
                         {" "}
                         {copy(
                           "Fallback to email",
-                          "Резерв на email",
+                          "Возврат к электронной почте",
                           "מעבר לגיבוי במייל",
                         )}{" "}
                       </span>{" "}
@@ -662,8 +662,8 @@ export default function SettingsPage() {
                       {" "}
                       {copy(
                         "Callback configured",
-                        "Callback настроен",
-                        "Callback מוגדר",
+                        "Обратный вызов настроен",
+                        "התקשרות חוזרת הוגדרה",
                       )}
                       :{" "}
                       {integrationsHealth.whatsapp.callback_configured
@@ -701,11 +701,11 @@ export default function SettingsPage() {
                       />{" "}
                     </div>{" "}
                     <div>
-                      {copy("Public URL", "Публичный URL", "URL ציבורי")}:{" "}
+                      {copy("Public URL", "Публичный URL-адрес", "כתובת אתר ציבורית")}:{" "}
                       {integrations.public_base_url || "-"}
                     </div>{" "}
                     <div>
-                      {copy("Waze URL", "URL Waze", "URL של Waze")}:{" "}
+                      {copy("Waze URL", "URL-адрес Waze", "כתובת האתר של Waze")}:{" "}
                       {integrations.waze_base_url || "-"}
                     </div>{" "}
                     <div className="flex items-center gap-2">
@@ -725,8 +725,8 @@ export default function SettingsPage() {
                   <p className="mb-3 text-[11px] font-medium uppercase text-text-secondary">
                     {copy(
                       "Limits / Sync / Auth",
-                      "Лимиты / Sync / Auth",
-                      "מגבלות / Sync / Auth",
+                      "Лимиты / синхронизация / авторизация",
+                      "מגבלות / סנכרון / הרשאה",
                     )}
                   </p>{" "}
                   <div className="space-y-1 text-[12px] leading-6 text-text-secondary">
@@ -758,21 +758,25 @@ export default function SettingsPage() {
                     <div>
                       {copy(
                         "Sync lag warn/danger",
-                        "Lag sync warn/danger",
-                        "השהיית sync אזהרה/סכנה",
+                        "Задержка синхронизации: предупреждение/риск",
+                        "השהיית סנכרון: אזהרה/סכנה",
                       )}
                       : {integrations.sync_warn_lag}/
                       {integrations.sync_danger_lag}
                     </div>{" "}
                     <div>
-                      {copy("Auth login RL", "RL логина", "הגבלת קצב התחברות")}:{" "}
-                      {integrations.auth_login_rl_max_req} req/
-                      {integrations.auth_login_rl_window_sec}s
+                      {copy("Auth login RL", "Лимит попыток входа", "הגבלת קצב התחברות")}:{" "}
+                      {integrations.auth_login_rl_max_req}{" "}
+                      {copy("requests", "запросов", "בקשות")} /{" "}
+                      {integrations.auth_login_rl_window_sec}{" "}
+                      {copy("sec", "сек", "שנ׳")}
                     </div>{" "}
                     <div>
-                      {copy("Auth refresh RL", "RL refresh", "הגבלת קצב רענון")}
-                      : {integrations.auth_refresh_rl_max_req} req/
-                      {integrations.auth_refresh_rl_window_sec}s
+                      {copy("Auth refresh RL", "Лимит обновления сессии", "הגבלת קצב רענון")}
+                      : {integrations.auth_refresh_rl_max_req}{" "}
+                      {copy("requests", "запросов", "בקשות")} /{" "}
+                      {integrations.auth_refresh_rl_window_sec}{" "}
+                      {copy("sec", "сек", "שנ׳")}
                     </div>{" "}
                   </div>{" "}
                 </div>{" "}
@@ -792,10 +796,10 @@ export default function SettingsPage() {
                   <div className="flex min-h-[184px] flex-col rounded-lg border border-border bg-surface px-3 py-3">
                     {" "}
                     <div className="mb-3 text-[11px] font-medium uppercase text-text-secondary">
-                      {copy("Email test", "Тест email", "בדיקת אימייל")}
+                      {copy("Email test", "Проверка эл. почты", "בדיקת אימייל")}
                     </div>{" "}
                     <input
-                      aria-label="Email test recipient"
+                      aria-label={copy("Email test recipient", "Получатель тестового письма", "נמען הודעת הבדיקה")}
                       value={emailTestRecipient}
                       onChange={(e) => setEmailTestRecipient(e.target.value)}
                       disabled={!canManageSettings}
@@ -817,7 +821,7 @@ export default function SettingsPage() {
                       <Send className="w-4 h-4" />{" "}
                       {copy(
                         "Send Email Test",
-                        "Отправить email-тест",
+                        "Отправить тестовое письмо",
                         "שלח בדיקת אימייל",
                       )}{" "}
                     </button>{" "}
@@ -828,7 +832,7 @@ export default function SettingsPage() {
                       {copy("WhatsApp test", "Тест WhatsApp", "בדיקת WhatsApp")}
                     </div>{" "}
                     <input
-                      aria-label="WhatsApp test recipient"
+                      aria-label={copy("WhatsApp test recipient", "Получатель тестового сообщения WhatsApp", "נמען הודעת הבדיקה ב-WhatsApp")}
                       value={whatsappTestRecipient}
                       onChange={(e) => setWhatsappTestRecipient(e.target.value)}
                       disabled={!canManageSettings}
@@ -862,7 +866,7 @@ export default function SettingsPage() {
                     {copy("Test message", "Тестовое сообщение", "הודעת בדיקה")}
                   </label>{" "}
                   <textarea
-                    aria-label="Provider test message"
+                    aria-label={copy("Provider test message", "Тестовое сообщение провайдера", "הודעת בדיקה לספק")}
                     value={testMessage}
                     onChange={(e) => setTestMessage(e.target.value)}
                     disabled={!canManageSettings}

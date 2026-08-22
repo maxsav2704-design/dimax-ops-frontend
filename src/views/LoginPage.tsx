@@ -96,6 +96,7 @@ export default function LoginPage() {
       "",
   );
   const [password, setPassword] = useState("");
+  const [hydrated, setHydrated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accessNotice, setAccessNotice] = useState<string | null>(null);
@@ -120,7 +121,9 @@ export default function LoginPage() {
         : "All systems operational";
 
   useEffect(() => {
-    return enableLoginPageInteractivityGuard();
+    const disableGuard = enableLoginPageInteractivityGuard();
+    setHydrated(true);
+    return disableGuard;
   }, []);
 
   useEffect(() => {
@@ -249,6 +252,7 @@ export default function LoginPage() {
 
           <form
             className="login-form"
+            data-login-ready={hydrated ? "true" : "false"}
             onSubmit={(event) => {
               event.preventDefault();
               void onSubmit();
@@ -330,7 +334,7 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={!canSubmit || loading}
+              disabled={!hydrated || !canSubmit || loading}
               className="login-submit"
             >
               {loading ? t("login.signingIn") : t("login.signIn")}

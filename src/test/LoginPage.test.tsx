@@ -55,6 +55,27 @@ describe("LoginPage", () => {
     document.body.style.cssText = "";
   });
 
+  it("publishes login readiness only after hydration and enables complete credentials", async () => {
+    const { container } = render(
+      <LanguageProvider>
+        <LoginPage />
+      </LanguageProvider>
+    );
+
+    const form = container.querySelector("form.login-form");
+    const submit = screen.getByRole("button", { name: "Sign In" });
+    await waitFor(() => {
+      expect(form).toHaveAttribute("data-login-ready", "true");
+    });
+    expect(submit).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Company ID"), { target: { value: "company-1" } });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "admin@example.com" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret" } });
+
+    expect(submit).toBeEnabled();
+  });
+
   it("shows readable access denied notice from auth redirect query", async () => {
     window.history.replaceState({}, "", "/login?error=access_denied&next=%2Freports");
 

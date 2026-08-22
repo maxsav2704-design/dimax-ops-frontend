@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
@@ -583,6 +583,7 @@ type ImportColumnsDiagnostics = {
     door_count: number;
     location_codes: string[];
     door_type_ids?: string[];
+    door_type_labels?: string[];
   }>;
 };
 
@@ -979,7 +980,7 @@ function buildProjectAddressSuggestions(
   }
 
   const compactMatch = value.match(
-    /^(.+?)\s+(\d+[A-Za-zА-Яа-я\-\/]*)\s+([A-Za-z\u0590-\u05FF\u0400-\u04FF][A-Za-z\u0590-\u05FF\u0400-\u04FF\s-]*?)(?:\s+([A-Za-z0-9\u0590-\u05FF\u0400-\u04FF-]+))?$/u,
+    /^(.+?)\s+(\d+[A-Za-zА-Яа-я/-]*)\s+([A-Za-z\u0590-\u05FF\u0400-\u04FF][A-Za-z\u0590-\u05FF\u0400-\u04FF\s-]*?)(?:\s+([A-Za-z0-9\u0590-\u05FF\u0400-\u04FF-]+))?$/u,
   );
   if (compactMatch) {
     pushSuggestion(
@@ -1209,23 +1210,19 @@ type MatrixHouseGroup = {
   open_count: number;
 };
 
-const LOCATION_LABELS: Record<string, string> = {
-  dira: "Dira",
-  mamad: "Mamad",
-  madregot: "Madregot",
-  mahzan: "Mahsan",
-  heder_ashpa: "Heder Ashpa",
-  lobby_maalit: "Lobby Maalit",
+const LOCATION_LABELS: Record<
+  string,
+  { en: string; ru: string; he: string }
+> = {
+  dira: { en: "Dira", ru: "Квартира", he: "דירה" },
+  mamad: { en: "Mamad", ru: "МАМАД", he: "ממ״ד" },
+  madregot: { en: "Stairwell", ru: "Лестница", he: "חדר מדרגות" },
+  mahzan: { en: "Storage", ru: "Склад", he: "מחסן" },
+  heder_ashpa: { en: "Waste room", ru: "Мусорная комната", he: "חדר אשפה" },
+  lobby_maalit: { en: "Elevator lobby", ru: "Холл лифта", he: "לובי מעלית" },
 };
 
 const FAILED_QUEUE_PAGE_SIZE = 10;
-
-function locationLabel(value: string | null | undefined): string {
-  if (!value) {
-    return "-";
-  }
-  return LOCATION_LABELS[value] || value;
-}
 
 function initialsFromName(value: string | null | undefined): string {
   const parts = String(value || "")
@@ -1458,6 +1455,28 @@ export default function ProjectsPage() {
   const tt = (key: string) => projectsOverrides[locale]?.[key] ?? t(key);
   const copy = (en: string, ru: string, he: string) =>
     locale === "ru" ? ru : locale === "he" ? he : en;
+  const locationLabel = (value: string | null | undefined): string => {
+    if (!value) {
+      return "-";
+    }
+    return LOCATION_LABELS[value]?.[locale] || value;
+  };
+  const importProfileLabel = (code: string, fallback = code) => {
+    switch (code) {
+      case "auto_v1":
+        return copy("Auto detect", "Автоопределение", "זיהוי אוטומטי");
+      case "factory_he_v1":
+        return copy("Factory Hebrew", "Заводской файл на иврите", "קובץ מפעל בעברית");
+      case "supplier_delivery_he_v1":
+        return copy("Hebrew delivery report", "Отчёт поставки на иврите", "דוח אספקה בעברית");
+      case "factory_ru_v1":
+        return copy("Factory Russian", "Заводской файл на русском", "קובץ מפעל ברוסית");
+      case "generic_en_v1":
+        return copy("Generic English", "Универсальный файл на английском", "קובץ כללי באנגלית");
+      default:
+        return fallback;
+    }
+  };
   const tokenLabel = (value: string) => {
     const normalized = value.trim().toUpperCase();
     switch (normalized) {
@@ -1513,7 +1532,7 @@ export default function ProjectsPage() {
   const commercialAccessRestrictedDetail = copy(
     "This admin scope can manage project operations, doors and imports, but prices, payroll, profit, add-on plans and urgency surcharge rows require finance access.",
     "Этот админ-доступ может управлять операциями проекта, дверями и импортом, но цены, зарплаты, прибыль, планы доп. работ и срочные надбавки требуют финансового доступа.",
-    "הרשאת הניהול הזו יכולה לנהל תפעול פרויקט, דלתות וייבוא, אך מחירים, שכר, רווח, תוכניות add-on ותוספות דחיפות דורשים גישת כספים.",
+    "היקף ניהול זה יכול לנהל את פעולות הפרויקט, דלתות וייבוא, אך מחירים, שכר, רווח, תוכניות תוספות ושורות היטלים דחופים דורשים גישה למימון.",
   );
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [doorTypes, setDoorTypes] = useState<DoorType[]>([]);
@@ -1685,6 +1704,8 @@ export default function ProjectsPage() {
     setLoadingProjectAddressSuggestions,
   ] = useState(false);
   const [deepLinkFocusApplied, setDeepLinkFocusApplied] = useState(false);
+  const [createProjectDeepLinkApplied, setCreateProjectDeepLinkApplied] =
+    useState(false);
   const [matrixHouse, setMatrixHouse] = useState("all");
   const [matrixOrderNumber, setMatrixOrderNumber] = useState("all");
   const [matrixFloor, setMatrixFloor] = useState("all");
@@ -1706,6 +1727,7 @@ export default function ProjectsPage() {
     importAnalyzeErrorsCount > 0 && !allowPartialImport;
 
   const deepLinkProjectId = (searchParams?.get("project_id") || "").trim();
+  const createProjectRequested = searchParams?.get("create") === "1";
   const deepLinkFocusSection = (searchParams?.get("focus_section") || "")
     .trim()
     .toLowerCase();
@@ -2524,7 +2546,7 @@ export default function ProjectsPage() {
     return (
       <div className="mt-2">
         <div className="text-text-secondary">{title}</div>
-        <div className="mt-1 divide-y divide-border-subtle overflow-hidden rounded-lg border border-border bg-surface md:hidden">
+        <div className="mt-1 max-h-[480px] divide-y divide-border-subtle overflow-y-auto rounded-lg border border-border bg-surface md:hidden">
           {previewGroups.map((group, index) => {
             const locations =
               group.location_codes.length > 0
@@ -2533,11 +2555,13 @@ export default function ProjectsPage() {
                     .join(", ")
                 : "-";
             const doorTypes =
-              (group.door_type_ids || []).length > 0
-                ? (group.door_type_ids || [])
-                    .map((id) => doorTypeLabelById.get(id) || id)
-                    .join(", ")
-                : "-";
+              (group.door_type_labels || []).length > 0
+                ? (group.door_type_labels || []).join(", ")
+                : (group.door_type_ids || []).length > 0
+                  ? (group.door_type_ids || [])
+                      .map((id) => doorTypeLabelById.get(id) || id)
+                      .join(", ")
+                  : "-";
             return (
               <article
                 key={`${group.order_number || "-"}-${group.house_number || "-"}-${group.floor_label || "-"}-${group.apartment_number || "-"}-${group.door_marking || "-"}-${index}`}
@@ -2603,9 +2627,9 @@ export default function ProjectsPage() {
             );
           })}
         </div>
-        <div className="mt-1 hidden overflow-auto rounded-lg border border-border bg-surface md:block">
+        <div className="mt-1 hidden max-h-[380px] overflow-auto rounded-lg border border-border bg-surface md:block">
           <table className="min-w-[860px] w-full text-[11px]">
-            <thead className="bg-surface-subtle text-text-secondary">
+            <thead className="sticky top-0 z-10 bg-surface-subtle text-text-secondary shadow-[0_1px_0_var(--dmx-border)]">
               <tr>
                 <th className="text-start px-2 py-1.5 font-medium">
                   מספר הזמנה
@@ -2646,11 +2670,13 @@ export default function ProjectsPage() {
                       : "-"}
                   </td>
                   <td className="px-2 py-1.5">
-                    {(group.door_type_ids || []).length > 0
-                      ? (group.door_type_ids || [])
-                          .map((id) => doorTypeLabelById.get(id) || id)
-                          .join(", ")
-                      : "-"}
+                    {(group.door_type_labels || []).length > 0
+                      ? (group.door_type_labels || []).join(", ")
+                      : (group.door_type_ids || []).length > 0
+                        ? (group.door_type_ids || [])
+                            .map((id) => doorTypeLabelById.get(id) || id)
+                            .join(", ")
+                        : "-"}
                   </td>
                   <td className="px-2 py-1.5">{group.door_count}</td>
                 </tr>
@@ -2662,7 +2688,7 @@ export default function ProjectsPage() {
     );
   };
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     setLoadingProjects(true);
     setError(null);
     try {
@@ -2681,24 +2707,22 @@ export default function ProjectsPage() {
           setSelectedProjectId(null);
           setDeepLinkProjectMissing(true);
         }
-      } else if (selectedProjectId && ids.has(selectedProjectId)) {
-        // keep current selection
-        setDeepLinkProjectMissing(false);
-      } else if (items.length > 0) {
-        setSelectedProjectId(items[0].id);
-        setDeepLinkProjectMissing(false);
       } else {
-        setSelectedProjectId(null);
         setDeepLinkProjectMissing(false);
+        setSelectedProjectId((currentProjectId) =>
+          currentProjectId && ids.has(currentProjectId)
+            ? currentProjectId
+            : items[0]?.id || null,
+        );
       }
     } catch (e) {
       setError(readableApiError(e, locale, t("projects.failedLoadProjects")));
     } finally {
       setLoadingProjects(false);
     }
-  };
+  }, [deepLinkProjectId, locale, t]);
 
-  const loadDoorTypes = async () => {
+  const loadDoorTypes = useCallback(async () => {
     setLoadingDoorTypes(true);
     setError(null);
     try {
@@ -2712,7 +2736,7 @@ export default function ProjectsPage() {
     } finally {
       setLoadingDoorTypes(false);
     }
-  };
+  }, [locale, t]);
 
   const loadLibraryProducts = async () => {
     setLoadingLibraryProducts(true);
@@ -2774,7 +2798,7 @@ export default function ProjectsPage() {
     }
   };
 
-  const loadMappingProfiles = async () => {
+  const loadMappingProfiles = useCallback(async () => {
     setLoadingMappingProfiles(true);
     try {
       const response = await apiFetch<ImportMappingProfilesResponse>(
@@ -2782,24 +2806,28 @@ export default function ProjectsPage() {
       );
       const items = Array.isArray(response.items) ? response.items : [];
       setMappingProfiles(items);
-      if (
-        response.default_code &&
-        items.some((x) => x.code === response.default_code)
-      ) {
-        setMappingProfile(response.default_code);
-      } else if (
-        items.length > 0 &&
-        !items.some((x) => x.code === mappingProfile)
-      ) {
-        setMappingProfile(items[0].code);
-      }
+      setMappingProfile((currentProfile) => {
+        if (
+          response.default_code &&
+          items.some((item) => item.code === response.default_code)
+        ) {
+          return response.default_code;
+        }
+        if (
+          items.length > 0 &&
+          !items.some((item) => item.code === currentProfile)
+        ) {
+          return items[0].code;
+        }
+        return currentProfile;
+      });
     } catch {
       setMappingProfiles([]);
       setMappingProfile("auto_v1");
     } finally {
       setLoadingMappingProfiles(false);
     }
-  };
+  }, []);
 
   const loadProjectDetails = async (projectId: string) => {
     setLoadingProjectDetails(true);
@@ -2815,7 +2843,7 @@ export default function ProjectsPage() {
     }
   };
 
-  const loadLayout = async (projectId: string) => {
+  const loadLayout = useCallback(async (projectId: string) => {
     setLoadingLayout(true);
     setError(null);
     try {
@@ -2829,9 +2857,9 @@ export default function ProjectsPage() {
     } finally {
       setLoadingLayout(false);
     }
-  };
+  }, [locale, t]);
 
-  const loadProjectPlanFact = async (projectId: string) => {
+  const loadProjectPlanFact = useCallback(async (projectId: string) => {
     if (!canViewProjectRates) {
       setProjectPlanFact(null);
       setLoadingProjectPlanFact(false);
@@ -2850,9 +2878,9 @@ export default function ProjectsPage() {
     } finally {
       setLoadingProjectPlanFact(false);
     }
-  };
+  }, [canViewProjectRates]);
 
-  const loadProjectRisk = async (projectId: string) => {
+  const loadProjectRisk = useCallback(async (projectId: string) => {
     if (!canViewProjectRates) {
       setProjectRisk(null);
       setLoadingProjectRisk(false);
@@ -2871,9 +2899,9 @@ export default function ProjectsPage() {
     } finally {
       setLoadingProjectRisk(false);
     }
-  };
+  }, [canViewProjectRates]);
 
-  const loadProjectAddonPlan = async (projectId: string) => {
+  const loadProjectAddonPlan = useCallback(async (projectId: string) => {
     if (!canViewProjectRates) {
       setProjectAddonPlan([]);
       setLoadingProjectAddonPlan(false);
@@ -2892,9 +2920,9 @@ export default function ProjectsPage() {
     } finally {
       setLoadingProjectAddonPlan(false);
     }
-  };
+  }, [canViewProjectRates]);
 
-  const loadUrgencySurcharges = async (projectId: string) => {
+  const loadUrgencySurcharges = useCallback(async (projectId: string) => {
     if (!canViewProjectRates) {
       setUrgencySurcharges([]);
       setLoadingUrgencySurcharges(false);
@@ -2913,7 +2941,7 @@ export default function ProjectsPage() {
     } finally {
       setLoadingUrgencySurcharges(false);
     }
-  };
+  }, [canViewProjectRates]);
 
   const refreshSelectedProjectOperationalData = async (projectId: string) => {
     await Promise.all([
@@ -2960,7 +2988,7 @@ export default function ProjectsPage() {
     }
   };
 
-  const loadImportHistory = async (projectId: string) => {
+  const loadImportHistory = useCallback(async (projectId: string) => {
     setLoadingImportHistory(true);
     try {
       const params = new URLSearchParams();
@@ -2974,23 +3002,23 @@ export default function ProjectsPage() {
       );
       const items = response.items || [];
       setImportHistory(items);
-      if (
-        (deepLinkOnlyFailed || deepLinkFailedIds.length > 0) &&
-        !focusedImportRunId
-      ) {
-        const failed = items.find(
-          (x) => x.status === "FAILED" || x.status === "PARTIAL",
-        );
-        if (failed) {
-          setFocusedImportRunId(failed.id);
-        }
+      if (deepLinkOnlyFailed || deepLinkFailedIds.length > 0) {
+        setFocusedImportRunId((currentRunId) => {
+          if (currentRunId) {
+            return currentRunId;
+          }
+          const failed = items.find(
+            (item) => item.status === "FAILED" || item.status === "PARTIAL",
+          );
+          return failed?.id || currentRunId;
+        });
       }
     } catch {
       setImportHistory([]);
     } finally {
       setLoadingImportHistory(false);
     }
-  };
+  }, [deepLinkFailedIds, deepLinkOnlyFailed, importHistoryModeFilter]);
 
   const loadImportRunDetails = async (projectId: string, runId: string) => {
     setLoadingImportRunDetails(true);
@@ -3006,7 +3034,7 @@ export default function ProjectsPage() {
     }
   };
 
-  const loadFailedQueue = async () => {
+  const loadFailedQueue = useCallback(async () => {
     setLoadingFailedQueue(true);
     try {
       const params = new URLSearchParams();
@@ -3037,7 +3065,7 @@ export default function ProjectsPage() {
     } finally {
       setLoadingFailedQueue(false);
     }
-  };
+  }, [failedQueueOffset, failedQueueOnlySelectedProject, selectedProjectId]);
 
   useEffect(() => {
     void loadProjects();
@@ -3048,8 +3076,7 @@ export default function ProjectsPage() {
     void loadAddonTypes();
     void loadMappingProfiles();
     void loadDocumentTemplates();
-    void loadFailedQueue();
-  }, []);
+  }, [loadDoorTypes, loadMappingProfiles, loadProjects]);
 
   useEffect(() => {
     if (
@@ -3250,7 +3277,16 @@ export default function ProjectsPage() {
       setProjectDocuments([]);
       setFocusedImportRunDetails(null);
     }
-  }, [selectedProjectId, importHistoryModeFilter, canViewProjectRates]);
+  }, [
+    canViewProjectRates,
+    loadImportHistory,
+    loadLayout,
+    loadProjectAddonPlan,
+    loadProjectPlanFact,
+    loadProjectRisk,
+    loadUrgencySurcharges,
+    selectedProjectId,
+  ]);
 
   useEffect(() => {
     setSelectedDoorIds([]);
@@ -3276,7 +3312,7 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     void loadFailedQueue();
-  }, [failedQueueOffset, failedQueueOnlySelectedProject, selectedProjectId]);
+  }, [loadFailedQueue]);
 
   useEffect(() => {
     if (!projectActionHint) {
@@ -3681,6 +3717,28 @@ export default function ProjectsPage() {
     setProjectDialogOpen(true);
   };
 
+  useEffect(() => {
+    if (
+      !createProjectRequested ||
+      createProjectDeepLinkApplied ||
+      !canManageProjects
+    ) {
+      return;
+    }
+    setCreateProjectDeepLinkApplied(true);
+    setProjectDialogMode("create");
+    setProjectForm(emptyProjectForm());
+    setProjectFormFieldErrors({});
+    setProjectFlowNotice(null);
+    setProjectActionHint(null);
+    setError(null);
+    setProjectDialogOpen(true);
+  }, [
+    canManageProjects,
+    createProjectDeepLinkApplied,
+    createProjectRequested,
+  ]);
+
   const openEditProjectDialog = () => {
     if (!canManageProjects) return;
     if (!projectDetails) {
@@ -3876,8 +3934,8 @@ export default function ProjectsPage() {
       showProjectActionHint(
         copy(
           "Add an admin override reason before reverting an installed door.",
-          "Укажите основание admin override перед откатом установленной двери.",
-          "הוסף סיבת override לפני החזרת דלת שהותקנה.",
+          "Прежде чем возвращать установленную дверь, добавьте причину переопределения администратором.",
+          "הוסף סיבה לעקיפה של מנהל מערכת לפני החזרת דלת מותקנת.",
         ),
       );
       return;
@@ -3919,8 +3977,8 @@ export default function ProjectsPage() {
         (isAdminOverride
           ? copy(
               "Door {door} reverted to not installed by admin override.",
-              "Дверь {door} откатили в неустановленную через admin override.",
-              "הדלת {door} הוחזרה ללא הותקנה באמצעות override.",
+              "Дверь {door} снова стала не установлена ​​администратором.",
+              "הדלת {door} הוחזרה למצב לא הותקנה על ידי עקיפה של מנהל המערכת.",
             )
           : copy(
               "Door {door} saved as not installed.",
@@ -4255,8 +4313,8 @@ export default function ProjectsPage() {
       setError(
         copy(
           "Choose a product and fill door code + unit before saving.",
-          "Выберите продукт и заполните код двери и unit перед сохранением.",
-          "בחר מוצר ומלא קוד דלת ו-unit לפני השמירה.",
+          "Выберите продукт и введите код двери + блок перед сохранением.",
+          "בחרו מוצר ומלאו קוד דלת + יחידה לפני השמירה.",
         ),
       );
       return;
@@ -4479,8 +4537,8 @@ export default function ProjectsPage() {
       setError(
         copy(
           "Fill reason and both surcharge amounts. Order-scoped surcharge also needs an order number.",
-          "Заполните причину и обе суммы surcharge. Для surcharge по заказу также нужен номер заказа.",
-          "מלא סיבה ושני סכומי surcharge. עבור surcharge לפי הזמנה נדרש גם מספר הזמנה.",
+          "Укажите причину и обе суммы доплаты. Надбавке в рамках заказа также требуется номер заказа.",
+          "מלא את הסיבה ואת שני סכומי ההיטל. תוספת בהיקף הזמנה צריכה גם מספר הזמנה.",
         ),
       );
       return;
@@ -4573,8 +4631,8 @@ export default function ProjectsPage() {
           locale,
           copy(
             "Failed to save urgency surcharge.",
-            "Не удалось сохранить urgency surcharge.",
-            "שמירת urgency surcharge נכשלה.",
+            "Не удалось сохранить плату за срочность.",
+            "חיסכון של תוספת דחיפות נכשלה.",
           ),
         ),
       );
@@ -4598,7 +4656,7 @@ export default function ProjectsPage() {
 
         <section
           className={cn(
-            "rounded-lg border border-border bg-surface px-4 py-4 shadow-[0_18px_45px_rgba(15,23,42,0.05)] md:px-5",
+            "rounded-lg border border-border bg-surface px-4 py-4 md:px-5",
             projectDetailFocused ? "order-5" : "order-1",
           )}
           data-testid="projects-list-v25"
@@ -4606,24 +4664,24 @@ export default function ProjectsPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="inline-flex min-h-8 items-center rounded-full bg-[var(--dmx-accent-tint)] px-3 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-accent">
-                Dashboard # Projects
+                {copy("Dashboard / Projects", "Главная / Проекты", "ראשי / פרויקטים")}
               </div>
               <h1 className="mt-4 text-[32px] font-semibold leading-tight text-text md:text-[42px]">
-                Projects
+                {copy("Projects", "Проекты", "פרויקטים")}
               </h1>
               <p className="mt-2 max-w-3xl text-[13px] leading-6 text-text-secondary">
                 <b className="font-semibold text-text">
                   {projectPortfolioStats.active}
                 </b>{" "}
-                active projects -{" "}
+                {copy("active projects ·", "активных проектов ·", "פרויקטים פעילים ·")}{" "}
                 <b className="font-semibold text-text">
                   {projectPortfolioStats.problem}
                 </b>{" "}
-                problem -{" "}
+                {copy("problem ·", "проблемных ·", "בעייתיים ·")}{" "}
                 <b className="font-semibold text-text">
                   {filteredProjects.length}
                 </b>{" "}
-                visible after filters - updated from live project API
+                {copy("visible after filters - updated from live project API", "отображается после фильтров — обновлено из API действующего проекта.", "גלוי לאחר מסננים - עודכן מ-API של פרויקט חי")}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -4651,7 +4709,7 @@ export default function ProjectsPage() {
                 className="dmx-secondary-action"
               >
                 <Download className="h-4 w-4" strokeWidth={1.8} />
-                Reports
+                {copy("Reports", "Отчеты", "דוחות")}
               </button>
               <button
                 type="button"
@@ -4660,7 +4718,7 @@ export default function ProjectsPage() {
                 className="dmx-primary-action"
               >
                 <Plus className="h-4 w-4" strokeWidth={1.8} />
-                New project
+                {copy("New project", "Новый проект", "פרויקט חדש")}
               </button>
             </div>
           </div>
@@ -4738,7 +4796,7 @@ export default function ProjectsPage() {
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by project, address or status"
+                  placeholder={copy("Search by project, address or status", "Поиск по объекту, адресу или статусу", "חיפוש לפי פרויקט, כתובת או סטטוס")}
                   className="h-10 w-full rounded-full border border-border bg-surface ps-9 pe-3 text-[12.5px] text-text placeholder:text-text-tertiary focus:border-border-strong focus:outline-none"
                 />
               </div>
@@ -4746,15 +4804,14 @@ export default function ProjectsPage() {
             {bulkSelectedProjectIds.length > 0 ? (
               <div className="mt-4 flex flex-col gap-2 rounded-lg border border-accent/35 bg-[var(--dmx-accent-tint)] px-3 py-3 text-[12px] text-text-secondary sm:flex-row sm:items-center sm:justify-between">
                 <span>
-                  {bulkSelectedProjectIds.length} projects selected for review
-                  or reconciliation.
+                  {bulkSelectedProjectIds.length} {copy("projects selected for review or reconciliation.", "проектов выбрано для проверки или согласования.", "פרויקטים שנבחרו לבדיקה או התאמה.")}
                 </span>
                 <button
                   type="button"
                   onClick={() => setBulkSelectedProjectIds([])}
                   className="dmx-secondary-action"
                 >
-                  Clear selection
+                  {copy("Clear selection", "Очистить выбор", "נקה בחירה")}
                 </button>
               </div>
             ) : null}
@@ -4782,16 +4839,16 @@ export default function ProjectsPage() {
             {selectedProjectId && selectedProjectId === deepLinkProjectId ? (
               <div className="flex flex-wrap gap-2">
                 <span className="metric-chip">
-                  Focused project {selectedProjectId}
+                  {copy("Focused project", "Выбранный проект", "הפרויקט שנבחר")} {selectedProjectId}
                 </span>
                 {focusedSectionLabel ? (
                   <span className="metric-chip">
-                    Focused section {focusedSectionLabel}
+                    {copy("Focused section", "Выбранный раздел", "החלק שנבחר")} {focusedSectionLabel}
                   </span>
                 ) : null}
                 {deepLinkOrderNumber ? (
                   <span className="metric-chip">
-                    Order {deepLinkOrderNumber}
+                    {copy("Order", "Заказ", "הזמנה")} {deepLinkOrderNumber}
                   </span>
                 ) : null}
                 {focusedSectionLabel || deepLinkOrderNumber ? (
@@ -4802,7 +4859,7 @@ export default function ProjectsPage() {
                     }
                     className="dmx-secondary-action"
                   >
-                    Show full project workspace
+                    {copy("Show full project workspace", "Показать всю рабочую область проекта", "הצג את סביבת העבודה המלאה של הפרויקט")}
                   </button>
                 ) : null}
                 <button
@@ -4810,7 +4867,7 @@ export default function ProjectsPage() {
                   onClick={() => router.push("/projects")}
                   className="dmx-secondary-action"
                 >
-                  Show all projects
+                  {copy("Show all projects", "Показать все проекты", "הצג את כל הפרויקטים")}
                 </button>
               </div>
             ) : null}
@@ -5685,7 +5742,7 @@ export default function ProjectsPage() {
                                 key={`${floor.house_number}-${floor.floor_label}-top`}
                                 data-testid={`project-detail-v28-floor-row-${floor.house_number}-${floor.floor_label}`}
                                 className={cn(
-                                  "relative overflow-hidden rounded-lg border bg-surface shadow-[0_1px_0_rgba(15,23,42,0.04)]",
+                                  "relative overflow-hidden rounded-lg border bg-surface",
                                   floor.issue_count > 0
                                     ? "border-status-problem-border"
                                     : "border-border",
@@ -6944,7 +7001,7 @@ export default function ProjectsPage() {
                             <div className="mt-1">
                               {formatBytes(selectedDocumentTemplate.size_bytes)}{" "}
                               - {selectedDocumentTemplate.placeholders.length}{" "}
-                              placeholders
+                              {copy("placeholders", "заполнители", "מצייני מקום")}
                             </div>
                           </div>
                         ) : null}
@@ -7114,7 +7171,7 @@ export default function ProjectsPage() {
                       <p className="mt-2 text-[12px] leading-6 text-text-secondary">
                         {copy(
                           "Use a canonical product from Library, assign an installer if needed, and refresh the layout immediately.",
-                          "Используйте канонический продукт из Library, при необходимости назначьте монтажника и сразу обновите раскладку проекта.",
+                          "Используйте канонический продукт из справочник, при необходимости назначьте монтажника и немедленно обновите макет.",
                           "בחר מוצר קנוני מהספרייה, שיוך מתקין אם צריך, ורענן מיד את פריסת הפרויקט.",
                         )}
                       </p>
@@ -7122,7 +7179,7 @@ export default function ProjectsPage() {
                         <span className="metric-chip">
                           {copy(
                             "Library products",
-                            "Продукты Library",
+                            "Библиотечные продукты",
                             "מוצרי ספרייה",
                           )}{" "}
                           {activeLibraryProducts.length}
@@ -7153,7 +7210,7 @@ export default function ProjectsPage() {
                         >
                           {copy(
                             "Open Library",
-                            "Открыть Library",
+                            "Открытая справочник",
                             "פתח ספרייה",
                           )}
                         </Button>
@@ -7179,13 +7236,13 @@ export default function ProjectsPage() {
                         {loadingLibraryProducts
                           ? copy(
                               "Loading library...",
-                              "Загружаем Library...",
+                              "Загрузка справочник...",
                               "טוען ספרייה...",
                             )
                           : activeLibraryProducts.length === 0
                             ? copy(
                                 "Add active products in Library first.",
-                                "Сначала добавьте активные продукты в Library.",
+                                "Сначала добавьте активные продукты в справочник.",
                                 "קודם הוסף מוצרים פעילים בספרייה.",
                               )
                             : copy(
@@ -7228,7 +7285,7 @@ export default function ProjectsPage() {
                             {copy(
                               "Keep one simple project plan: what add-on is expected, how many units, and both client/install prices.",
                               "Держите простой план по проекту: какой доп нужен, сколько единиц и обе цены — клиентская и монтажная.",
-                              "שמור תוכנית פרויקט פשוטה: איזה add-on נדרש, כמה יחידות, ומהם מחירי הלקוח והמתקין.",
+                              "שמור על תוכנית פרויקט פשוטה אחת: איזה תוספת צפויה, כמה יחידות, וגם מחירי לקוח/התקנה.",
                             )}
                           </p>
                         </div>
@@ -7534,8 +7591,8 @@ export default function ProjectsPage() {
                           <p className="mt-2 text-[12px] leading-6 text-text-secondary">
                             {copy(
                               "Use project-level or order-level surcharge rows so finance and operations see the same uplift logic.",
-                              "Используйте строки surcharge на уровне проекта или заказа, чтобы финансы и operations видели одну и ту же логику надбавки.",
-                              "השתמש בשורות surcharge ברמת פרויקט או הזמנה כדי שפיננסים ותפעול יראו את אותה לוגיקת תוספת.",
+                              "Используйте строки надбавок на уровне проекта или уровня заказа, чтобы финансы и операции видели одну и ту же логику повышения.",
+                              "השתמש בשורות היטלים ברמת הפרויקט או ברמת ההזמנה כדי שהכספים והתפעול יראו את אותו היגיון העלאה.",
                             )}
                           </p>
                         </div>
@@ -7556,8 +7613,8 @@ export default function ProjectsPage() {
                           <div className="text-[11px] text-text-secondary">
                             {copy(
                               "Keep surcharge visible and auditable as a separate plan layer.",
-                              "Держите surcharge видимым и аудируемым как отдельный плановый слой.",
-                              "שמור surcharge גלוי וניתן לביקורת כשכבת תכנון נפרדת.",
+                              "Держите надбавки видимыми и проверяемыми на отдельном уровне плана.",
+                              "שמור על תוספת גלויה וניתנת לביקורת כשכבת תוכנית נפרדת.",
                             )}
                           </div>
                         </div>
@@ -7690,7 +7747,7 @@ export default function ProjectsPage() {
                           <thead className="bg-surface-subtle text-text-secondary">
                             <tr>
                               <th className="px-3 py-2.5 text-start font-medium">
-                                {copy("Scope", "Скоуп", "היקף")}
+                                {copy("Scope", "Объём работ", "היקף עבודה")}
                               </th>
                               <th className="px-3 py-2.5 text-start font-medium">
                                 {copy("Order", "Заказ", "הזמנה")}
@@ -7936,8 +7993,8 @@ export default function ProjectsPage() {
                                 <>
                                   {copy(
                                     "Add-on gaps",
-                                    "Пробелы add-on",
-                                    "פערי add-on",
+                                    "Дополнительные пробелы",
+                                    "פערי תוספות",
                                   )}
                                   : {projectPlanFact.missing_addon_plans_facts}
                                 </>
@@ -9222,7 +9279,11 @@ export default function ProjectsPage() {
                   }
                 >
                   <p className="text-[12px] text-text-secondary">
-                    Priority columns: מספר הזמנה, בניין, קומה, דירה, דגם כנף
+                    {copy(
+                      "Priority columns: order, building, floor, apartment, door model",
+                      "Основные столбцы: заказ, дом, этаж, квартира, модель двери",
+                      "עמודות עיקריות: הזמנה, בניין, קומה, דירה, דגם דלת",
+                    )}
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-[1fr_280px_130px] gap-2 mt-3">
                     <label className="flex h-10 cursor-pointer items-center rounded-lg border border-dashed border-border bg-surface px-3 text-[13px] text-text-secondary transition-colors hover:border-border-strong focus-within:ring-2 focus-within:ring-accent/35">
@@ -9325,7 +9386,7 @@ export default function ProjectsPage() {
                       ) : null}
                       {mappingProfiles.map((profile) => (
                         <option key={profile.code} value={profile.code}>
-                          {profile.name}
+                          {importProfileLabel(profile.code, profile.name)}
                         </option>
                       ))}
                     </select>
@@ -9434,7 +9495,9 @@ export default function ProjectsPage() {
                         <div className="mt-1 text-text-secondary">
                           {t("projects.mappingProfileValue").replace(
                             "{value}",
-                            importResult.diagnostics.mapping_profile,
+                            importProfileLabel(
+                              importResult.diagnostics.mapping_profile,
+                            ),
                           )}
                         </div>
                       ) : null}
@@ -9657,7 +9720,7 @@ export default function ProjectsPage() {
                       </div>
                       <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                         <select
-                          aria-label="Import history mode"
+                          aria-label={copy("Import history mode", "Режим истории импорта", "מצב היסטוריית ייבוא")}
                           value={importHistoryModeFilter}
                           onChange={(e) =>
                             setImportHistoryModeFilter(e.target.value)
@@ -9674,7 +9737,7 @@ export default function ProjectsPage() {
                           </option>
                         </select>
                         <select
-                          aria-label="Import history status"
+                          aria-label={copy("Import history status", "Статус истории импорта", "סטטוס היסטוריית ייבוא")}
                           value={importHistoryStatusFilter}
                           onChange={(e) =>
                             setImportHistoryStatusFilter(e.target.value)
@@ -9977,7 +10040,11 @@ export default function ProjectsPage() {
                             label={t("projects.profile")}
                             value={
                               <span className="inline-block max-w-[12rem] truncate align-bottom">
-                                {focusedImportRunDetails.mapping_profile || "-"}
+                                {focusedImportRunDetails.mapping_profile
+                                  ? importProfileLabel(
+                                      focusedImportRunDetails.mapping_profile,
+                                    )
+                                  : "-"}
                               </span>
                             }
                             barColor="orange"
@@ -10568,7 +10635,7 @@ export default function ProjectsPage() {
                     <div
                       data-testid="project-door-info-frame"
                       aria-live="polite"
-                      className="sticky top-3 z-20 mb-3 overflow-hidden rounded-lg border border-border-strong bg-surface shadow-[0_18px_38px_rgba(15,23,42,0.12)] ring-1 ring-black/5"
+                      className="sticky top-3 z-20 mb-3 overflow-hidden rounded-lg border border-border-strong bg-surface shadow-[var(--dmx-shadow-overlay)] ring-1 ring-black/5"
                     >
                       <span
                         className={cn(
@@ -10665,7 +10732,7 @@ export default function ProjectsPage() {
                       <div className="grid grid-cols-1 gap-3 p-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)]">
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
                           <MetricRow
-                            label={copy("Unit", "Юнит", "יחידה")}
+                            label={copy("Unit", "Позиция", "מיקום")}
                             value={<LtrText>{focusedDoorRow.unit_label}</LtrText>}
                             barColor="blue"
                           />
@@ -10811,13 +10878,13 @@ export default function ProjectsPage() {
                                   maxLength={500}
                                   placeholder={copy(
                                     "Required admin override reason",
-                                    "Обязательное основание admin override",
-                                    "סיבת override נדרשת",
+                                    "Требуемая причина переопределения администратором",
+                                    "נדרשת סיבה לעקוף מנהל מערכת",
                                   )}
                                   aria-label={copy(
                                     "Admin override reason",
-                                    "Основание admin override",
-                                    "סיבת override",
+                                    "Причина отмены администратором",
+                                    "סיבה לעקוף מנהל המערכת",
                                   )}
                                   data-testid="project-door-override-reason"
                                   className="control-input mt-2 h-9 text-[12px]"
@@ -10840,8 +10907,8 @@ export default function ProjectsPage() {
                                   {focusedDoorRow.status === "INSTALLED"
                                     ? copy(
                                         "Installed doors are locked. Admin override reverses completed work, reopens an issue and writes audit history.",
-                                        "Установленные двери заблокированы. Admin override откатывает выполненную работу, открывает проблему и пишет audit history.",
-                                        "דלתות שהותקנו נעולות. Admin override מבטל ביצוע, פותח בעיה ורושם audit history.",
+                                        "Установленные двери запираются. Администраторское переопределение отменяет завершенную работу, повторно открывает проблему и записывает историю аудита.",
+                                        "דלתות מותקנות ננעלות. עקיפה של מנהל מערכת הופכת עבודה שהושלמה, פותחת בעיה מחדש וכותבת היסטוריית ביקורת.",
                                       )
                                     : copy(
                                         "Not installed always requires a reason and writes an issue to the project log.",
@@ -11051,7 +11118,9 @@ export default function ProjectsPage() {
                         >
                           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
                             <div>
-                              <div className={projectsMetricLabelClass}>בניין / House</div>
+                              <div className={projectsMetricLabelClass}>
+                                {copy("Building", "Дом", "בניין")}
+                              </div>
                               <div className="text-[15px] font-semibold text-text mt-1">
                                 {house.house_number}
                               </div>
@@ -11110,7 +11179,7 @@ export default function ProjectsPage() {
                                 key={`${house.house_number}-${floor.floor_label}`}
                                 data-testid={`project-detail-v28-full-floor-row-${house.house_number}-${floor.floor_label}`}
                                 className={cn(
-                                  "relative overflow-hidden rounded-lg border bg-surface shadow-[0_1px_0_rgba(15,23,42,0.04)]",
+                                  "relative overflow-hidden rounded-lg border bg-surface",
                                   floor.issue_count > 0
                                     ? "border-status-problem-border"
                                     : "border-border",
@@ -11254,7 +11323,7 @@ export default function ProjectsPage() {
                                               toggleDoorSelection(door.door_id)
                                             }
                                             className={cn(
-                                              "relative flex aspect-square min-h-10 items-center justify-center rounded-md border px-1 text-[11px] font-medium leading-none tabular-nums transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_rgba(26,26,26,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35",
+                                              "relative flex aspect-square min-h-10 items-center justify-center rounded-md border px-1 text-[11px] font-medium leading-none tabular-nums transition-transform hover:-translate-y-0.5 hover:ring-2 hover:ring-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35",
                                               matrixDoorTileTone(door),
                                               focusedDoorId === door.door_id &&
                                                 "shadow-[0_0_0_2px_var(--dmx-accent)]",
@@ -12554,7 +12623,7 @@ export default function ProjectsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="project-form-lat">Lat</Label>
+                    <Label htmlFor="project-form-lat">{copy("Latitude", "Широта", "קו רוחב")}</Label>
                     <Input
                       id="project-form-lat"
                       value={projectForm.address_lat}
@@ -12568,7 +12637,7 @@ export default function ProjectsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="project-form-lng">Lng</Label>
+                    <Label htmlFor="project-form-lng">{copy("Longitude", "Долгота", "קו אורך")}</Label>
                     <Input
                       id="project-form-lng"
                       value={projectForm.address_lng}
@@ -12817,7 +12886,7 @@ export default function ProjectsPage() {
                     ) : null}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="project-form-email">Email</Label>
+                    <Label htmlFor="project-form-email">{copy("Email", "Эл. почта", "דוא״ל")}</Label>
                     <Input
                       id="project-form-email"
                       type="email"
@@ -12946,7 +13015,7 @@ export default function ProjectsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="urgency-scope">
-                {copy("Scope", "Скоуп", "היקף")}
+                {copy("Scope", "Объём работ", "היקף עבודה")}
               </Label>
               <select
                 id="urgency-scope"
@@ -13118,7 +13187,7 @@ export default function ProjectsPage() {
               {copy(
                 "Create one planned add-on line for the selected project. Installers will later record facts against this plan.",
                 "Создайте одну плановую строку доп. работ для выбранного проекта. Позже монтажники будут фиксировать факты по этому плану.",
-                "צור שורת add-on מתוכננת אחת לפרויקט הנבחר. בהמשך מתקינים ידווחו ביצוע בפועל מול התוכנית הזו.",
+                "צור שורת תוספת מתוכננת אחת עבור הפרויקט שנבחר. מתקינים ירשמו מאוחר יותר עובדות נגד תוכנית זו.",
               )}
             </DialogDescription>
           </DialogHeader>
@@ -13277,7 +13346,7 @@ export default function ProjectsPage() {
             <DialogDescription>
               {copy(
                 "Create one operational door row directly in the selected project using a product from Library.",
-                "Создайте одну рабочую строку двери прямо в выбранном проекте, используя продукт из Library.",
+                "Создайте один ряд эксплуатационных дверей непосредственно в выбранном проекте с помощью продукта из справочник.",
                 "צור רשומת דלת תפעולית ישירות בפרויקט הנבחר בעזרת מוצר מהספרייה.",
               )}
             </DialogDescription>
@@ -13286,7 +13355,7 @@ export default function ProjectsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="manual-door-product">
-                {copy("Library product", "Продукт Library", "מוצר ספרייה")}
+                {copy("Library product", "Библиотечный продукт", "מוצר ספרייה")}
               </Label>
               <select
                 id="manual-door-product"
@@ -13334,7 +13403,7 @@ export default function ProjectsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="manual-door-unit">
-                {copy("Unit / apartment", "Unit / квартира", "Unit / דירה")}
+                {copy("Unit / apartment", "Единица/квартира", "יחידה/דירה")}
               </Label>
               <Input
                 id="manual-door-unit"

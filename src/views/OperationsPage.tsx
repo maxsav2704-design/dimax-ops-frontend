@@ -22,7 +22,6 @@ import {
 import { usePathname, useSearchParams } from "next/navigation";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import {
   KpiCard as DimaxKpiCard,
   MetricRow,
@@ -90,69 +89,69 @@ const operationsOverrides: Record<Locale, Record<string, string>> = {
     "operations.noReasonSupplied": "No reason supplied",
   },
   ru: {
-    "operations.actionableOnlyView": "Только actionable-сигналы",
+    "operations.actionableOnlyView": "Только сигналы, требующие действий",
     "operations.batchRecovery": "Пакетное восстановление",
-    "operations.webhookDiagnostics": "Диагностика webhook",
+    "operations.webhookDiagnostics": "Диагностика вебхуков",
     "operations.showAll": "Показать все",
     "operations.providerLane": "Срез провайдера",
     "operations.deliveryRecoveryAuditTitle": "Аудит восстановления доставки",
     "operations.deliveryRecoveryAuditSubtitle":
-      "Последние ручные повторы для восстановления неуспешных outbox-сообщений.",
+      "Последние ручные повторы для сообщений с ошибкой отправки.",
     "operations.openDeliveryReports": "Открыть отчеты по доставке",
     "operations.loadingDeliveryRecoveryAudit":
       "Загружаем аудит восстановления доставки...",
     "operations.noDeliveryRecoveryAudit":
       "Записей аудита восстановления доставки пока нет.",
     "operations.reviewDeliveryRecovery": "Проверить восстановление доставки",
-    "operations.webhookSignalsTitle": "Webhook-сигналы",
+    "operations.webhookSignalsTitle": "Сигналы вебхуков",
     "operations.webhookSignalsSubtitle":
-      "Дубликаты webhook, несоответствия и ошибки провайдера за последние {hours} часов.",
+      "Дубликаты вебхуков, несовпадения и ошибки провайдера за последние {hours} ч.",
     "operations.received": "Получено",
     "operations.duplicates": "Дубликаты",
     "operations.unmatched": "Без совпадения",
     "operations.providerFailed": "Ошибка провайдера",
-    "operations.loadingWebhookSignals": "Загружаем webhook-сигналы...",
+    "operations.loadingWebhookSignals": "Загружаем сигналы вебхуков...",
     "operations.noWebhookSignalsScoped":
-      "Для текущего провайдера сигналов webhook нет.",
-    "operations.noWebhookSignals": "Webhook-сигналы пока не зафиксированы.",
+      "Для текущего провайдера нет сигналов вебхуков.",
+    "operations.noWebhookSignals": "Сигналы вебхуков пока не зафиксированы.",
     "operations.deliveryReport": "Отчет по доставке",
     "operations.openImportWorkspace": "Открыть импорт",
-    "operations.openOperationsReports": "Открыть ops-отчеты",
+    "operations.openOperationsReports": "Открыть операционные отчёты",
     "operations.openIssuesReports": "Открыть отчеты по проблемам",
     "operations.openCommunicationQueue": "Открыть очередь коммуникаций",
     "operations.openInstallerBoard": "Открыть доску монтажников",
     "operations.failedImportQueue": "Очередь неуспешных импортов",
     "operations.openQueue": "Открыть очередь",
     "operations.loadingFailedImports": "Загружаем неуспешные импорты...",
-    "operations.noActionableImportRuns": "Actionable-импортов сейчас нет.",
+    "operations.noActionableImportRuns": "Сейчас нет импортов, требующих действий.",
     "operations.noFailedImportRuns": "Неуспешных импортов нет.",
     "operations.unknown": "неизвестно",
     "operations.noReasonSupplied": "Причина не указана",
   },
   he: {
-    "operations.actionableOnlyView": "תצוגת actionable בלבד",
+    "operations.actionableOnlyView": "רק אותות הדורשים פעולה",
     "operations.batchRecovery": "שחזור מרוכז",
-    "operations.webhookDiagnostics": "אבחון webhook",
+    "operations.webhookDiagnostics": "אבחון וובהוקים",
     "operations.showAll": "הצג הכל",
     "operations.providerLane": "נתיב ספק",
-    "operations.deliveryRecoveryAuditTitle": "Audit לשחזור משלוחים",
+    "operations.deliveryRecoveryAuditTitle": "בקרת שחזור שליחות",
     "operations.deliveryRecoveryAuditSubtitle":
-      "ניסיונות שחזור ידניים אחרונים עבור פריטי outbox שנכשלו.",
+      "ניסיונות שחזור ידניים אחרונים עבור הודעות שנכשלו בשליחה.",
     "operations.openDeliveryReports": "פתח דוחות משלוח",
-    "operations.loadingDeliveryRecoveryAudit": "טוען audit לשחזור משלוחים...",
+    "operations.loadingDeliveryRecoveryAudit": "טוען בקרת שחזור שליחות...",
     "operations.noDeliveryRecoveryAudit":
-      "עדיין אין רשומות audit לשחזור משלוחים.",
+      "עדיין אין רשומות בקרת שחזור שליחות.",
     "operations.reviewDeliveryRecovery": "בדוק את שחזור המשלוח",
-    "operations.webhookSignalsTitle": "אותות Webhook",
+    "operations.webhookSignalsTitle": "אותות וובהוק",
     "operations.webhookSignalsSubtitle":
-      "כפילויות webhook, אי-התאמות וכשלי ספק ב-{hours} השעות האחרונות.",
+      "כפילויות וובהוק, אי-התאמות וכשלי ספק ב-{hours} השעות האחרונות.",
     "operations.received": "התקבלו",
     "operations.duplicates": "כפילויות",
     "operations.unmatched": "ללא התאמה",
     "operations.providerFailed": "כשל ספק",
-    "operations.loadingWebhookSignals": "טוען אותות webhook...",
-    "operations.noWebhookSignalsScoped": "אין אותות webhook עבור ספק זה.",
-    "operations.noWebhookSignals": "עדיין לא נרשמו אותות webhook.",
+    "operations.loadingWebhookSignals": "טוען אותות וובהוק...",
+    "operations.noWebhookSignalsScoped": "אין אותות וובהוק עבור ספק זה.",
+    "operations.noWebhookSignals": "עדיין לא נרשמו אותות וובהוק.",
     "operations.deliveryReport": "דוח משלוח",
     "operations.openImportWorkspace": "פתח סביבת ייבוא",
     "operations.openOperationsReports": "פתח דוחות תפעול",
@@ -162,7 +161,7 @@ const operationsOverrides: Record<Locale, Record<string, string>> = {
     "operations.failedImportQueue": "תור ייבואים שנכשלו",
     "operations.openQueue": "פתח תור",
     "operations.loadingFailedImports": "טוען ייבואים שנכשלו...",
-    "operations.noActionableImportRuns": "אין כרגע ייבואים actionable.",
+    "operations.noActionableImportRuns": "אין כרגע ייבואים הדורשים פעולה.",
     "operations.noFailedImportRuns": "אין ייבואים שנכשלו.",
     "operations.unknown": "לא ידוע",
     "operations.noReasonSupplied": "לא סופקה סיבה",
@@ -858,23 +857,30 @@ function OperationsMiniBars({ tone }: { tone: OperationsTone }) {
   const colors =
     tone === "red"
       ? [
-          "#4caf50",
-          "#4caf50",
-          "#ffc83a",
-          "#ff8a3d",
-          "#e74c3c",
-          "#e74c3c",
+          "var(--dmx-kpi-green)",
+          "var(--dmx-kpi-green)",
+          "var(--dmx-kpi-yellow)",
+          "var(--dmx-kpi-orange)",
+          "var(--dmx-kpi-red)",
+          "var(--dmx-kpi-red)",
         ]
       : tone === "orange"
         ? [
-            "#4caf50",
-            "#ffc83a",
-            "#ffc83a",
-            "#ff8a3d",
-            "#ffc83a",
-            "#ff8a3d",
+            "var(--dmx-kpi-green)",
+            "var(--dmx-kpi-yellow)",
+            "var(--dmx-kpi-yellow)",
+            "var(--dmx-kpi-orange)",
+            "var(--dmx-kpi-yellow)",
+            "var(--dmx-kpi-orange)",
           ]
-        : ["#4caf50", "#4caf50", "#4caf50", "#4caf50", "#4caf50", "#ffc83a"];
+        : [
+            "var(--dmx-kpi-green)",
+            "var(--dmx-kpi-green)",
+            "var(--dmx-kpi-green)",
+            "var(--dmx-kpi-green)",
+            "var(--dmx-kpi-green)",
+            "var(--dmx-kpi-yellow)",
+          ];
 
   return (
     <svg
@@ -1170,7 +1176,10 @@ export default function OperationsPage() {
     syncRecoveryAuditsQuery.isError;
 
   const sync = syncQuery.data;
-  const syncProblems = syncProblemsQuery.data?.items || [];
+  const syncProblems = useMemo(
+    () => syncProblemsQuery.data?.items || [],
+    [syncProblemsQuery.data?.items],
+  );
   const syncProblemInstallerOptions = useMemo(() => {
     const options = new Map<string, string>();
     for (const item of [
@@ -1211,10 +1220,19 @@ export default function OperationsPage() {
     [syncProblemInstallerFilter, syncProblemStatusFilter, syncProblems],
   );
   const outboxSummary = outboxSummaryQuery.data;
-  const failedOutbox = outboxFailedQuery.data?.items || [];
-  const failedImports = failedImportsQuery.data?.items || [];
+  const failedOutbox = useMemo(
+    () => outboxFailedQuery.data?.items || [],
+    [outboxFailedQuery.data?.items],
+  );
+  const failedImports = useMemo(
+    () => failedImportsQuery.data?.items || [],
+    [failedImportsQuery.data?.items],
+  );
   const webhookSummary = webhookSummaryQuery.data;
-  const webhookSignals = webhookSignalsQuery.data?.items || [];
+  const webhookSignals = useMemo(
+    () => webhookSignalsQuery.data?.items || [],
+    [webhookSignalsQuery.data?.items],
+  );
   const retryAudits = retryAuditsQuery.data?.items || [];
   const syncRecoveryAudits = syncRecoveryAuditsQuery.data?.items || [];
   const loadErrorMessage = readableApiError(
@@ -1559,6 +1577,7 @@ export default function OperationsPage() {
       failedImportsQuery.data?.total,
       onlyActionable,
       outboxSummary,
+      sync,
       visibleFailedImports,
       visibleFailedOutbox.length,
       visibleSyncItems.length,
@@ -2126,7 +2145,7 @@ export default function OperationsPage() {
               DIMAX
             </div>
             <div className="min-w-0 flex-1 truncate text-center text-[11px] font-medium uppercase tracking-[0.14em] text-text-secondary">
-              DIMAX GROUP · OPERATIONS
+              {copy("DIMAX GROUP · OPERATIONS", "ГРУППА DIMAX · ОПЕРАЦИИ", "DIMAX GROUP · פעולות")}
             </div>
             <div className="flex items-center gap-2 text-text-secondary">
               <Bell className="h-4 w-4" />
@@ -2136,15 +2155,15 @@ export default function OperationsPage() {
 
           <div className="space-y-4 p-4">
             <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-link">
-              Dashboard <span className="mx-1 text-text-tertiary">#</span>{" "}
-              <b className="font-medium text-text">Operations Center</b>
+              {copy("Dashboard", "Главная", "ראשי")} <span className="mx-1 text-text-tertiary">#</span>{" "}
+              <b className="font-medium text-text">{copy("Operations Center", "Операционный центр", "מרכז מבצעים")}</b>
             </div>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-[24px] font-semibold leading-tight text-text">
-                    Operations recovery
+                    {copy("Operations recovery", "Восстановление операций", "שחזור תפעולי")}
                   </h1>
                   <span
                     className={cn(
@@ -2165,38 +2184,38 @@ export default function OperationsPage() {
                   <b className="font-medium text-text">
                     {activeIncidentCount}
                   </b>{" "}
-                  incidents need attention ·{" "}
+                  {copy("incidents need attention ·", "инциденты требуют внимания ·", "דורשות התייחסות ·")}{" "}
                   <b className="font-medium text-text">
                     {importsPendingReconciliation}
                   </b>{" "}
-                  imports pending reconciliation · last scan{" "}
+                  {copy("imports pending reconciliation · last scan", "импорт в ожидании сверки · последнее сканирование", "ייבוא בהמתנה לפיוס · סריקה אחרונה")}{" "}
                   <b className="font-medium text-text">
                     {describeAgeMinutes(freshnessTimestamp, Date.now(), t)}
                   </b>{" "}
-                  · delivery lane{" "}
+                  {copy("· delivery lane", "· канал отправки", "· ערוץ שליחה")}{" "}
                   <b className="font-medium text-text">
                     {deliveryChannelFilter || t("common.all")}
                   </b>{" "}
-                  · provider{" "}
+                  {copy("· provider", "· провайдер", "· ספק")}{" "}
                   <b className="font-medium text-text">
                     {webhookProviderFilter || t("common.all")}
                   </b>{" "}
                   · <b className="font-medium text-text">{manualReviewCount}</b>{" "}
-                  manual review
+                  {copy("manual review", "проверка вручную", "סקירה ידנית")}
                 </div>
               </div>
 
               <div className="flex flex-wrap justify-start gap-2 sm:justify-end">
                 <Link href="/settings" className="dmx-secondary-action">
                   <Bell className="h-4 w-4" />
-                  Alerts config
+                  {copy("Alerts config", "Конфигурация оповещений", "תצורת התראות")}
                 </Link>
                 <Link
                   href="/reports?focus=operations"
                   className="dmx-secondary-action"
                 >
                   <ClipboardList className="h-4 w-4" />
-                  Incident log
+                  {copy("Incident log", "Журнал инцидентов", "יומן תקריות")}
                 </Link>
                 <button
                   type="button"
@@ -2303,7 +2322,7 @@ export default function OperationsPage() {
               <div className="overflow-hidden rounded-[12px] border border-border bg-surface">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
                   <div className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-text">
-                    Active incidents
+                    {copy("Active incidents", "Активные инциденты", "אירועים פעילים")}
                     <span className="rounded-full bg-status-problem-bg px-2 py-0.5 text-[10.5px] font-medium text-status-problem-fg">
                       {recoveryIncidents.length}
                     </span>
@@ -2312,7 +2331,7 @@ export default function OperationsPage() {
                     href="/reports?focus=operations"
                     className="text-[11.5px] font-medium text-link hover:underline"
                   >
-                    Export log →
+                    {copy("Export log →", "Экспорт журнала →", "יומן ייצוא →")}
                   </Link>
                 </div>
 
@@ -2394,7 +2413,7 @@ export default function OperationsPage() {
                               {incident.age}
                             </div>
                             <div className="text-[9.5px] text-text-tertiary">
-                              ongoing
+                              {copy("ongoing", "продолжается", "מתמשך")}
                             </div>
                           </div>
                           {incident.onAction ? (
@@ -2420,19 +2439,19 @@ export default function OperationsPage() {
                   </div>
                 ) : (
                   <div className="px-4 py-8 text-[13px] text-text-secondary">
-                    No active operations incidents.
+                    {copy("No active operations incidents.", "Нет активных операционных проблем.", "אין תקלות תפעוליות פעילות.")}
                   </div>
                 )}
 
                 <div className="flex flex-wrap items-center gap-2 border-t border-accent/40 bg-accent/15 px-4 py-3 text-[12px]">
                   <span className="font-medium text-text">
-                    Selected actionable recovery
+                    {copy("Selected actionable recovery", "Выбранные действия восстановления", "פעולות השחזור שנבחרו")}
                   </span>
                   <span className="rounded-full bg-accent px-3 py-1 text-[11px] font-medium text-accent-foreground">
-                    {actionableRecoveryCount} selected
+                    {actionableRecoveryCount} {copy("selected", "выбрано", "נבחר")}
                   </span>
                   <span className="rounded-full border border-status-warning-border bg-status-warning-bg px-3 py-1 text-[11px] font-medium text-status-warning-fg">
-                    {actionableSyncItems.length} sync watchlist
+                    {actionableSyncItems.length} {copy("sync watchlist", "список наблюдения для синхронизации", "רשימת מעקב סנכרון")}
                   </span>
                   <span className="hidden h-4 w-px bg-accent/50 sm:inline-block" />
                   <button
@@ -2447,7 +2466,7 @@ export default function OperationsPage() {
                     }
                     className="dmx-secondary-action min-h-8 px-3 py-1.5 text-[11.5px] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Recover imports
+                    {copy("Recover imports", "Восстановить импорт", "שחזור יבוא")}
                   </button>
                   <button
                     type="button"
@@ -2462,7 +2481,7 @@ export default function OperationsPage() {
                     }
                     className="dmx-secondary-action min-h-8 px-3 py-1.5 text-[11.5px] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Recover deliveries
+                    {copy("Recover deliveries", "Восстановить поставки", "שחזור משלוחים")}
                   </button>
                   <button
                     type="button"
@@ -2476,7 +2495,7 @@ export default function OperationsPage() {
                     }
                     className="dmx-secondary-action min-h-8 px-3 py-1.5 text-[11.5px] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Reconcile projects
+                    {copy("Reconcile projects", "Согласование проектов", "התאימו פרויקטים")}
                   </button>
                 </div>
               </div>
@@ -2484,7 +2503,7 @@ export default function OperationsPage() {
               <div className="overflow-hidden rounded-[12px] border border-border bg-surface">
                 <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
                   <div className="text-[13px] font-semibold text-text">
-                    Integrations{" "}
+                    {copy("Integrations", "Интеграции", "אינטגרציות")}{" "}
                     <span className="rounded-full bg-surface-subtle px-2 py-0.5 text-[10.5px] font-medium text-text-secondary">
                       {recoveryIntegrations.length}
                     </span>
@@ -2493,7 +2512,7 @@ export default function OperationsPage() {
                     href="/settings"
                     className="text-[11.5px] font-medium text-link hover:underline"
                   >
-                    Config →
+                    {copy("Config →", "Конфигурация →", "תצורה →")}
                   </Link>
                 </div>
                 {recoveryIntegrations.map((item) => (
@@ -2512,21 +2531,21 @@ export default function OperationsPage() {
               <div className="overflow-hidden rounded-[12px] border border-border bg-surface">
                 <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
                   <div className="text-[13px] font-semibold text-text">
-                    Import runs{" "}
+                    {copy("Import runs", "Запуски импорта", "הרצות ייבוא")}{" "}
                     <span className="rounded-full bg-surface-subtle px-2 py-0.5 text-[10.5px] font-medium text-text-secondary">
-                      failed queue
+                      {copy("failed queue", "очередь с ошибками", "תור שגיאות")}
                     </span>
                   </div>
                   <Link
                     href={failedImportsHref}
                     className="text-[11.5px] font-medium text-link hover:underline"
                   >
-                    Full log →
+                    {copy("Full log →", "Полный журнал →", "יומן מלא →")}
                   </Link>
                 </div>
                 {visibleFailedImports.length === 0 ? (
                   <div className="px-4 py-6 text-[13px] text-text-secondary">
-                    No failed import runs in recovery panel.
+                    {copy("No failed import runs in recovery panel.", "В панели восстановления нет неудачных запусков импорта.", "אין הרצות ייבוא שנכשלו בלוח השחזור.")}
                   </div>
                 ) : (
                   <div className="divide-y divide-border-subtle">
@@ -2547,11 +2566,11 @@ export default function OperationsPage() {
                             {item.project_name}
                           </div>
                           <div className="mt-1 grid grid-cols-2 gap-1 text-[10.5px] text-text-secondary sm:grid-cols-4">
-                            <span>{item.imported} imported</span>
-                            <span>{item.skipped} skipped</span>
-                            <span>{item.prepared_rows} prepared</span>
+                            <span>{item.imported} {copy("imported", "импортировано", "מיובא")}</span>
+                            <span>{item.skipped} {copy("skipped", "пропущено", "דילג")}</span>
+                            <span>{item.prepared_rows} {copy("prepared", "подготовлено", "מוכן")}</span>
                             <span className="text-status-problem-fg">
-                              {item.errors_count} errors
+                              {item.errors_count} {copy("errors", "ошибки", "שגיאות")}
                             </span>
                           </div>
                         </div>
@@ -2574,18 +2593,18 @@ export default function OperationsPage() {
               <div className="overflow-hidden rounded-[12px] border border-border bg-surface">
                 <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
                   <div className="text-[13px] font-semibold text-text">
-                    Sync queue by installer
+                    {copy("Sync queue by installer", "Очередь синхронизации монтажника", "תור סנכרון לפי מתקין")}
                   </div>
                   <Link
                     href="/installers"
                     className="text-[11.5px] font-medium text-link hover:underline"
                   >
-                    Open board →
+                    {copy("Open board →", "Открыть панель →", "פתח לוח ←")}
                   </Link>
                 </div>
                 {visibleSyncItems.length === 0 ? (
                   <div className="px-4 py-6 text-[13px] text-text-secondary">
-                    Sync queue is clean.
+                    {copy("Sync queue is clean.", "Очередь синхронизации чиста.", "תור הסנכרון נקי.")}
                   </div>
                 ) : (
                   <div className="divide-y divide-border-subtle">
@@ -2617,14 +2636,14 @@ export default function OperationsPage() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-[12px] font-medium text-text">
-                              Sync · {syncInstallerLabel(item)}
+                              {copy("Sync ·", "Синхронизация ·", "סנכרון ·")} {syncInstallerLabel(item)}
                             </div>
                             <div className="mt-0.5 flex flex-wrap gap-2 text-[10.5px] text-text-secondary">
                               <span className="text-status-warning-fg">
-                                {queueTotal} queued
+                                {queueTotal} {copy("queued", "в очереди", "בתור")}
                               </span>
-                              <span>{item.lag} lag</span>
-                              <span>{item.days_offline}d offline</span>
+                              <span>{item.lag} {copy("lag", "задержка", "פיגור")}</span>
+                              <span>{item.days_offline}{copy("d offline", " дн. без сети", " ימים ללא חיבור")}</span>
                             </div>
                             <div className="mt-2 flex h-3 gap-1">
                               {Array.from({ length: 8 }).map((_, barIndex) => (
@@ -2660,65 +2679,6 @@ export default function OperationsPage() {
           </div>
         </section>
 
-        {false && (
-        <DimaxPageHeader
-          eyebrow={t("operations.eyebrow")}
-          title={t("operations.title")}
-          badge={
-            onlyActionable
-              ? t("operations.actionableFocused")
-              : t("operations.actionableMixed")
-          }
-          subtitle={
-            <>
-              {t("operations.subtitle")}{" "}
-              <span className="font-medium text-text">
-                {t("operations.deliveryLane")}{" "}
-                {deliveryChannelFilter || t("common.all")}
-              </span>
-              {" · "}
-              <span className="font-medium text-text">
-                {t("operations.provider")}{" "}
-                {webhookProviderFilter || t("common.all")}
-              </span>
-            </>
-          }
-          actions={
-            <>
-              <button
-                type="button"
-                onClick={() =>
-                  setOnlyActionable((value) => {
-                    const nextValue = !value;
-                    syncUrlState({
-                      nextOnlyActionable: nextValue,
-                      nextDeliveryChannel: deliveryChannelFilter,
-                      nextWebhookProvider: webhookProviderFilter,
-                    });
-                    return nextValue;
-                  })
-                }
-                aria-pressed={onlyActionable}
-                className="dmx-secondary-action aria-[pressed=true]:border-accent aria-[pressed=true]:bg-accent aria-[pressed=true]:text-accent-foreground"
-              >
-                {t("operations.onlyActionable")}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  void refetchAll();
-                }}
-                className="dmx-primary-action disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isRefreshing}
-              >
-                <RefreshCcw className="h-4 w-4" />
-                {isRefreshing ? t("common.refreshing") : t("common.refresh")}
-              </button>
-            </>
-          }
-        />
-        )}
-
         {hasError && (
           <div className={operationsNoticeClass("error")}>
             {loadErrorMessage}
@@ -2732,57 +2692,6 @@ export default function OperationsPage() {
           >
             {actionFeedback.message}
           </div>
-        )}
-
-        {false && (
-          <>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {cards.map((card) => (
-            <DimaxKpiCard
-              key={card.label}
-              className="min-h-[118px]"
-              label={card.label}
-              value={card.value}
-              hint={
-                <span className="inline-flex min-w-0 items-center gap-1.5">
-                  <card.icon className="h-3.5 w-3.5 shrink-0 text-text-secondary" />
-                  <span className="truncate">{card.note}</span>
-                </span>
-              }
-              barColor={
-                card.tone === "danger"
-                  ? "red"
-                  : card.tone === "warning"
-                    ? "orange"
-                    : card.tone === "success"
-                      ? "green"
-                      : "blue"
-              }
-              emphasis={card.tone === "danger" ? "problem" : "default"}
-            />
-          ))}
-        </div>
-
-        <WidgetCard
-          title={t("operations.dataFreshness")}
-          titleAccessory={
-            <span className={freshnessBadgeClass(freshnessState)}>
-              {freshnessState === "fresh"
-                ? t("operations.fresh")
-                : freshnessState === "stale"
-                  ? t("operations.stale")
-                  : freshnessState === "degraded"
-                    ? t("operations.degraded")
-                    : t("operations.refreshing")}
-            </span>
-          }
-          headerMeta={formatRefreshTimestamp(freshnessTimestamp, t)}
-        >
-          <div className="text-[12px] text-text-secondary">
-            {describeAgeMinutes(freshnessTimestamp, Date.now(), t)}
-          </div>
-        </WidgetCard>
-          </>
         )}
 
         <WidgetCard
@@ -3077,22 +2986,26 @@ export default function OperationsPage() {
         </WidgetCard>
 
         <WidgetCard
-          title="Sync Recovery Audit"
-          headerMeta="Latest cold resync and sync-state reset actions recorded in audit logs."
+          title={copy("Sync Recovery Audit", "Аудит восстановления синхронизации", "ביקורת שחזור סנכרון")}
+          headerMeta={copy(
+            "Latest cold resync and sync-state reset actions recorded in audit logs.",
+            "Последние полные синхронизации и сбросы состояния, зафиксированные в журнале действий.",
+            "פעולות הסנכרון המלא ואיפוס המצב האחרונות שנרשמו ביומן הביקורת.",
+          )}
           actionSlot={
             <Link href="/reports" className="dmx-secondary-action">
-              Open reports
+              {copy("Open reports", "Открыть отчеты", "פתחו דוחות")}
             </Link>
           }
         >
           <div className="space-y-2">
             {syncRecoveryAuditsQuery.isLoading ? (
               <div className="text-[13px] text-text-secondary">
-                Loading sync recovery audit...
+                {copy("Loading sync recovery audit...", "Загрузка аудита восстановления синхронизации...", "טוען ביקורת שחזור סנכרון...")}
               </div>
             ) : syncRecoveryAudits.length === 0 ? (
               <div className="text-[13px] text-text-secondary">
-                No sync recovery audit entries yet.
+                {copy("No sync recovery audit entries yet.", "Пока нет записей аудита восстановления синхронизации.", "אין עדיין ערכי ביקורת לשחזור סנכרון.")}
               </div>
             ) : (
               syncRecoveryAudits.map((item) => {
@@ -3117,7 +3030,7 @@ export default function OperationsPage() {
                           {syncRecoveryAuditInstallerLabel(item)}
                         </div>
                         <div className="mt-1 text-xs text-text-secondary">
-                          {syncRecoveryAuditReasonLabel(item.reason)} | cursor{" "}
+                          {syncRecoveryAuditReasonLabel(item.reason)} {copy("| cursor", "| курсор", "| הסמן")}{" "}
                           {beforeCursor ?? "unknown"} -&gt;{" "}
                           {afterCursor ?? "unknown"}
                         </div>
@@ -3127,7 +3040,7 @@ export default function OperationsPage() {
                       </div>
                     </div>
                     <div className="mt-1 text-xs text-text-secondary">
-                      actor {item.actor_user_id}
+                      {copy("actor", "пользователь", "משתמש")} {item.actor_user_id}
                       {beforeDevice ? ` | device ${beforeDevice}` : ""}
                       {beforeApp ? ` | app ${beforeApp}` : ""}
                     </div>
@@ -3171,7 +3084,7 @@ export default function OperationsPage() {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="font-medium text-text">
-                        Outbox {item.outbox_id}
+                        {copy("Outbox", "Исходящие", "תיבת דואר יוצא")} {item.outbox_id}
                       </div>
                       <div className="mt-1 text-xs text-text-secondary">
                         {item.before_status || tt("operations.unknown")} →{" "}
@@ -3187,7 +3100,7 @@ export default function OperationsPage() {
                     </div>
                   </div>
                   <div className="mt-1 text-xs text-text-secondary">
-                    {item.reason || tt("operations.noReasonSupplied")} | actor{" "}
+                    {item.reason || tt("operations.noReasonSupplied")} {copy("| actor", "| пользователь", "| משתמש")}{" "}
                     {item.actor_user_id}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
@@ -3513,8 +3426,8 @@ export default function OperationsPage() {
                     {item.last_error ||
                       copy(
                         "No error payload",
-                        "Нет payload ошибки",
-                        "אין payload לשגיאה",
+                        "Нет данных об ошибке",
+                        "אין נתוני שגיאה",
                       )}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -3574,7 +3487,7 @@ export default function OperationsPage() {
           </WidgetCard>
 
           <WidgetCard
-            title={copy("Failed Outbox", "Failed Outbox", "Failed Outbox")}
+            title={copy("Failed Outbox", "Ошибки отправки", "שגיאות שליחה")}
             actionSlot={
               <div className="flex flex-wrap justify-end gap-3 text-[12px]">
                 <Link
@@ -3643,8 +3556,8 @@ export default function OperationsPage() {
                     {item.last_error ||
                       copy(
                         "No error payload",
-                        "Нет payload ошибки",
-                        "אין payload לשגיאה",
+                        "Нет данных об ошибке",
+                        "אין נתוני שגיאה",
                       )}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -3665,7 +3578,7 @@ export default function OperationsPage() {
                       href="/journal"
                       className="font-medium text-link hover:underline"
                     >
-                      {copy("Journal outbox", "Outbox журнала", "Outbox יומן")}
+                      {copy("Journal outbox", "Очередь отправки журнала", "תור שליחת היומן")}
                     </Link>
                     <button
                       type="button"
@@ -3697,7 +3610,7 @@ export default function OperationsPage() {
           </WidgetCard>
 
           <WidgetCard
-            title={copy("Sync Health", "Sync Health", "Sync Health")}
+            title={copy("Sync Health", "Состояние синхронизации", "מצב סנכרון")}
             actionSlot={
               <Link
                 href="/installers"
@@ -3731,7 +3644,7 @@ export default function OperationsPage() {
                 <>
                   <div className="px-4 py-3 text-[13px]">
                     <div className="font-medium text-text">
-                      {copy("ok", "ok", "ok")} {sync.counts.ok} |{" "}
+                      {copy("ok", "норма", "תקין")} {sync.counts.ok} |{" "}
                       {copy("warn", "предупр.", "אזהרה")} {sync.counts.warn} |{" "}
                       {copy("danger", "риск", "סיכון")} {sync.counts.danger}
                     </div>
@@ -3747,15 +3660,15 @@ export default function OperationsPage() {
                       {sync.alerts_sent}
                     </div>
                     <div className="mt-1 text-xs text-text-secondary">
-                      {copy("failed events", "failed events", "failed events")}{" "}
+                      {copy("failed events", "ошибки событий", "אירועים שנכשלו")}{" "}
                       {sync.counts.failed_events ?? 0} |{" "}
                       {copy(
                         "queue conflicts",
-                        "queue conflicts",
-                        "queue conflicts",
+                        "конфликты очереди",
+                        "התנגשויות בתור",
                       )}{" "}
                       {sync.counts.queue_conflicts ?? 0} |{" "}
-                      {copy("auth required", "auth required", "auth required")}{" "}
+                      {copy("auth required", "нужен повторный вход", "נדרשת התחברות מחדש")}{" "}
                       {sync.counts.queue_auth_required ?? 0}
                     </div>
                   </div>
@@ -3766,12 +3679,13 @@ export default function OperationsPage() {
                           <div className="text-[12px] font-semibold uppercase text-text-secondary">
                             {copy(
                               "Recent sync problems",
-                              "Recent sync problems",
-                              "Recent sync problems",
+                              "Последние проблемы синхронизации",
+                              "בעיות סנכרון אחרונות",
                             )}
                           </div>
                           <div className="mt-1 text-[11px] text-text-secondary">
-                            Showing {visibleSyncProblems.length} of{" "}
+                            {copy("Showing", "Показано", "מוצגים")} {visibleSyncProblems.length}{" "}
+                            {copy("of", "из", "מתוך")}{" "}
                             {syncProblemsQuery.data?.total ??
                               syncProblems.length}
                           </div>
@@ -3781,18 +3695,18 @@ export default function OperationsPage() {
                             className="sr-only"
                             htmlFor="sync-problem-installer-filter"
                           >
-                            Sync problem installer
+                            {copy("Sync problem installer", "Монтажник с проблемой синхронизации", "מתקין עם בעיית סנכרון")}
                           </label>
                           <select
                             id="sync-problem-installer-filter"
-                            aria-label="Sync problem installer"
+                            aria-label={copy("Sync problem installer", "Монтажник с проблемой синхронизации", "מתקין עם בעיית סנכרון")}
                             value={syncProblemInstallerFilter}
                             onChange={(event) =>
                               setSyncProblemInstallerFilter(event.target.value)
                             }
                             className="h-9 rounded-md border border-border bg-surface px-2.5 text-[12px] text-text"
                           >
-                            <option value="all">All installers</option>
+                            <option value="all">{copy("All installers", "Все монтажники", "כל המתקינים")}</option>
                             {syncProblemInstallerOptions.map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
@@ -3803,11 +3717,11 @@ export default function OperationsPage() {
                             className="sr-only"
                             htmlFor="sync-problem-status-filter"
                           >
-                            Sync problem status
+                            {copy("Sync problem status", "Состояние проблемы с синхронизацией", "מצב בעיית סנכרון")}
                           </label>
                           <select
                             id="sync-problem-status-filter"
-                            aria-label="Sync problem status"
+                            aria-label={copy("Sync problem status", "Статус проблемы синхронизации", "סטטוס בעיית סנכרון")}
                             value={syncProblemStatusFilter}
                             onChange={(event) =>
                               setSyncProblemStatusFilter(
@@ -3836,21 +3750,25 @@ export default function OperationsPage() {
                         <div className="text-[13px] text-text-secondary">
                           {copy(
                             "Loading sync problems...",
-                            "Loading sync problems...",
-                            "Loading sync problems...",
+                            "Загрузка проблем синхронизации...",
+                            "טוען בעיות סנכרון...",
                           )}
                         </div>
                       ) : syncProblems.length === 0 ? (
                         <div className="text-[13px] text-text-secondary">
                           {copy(
                             "No problem details returned.",
-                            "No problem details returned.",
-                            "No problem details returned.",
+                            "Подробности проблемы не получены.",
+                            "לא התקבלו פרטי התקלה.",
                           )}
                         </div>
                       ) : visibleSyncProblems.length === 0 ? (
                         <div className="text-[13px] text-text-secondary">
-                          No sync problems match the selected filters.
+                          {copy(
+                            "No sync problems match the selected filters.",
+                            "Нет проблем синхронизации по выбранным фильтрам.",
+                            "אין בעיות סנכרון התואמות למסננים שנבחרו.",
+                          )}
                         </div>
                       ) : (
                         <div className="space-y-2">
@@ -3939,7 +3857,7 @@ export default function OperationsPage() {
                                 ) : null}
                                 {problem.manual_review_required ? (
                                   <div className="mt-1 text-[11px] font-medium text-status-warning-fg">
-                                    Manual review required
+                                    {copy("Manual review required", "Требуется ручная проверка", "נדרשת סקירה ידנית")}
                                     {problem.retry_allowed === false
                                       ? " | no blind retry"
                                       : ""}
@@ -3956,7 +3874,7 @@ export default function OperationsPage() {
                     <div className="border-t border-border-subtle px-4 py-6 text-[13px] text-text-secondary">
                       {copy(
                         "No actionable sync items.",
-                        "Нет actionable-элементов по синку.",
+                        "Нет задач синхронизации, требующих действий.",
                         "אין פריטי סנכרון לטיפול.",
                       )}
                     </div>
@@ -3999,18 +3917,18 @@ export default function OperationsPage() {
                         </div>
                         {(item.problem_count ?? 0) > 0 ? (
                           <div className="mt-1 text-xs text-status-problem-fg">
-                            {copy("sync errors", "sync errors", "sync errors")}{" "}
+                            {copy("sync errors", "ошибки синхронизации", "שגיאות סנכרון")}{" "}
                             {item.problem_count ?? 0} |{" "}
                             {copy(
                               "failed events",
-                              "failed events",
-                              "failed events",
+                              "ошибки событий",
+                              "אירועים שנכשלו",
                             )}{" "}
                             {item.failed_events ?? 0} |{" "}
                             {copy(
                               "queue conflicts",
-                              "queue conflicts",
-                              "queue conflicts",
+                              "конфликты очереди",
+                              "התנגשויות בתור",
                             )}{" "}
                             {item.queue_conflicts ?? 0}
                           </div>
@@ -4070,14 +3988,14 @@ export default function OperationsPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Request cold resync</AlertDialogTitle>
+            <AlertDialogTitle>{copy("Request cold resync", "Запросить холодную повторную синхронизацию", "בקש סנכרון קר")}</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingSyncReset ? pendingSyncReset.description : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>
-              {copy("Cancel", "Cancel", "Cancel")}
+              {copy("Cancel", "Отмена", "ביטול")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
@@ -4086,7 +4004,7 @@ export default function OperationsPage() {
                 }
               }}
             >
-              Confirm
+              {copy("Confirm", "Подтвердить", "אשר")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -4116,7 +4034,7 @@ export default function OperationsPage() {
                 void confirmBatchAction();
               }}
             >
-              Confirm
+              {copy("Confirm", "Подтвердить", "אשר")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

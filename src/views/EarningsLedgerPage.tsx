@@ -209,7 +209,7 @@ async function downloadCsvExport(
   });
   const blob = await response.blob();
   const disposition = response.headers.get("content-disposition") || "";
-  const match = disposition.match(/filename=\"?([^"]+)\"?/i);
+  const match = disposition.match(/filename="?([^"]+)"?/i);
   downloadBlob(blob, match?.[1] || fallbackFilename);
 }
 
@@ -540,7 +540,7 @@ export default function EarningsLedgerPage() {
         <div className="page-shell page-stack-tight motion-stagger">
           <section className="rounded-lg border border-border bg-surface p-5 sm:p-6">
             <div className="mb-2 text-[10.5px] font-medium uppercase text-text-secondary">
-              Payroll
+              {copy("Payroll", "Начисления", "שכר")}
             </div>
             <h1 className="dmx-page-title">
               {copy("Earnings Ledger", "Реестр начислений", "יומן תשלומים")}
@@ -566,7 +566,7 @@ export default function EarningsLedgerPage() {
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl">
               <div className="mb-2 text-[10.5px] font-medium uppercase text-text-secondary">
-                Payroll
+                {copy("Payroll", "Начисления", "שכר")}
               </div>
               <h1 className="dmx-page-title">
                 {copy("Earnings Ledger", "Реестр начислений", "יומן תשלומים")}
@@ -767,9 +767,9 @@ export default function EarningsLedgerPage() {
               <option value="all">
                 {copy("All entries", "Все записи", "כל הרשומות")}
               </option>
-              <option value="ORIGINAL">ORIGINAL</option>
-              <option value="REVERSAL">REVERSAL</option>
-              <option value="CORRECTION">CORRECTION</option>
+              <option value="ORIGINAL">{copy("ORIGINAL", "ИСХОДНАЯ", "מקור")}</option>
+              <option value="REVERSAL">{copy("REVERSAL", "СТОРНО", "ביטול")}</option>
+              <option value="CORRECTION">{copy("CORRECTION", "КОРРЕКТИРОВКА", "תיקון")}</option>
             </select>
             <select
               aria-label={copy(
@@ -787,8 +787,8 @@ export default function EarningsLedgerPage() {
               <option value="all">
                 {copy("Door + addon", "Двери + допы", "דלת + תוספות")}
               </option>
-              <option value="DOOR">DOOR</option>
-              <option value="ADDON">ADDON</option>
+              <option value="DOOR">{copy("DOOR", "ДВЕРЬ", "דלת")}</option>
+              <option value="ADDON">{copy("ADDON", "ДОПРАБОТА", "עבודה נוספת")}</option>
             </select>
             <div className="field-stack min-w-[160px]">
               <label

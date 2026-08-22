@@ -218,8 +218,8 @@ const copy: Record<Locale, DashboardCopy> = {
       emptyHint: "Reasons will appear when issues arise.",
     },
     nextSchedule: {
-      title: "Next schedule",
-      description: "Upcoming operational slots with clear time windows.",
+      title: "Upcoming work",
+      description: "Scheduled site visits and installation work.",
       openCalendar: "Open calendar",
       empty: "No upcoming events.",
     },
@@ -330,8 +330,8 @@ const copy: Record<Locale, DashboardCopy> = {
       emptyHint: "Причины появятся, когда возникнут проблемы.",
     },
     nextSchedule: {
-      title: "Ближайшее расписание",
-      description: "Предстоящие операционные слоты с понятными временными окнами.",
+      title: "Ближайшие работы",
+      description: "Запланированные выезды и монтажные работы на объектах.",
       openCalendar: "Открыть календарь",
       empty: "Нет ближайших событий.",
     },
@@ -442,8 +442,8 @@ const copy: Record<Locale, DashboardCopy> = {
       emptyHint: "הסיבות יופיעו כאשר יעלו תקלות.",
     },
     nextSchedule: {
-      title: "הלו\"ז הקרוב",
-      description: "חלונות העבודה הקרובים עם טווחי זמן ברורים.",
+      title: "עבודות קרובות",
+      description: "ביקורים ועבודות התקנה מתוכננות באתרים.",
       openCalendar: "פתח יומן",
       empty: "אין אירועים קרובים.",
     },

@@ -27,7 +27,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 type LibraryStatus = "ACTIVE" | "ARCHIVED";
 type LibraryUnit = "piece" | "set" | "point";
@@ -103,6 +103,8 @@ export default function LibraryPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const { locale } = useI18n();
+  const copy = (en: string, ru: string, he: string) =>
+    locale === "ru" ? ru : locale === "he" ? he : en;
   const searchParams = useSearchParams();
   const initialSearch = (searchParams?.get("q") || "").trim();
   const initialStatus =
@@ -245,7 +247,7 @@ export default function LibraryPage() {
       );
     },
   });
-  const items = listQuery.data || [];
+  const items = useMemo(() => listQuery.data || [], [listQuery.data]);
   const visibleItems = useMemo(() => {
     if (!focusedInstallType) {
       return items;
@@ -296,10 +298,14 @@ export default function LibraryPage() {
     <DashboardLayout>
       <div className="page-shell page-stack-tight motion-stagger">
         <DimaxPageHeader
-          eyebrow="Product library"
-          title="Library"
+          eyebrow={copy("Product library", "Справочник продукции", "ספריית מוצרים")}
+          title={copy("Library", "Справочник", "ספרייה")}
           badge={`Rows ${metrics.total}`}
-          subtitle="Canonical product definitions used by manual door creation and downstream pricing logic."
+          subtitle={copy(
+            "Canonical product definitions used by manual door creation and downstream pricing logic.",
+            "Единый справочник позиций для ручного добавления дверей и расчёта стоимости.",
+            "ספריית פריטים אחידה להוספה ידנית של דלתות ולחישוב מחירים.",
+          )}
           actions={
             <>
               {returnTo ? (
@@ -308,7 +314,7 @@ export default function LibraryPage() {
                   className="dmx-secondary-action h-9"
                   onClick={() => router.push(buildProjectFlowHref())}
                 >
-                  Back to project flow
+                  {copy("Back to project flow", "Вернуться к проекту", "חזרה לפרויקט")}
                 </button>
               ) : null}
               <button
@@ -316,7 +322,7 @@ export default function LibraryPage() {
                 className="dmx-primary-action h-9"
                 onClick={openCreateDialog}
               >
-                <Plus className="h-3.5 w-3.5" /> Add product
+                <Plus className="h-3.5 w-3.5" /> {copy("Add product", "Добавить позицию", "הוסף פריט")}
               </button>
             </>
           }
@@ -324,25 +330,25 @@ export default function LibraryPage() {
 
         <div className="grid gap-3 md:grid-cols-5">
           <DimaxKpiCard
-            label="Visible"
+            label={copy("Visible", "Показано", "מוצגים")}
             value={visibleItems.length}
-            hint="Rows in current view"
+            hint={copy("Rows in current view", "Строки в текущем списке", "שורות בתצוגה הנוכחית")}
             barColor="blue"
           />
           <DimaxKpiCard
-            label="Active"
+            label={copy("Active", "Активные", "פעילים")}
             value={metrics.active}
-            hint="Available for door creation"
+            hint={copy("Available for door creation", "Доступны при добавлении дверей", "זמינים בעת הוספת דלתות")}
             barColor="green"
           />
           <DimaxKpiCard
-            label="Archived"
+            label={copy("Archived", "Архив", "ארכיון")}
             value={metrics.archived}
-            hint="Kept for history"
+            hint={copy("Kept for history", "Сохранены для истории", "נשמרו להיסטוריה")}
             barColor="yellow"
           />
           <DimaxKpiCard
-            label="Scope"
+            label={copy("Scope", "Фильтр", "סינון")}
             value={
               focusedInstallType
                 ? `${focusedInstallType} · ${statusFilter === "all" ? "All" : statusFilter}`
@@ -350,13 +356,13 @@ export default function LibraryPage() {
                   ? "All"
                   : statusFilter
             }
-            hint="Current filter"
+            hint={copy("Current filter", "Текущий фильтр", "המסנן הנוכחי")}
             barColor="orange"
           />
           <DimaxKpiCard
-            label="Unit model"
+            label={copy("Unit model", "Единица расчёта", "יחידת חישוב")}
             value="piece / set / point"
-            hint="Pricing unit options"
+            hint={copy("Pricing unit options", "Варианты единиц для расчёта цены", "אפשרויות יחידה לחישוב מחיר")}
             barColor="blue"
           />
         </div>
@@ -364,7 +370,7 @@ export default function LibraryPage() {
         {hasFocusedProjectFlow ? (
           <div className="toolbar-panel toolbar-row justify-between">
             <span className="dmx-week-pill">
-              Focused project flow
+              {copy("Focused project flow", "Выбранный проект", "הפרויקט שנבחר")}
               {focusedInstallType ? ` · ${focusedInstallType}` : ""}
             </span>
             <button
@@ -372,7 +378,7 @@ export default function LibraryPage() {
               onClick={() => router.push("/library")}
               className="dmx-secondary-action h-8"
             >
-              Show full library
+              {copy("Show full library", "Показать весь справочник", "הצג את כל הספרייה")}
             </button>
           </div>
         ) : null}
@@ -386,7 +392,11 @@ export default function LibraryPage() {
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search SKU, RU/HE name, install type, manufacturer..."
+                placeholder={copy(
+                  "Search SKU, localized name, install type or manufacturer...",
+                  "Поиск по SKU, названию, типу монтажа или производителю...",
+                  "חיפוש לפי SKU, שם, סוג התקנה או יצרן...",
+                )}
                 className="control-input ps-10"
               />{" "}
             </div>{" "}
@@ -396,7 +406,7 @@ export default function LibraryPage() {
               onClick={() => setStatusFilter("all")}
             >
               {" "}
-              All{" "}
+              {copy("All", "Все", "הכל")}{" "}
             </button>{" "}
             <button
               type="button"
@@ -404,7 +414,7 @@ export default function LibraryPage() {
               onClick={() => setStatusFilter("ACTIVE")}
             >
               {" "}
-              Active{" "}
+              {copy("Active", "Активные", "פעילים")}{" "}
             </button>{" "}
             <button
               type="button"
@@ -412,7 +422,7 @@ export default function LibraryPage() {
               onClick={() => setStatusFilter("ARCHIVED")}
             >
               {" "}
-              Archived{" "}
+              {copy("Archived", "В архиве", "הועבר לארכיון")}{" "}
             </button>{" "}
           </div>{" "}
         </section>{" "}
@@ -446,11 +456,11 @@ export default function LibraryPage() {
             {" "}
             {listQuery.isLoading ? (
               <div className="px-4 py-8 text-sm text-text-secondary">
-                Loading library...
+                {copy("Loading library...", "Загрузка справочника...", "טוען ספרייה...")}
               </div>
             ) : visibleItems.length === 0 ? (
               <div className="px-4 py-8 text-sm text-text-secondary">
-                No products found.
+                {copy("No products found.", "Товары не найдены.", "לא נמצאו מוצרים.")}
               </div>
             ) : (
               visibleItems.map((item) => (
@@ -485,7 +495,7 @@ export default function LibraryPage() {
                     <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
                       {" "}
                       <div className="text-[11px] font-medium uppercase text-text-secondary">
-                        Install type
+                        {copy("Install type", "Тип установки", "סוג התקנה")}
                       </div>{" "}
                       <div className="mt-1 truncate text-[12px] font-medium text-text">
                         {item.install_type}
@@ -494,7 +504,7 @@ export default function LibraryPage() {
                     <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
                       {" "}
                       <div className="text-[11px] font-medium uppercase text-text-secondary">
-                        Unit
+                        {copy("Unit", "Единица", "יחידה")}
                       </div>{" "}
                       <div className="mt-1 truncate text-[12px] font-medium text-text">
                         {item.unit}
@@ -503,7 +513,7 @@ export default function LibraryPage() {
                   </div>{" "}
                   <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-[12px] leading-5 text-text-secondary">
                     {" "}
-                    Updated: {formatDateTime(item.updated_at)}{" "}
+                    {copy("Updated:", "Обновлено:", "עודכן:")} {formatDateTime(item.updated_at)}{" "}
                     {item.manufacturer ? ` · ${item.manufacturer}` : ""}{" "}
                   </div>{" "}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -515,7 +525,7 @@ export default function LibraryPage() {
                         onClick={() => router.push(buildProjectFlowHref(item))}
                       >
                         {" "}
-                        Use product{" "}
+                        {copy("Use product", "Использовать продукт", "השתמש במוצר")}{" "}
                       </button>
                     ) : null}{" "}
                     <button
@@ -540,13 +550,13 @@ export default function LibraryPage() {
                 {" "}
                 <TableRow className="border-b border-border hover:bg-transparent">
                   {" "}
-                  <TableHead>SKU</TableHead> <TableHead>RU name</TableHead>{" "}
-                  <TableHead>HE name</TableHead>{" "}
-                  <TableHead>Install type</TableHead>{" "}
-                  <TableHead>Unit</TableHead> <TableHead>Status</TableHead>{" "}
-                  <TableHead>Updated</TableHead>{" "}
+                  <TableHead>{copy("SKU", "SKU", "מק\"ט")}</TableHead> <TableHead>{copy("RU name", "Название на русском", "שם ברוסית")}</TableHead>{" "}
+                  <TableHead>{copy("HE name", "Название на иврите", "שם בעברית")}</TableHead>{" "}
+                  <TableHead>{copy("Install type", "Тип установки", "סוג התקנה")}</TableHead>{" "}
+                  <TableHead>{copy("Unit", "Единица", "יחידה")}</TableHead> <TableHead>{copy("Status", "Статус", "סטטוס")}</TableHead>{" "}
+                  <TableHead>{copy("Updated", "Обновлено", "עודכן")}</TableHead>{" "}
                   <TableHead className="w-[96px] text-end">
-                    Actions
+                    {copy("Actions", "Действия", "פעולות")}
                   </TableHead>{" "}
                 </TableRow>{" "}
               </TableHeader>{" "}
@@ -559,7 +569,7 @@ export default function LibraryPage() {
                       colSpan={8}
                       className="py-8 text-sm text-text-secondary"
                     >
-                      Loading library...
+                      {copy("Loading library...", "Загрузка справочника...", "טוען ספרייה...")}
                     </TableCell>{" "}
                   </TableRow>
                 ) : visibleItems.length === 0 ? (
@@ -569,7 +579,7 @@ export default function LibraryPage() {
                       colSpan={8}
                       className="py-8 text-sm text-text-secondary"
                     >
-                      No products found.
+                      {copy("No products found.", "Товары не найдены.", "לא נמצאו מוצרים.")}
                     </TableCell>{" "}
                   </TableRow>
                 ) : (
@@ -614,7 +624,7 @@ export default function LibraryPage() {
                               }
                             >
                               {" "}
-                              Use in project flow{" "}
+                              {copy("Use in project flow", "Использование в ходе проекта", "שימוש בזרימת הפרויקט")}{" "}
                             </button>
                           ) : null}{" "}
                           <button
@@ -642,14 +652,13 @@ export default function LibraryPage() {
           {" "}
           <DialogHeader>
             {" "}
-            <DialogTitle>Create library product</DialogTitle>{" "}
+            <DialogTitle>{copy("Create library product", "Создать позицию справочника", "צור פריט בספרייה")}</DialogTitle>{" "}
             <DialogDescription>
               {" "}
-              Define a reusable product row for manual door creation and
-              downstream operational flows.{" "}
+              {copy("Define a reusable product row for manual door creation and downstream operational flows.", "Определите строку продукта многократного использования для создания дверей вручную и последующих операционных потоков.", "הגדר שורת מוצרים לשימוש חוזר ליצירת דלת ידנית ולזרימות תפעוליות במורד הזרם.")}{" "}
             </DialogDescription>{" "}
           </DialogHeader>{" "}
-          <LibraryForm form={form} onChange={setForm} />{" "}
+          <LibraryForm form={form} onChange={setForm} locale={locale} />{" "}
           <DialogFooter>
             {" "}
             <button
@@ -658,7 +667,7 @@ export default function LibraryPage() {
               onClick={() => setIsCreateOpen(false)}
             >
               {" "}
-              Cancel{" "}
+              {copy("Cancel", "Отмена", "ביטול")}{" "}
             </button>{" "}
             <button
               type="button"
@@ -667,7 +676,7 @@ export default function LibraryPage() {
               disabled={!canSubmit || createMutation.isPending}
             >
               {" "}
-              Save{" "}
+              {copy("Save", "Сохранить", "שמור")}{" "}
             </button>{" "}
           </DialogFooter>{" "}
         </DialogContent>{" "}
@@ -686,14 +695,13 @@ export default function LibraryPage() {
           {" "}
           <DialogHeader>
             {" "}
-            <DialogTitle>Edit library product</DialogTitle>{" "}
+            <DialogTitle>{copy("Edit library product", "Редактировать позицию справочника", "ערוך פריט בספרייה")}</DialogTitle>{" "}
             <DialogDescription>
               {" "}
-              Keep the catalog clean and operationally safe. Archive rows
-              instead of silently removing them from history.{" "}
+              {copy("Keep the catalog clean and operationally safe. Archive rows instead of silently removing them from history.", "Содержите каталог в чистоте и эксплуатационной безопасности. Архивируйте строки вместо того, чтобы молча удалять их из истории.", "שמור על הקטלוג נקי ובטוח תפעולי. ארכיון שורות במקום להסיר אותן בשקט מההיסטוריה.")}{" "}
             </DialogDescription>{" "}
           </DialogHeader>{" "}
-          <LibraryForm form={form} onChange={setForm} />{" "}
+          <LibraryForm form={form} onChange={setForm} locale={locale} />{" "}
           <DialogFooter>
             {" "}
             <button
@@ -702,7 +710,7 @@ export default function LibraryPage() {
               onClick={() => setIsEditOpen(false)}
             >
               {" "}
-              Cancel{" "}
+              {copy("Cancel", "Отмена", "ביטול")}{" "}
             </button>{" "}
             <button
               type="button"
@@ -711,7 +719,7 @@ export default function LibraryPage() {
               disabled={!canSubmit || updateMutation.isPending}
             >
               {" "}
-              Save{" "}
+              {copy("Save", "Сохранить", "שמור")}{" "}
             </button>{" "}
           </DialogFooter>{" "}
         </DialogContent>{" "}
@@ -722,10 +730,14 @@ export default function LibraryPage() {
 function LibraryForm({
   form,
   onChange,
+  locale,
 }: {
   form: ProductLibraryForm;
   onChange: React.Dispatch<React.SetStateAction<ProductLibraryForm>>;
+  locale: Locale;
 }) {
+  const copy = (en: string, ru: string, he: string) =>
+    locale === "ru" ? ru : locale === "he" ? he : en;
   return (
     <div className="grid gap-4">
       {" "}
@@ -733,7 +745,7 @@ function LibraryForm({
         {" "}
         <div className="field-stack">
           {" "}
-          <Label htmlFor="library-sku">SKU</Label>{" "}
+          <Label htmlFor="library-sku">{copy("SKU", "SKU", "מק\"ט")}</Label>{" "}
           <Input
             id="library-sku"
             value={form.sku}
@@ -745,7 +757,7 @@ function LibraryForm({
         </div>{" "}
         <div className="field-stack">
           {" "}
-          <Label htmlFor="library-install-type">Install type</Label>{" "}
+          <Label htmlFor="library-install-type">{copy("Install type", "Тип установки", "סוג התקנה")}</Label>{" "}
           <Input
             id="library-install-type"
             value={form.install_type}
@@ -763,7 +775,7 @@ function LibraryForm({
         {" "}
         <div className="field-stack">
           {" "}
-          <Label htmlFor="library-name-ru">Name RU</Label>{" "}
+          <Label htmlFor="library-name-ru">{copy("Name RU", "Название на русском", "שם ברוסית")}</Label>{" "}
           <Textarea
             id="library-name-ru"
             rows={3}
@@ -776,7 +788,7 @@ function LibraryForm({
         </div>{" "}
         <div className="field-stack">
           {" "}
-          <Label htmlFor="library-name-he">Name HE</Label>{" "}
+          <Label htmlFor="library-name-he">{copy("Name HE", "Название на иврите", "שם בעברית")}</Label>{" "}
           <Textarea
             id="library-name-he"
             rows={3}
@@ -792,7 +804,7 @@ function LibraryForm({
         {" "}
         <div className="field-stack">
           {" "}
-          <Label htmlFor="library-manufacturer">Manufacturer</Label>{" "}
+          <Label htmlFor="library-manufacturer">{copy("Manufacturer", "Производитель", "יצרן")}</Label>{" "}
           <Input
             id="library-manufacturer"
             value={form.manufacturer}
@@ -807,7 +819,7 @@ function LibraryForm({
         </div>{" "}
         <div className="field-stack">
           {" "}
-          <Label htmlFor="library-unit">Unit</Label>{" "}
+          <Label htmlFor="library-unit">{copy("Unit", "Единица", "יחידה")}</Label>{" "}
           <select
             id="library-unit"
             value={form.unit}
@@ -820,14 +832,14 @@ function LibraryForm({
             className="control-input"
           >
             {" "}
-            <option value="piece">piece</option>{" "}
-            <option value="set">set</option>{" "}
-            <option value="point">point</option>{" "}
+            <option value="piece">{copy("piece", "шт.", "יח׳")}</option>{" "}
+            <option value="set">{copy("set", "комплект", "סט")}</option>{" "}
+            <option value="point">{copy("point", "точка", "נקודה")}</option>{" "}
           </select>{" "}
         </div>{" "}
         <div className="field-stack">
           {" "}
-          <Label htmlFor="library-status">Status</Label>{" "}
+          <Label htmlFor="library-status">{copy("Status", "Статус", "סטטוס")}</Label>{" "}
           <select
             id="library-status"
             value={form.status}
@@ -840,8 +852,8 @@ function LibraryForm({
             className="control-input"
           >
             {" "}
-            <option value="ACTIVE">ACTIVE</option>{" "}
-            <option value="ARCHIVED">ARCHIVED</option>{" "}
+            <option value="ACTIVE">{copy("ACTIVE", "АКТИВЕН", "פעיל")}</option>{" "}
+            <option value="ARCHIVED">{copy("ARCHIVED", "В АРХИВЕ", "בארכיון")}</option>{" "}
           </select>{" "}
         </div>{" "}
       </div>{" "}

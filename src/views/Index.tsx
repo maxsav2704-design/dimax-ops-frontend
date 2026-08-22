@@ -1,14 +1,12 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, FileText, Plus, ShieldAlert } from "lucide-react";
+import { AlertTriangle, CalendarDays, Plus } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { getDashboardCopy } from "@/components/dashboard/copy";
 import { DispatcherBoard } from "@/components/dashboard/DispatcherBoard";
 import { NextSchedule } from "@/components/dashboard/NextSchedule";
-import { ProblemProjectsTable } from "@/components/dashboard/ProblemProjectsTable";
-import { TopReasonsCard } from "@/components/dashboard/TopReasonsCard";
 import { apiFetch } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -40,15 +38,6 @@ type ReportsDashboardResponse = {
       utilization_pct: number | null;
     };
   };
-};
-
-type ProblemProjectsResponse = {
-  items: Array<{
-    project_id: string;
-    name: string;
-    address: string;
-    not_installed_doors: number;
-  }>;
 };
 
 type DispatcherBoardResponse = {
@@ -106,14 +95,6 @@ type DispatcherBoardResponse = {
     open_issues: number;
     next_event_at: string | null;
     next_event_title: string | null;
-  }>;
-};
-
-type TopReasonsResponse = {
-  items: Array<{
-    reason_id: string | null;
-    reason_name: string;
-    count: number;
   }>;
 };
 
@@ -197,6 +178,16 @@ function dashboardActionLabels(locale: "en" | "ru" | "he") {
       openIssues: "открытых проблем",
       pendingDoors: "дверей в ожидании",
       blocked: "заблокировано",
+      doorsLeft: "дверей осталось",
+      installed7d: "Установлено за 7 дней",
+      freeInstallers: "Свободные монтажники",
+      busy: "заняты",
+      needsAttention: "Требует внимания",
+      everythingFine: "Всё в порядке",
+      active: "В работе",
+      week: "За 7 дней",
+      availableNow: "Доступны сейчас",
+      issuesAction: "Проблемы",
     };
   }
   if (locale === "he") {
@@ -210,6 +201,16 @@ function dashboardActionLabels(locale: "en" | "ru" | "he") {
       openIssues: "תקלות פתוחות",
       pendingDoors: "דלתות ממתינות",
       blocked: "חסום",
+      doorsLeft: "דלתות נותרו",
+      installed7d: "הותקנו ב-7 ימים",
+      freeInstallers: "מתקינים זמינים",
+      busy: "עסוקים",
+      needsAttention: "דורש טיפול",
+      everythingFine: "הכל תקין",
+      active: "בעבודה",
+      week: "ב-7 ימים",
+      availableNow: "זמינים עכשיו",
+      issuesAction: "תקלות",
     };
   }
   return {
@@ -222,6 +223,16 @@ function dashboardActionLabels(locale: "en" | "ru" | "he") {
     openIssues: "open issues",
     pendingDoors: "pending doors",
     blocked: "blocked",
+    doorsLeft: "doors left",
+    installed7d: "Installed in 7 days",
+    freeInstallers: "Available installers",
+    busy: "busy",
+    needsAttention: "Needs attention",
+    everythingFine: "All clear",
+    active: "Active",
+    week: "Last 7 days",
+    availableNow: "Available now",
+    issuesAction: "Issues",
   };
 }
 
@@ -292,18 +303,18 @@ function DashboardV24KpiTile({ item }: { item: DashboardV24Kpi }) {
   return (
     <div
       className={cn(
-        "relative min-h-[112px] overflow-hidden rounded-[12px] border border-border bg-surface px-4 py-3 before:absolute before:inset-y-3 before:left-0 before:w-[3px] before:rounded-r-full",
+        "relative min-h-[128px] overflow-hidden rounded-lg border border-border bg-surface px-4 py-3 before:absolute before:inset-y-3 before:left-0 before:w-[3px] before:rounded-r-full",
         tone.bar,
       )}
     >
       <div className="pl-2">
         <div className="flex items-start justify-between gap-3">
-          <div className="truncate text-[10.5px] font-semibold uppercase tracking-[0.04em] text-text-secondary">
+          <div className="min-h-8 text-[10.5px] font-semibold leading-4 text-text-secondary">
             {item.label}
           </div>
           <span
             className={cn(
-              "shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.04em]",
+              "shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-semibold",
               tone.status,
             )}
           >
@@ -312,7 +323,7 @@ function DashboardV24KpiTile({ item }: { item: DashboardV24Kpi }) {
         </div>
         <div
           className={cn(
-            "mt-3 truncate text-[24px] font-semibold leading-none tabular-nums",
+            "mt-2 text-[24px] font-semibold leading-none tabular-nums",
             tone.value,
           )}
         >
@@ -324,7 +335,7 @@ function DashboardV24KpiTile({ item }: { item: DashboardV24Kpi }) {
             style={{ width: `${progress}%` }}
           />
         </div>
-        <div className="mt-3 truncate text-[10.5px] text-text-secondary">
+        <div className="mt-3 line-clamp-2 min-h-8 text-[10.5px] leading-4 text-text-secondary">
           {item.detail}
         </div>
       </div>
@@ -348,29 +359,11 @@ const Index = () => {
     refetchInterval: 30_000,
   });
 
-  const problemProjectsQuery = useQuery({
-    queryKey: ["dashboard-problem-projects"],
-    queryFn: () =>
-      apiFetch<ProblemProjectsResponse>(
-        "/api/v1/admin/reports/problem-projects?limit=10",
-      ),
-    refetchInterval: 30_000,
-  });
-
   const dispatcherBoardQuery = useQuery({
     queryKey: ["dashboard-dispatcher-board"],
     queryFn: () =>
       apiFetch<DispatcherBoardResponse>(
         "/api/v1/admin/reports/dispatcher-board?projects_limit=6&installers_limit=6&recommendation_limit=3",
-      ),
-    refetchInterval: 30_000,
-  });
-
-  const topReasonsQuery = useQuery({
-    queryKey: ["dashboard-top-reasons", dateFrom, dateTo],
-    queryFn: () =>
-      apiFetch<TopReasonsResponse>(
-        `/api/v1/admin/reports/top-reasons?limit=5&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}`,
       ),
     refetchInterval: 30_000,
   });
@@ -388,7 +381,6 @@ const Index = () => {
   const dispatcherSummary = dispatcherBoardQuery.data?.summary;
   const kpi = dashboard?.kpi;
   const projectUtilization = dashboard?.limits.projects.utilization_pct ?? 0;
-  const syncCounts = dashboard?.sync_health.counts;
   const notInstalled = kpi?.not_installed_doors ?? 0;
   const profitPct =
     kpi && decimalToNumber(kpi.revenue_total) > 0
@@ -420,27 +412,60 @@ const Index = () => {
   const refreshLabel = hhmm(refreshSource, locale);
   const dashboardTitle =
     locale === "ru"
-      ? "Операционный дашборд"
+      ? "Главная"
       : locale === "he"
-        ? "דשבורד תפעולי"
-        : "Admin command dashboard";
+        ? "ראשי"
+        : "Home";
   const dashboardSubtitle =
     locale === "ru"
-      ? "Единый обзор объектов, дверей, проблем и загрузки монтажников."
+      ? "Что происходит на объектах и что требует вашего внимания сегодня."
       : locale === "he"
-        ? "מבט אחד על פרויקטים, דלתות, תקלות ועומס מתקינים."
-        : "One control view for projects, doors, issues and installer load.";
-  const teamUtilizationLabel =
-    locale === "ru"
-      ? "Загрузка бригад"
-      : locale === "he"
-        ? "ניצול צוותים"
-        : "Team utilisation";
-  const availableLabel =
-    locale === "ru" ? "свободно" : locale === "he" ? "זמינים" : "available";
-  const busyLabel =
-    locale === "ru" ? "занято" : locale === "he" ? "עסוקים" : "busy";
+        ? "מה קורה בפרויקטים ומה דורש את תשומת לבך היום."
+        : "What is happening on site and what needs your attention today.";
   const dashboardKpis: DashboardV24Kpi[] = [
+    {
+      label: copy.kpi.activeProjects,
+      value: dashboard?.limits.projects.current ?? 0,
+      detail: `${pendingDoors} ${labels.doorsLeft}`,
+      progress: projectUtilization || 0,
+      status: labels.active,
+      tone: "yellow",
+    },
+    {
+      label: labels.installed7d,
+      value: kpi?.installed_doors ?? 0,
+      detail: `${pendingDoors} ${labels.doorsLeft}`,
+      progress:
+        (kpi?.installed_doors ?? 0) + pendingDoors > 0
+          ? Math.round(
+              ((kpi?.installed_doors ?? 0) /
+                ((kpi?.installed_doors ?? 0) + pendingDoors)) *
+                100,
+            )
+          : 0,
+      status: labels.week,
+      tone: "green",
+    },
+    {
+      label: copy.dispatcher.metrics.issues,
+      value: openIssues,
+      detail: `${blockedIssues} ${labels.blocked}`,
+      progress: Math.min(openIssues * 6, 100),
+      status:
+        openIssues > 0 ? labels.needsAttention : labels.everythingFine,
+      tone: openIssues > 0 ? "red" : "green",
+    },
+    {
+      label: labels.freeInstallers,
+      value: availableInstallers,
+      detail: `${busyInstallers} ${labels.busy}`,
+      progress:
+        installerCapacityTotal > 0
+          ? Math.round((availableInstallers / installerCapacityTotal) * 100)
+          : 0,
+      status: labels.availableNow,
+      tone: teamUtilization > 85 ? "orange" : "blue",
+    },
     {
       label: copy.kpi.revenue,
       value: kpi ? formatCompactCurrency(kpi.revenue_total, locale) : "0 NIS",
@@ -448,65 +473,10 @@ const Index = () => {
         ? `${copy.kpi.payroll}: ${formatCurrency(kpi.payroll_total, locale)}`
         : `${copy.kpi.payroll}: 0.00 NIS`,
       progress: profitPct,
-      status: profitPct >= 0 ? "ok" : "risk",
+      status: labels.week,
       tone: "green",
     },
-    {
-      label: copy.kpi.activeProjects,
-      value: dashboard?.limits.projects.current ?? 0,
-      detail: `${pendingDoors} ${labels.pendingDoors}`,
-      progress: projectUtilization || 0,
-      status: "live",
-      tone: "yellow",
-    },
-    {
-      label: copy.kpi.problems,
-      value: kpi?.problem_projects ?? 0,
-      detail: `${blockedIssues} ${labels.blocked} · ${kpi?.missing_rates_installed_doors ?? 0} ${copy.kpi.doorsWithoutRates}`,
-      progress: Math.min((kpi?.problem_projects ?? 0) * 10, 100),
-      status: (kpi?.problem_projects ?? 0) > 0 ? "P1" : "ok",
-      tone: (kpi?.problem_projects ?? 0) > 0 ? "red" : "green",
-    },
-    {
-      label: copy.dispatcher.metrics.issues,
-      value: openIssues,
-      detail: syncCounts
-        ? `${copy.kpi.syncDanger}: ${syncCounts.danger}/${syncCounts.total}`
-        : copy.kpi.syncStatusPending,
-      progress: Math.min(openIssues * 6, 100),
-      status: openIssues > 0 ? "watch" : "ok",
-      tone: openIssues > 0 ? "orange" : "green",
-    },
-    {
-      label: teamUtilizationLabel,
-      value: `${teamUtilization}%`,
-      detail: `${availableInstallers} ${availableLabel} · ${busyInstallers} ${busyLabel}`,
-      progress: teamUtilization,
-      status: installerCapacityTotal > 0 ? "week" : "n/a",
-      tone: teamUtilization > 85 ? "orange" : "blue",
-    },
   ];
-
-  const reasons = useMemo(() => {
-    const rows = topReasonsQuery.data?.items || [];
-    const total = rows.reduce((acc, row) => acc + row.count, 0);
-    return rows.map((row) => ({
-      reason: row.reason_name,
-      count: row.count,
-      percentage: total > 0 ? Math.round((row.count / total) * 100) : 0,
-    }));
-  }, [topReasonsQuery.data]);
-
-  const problemProjects = useMemo(
-    () =>
-      (problemProjectsQuery.data?.items || []).map((item) => ({
-        projectId: item.project_id,
-        name: item.name,
-        problems: item.not_installed_doors,
-        address: item.address || copy.problemsTable.addressNotSet,
-      })),
-    [copy.problemsTable.addressNotSet, problemProjectsQuery.data?.items],
-  );
 
   const events = useMemo(
     () =>
@@ -521,8 +491,6 @@ const Index = () => {
   const hasError =
     dashboardQuery.isError ||
     dispatcherBoardQuery.isError ||
-    problemProjectsQuery.isError ||
-    topReasonsQuery.isError ||
     nextScheduleQuery.isError;
 
   return (
@@ -530,92 +498,59 @@ const Index = () => {
       <div className="page-shell page-stack-tight motion-stagger">
         <section
           data-testid="admin-dashboard-v24"
-          className="overflow-hidden rounded-[14px] border border-border bg-surface-subtle shadow-sm"
+          className="space-y-4"
         >
-          <div className="flex items-center gap-3 border-b border-border px-3 py-2">
-            <div className="rounded-full bg-text px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">
-              DIMAX
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="text-[26px] font-semibold leading-tight text-text">
+                  {dashboardTitle}
+                </h1>
+                <span className="rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium text-text-secondary">
+                  {labels.today} · {todayLabel}
+                </span>
+              </div>
+              <p className="mt-1.5 max-w-3xl text-[13px] leading-5 text-text-secondary">
+                {dashboardSubtitle}
+              </p>
+              <p className="mt-1 text-[11px] text-text-tertiary">
+                {labels.lastRefresh}: {refreshLabel}
+              </p>
             </div>
-            <div className="min-w-0 flex-1 truncate text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary">
-              DIMAX GROUP
-            </div>
-            <div className="rounded-full border border-status-ok-border bg-status-ok-bg px-2.5 py-1 text-[10.5px] font-medium text-status-ok-fg">
-              OWNER
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => router.push("/calendar")}
+                className="dmx-secondary-action"
+              >
+                <CalendarDays className="h-4 w-4" strokeWidth={1.8} />
+                {copy.heroActions.calendar}
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/issues")}
+                className="dmx-secondary-action"
+              >
+                <AlertTriangle className="h-4 w-4" strokeWidth={1.8} />
+                {labels.issuesAction}
+                {openIssues > 0 ? ` (${openIssues})` : ""}
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/projects?create=1")}
+                className="dmx-primary-action"
+              >
+                <Plus className="h-4 w-4" strokeWidth={1.8} />
+                {labels.newProject}
+              </button>
             </div>
           </div>
 
-          <div className="space-y-4 p-4 md:p-5">
-            <div className="truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-link">
-              <b className="font-semibold text-text">Dashboard</b>
-            </div>
-
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-[26px] font-semibold leading-tight text-text">
-                    {dashboardTitle}
-                  </h1>
-                  <span className="rounded-full bg-surface px-3 py-1 text-[11px] font-medium text-text-secondary">
-                    {labels.today} · {todayLabel}
-                  </span>
-                </div>
-                <p className="mt-2 max-w-4xl text-[12.5px] leading-5 text-text-secondary">
-                  {dashboardSubtitle}{" "}
-                  <b className="font-medium text-text">
-                    {dashboard?.limits.projects.current ?? 0}
-                  </b>{" "}
-                  {labels.activeProjects} ·{" "}
-                  <b className="font-medium text-text">
-                    {kpi?.problem_projects ?? 0}
-                  </b>{" "}
-                  {labels.problemProjects} ·{" "}
-                  <b className="font-medium text-text">{openIssues}</b>{" "}
-                  {labels.openIssues} · {labels.lastRefresh}{" "}
-                  <b className="font-medium text-text">{refreshLabel}</b>
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => router.push("/calendar")}
-                  className="dmx-secondary-action"
-                >
-                  <CalendarDays className="h-4 w-4" strokeWidth={1.8} />
-                  {copy.heroActions.calendar}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push("/operations")}
-                  className="dmx-secondary-action"
-                >
-                  <ShieldAlert className="h-4 w-4" strokeWidth={1.8} />
-                  {copy.heroActions.operations}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push("/reports")}
-                  className="dmx-secondary-action"
-                >
-                  <FileText className="h-4 w-4" strokeWidth={1.8} />
-                  {labels.reports}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push("/projects")}
-                  className="dmx-primary-action"
-                >
-                  <Plus className="h-4 w-4" strokeWidth={1.8} />
-                  {labels.newProject}
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
-              {dashboardKpis.map((item) => (
-                <DashboardV24KpiTile key={item.label} item={item} />
-              ))}
-            </div>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
+            {dashboardKpis.map((item) => (
+              <DashboardV24KpiTile key={item.label} item={item} />
+            ))}
           </div>
         </section>
 
@@ -638,21 +573,6 @@ const Index = () => {
             onOpenCalendar={() => router.push("/calendar")}
           />
         )}
-
-        <div className="grid grid-cols-1 gap-4 mb-6 lg:grid-cols-5">
-          <div className="lg:col-span-3">
-            <ProblemProjectsTable
-              projects={problemProjects}
-              onViewAll={() => router.push("/projects")}
-              onOpenProject={(projectId) =>
-                router.push(`/projects?project_id=${projectId}`)
-              }
-            />
-          </div>
-          <div className="lg:col-span-2">
-            <TopReasonsCard reasons={reasons} />
-          </div>
-        </div>
 
         <NextSchedule
           events={events}

@@ -33,7 +33,7 @@ describe("CalendarPage", () => {
     authSessionMock.mockReturnValue({ role: "ADMIN", admin_scope: "OWNER", can_view_rates: true });
   });
 
-  it("renders calendar v2 installer lanes and event detail drawer", async () => {
+  it("renders the premium time grid and keeps schedule interactions working", async () => {
     const now = new Date();
     const dow = now.getDay();
     const mondayOffset = dow === 0 ? -6 : 1 - dow;
@@ -125,14 +125,40 @@ describe("CalendarPage", () => {
     );
 
     expect(await screen.findByTestId("calendar-v27")).toBeInTheDocument();
-    expect(await screen.findByText("Operational planning")).toBeInTheDocument();
-    expect((await screen.findAllByText("Installer Alpha")).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole("searchbox")).toBeInTheDocument();
+    expect(screen.getByText("My Schedule")).toBeInTheDocument();
+    expect(screen.getByText("Crews")).toBeInTheDocument();
+    expect(await screen.findByText("Installer Alpha")).toBeInTheDocument();
     expect(await screen.findByText("1 event · busy 1 day")).toBeInTheDocument();
-    expect(await screen.findAllByText("Install Tower A")).toHaveLength(2);
+    const eventCard = await screen.findByRole("button", {
+      name: "Install Tower A, 09:00 - 11:00",
+    });
+    expect(eventCard).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "missing schedule" },
+    });
+    expect(screen.queryByRole("button", { name: "Install Tower A, 09:00 - 11:00" })).not.toBeInTheDocument();
+    expect(await screen.findByText("No events match the selected filters.")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "" } });
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Installation" }));
+    expect(screen.queryByRole("button", { name: "Install Tower A, 09:00 - 11:00" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Installation" }));
+
+    fireEvent.click(await screen.findByRole("button", {
+      name: "Install Tower A, 09:00 - 11:00",
+    }));
+    expect(await screen.findByTestId("calendar-event-info-frame")).toBeInTheDocument();
     expect(await screen.findByText("DIMAX Dev Co")).toBeInTheDocument();
     expect(await screen.findByText("4 / 10")).toBeInTheDocument();
     expect(screen.getByText("Waze")).toBeInTheDocument();
     expect(screen.getByText("WhatsApp")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Close event info"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("calendar-event-info-frame")).not.toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Open Installer Alpha schedule row" }));
     const laneFrame = await screen.findByTestId("calendar-lane-info-frame");
@@ -146,9 +172,6 @@ describe("CalendarPage", () => {
     expect(await screen.findByText("Edit Event")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     fireEvent.click(screen.getByRole("button", { name: "Read schedule" }));
-    expect(await screen.findByTestId("calendar-event-info-frame")).toBeInTheDocument();
-
-    fireEvent.click((await screen.findAllByText("Install Tower A"))[0]);
     expect(await screen.findByTestId("calendar-event-info-frame")).toBeInTheDocument();
     expect(screen.getAllByText("Open project").length).toBeGreaterThan(0);
 

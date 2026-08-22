@@ -150,7 +150,10 @@ export default function InstallerSchedulePage() {
       ),
     refetchInterval: 30_000,
   });
-  const events = eventsQuery.data?.items || [];
+  const events = useMemo(
+    () => eventsQuery.data?.items || [],
+    [eventsQuery.data?.items],
+  );
   const eventTypeOptions = useMemo(() => {
     const unique = Array.from(
       new Set(events.map((event) => event.event_type)),
@@ -270,7 +273,7 @@ export default function InstallerSchedulePage() {
               {" "}
               <div
                 role="group"
-                aria-label="Quick range"
+                aria-label={copy("Quick range", "Быстрый выбор периода", "בחירת טווח מהירה")}
                 className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface-subtle p-1"
               >
                 {" "}

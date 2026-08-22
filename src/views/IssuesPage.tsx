@@ -440,7 +440,7 @@ export default function IssuesPage() {
       setSaveNote(
         copy(
           "Workflow updated",
-          "Workflow \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d",
+          "Этап обработки обновлён",
           "\u05ea\u05d4\u05dc\u05d9\u05da \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05d5\u05d3\u05db\u05df",
         ),
       );
@@ -462,7 +462,10 @@ export default function IssuesPage() {
     },
   });
 
-  const issues = issuesQuery.data?.items || [];
+  const issues = useMemo(
+    () => issuesQuery.data?.items || [],
+    [issuesQuery.data?.items],
+  );
   const visibleIssues = useMemo(() => {
     const query = issueSearch.trim().toLowerCase();
     const searched = query
@@ -618,7 +621,7 @@ export default function IssuesPage() {
     setForm(toForm(selectedIssue));
     setFormError(null);
     setSaveNote(null);
-  }, [selectedIssue?.id, selectedIssue?.updated_at]);
+  }, [selectedIssue]);
 
   const metrics = useMemo(() => {
     const total = issues.length;
@@ -872,31 +875,31 @@ export default function IssuesPage() {
     <DashboardLayout>
       <div className="page-shell page-stack-tight motion-stagger">
         <section
-          className="rounded-lg border border-border bg-surface shadow-[0_18px_45px_rgba(15,23,42,0.05)]"
+          className="rounded-lg border border-border bg-surface"
           data-testid="issues-control-v26"
         >
           <div className="px-4 py-4 md:px-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-link">
-                  Dashboard <span className="text-text-tertiary">#</span>{" "}
-                  <span className="text-text">Issues</span>
+                  {copy("Dashboard", "Главная", "ראשי")} <span className="text-text-tertiary">#</span>{" "}
+                  <span className="text-text">{copy("Issues", "Проблемы", "תקלות")}</span>
                 </div>
                 <h1 className="mt-3 text-[30px] font-semibold leading-tight text-text md:text-[38px]">
-                  Issues
+                  {copy("Issues", "Проблемы", "תקלות")}
                 </h1>
                 <p className="mt-2 text-[13px] leading-6 text-text-secondary">
                   <span className="font-semibold text-status-problem-fg">
-                    {metrics.overdue} SLA breached
+                    {metrics.overdue} {copy("SLA breached", "Нарушено соглашение об уровне обслуживания", "SLA הופר")}
                   </span>{" "}
                   - <b className="font-semibold text-text">{metrics.open}</b>{" "}
-                  open -{" "}
+                  {copy("open -", "открыто -", "פתוח -")}{" "}
                   <b className="font-semibold text-text">
                     {metrics.unassigned}
                   </b>{" "}
-                  unassigned -{" "}
+                  {copy("unassigned -", "не назначен -", "לא הוקצה -")}{" "}
                   <b className="font-semibold text-text">{metrics.visible}</b>{" "}
-                  visible in current scope
+                  {copy("visible in current scope", "виден в текущей области", "גלוי בהיקף הנוכחי")}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -907,14 +910,14 @@ export default function IssuesPage() {
                   className="dmx-secondary-action disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Download className="h-4 w-4" strokeWidth={1.8} />
-                  Export CSV
+                  {copy("Export CSV", "Экспорт в CSV", "ייצא CSV")}
                 </button>
                 <a
                   href="/reports#reports-issues-analytics"
                   className="dmx-secondary-action"
                 >
                   <FileText className="h-4 w-4" strokeWidth={1.8} />
-                  Report view
+                  {copy("Report view", "Просмотр отчета", "תצוגת דוח")}
                 </a>
                 <button
                   type="button"
@@ -1038,15 +1041,15 @@ export default function IssuesPage() {
             <div className="relative min-w-[220px] flex-1">
               <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
               <input
-                aria-label="Issue search"
+                aria-label={copy("Issue search", "Поиск проблем", "חיפוש תקלות")}
                 value={issueSearch}
                 onChange={(event) => setIssueSearch(event.target.value)}
-                placeholder="Search issue, project, door..."
+                placeholder={copy("Search issue, project, door...", "Поиск по проблеме, объекту или двери...", "חיפוש לפי תקלה, פרויקט או דלת...")}
                 className="h-10 w-full rounded-full border border-border bg-surface ps-9 pe-3 text-[12.5px] text-text placeholder:text-text-tertiary focus:border-border-strong focus:outline-none"
               />
             </div>
             <select
-              aria-label="Status filter"
+              aria-label={copy("Status filter", "Фильтр по статусу", "סינון לפי סטטוס")}
               value={statusFilter}
               onChange={(e) =>
                 setStatusFilter(e.target.value as "all" | IssueStatus)
@@ -1061,7 +1064,7 @@ export default function IssuesPage() {
               ))}
             </select>
             <select
-              aria-label="Workflow filter"
+              aria-label={copy("Workflow filter", "Фильтр по этапу", "סינון לפי שלב")}
               value={workflowFilter}
               onChange={(e) =>
                 setWorkflowFilter(e.target.value as "all" | IssueWorkflowState)
@@ -1077,7 +1080,7 @@ export default function IssuesPage() {
             </select>
             <div className="min-w-[200px]">
               <input
-                aria-label="Owner filter"
+                aria-label={copy("Owner filter", "Фильтр по ответственному", "סינון לפי אחראי")}
                 value={ownerFilter}
                 onChange={(e) => setOwnerFilter(e.target.value)}
                 placeholder={tt("issues.ownerUserUuid")}
@@ -1094,7 +1097,7 @@ export default function IssuesPage() {
             </div>
             <label className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-surface px-3 text-[12px] text-text-secondary">
               <input
-                aria-label="Overdue only"
+                aria-label={copy("Overdue only", "Только просроченные", "באיחור בלבד")}
                 type="checkbox"
                 checked={overdueOnly}
                 onChange={(e) => setOverdueOnly(e.target.checked)}
@@ -1166,11 +1169,11 @@ export default function IssuesPage() {
             <div className="overflow-x-auto">
               <div className="grid min-w-[760px] grid-cols-[24px_52px_minmax(0,2fr)_108px_minmax(96px,0.8fr)_112px_64px] gap-2 border-b border-border-subtle bg-surface-subtle px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.04em] text-text-secondary">
                 <span />
-                <span>Prio</span>
-                <span>Issue</span>
-                <span>Workflow</span>
-                <span>Owner</span>
-                <span className="text-end">SLA / Due</span>
+                <span>{copy("Prio", "Приоритет", "עדיפות")}</span>
+                <span>{copy("Issue", "Проблема", "תקלה")}</span>
+                <span>{copy("Workflow", "Этап", "שלב")}</span>
+                <span>{copy("Owner", "Владелец", "בעלים")}</span>
+                <span className="text-end">{copy("SLA / Due", "SLA / Срок выполнения", "SLA / מועד")}</span>
                 <span />
               </div>
             </div>
@@ -1214,7 +1217,7 @@ export default function IssuesPage() {
                           active && "border-text bg-text",
                         )}
                       >
-                        <span className="sr-only">Select</span>
+                        <span className="sr-only">{copy("Select", "Выбрать", "בחר")}</span>
                       </button>
                       <button
                         type="button"
@@ -1246,13 +1249,13 @@ export default function IssuesPage() {
                           className="mt-1 block truncate text-[11px] text-text-secondary"
                           title={issue.door_id}
                         >
-                          {issue.door_unit_label} - project{" "}
-                          {shortId(issue.project_id)} - door{" "}
+                          {issue.door_unit_label} {copy("- project", "- проект", "- פרויקט")}{" "}
+                          {shortId(issue.project_id)} {copy("- door", "- дверь", "- דלת")}{" "}
                           {shortId(issue.door_id)}
                         </span>
                         {issue.details ? (
                           <span className="mt-2 block truncate text-[11px] text-text-secondary">
-                            <span className="font-medium text-text">Note:</span>{" "}
+                            <span className="font-medium text-text">{copy("Note:", "Примечание:", "הערה:")}</span>{" "}
                             {issue.details}
                           </span>
                         ) : null}
@@ -1290,7 +1293,7 @@ export default function IssuesPage() {
                           </>
                         ) : (
                           <span className="text-[11.5px] italic text-text-tertiary">
-                            unassigned
+                            {copy("unassigned", "не назначено", "לא משויך")}
                           </span>
                         )}
                       </div>
@@ -1315,7 +1318,7 @@ export default function IssuesPage() {
                         onClick={() => setSelectedIssueId(issue.id)}
                         className="mt-0.5 inline-flex h-8 items-center justify-center rounded-full border border-border bg-surface px-2 text-[11.5px] font-semibold text-text-secondary hover:bg-surface-subtle hover:text-text"
                       >
-                        Edit
+                        {copy("Edit", "Редактировать", "ערוך")}
                       </button>
                     </div>
                   );
@@ -1331,7 +1334,7 @@ export default function IssuesPage() {
               </h3>
               {selectedIssue ? (
                 <div className="text-[11px] text-text-secondary">
-                  Issue #{shortId(selectedIssue.id)}
+                  {copy("Issue #", "Проблема №", "תקלה מס׳")}{shortId(selectedIssue.id)}
                 </div>
               ) : null}
             </div>
@@ -1518,7 +1521,7 @@ export default function IssuesPage() {
 
                 <div className="grid grid-cols-2 gap-2">
                   <select
-                    aria-label="Issue status"
+                    aria-label={copy("Issue status", "Статус проблемы", "סטטוס תקלה")}
                     value={form.status}
                     onChange={(e) =>
                       setForm((prev) => ({
@@ -1536,7 +1539,7 @@ export default function IssuesPage() {
                     ))}
                   </select>
                   <select
-                    aria-label="Issue priority"
+                    aria-label={copy("Issue priority", "Приоритет проблемы", "עדיפות תקלה")}
                     value={form.priority}
                     onChange={(e) =>
                       setForm((prev) => ({
@@ -1556,7 +1559,7 @@ export default function IssuesPage() {
                 </div>
 
                 <select
-                  aria-label="Issue workflow state"
+                  aria-label={copy("Issue workflow state", "Этап обработки проблемы", "שלב טיפול בתקלה")}
                   value={form.workflow_state}
                   onChange={(e) =>
                     setForm((prev) => ({
@@ -1579,7 +1582,7 @@ export default function IssuesPage() {
                     {tt("issues.ownerUser")}
                   </div>
                   <select
-                    aria-label="Issue owner select"
+                    aria-label={copy("Issue owner select", "Выбрать ответственного", "בחירת אחראי לתקלה")}
                     value={
                       linkedOwners.some((x) => x.user_id === form.owner_user_id)
                         ? form.owner_user_id
@@ -1602,7 +1605,7 @@ export default function IssuesPage() {
                     ))}
                   </select>
                   <input
-                    aria-label="Issue owner input"
+                    aria-label={copy("Issue owner input", "ID ответственного", "מזהה אחראי")}
                     value={form.owner_user_id}
                     onChange={(e) =>
                       setForm((prev) => ({
@@ -1622,7 +1625,7 @@ export default function IssuesPage() {
                     {tt("issues.dueAt")}
                   </label>
                   <input
-                    aria-label="Issue due at"
+                    aria-label={copy("Issue due at", "Срок решения проблемы", "מועד טיפול בתקלה")}
                     type="datetime-local"
                     value={form.due_at}
                     onChange={(e) =>
@@ -1634,7 +1637,7 @@ export default function IssuesPage() {
                 </div>
 
                 <textarea
-                  aria-label="Issue details"
+                  aria-label={copy("Issue details", "Описание проблемы", "פרטי התקלה")}
                   value={form.details}
                   onChange={(e) =>
                     setForm((prev) => ({ ...prev, details: e.target.value }))

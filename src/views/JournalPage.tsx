@@ -309,6 +309,8 @@ function SectionMessage({
 export default function JournalPage() {
   const router = useRouter();
   const { t, locale } = useI18n();
+  const copy = (en: string, ru: string, he: string) =>
+    locale === "ru" ? ru : locale === "he" ? he : en;
   const session = useAuthSession();
   const canManage = canRunPrivilegedAdminActions(session);
 
@@ -448,7 +450,7 @@ export default function JournalPage() {
     return () => {
       alive = false;
     };
-  }, [canManage, refreshTick, statusFilter]);
+  }, [canManage, locale, refreshTick, statusFilter]);
 
   useEffect(() => {
     let alive = true;
@@ -498,7 +500,7 @@ export default function JournalPage() {
     return () => {
       alive = false;
     };
-  }, [selectedJournalId, refreshTick]);
+  }, [locale, selectedJournalId, refreshTick]);
 
   useEffect(() => {
     if (!canManage) {
@@ -555,7 +557,7 @@ export default function JournalPage() {
     return () => {
       alive = false;
     };
-  }, [canManage, selectedJournalId, refreshTick]);
+  }, [canManage, locale, selectedJournalId, refreshTick]);
 
   const journalsWithProject = useMemo(() => {
     const projectById = new Map(
@@ -1562,7 +1564,7 @@ export default function JournalPage() {
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <label className="flex items-start gap-3 rounded-lg border border-border bg-surface-subtle p-3">
                         <input
-                          aria-label="Send email"
+                          aria-label={copy("Send email", "Отправить по эл. почте", "שליחה בדוא״ל")}
                           type="checkbox"
                           checked={sendEmail}
                           onChange={(event) =>
@@ -1585,7 +1587,7 @@ export default function JournalPage() {
                       </label>
                       <label className="flex items-start gap-3 rounded-lg border border-border bg-surface-subtle p-3">
                         <input
-                          aria-label="Send WhatsApp"
+                          aria-label={copy("Send WhatsApp", "Отправить в WhatsApp", "שליחה ב-WhatsApp")}
                           type="checkbox"
                           checked={sendWhatsapp}
                           onChange={(event) =>
@@ -1614,7 +1616,7 @@ export default function JournalPage() {
                           {t("journal.emailRecipient")}
                         </label>
                         <input
-                          aria-label="Email recipient"
+                          aria-label={copy("Email recipient", "Получатель эл. почты", "נמען דוא״ל")}
                           value={emailTo}
                           disabled={!canManage}
                           onChange={(event) => setEmailTo(event.target.value)}
@@ -1627,7 +1629,7 @@ export default function JournalPage() {
                           {t("journal.whatsappRecipient")}
                         </label>
                         <input
-                          aria-label="WhatsApp recipient"
+                          aria-label={copy("WhatsApp recipient", "Получатель WhatsApp", "נמען WhatsApp")}
                           value={whatsappTo}
                           disabled={!canManage}
                           onChange={(event) =>
@@ -1644,7 +1646,7 @@ export default function JournalPage() {
                         {t("journal.subject")}
                       </label>
                       <input
-                        aria-label="Journal subject"
+                        aria-label={copy("Journal subject", "Тема сообщения журнала", "נושא הודעת היומן")}
                         value={subject}
                         disabled={!canManage}
                         onChange={(event) => setSubject(event.target.value)}
@@ -1658,7 +1660,7 @@ export default function JournalPage() {
                         {t("journal.message")}
                       </label>
                       <textarea
-                        aria-label="Journal message"
+                        aria-label={copy("Journal message", "Сообщение журнала", "הודעת היומן")}
                         value={message}
                         disabled={!canManage}
                         onChange={(event) => setMessage(event.target.value)}
@@ -1749,7 +1751,7 @@ export default function JournalPage() {
                           {outboxSummary?.by_delivery_status?.DELIVERED ?? 0}
                         </span>
                         <span>
-                          PENDING:{" "}
+                          {locale === "ru" ? "Ожидает" : locale === "he" ? "ממתין" : "Pending"}:{" "}
                           {outboxSummary?.by_delivery_status?.PENDING ?? 0}
                         </span>
                         <span>

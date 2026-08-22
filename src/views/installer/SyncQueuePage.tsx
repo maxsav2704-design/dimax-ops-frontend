@@ -84,7 +84,10 @@ export default function InstallerSyncQueuePage() {
     refetchInterval: 30_000,
   });
 
-  const allItems = syncQuery.data?.items || [];
+  const allItems = useMemo(
+    () => syncQuery.data?.items || [],
+    [syncQuery.data?.items],
+  );
   const items = useMemo(() => {
     if (!focusedProjectId) {
       return allItems;

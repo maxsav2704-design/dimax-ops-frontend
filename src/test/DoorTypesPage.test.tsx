@@ -88,6 +88,9 @@ describe("DoorTypesPage", () => {
     );
 
     expect((await screen.findAllByText("Entry Door")).length).toBeGreaterThan(0);
+    expect(apiFetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/door-types?limit=200",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Add Door Type" }));
     await screen.findByText("Create Door Type");

@@ -241,8 +241,8 @@ export default function JournalFormPage() {
                   <p>
                     {copy(
                       "Export integration will be connected on the backend.",
-                      "Интеграция экспорта будет подключена на backend.",
-                      "אינטגרציית הייצוא תחובר בצד ה-backend.",
+                      "Экспортная интеграция будет подключена на бэкенде.",
+                      "שילוב הייצוא יהיה מחובר בקצה העורפי.",
                     )}
                   </p>
                 </TooltipContent>

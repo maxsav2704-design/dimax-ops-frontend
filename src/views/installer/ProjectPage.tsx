@@ -252,7 +252,7 @@ export default function InstallerProjectPage({
     return en;
   };
   const normalizeReadableText = (value: string, fallback: string) =>
-    /(\?{3,}|Р \S|Р§\S)/.test(value) ? fallback : value;
+    /(\?{3,}|Р\u00a0\S|Р§\S)/.test(value) ? fallback : value;
   const pt = (key: string) =>
     normalizeReadableText(projectOverrides[locale]?.[key] ?? t(key), t(key));
   const doorStatusLabel = (status: string) => {
@@ -1504,7 +1504,7 @@ export default function InstallerProjectPage({
           </section>{" "}
           <section
             className={projectPanelClass("sticky top-4 z-10 bg-surface/95 p-4 backdrop-blur")}
-            aria-label="Door summary bar"
+            aria-label={copy("Door summary bar", "Сводка по дверям", "סיכום דלתות")}
           >
             {" "}
             <div className="flex flex-wrap items-center justify-between gap-3">

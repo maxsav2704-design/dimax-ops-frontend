@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev --webpack -H 0.0.0.0 -p 5173",
     "build": "node scripts/clean-next.mjs && next build --webpack",
-    "quality-gate": "npm run test:production-env && npm run test:coverage-contract && npm run test && npm run build",
+    "quality-gate": "npm run lint && npm run test:production-env && npm run test:coverage-contract && npm run test && npm run build",
     "quality-gate:installer": "npm run test:installer && npm run test:e2e:installer",
     "quality-gate:installer:strict": "npm run test:installer && npm run test:e2e:installer:strict",
     "quality-gate:installer:local": "node scripts/installer-quality-gate-local.mjs",
@@ -22,7 +22,7 @@
     "lint": "eslint .",
     "audit:high": "npm audit --audit-level=high",
     "preview": "vite preview",
-    "test": "set NODE_NO_WARNINGS=1&& vitest run --silent=passed-only",
+    "test": "node scripts/run-vitest-gate.mjs",
     "test:installer": "set NODE_NO_WARNINGS=1&& vitest run --silent=passed-only src/lib/admin-access.test.ts src/test/RequireAuth.test.tsx src/test/InstallerWorkspacePage.test.tsx src/test/InstallerProjectPage.test.tsx src/test/InstallerSchedulePage.test.tsx src/test/InstallerIssuesPage.test.tsx src/test/InstallerEarningsPage.test.tsx src/test/InstallerSyncQueuePage.test.tsx src/test/InstallerScheduleExportButton.test.tsx src/test/ScheduleExport.test.ts",
     "test:watch": "set NODE_NO_WARNINGS=1&& vitest --silent=passed-only",
     "test:e2e": "npm run build && node ./node_modules/@playwright/test/cli.js test",
@@ -80,7 +80,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.61.1",
     "react-resizable-panels": "^2.1.9",
-    "react-router-dom": "6.30.4",
+    "react-router-dom": "6.30.6",
     "recharts": "^2.15.4",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
@@ -99,7 +99,7 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.4.21",
-    "browserslist": "^4.28.2",
+    "browserslist": "^4.28.8",
     "caniuse-lite": "^1.0.30001792",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -115,12 +115,16 @@
   },
   "overrides": {
     "brace-expansion": "5.0.9",
+    "minimatch@3.1.5": {
+      "brace-expansion": "1.1.18"
+    },
     "glob": {
       ".": "^13.0.6"
     },
     "next": {
       "sharp": "^0.35.3"
     },
-    "postcss": "8.5.25"
+    "postcss": "8.5.25",
+    "postcss-selector-parser": "6.1.3"
   }
 }

@@ -8,7 +8,11 @@ export function safeInternalNextPath(
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
     return fallback;
   }
-  if (value.includes("\\") || /[\u0000-\u001f\u007f]/.test(value)) {
+  const hasControlCharacter = Array.from(value).some((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint <= 31 || codePoint === 127;
+  });
+  if (value.includes("\\") || hasControlCharacter) {
     return fallback;
   }
 

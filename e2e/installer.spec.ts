@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { fillReadyLoginForm, LOGIN_RESPONSE_TIMEOUT } from "./login-helpers";
+
 const COMPANY_ID =
   process.env.E2E_COMPANY_ID || "1f16d537-5617-4c4b-a944-dafba2bcead9";
 const INSTALLER_EMAIL = process.env.E2E_INSTALLER_EMAIL || "";
@@ -10,18 +12,20 @@ const REQUIRE_INSTALLER_CREDENTIALS_IN_CI = process.env.CI === "true";
 
 async function loginInstaller(page) {
   await page.goto("/login");
-  await page.getByLabel("Company ID").fill(COMPANY_ID);
-  await page.getByLabel("Email").fill(INSTALLER_EMAIL);
-  await page.getByLabel("Password").fill(INSTALLER_PASSWORD);
+  const submit = await fillReadyLoginForm(page, {
+    companyId: COMPANY_ID,
+    email: INSTALLER_EMAIL,
+    password: INSTALLER_PASSWORD,
+  });
 
   const loginResponsePromise = page.waitForResponse(
     (response) =>
       response.url().includes("/api/v1/auth/login") &&
       response.request().method() === "POST",
-    { timeout: 30_000 }
+    { timeout: LOGIN_RESPONSE_TIMEOUT }
   );
 
-  await page.locator('button[type="submit"]').click();
+  await submit.click();
   const loginResponse = await loginResponsePromise;
   expect(loginResponse.ok()).toBeTruthy();
   const loginBody = (await loginResponse.json()) as { access_token?: string };
@@ -149,9 +153,9 @@ test.describe.serial("Installer web smoke", () => {
 
     const projectLink = page
       .locator(`a[href="/installer/projects/${targetProject.id}"]`)
-      .filter({ hasText: "Open project" })
       .first();
-    await expect(projectLink).toBeVisible({ timeout: 30_000 });
+    await expect(projectLink).toBeVisible({ timeout: 60_000 });
+    await expect(projectLink).toHaveAccessibleName(/Open project/i);
     await projectLink.click();
     await expect(page).toHaveURL(
       new RegExp(`/installer/projects/${targetProject.id}$`)

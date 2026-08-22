@@ -167,6 +167,8 @@ export function CatalogCrudPage({
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { locale } = useI18n();
+  const copy = (en: string, ru: string, he: string) =>
+    locale === "ru" ? ru : locale === "he" ? he : en;
   const session = useAuthSession();
   const canManageCatalog = canRunPrivilegedAdminActions(session);
   const canImportCatalog = canManageImports(session);
@@ -203,7 +205,7 @@ export function CatalogCrudPage({
       if (statusFilter !== "all") {
         params.set("is_active", statusFilter === "active" ? "true" : "false");
       }
-      params.set("limit", "500");
+      params.set("limit", "200");
       return apiFetch<CatalogItem[]>(`${endpoint}?${params.toString()}`);
     },
     refetchInterval: 30_000,
@@ -282,7 +284,7 @@ export function CatalogCrudPage({
       await queryClient.invalidateQueries({ queryKey: [queryKey] });
     },
   });
-  const items = listQuery.data || [];
+  const items = useMemo(() => listQuery.data || [], [listQuery.data]);
   const selectedCount = selectedIds.size;
   const allVisibleSelected =
     items.length > 0 && items.every((item) => selectedIds.has(item.id));
@@ -361,10 +363,10 @@ export function CatalogCrudPage({
               />{" "}
               <div className="mt-4 flex flex-wrap gap-2">
                 {" "}
-                <span className="dmx-week-pill">Rows {metrics.total}</span>{" "}
-                <span className="dmx-week-pill">Active {metrics.active}</span>{" "}
+                <span className="dmx-week-pill">{copy("Rows", "Строки", "שורות")} {metrics.total}</span>{" "}
+                <span className="dmx-week-pill">{copy("Active", "Активные", "פעילים")} {metrics.active}</span>{" "}
                 <span className="dmx-week-pill">
-                  Selected {selectedCount}
+                  {copy("Selected", "Выбрано", "נבחר")} {selectedCount}
                 </span>{" "}
               </div>{" "}
             </div>{" "}
@@ -372,7 +374,7 @@ export function CatalogCrudPage({
               {" "}
               <div>
                 {" "}
-                <div className={catalogMetricLabelClass()}>Business role</div>{" "}
+                <div className={catalogMetricLabelClass()}>{copy("Business role", "Назначение", "תפקיד")}</div>{" "}
                 <p className="mt-1 text-[13px] leading-6 text-text-secondary">
                   {purpose}
                 </p>{" "}
@@ -381,21 +383,21 @@ export function CatalogCrudPage({
                 {" "}
                 <div className="rounded-lg border border-border bg-surface px-3 py-3">
                   {" "}
-                  <div className={catalogMetricLabelClass()}>Scope</div>{" "}
+                  <div className={catalogMetricLabelClass()}>{copy("Scope", "Раздел", "תחום")}</div>{" "}
                   <div className="mt-1 text-lg font-semibold text-text capitalize">
                     {statusFilter}
                   </div>{" "}
                 </div>{" "}
                 <div className="rounded-lg border border-border bg-surface px-3 py-3">
                   {" "}
-                  <div className={catalogMetricLabelClass()}>Visible</div>{" "}
+                  <div className={catalogMetricLabelClass()}>{copy("Visible", "Показано", "מוצגים")}</div>{" "}
                   <div className="mt-1 text-lg font-semibold text-text">
                     {items.length}
                   </div>{" "}
                 </div>{" "}
                 <div className="rounded-lg border border-border bg-surface px-3 py-3">
                   {" "}
-                  <div className={catalogMetricLabelClass()}>Import mode</div>{" "}
+                  <div className={catalogMetricLabelClass()}>{copy("Import mode", "Режим импорта", "מצב ייבוא")}</div>{" "}
                   <div className="mt-1 text-lg font-semibold text-text">
                     {" "}
                     {createOnlyImport ? "Create only" : "Create + update"}{" "}
@@ -411,7 +413,7 @@ export function CatalogCrudPage({
                   disabled={exportMutation.isPending}
                 >
                   {" "}
-                  <Download className="h-3.5 w-3.5" /> Export{" "}
+                  <Download className="h-3.5 w-3.5" /> {copy("Export", "Экспорт", "ייצוא")}{" "}
                 </button>{" "}
                 <button
                   type="button"
@@ -420,7 +422,7 @@ export function CatalogCrudPage({
                   disabled={!canImportCatalog || importMutation.isPending}
                 >
                   {" "}
-                  <Upload className="h-3.5 w-3.5" /> Import{" "}
+                  <Upload className="h-3.5 w-3.5" /> {copy("Import", "Импорт", "ייבוא")}{" "}
                 </button>{" "}
                 <button
                   type="button"
@@ -429,7 +431,7 @@ export function CatalogCrudPage({
                   disabled={!canManageCatalog}
                 >
                   {" "}
-                  <Plus className="h-3.5 w-3.5" /> Add {entityLabel}{" "}
+                  <Plus className="h-3.5 w-3.5" /> {copy("Add", "Добавить", "הוסף")} {entityLabel}{" "}
                 </button>{" "}
                 <input
                   ref={fileInputRef}
@@ -450,21 +452,21 @@ export function CatalogCrudPage({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {" "}
           <DimaxKpiCard
-            label="Total"
+            label={copy("Total", "Всего", "סה״כ")}
             value={metrics.total}
-            hint="Rows matching current filters"
+            hint={copy("Rows matching current filters", "Строки по текущим фильтрам", "שורות לפי המסננים הנוכחיים")}
             barColor="blue"
           />{" "}
           <DimaxKpiCard
-            label="Active"
+            label={copy("Active", "Активные", "פעילים")}
             value={metrics.active}
-            hint="Available in active DIMAX flows"
+            hint={copy("Available in active DIMAX flows", "Доступны в рабочих процессах DIMAX", "זמינים בתהליכי העבודה של DIMAX")}
             barColor="green"
           />{" "}
           <DimaxKpiCard
-            label="Inactive"
+            label={copy("Inactive", "Неактивные", "לא פעילים")}
             value={metrics.inactive}
-            hint="Kept for history and reporting"
+            hint={copy("Kept for history and reporting", "Сохранены для истории и отчётов", "נשמרו להיסטוריה ולדוחות")}
             barColor="orange"
           />{" "}
         </div>{" "}
@@ -478,7 +480,11 @@ export function CatalogCrudPage({
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder={`Search ${entityLabel.toLowerCase()}...`}
+                placeholder={copy(
+                  `Search ${entityLabel.toLowerCase()}...`,
+                  "Поиск по справочнику...",
+                  "חיפוש בקטלוג...",
+                )}
                 className="control-input ps-10"
               />{" "}
             </div>{" "}
@@ -488,7 +494,7 @@ export function CatalogCrudPage({
               onClick={() => setStatusFilter("all")}
             >
               {" "}
-              All{" "}
+              {copy("All", "Все", "הכל")}{" "}
             </button>{" "}
             <button
               type="button"
@@ -496,7 +502,7 @@ export function CatalogCrudPage({
               onClick={() => setStatusFilter("active")}
             >
               {" "}
-              Active{" "}
+              {copy("Active", "Активные", "פעילים")}{" "}
             </button>{" "}
             <button
               type="button"
@@ -504,7 +510,7 @@ export function CatalogCrudPage({
               onClick={() => setStatusFilter("inactive")}
             >
               {" "}
-              Inactive{" "}
+              {copy("Inactive", "Неактивные", "לא פעילים")}{" "}
             </button>{" "}
           </div>{" "}
         </section>{" "}
@@ -514,15 +520,14 @@ export function CatalogCrudPage({
             {" "}
             <div>
               {" "}
-              <div className="panel-title">Bulk actions</div>{" "}
+              <div className="panel-title">{copy("Bulk actions", "Групповые действия", "פעולות קבוצתיות")}</div>{" "}
               <div className="panel-subtitle">
                 {" "}
-                Review visible rows, adjust status in one pass, and keep imports
-                disciplined.{" "}
+                {copy("Review visible rows, adjust status in one pass, and keep imports disciplined.", "Просматривайте видимые строки, корректируйте статус за один проход и следите за дисциплиной импорта.", "סקור שורות גלויות, התאם סטטוס במעבר אחד ושמור על משמעת ביבוא.")}{" "}
               </div>{" "}
             </div>{" "}
             <div className="text-[12px] leading-6 text-text-secondary">
-              Selected: {selectedCount}
+              {copy("Selected:", "Выбрано:", "נבחר:")} {selectedCount}
             </div>{" "}
           </div>{" "}
           <div className="toolbar-row">
@@ -534,7 +539,7 @@ export function CatalogCrudPage({
                 disabled={!canManageCatalog}
                 onCheckedChange={toggleSelectAllVisible}
               />{" "}
-              <span>Select all visible rows</span>{" "}
+              <span>{copy("Select all visible rows", "Выбрать все видимые строки", "בחר את כל השורות הגלויות")}</span>{" "}
             </label>{" "}
             <button
               type="button"
@@ -543,7 +548,7 @@ export function CatalogCrudPage({
               onClick={() => bulkMutation.mutate("activate")}
             >
               {" "}
-              Activate{" "}
+              {copy("Activate", "Активировать", "הפעל")}{" "}
             </button>{" "}
             <button
               type="button"
@@ -552,7 +557,7 @@ export function CatalogCrudPage({
               onClick={() => bulkMutation.mutate("deactivate")}
             >
               {" "}
-              Deactivate{" "}
+              {copy("Deactivate", "Деактивировать", "השבת")}{" "}
             </button>{" "}
             <button
               type="button"
@@ -561,7 +566,7 @@ export function CatalogCrudPage({
               onClick={() => bulkMutation.mutate("delete")}
             >
               {" "}
-              Delete{" "}
+              {copy("Delete", "Удалить", "מחק")}{" "}
             </button>{" "}
           </div>{" "}
           <label className="checkbox-row">
@@ -571,7 +576,7 @@ export function CatalogCrudPage({
               disabled={!canImportCatalog}
               onCheckedChange={(value) => setCreateOnlyImport(value === true)}
             />{" "}
-            <span>Import in create-only mode</span>{" "}
+            <span>{copy("Import in create-only mode", "Импорт в режиме «только создание»", "ייבוא במצב יצירה בלבד")}</span>{" "}
           </label>{" "}
         </section>{" "}
         {message && (
@@ -613,12 +618,12 @@ export function CatalogCrudPage({
             {listQuery.isLoading ? (
               <div className="px-4 py-8 text-sm text-text-secondary">
                 {" "}
-                Loading {title.toLowerCase()}...{" "}
+                {copy("Loading", "Загрузка", "טוען")} {title.toLowerCase()}...{" "}
               </div>
             ) : items.length === 0 ? (
               <div className="px-4 py-8 text-sm text-text-secondary">
                 {" "}
-                No rows found.{" "}
+                {copy("No rows found.", "Строки не найдены.", "לא נמצאו שורות.")}{" "}
               </div>
             ) : (
               items.map((item) => (
@@ -634,7 +639,7 @@ export function CatalogCrudPage({
                     {" "}
                     <label className="mt-0.5 inline-flex shrink-0 items-center">
                       {" "}
-                      <span className="sr-only">Select {item.code}</span>{" "}
+                      <span className="sr-only">{copy("Select", "Выбрать", "בחר")} {item.code}</span>{" "}
                       <Checkbox
                         checked={selectedIds.has(item.id)}
                         disabled={!canManageCatalog}
@@ -653,12 +658,14 @@ export function CatalogCrudPage({
                     </div>{" "}
                     <span className={catalogStatusClass(item.is_active)}>
                       {" "}
-                      {item.is_active ? "Active" : "Inactive"}{" "}
+                      {item.is_active
+                        ? copy("Active", "Активен", "פעיל")
+                        : copy("Inactive", "Неактивен", "לא פעיל")}{" "}
                     </span>{" "}
                   </div>{" "}
                   <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-[12px] leading-5 text-text-secondary">
                     {" "}
-                    Updated: {formatDateTime(item.updated_at)}{" "}
+                    {copy("Updated:", "Обновлено:", "עודכן:")} {formatDateTime(item.updated_at)}{" "}
                   </div>{" "}
                   <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
                     {" "}
@@ -667,7 +674,7 @@ export function CatalogCrudPage({
                       className="dmx-secondary-action h-8 px-2.5"
                       onClick={() => onOpenEdit(item)}
                       disabled={!canManageCatalog}
-                      aria-label={`Edit ${item.code} card`}
+                      aria-label={copy(`Edit ${item.code} card`, `Редактировать ${item.code}`, `עריכת ${item.code}`)}
                     >
                       {" "}
                       <Pencil className="h-3.5 w-3.5" />{" "}
@@ -677,7 +684,7 @@ export function CatalogCrudPage({
                       onClick={() => deleteMutation.mutate(item.id)}
                       className="inline-flex h-8 items-center justify-center gap-2 rounded-full border border-status-problem-border bg-status-problem-bg px-2.5 text-[12px] font-medium leading-none text-status-problem-fg transition-colors duration-150 hover:bg-status-problem-bg disabled:cursor-not-allowed disabled:opacity-60"
                       disabled={!canManageCatalog || deleteMutation.isPending}
-                      aria-label={`Delete ${item.code} card`}
+                      aria-label={copy(`Delete ${item.code} card`, `Удалить ${item.code}`, `מחיקת ${item.code}`)}
                     >
                       {" "}
                       <Trash2 className="h-3.5 w-3.5" />{" "}
@@ -688,48 +695,39 @@ export function CatalogCrudPage({
             )}{" "}
           </div>{" "}
           <div className="hidden md:block">
-            {" "}
             <Table>
-              {" "}
               <TableHeader className="data-table-head">
-                {" "}
                 <TableRow className="border-b border-border hover:bg-transparent">
-                  {" "}
                   <TableHead className="w-[48px]">
-                    {" "}
-                    <span className="sr-only">Select</span>{" "}
-                  </TableHead>{" "}
-                  <TableHead>Code</TableHead> <TableHead>Name</TableHead>{" "}
-                  <TableHead>Status</TableHead>{" "}
-                  <TableHead>Updated at</TableHead>{" "}
+                    <span className="sr-only">{copy("Select", "Выбрать", "בחר")}</span>
+                  </TableHead>
+                  <TableHead>{copy("Code", "Код", "קוד")}</TableHead>
+                  <TableHead>{copy("Name", "Название", "שם")}</TableHead>
+                  <TableHead>{copy("Status", "Статус", "סטטוס")}</TableHead>
+                  <TableHead>{copy("Updated at", "Обновлено", "עודכן")}</TableHead>
                   <TableHead className="w-[112px] text-end">
-                    Actions
-                  </TableHead>{" "}
-                </TableRow>{" "}
-              </TableHeader>{" "}
+                    {copy("Actions", "Действия", "פעולות")}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>
-                {" "}
                 {listQuery.isLoading ? (
                   <TableRow className="data-table-row">
-                    {" "}
                     <TableCell
                       colSpan={6}
                       className="py-8 text-sm text-text-secondary"
                     >
-                      {" "}
-                      Loading {title.toLowerCase()}...{" "}
-                    </TableCell>{" "}
+                      {copy("Loading", "Загрузка", "טוען")} {title.toLowerCase()}...
+                    </TableCell>
                   </TableRow>
                 ) : items.length === 0 ? (
                   <TableRow className="data-table-row">
-                    {" "}
                     <TableCell
                       colSpan={6}
                       className="py-8 text-sm text-text-secondary"
                     >
-                      {" "}
-                      No rows found.{" "}
-                    </TableCell>{" "}
+                      {copy("No rows found.", "Строки не найдены.", "לא נמצאו שורות.")}
+                    </TableCell>
                   </TableRow>
                 ) : (
                   items.map((item) => (
@@ -740,61 +738,55 @@ export function CatalogCrudPage({
                         selectedIds.has(item.id) && "bg-surface-sunken",
                       )}
                     >
-                      {" "}
                       <TableCell>
-                        {" "}
                         <Checkbox
                           checked={selectedIds.has(item.id)}
                           disabled={!canManageCatalog}
                           onCheckedChange={() => toggleRowSelection(item.id)}
-                        />{" "}
-                      </TableCell>{" "}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium text-text">
                         {item.code}
-                      </TableCell>{" "}
-                      <TableCell className="text-text">{item.name}</TableCell>{" "}
+                      </TableCell>
+                      <TableCell className="text-text">{item.name}</TableCell>
                       <TableCell>
-                        {" "}
                         <span className={catalogStatusClass(item.is_active)}>
-                          {" "}
-                          {item.is_active ? "Active" : "Inactive"}{" "}
-                        </span>{" "}
-                      </TableCell>{" "}
+                          {item.is_active
+                            ? copy("Active", "Активен", "פעיל")
+                            : copy("Inactive", "Неактивен", "לא פעיל")}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-text-secondary">
                         {formatDateTime(item.updated_at)}
-                      </TableCell>{" "}
+                      </TableCell>
                       <TableCell>
-                        {" "}
                         <div className="flex justify-end gap-1.5">
-                          {" "}
                           <button
                             type="button"
                             className="dmx-secondary-action h-8 px-2.5"
                             onClick={() => onOpenEdit(item)}
                             disabled={!canManageCatalog}
-                            aria-label={`Edit ${item.code}`}
+                            aria-label={copy(`Edit ${item.code}`, `Редактировать ${item.code}`, `עריכת ${item.code}`)}
                           >
-                            {" "}
-                            <Pencil className="h-3.5 w-3.5" />{" "}
-                          </button>{" "}
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => deleteMutation.mutate(item.id)}
                             className="inline-flex h-8 items-center justify-center gap-2 rounded-full border border-status-problem-border bg-status-problem-bg px-2.5 text-[12px] font-medium leading-none text-status-problem-fg transition-colors duration-150 hover:bg-status-problem-bg disabled:cursor-not-allowed disabled:opacity-60"
                             disabled={!canManageCatalog || deleteMutation.isPending}
-                            aria-label={`Delete ${item.code}`}
+                            aria-label={copy(`Delete ${item.code}`, `Удалить ${item.code}`, `מחיקת ${item.code}`)}
                           >
-                            {" "}
-                            <Trash2 className="h-3.5 w-3.5" />{" "}
-                          </button>{" "}
-                        </div>{" "}
-                      </TableCell>{" "}
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
-                )}{" "}
-              </TableBody>{" "}
-            </Table>{" "}
-          </div>{" "}
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </section>{" "}
       </div>{" "}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -803,18 +795,21 @@ export function CatalogCrudPage({
           {" "}
           <DialogHeader>
             {" "}
-            <DialogTitle>Create {entityLabel}</DialogTitle>{" "}
+            <DialogTitle>{copy("Create", "Создать", "צור")} {entityLabel}</DialogTitle>{" "}
             <DialogDescription>
               {" "}
-              Add a new catalog row with disciplined naming and a stable status
-              baseline.{" "}
+              {copy(
+                "Add a new catalog row with disciplined naming and a stable status baseline.",
+                "Добавьте новую позицию справочника и задайте её начальный статус.",
+                "הוסף רשומה חדשה לספרייה והגדר את המצב ההתחלתי שלה.",
+              )}{" "}
             </DialogDescription>{" "}
           </DialogHeader>{" "}
           <div className="grid gap-4 sm:grid-cols-2">
             {" "}
             <div className="field-stack">
               {" "}
-              <Label htmlFor={`${queryKey}-create-code`}>Code</Label>{" "}
+              <Label htmlFor={`${queryKey}-create-code`}>{copy("Code", "Код", "קוד")}</Label>{" "}
               <Input
                 id={`${queryKey}-create-code`}
                 value={form.code}
@@ -826,7 +821,7 @@ export function CatalogCrudPage({
             </div>{" "}
             <div className="field-stack">
               {" "}
-              <Label htmlFor={`${queryKey}-create-name`}>Name</Label>{" "}
+              <Label htmlFor={`${queryKey}-create-name`}>{copy("Name", "Название", "שם")}</Label>{" "}
               <Input
                 id={`${queryKey}-create-name`}
                 value={form.name}
@@ -845,7 +840,7 @@ export function CatalogCrudPage({
                 setForm((prev) => ({ ...prev, is_active: value === true }))
               }
             />{" "}
-            <span>Active</span>{" "}
+            <span>{copy("Active", "Активен", "פעיל")}</span>{" "}
           </label>{" "}
           <DialogFooter>
             {" "}
@@ -855,7 +850,7 @@ export function CatalogCrudPage({
               onClick={() => setIsCreateOpen(false)}
             >
               {" "}
-              Cancel{" "}
+              {copy("Cancel", "Отмена", "ביטול")}{" "}
             </button>{" "}
             <button
               type="button"
@@ -864,7 +859,7 @@ export function CatalogCrudPage({
               disabled={!canManageCatalog || !canSubmitForm || createMutation.isPending}
             >
               {" "}
-              Save{" "}
+              {copy("Save", "Сохранить", "שמור")}{" "}
             </button>{" "}
           </DialogFooter>{" "}
         </DialogContent>{" "}
@@ -883,18 +878,21 @@ export function CatalogCrudPage({
           {" "}
           <DialogHeader>
             {" "}
-            <DialogTitle>Edit {entityLabel}</DialogTitle>{" "}
+            <DialogTitle>{copy("Edit", "Править", "עריכה")} {entityLabel}</DialogTitle>{" "}
             <DialogDescription>
               {" "}
-              Adjust naming, code, and activation state without disturbing
-              catalog structure.{" "}
+              {copy(
+                "Adjust naming, code, and activation state without disturbing catalog structure.",
+                "Измените название, код или активность позиции без удаления истории.",
+                "עדכן שם, קוד או מצב פעילות בלי למחוק את ההיסטוריה.",
+              )}{" "}
             </DialogDescription>{" "}
           </DialogHeader>{" "}
           <div className="grid gap-4 sm:grid-cols-2">
             {" "}
             <div className="field-stack">
               {" "}
-              <Label htmlFor={`${queryKey}-edit-code`}>Code</Label>{" "}
+              <Label htmlFor={`${queryKey}-edit-code`}>{copy("Code", "Код", "קוד")}</Label>{" "}
               <Input
                 id={`${queryKey}-edit-code`}
                 value={form.code}
@@ -906,7 +904,7 @@ export function CatalogCrudPage({
             </div>{" "}
             <div className="field-stack">
               {" "}
-              <Label htmlFor={`${queryKey}-edit-name`}>Name</Label>{" "}
+              <Label htmlFor={`${queryKey}-edit-name`}>{copy("Name", "Название", "שם")}</Label>{" "}
               <Input
                 id={`${queryKey}-edit-name`}
                 value={form.name}
@@ -925,7 +923,7 @@ export function CatalogCrudPage({
                 setForm((prev) => ({ ...prev, is_active: value === true }))
               }
             />{" "}
-            <span>Active</span>{" "}
+            <span>{copy("Active", "Активен", "פעיל")}</span>{" "}
           </label>{" "}
           <DialogFooter>
             {" "}
@@ -938,7 +936,7 @@ export function CatalogCrudPage({
               }}
             >
               {" "}
-              Cancel{" "}
+              {copy("Cancel", "Отмена", "ביטול")}{" "}
             </button>{" "}
             <button
               type="button"
@@ -947,7 +945,7 @@ export function CatalogCrudPage({
               disabled={!canManageCatalog || !canSubmitForm || updateMutation.isPending}
             >
               {" "}
-              Save{" "}
+              {copy("Save", "Сохранить", "שמור")}{" "}
             </button>{" "}
           </DialogFooter>{" "}
         </DialogContent>{" "}

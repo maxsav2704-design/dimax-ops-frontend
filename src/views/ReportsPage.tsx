@@ -40,7 +40,11 @@ import {
   formatLocalePercent as formatLocalizedPercent,
 } from "@/lib/formatting";
 import { useI18n, type Locale } from "@/lib/i18n";
+import { createRequestLimiter } from "@/lib/request-limiter";
 import { cn } from "@/lib/utils";
+
+const LIVE_REPORT_REFRESH_MS = 30_000;
+const STANDARD_REPORT_REFRESH_MS = 5 * 60_000;
 
 const reportsOverrides: Record<Locale, Record<string, string>> = {
   en: {
@@ -178,11 +182,11 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.loadingSlaMetrics": "Загружаем SLA-метрики...",
     "reports.loadingIssuesAnalytics": "Загружаем аналитику проблем...",
     "reports.loadingMarginLeakage": "Загружаем утечку маржи...",
-    "reports.projectPlanVsFactTitle": "План vs факт по проекту",
+    "reports.projectPlanVsFactTitle": "План и факт по проекту",
     "reports.projectPlanVsFactSubtitle":
-      "Сравнение плановых коммерческих целей с фактической доставкой, payroll и маржой.",
+      "Сравнение плановых коммерческих целей с фактическими работами, начислениями и маржой.",
     "reports.actualMissing": "Фактически отсутствует",
-    "reports.payroll": "Payroll",
+    "reports.payroll": "Начисления",
     "reports.profit": "Прибыль",
     "reports.projectRiskTitle": "Разбор рисков проекта",
     "reports.projectRiskSubtitle":
@@ -192,9 +196,9 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.failedProjectRisk": "Не удалось загрузить разбор рисков проекта",
     "reports.importModes": "Режимы импорта",
     "reports.analyzeRetry": "Анализ {analyze} | Повтор {retry}",
-    "reports.outboxRisk": "Риск outbox",
+    "reports.outboxRisk": "Риск очереди отправки",
     "reports.limitAlerts": "Алерты лимитов",
-    "reports.warnDanger24h": "24ч warn {warn} | danger {danger}",
+    "reports.warnDanger24h": "24 ч: предупреждений {warn} | критических {danger}",
     "reports.topFailingProjectsTitle":
       "Проблемные проекты (ошибки импорта за 7д)",
     "reports.failureRuns": "{count} сбоев",
@@ -228,7 +232,7 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.worstInstaller": "Худший монтажник {amount}",
     "reports.riskyProjectsOrders": "Рискованные проекты / заказы",
     "reports.worstProject": "Худший проект {amount}",
-    "reports.revenuePayrollProfit": "Выручка / payroll / прибыль",
+    "reports.revenuePayrollProfit": "Выручка / начисления / прибыль",
     "reports.projectsOrders": "Проекты / заказы",
     "reports.installedDoors": "Установлено дверей: {count}",
     "reports.openIssuesMissingRates":
@@ -236,8 +240,8 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.lastInstall": "Последняя установка:",
     "reports.addonsImpact": "Влияние допов",
     "reports.addonsProfitMissingPlans": "Прибыль {profit} | Нет планов {count}",
-    "reports.openOperationsCenter": "Открыть Operations Center",
-    "reports.openActionableOps": "Открыть actionable Ops",
+    "reports.openOperationsCenter": "Открыть операционный центр",
+    "reports.openActionableOps": "Открыть задачи, требующие действий",
     "reports.loadingCommandCenter": "Загружаем командный центр...",
     "reports.issuesAnalyticsTitle": "Аналитика проблем",
     "reports.issuesAnalyticsSubtitle": "MTTR, просрочки и динамика бэклога",
@@ -246,16 +250,16 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
       "Риск по открытым проблемам, зависшим причинам и допам",
     "reports.loadingProjectsForPlanFact": "Загружаем проекты...",
     "reports.preparingPlanFactFilters":
-      "Готовим фильтры проекта для блока план vs факт.",
-    "reports.loadingProjectPlanFact": "Загружаем план vs факт по проекту...",
+      "Готовим фильтры проекта для сравнения плана и факта.",
+    "reports.loadingProjectPlanFact": "Загружаем план и факт по проекту...",
     "reports.failedProjectPlanFact":
-      "Не удалось загрузить план vs факт по проекту",
+      "Не удалось загрузить план и факт по проекту",
     "reports.failedIssuesAnalytics": "Не удалось загрузить аналитику проблем",
     "reports.openTotal": "Открыто / всего",
     "reports.overdueRate": "Доля просрочки",
     "reports.overdueOpen": "Просрочено открытых: {count}",
     "reports.blockedOpen": "Блокировано",
-    "reports.backlogByWorkflow": "Бэклог по workflow",
+    "reports.backlogByWorkflow": "Незакрытые проблемы по этапам",
     "reports.backlogByPriority": "Бэклог по приоритету",
     "reports.trendLastDays": "Тренд за {days} дней",
     "reports.failedMarginLeakage": "Не удалось загрузить утечку маржи",
@@ -309,9 +313,9 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.loadingMarginLeakage": "טוען דליפת מרווח...",
     "reports.projectPlanVsFactTitle": "תכנית מול ביצוע לפרויקט",
     "reports.projectPlanVsFactSubtitle":
-      "השוואה בין היעדים המסחריים המתוכננים לבין הביצוע בפועל במשלוחים, payroll ומרווח.",
+      "השוואה בין היעדים המסחריים המתוכננים לבין הביצוע בפועל, השכר והמרווח.",
     "reports.actualMissing": "חסר בפועל",
-    "reports.payroll": "Payroll",
+    "reports.payroll": "שכר",
     "reports.profit": "רווח",
     "reports.projectRiskTitle": "פירוט סיכוני פרויקט",
     "reports.projectRiskSubtitle":
@@ -321,7 +325,7 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.failedProjectRisk": "טעינת פירוט סיכוני הפרויקט נכשלה",
     "reports.importModes": "מצבי ייבוא",
     "reports.analyzeRetry": "ניתוח {analyze} | ניסיון חוזר {retry}",
-    "reports.outboxRisk": "סיכון Outbox",
+    "reports.outboxRisk": "סיכון בתור השליחה",
     "reports.limitAlerts": "התראות מגבלות",
     "reports.warnDanger24h": "24ש׳ אזהרה {warn} | סכנה {danger}",
     "reports.topFailingProjectsTitle":
@@ -353,7 +357,7 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.worstInstaller": "המתקין הגרוע ביותר {amount}",
     "reports.riskyProjectsOrders": "פרויקטים / הזמנות בסיכון",
     "reports.worstProject": "הפרויקט הגרוע ביותר {amount}",
-    "reports.revenuePayrollProfit": "הכנסה / payroll / רווח",
+    "reports.revenuePayrollProfit": "הכנסה / שכר / רווח",
     "reports.projectsOrders": "פרויקטים / הזמנות",
     "reports.installedDoors": "דלתות מותקנות: {count}",
     "reports.openIssuesMissingRates": "תקלות פתוחות / תעריפים חסרים",
@@ -361,24 +365,24 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.addonsImpact": "השפעת תוספות",
     "reports.addonsProfitMissingPlans": "רווח {profit} | תוכניות חסרות {count}",
     "reports.openOperationsCenter": "פתח את מרכז התפעול",
-    "reports.openActionableOps": "פתח actionable Ops",
+    "reports.openActionableOps": "פתח משימות הדורשות פעולה",
     "reports.loadingCommandCenter": "טוען את מרכז הפיקוד...",
     "reports.issuesAnalyticsTitle": "אנליטיקת תקלות",
-    "reports.issuesAnalyticsSubtitle": "MTTR, לחץ איחורים ודינמיקת backlog",
+    "reports.issuesAnalyticsSubtitle": "MTTR, עומס איחורים ודינמיקת משימות פתוחות",
     "reports.marginLeakageTitle": "דליפת מרווח",
     "reports.marginLeakageSubtitle":
-      "חשיפת תקלות פתוחות, סיבות תקועות והתרוממות add-on",
+      "חשיפת תקלות פתוחות, סיבות תקועות ותרומת עבודות נוספות",
     "reports.loadingProjectsForPlanFact": "טוען פרויקטים...",
-    "reports.preparingPlanFactFilters": "מכין מסנני פרויקט עבור plan vs fact.",
-    "reports.loadingProjectPlanFact": "טוען plan vs fact לפרויקט...",
-    "reports.failedProjectPlanFact": "טעינת plan vs fact לפרויקט נכשלה",
+    "reports.preparingPlanFactFilters": "מכין מסננים להשוואת תכנון וביצוע.",
+    "reports.loadingProjectPlanFact": "טוען תכנון וביצוע לפרויקט...",
+    "reports.failedProjectPlanFact": "טעינת התכנון והביצוע של הפרויקט נכשלה",
     "reports.failedIssuesAnalytics": "טעינת אנליטיקת התקלות נכשלה",
     "reports.openTotal": 'פתוחות / סה"כ',
     "reports.overdueRate": "שיעור איחור",
     "reports.overdueOpen": "{count} פתוחות באיחור",
     "reports.blockedOpen": "פתוחות חסומות",
-    "reports.backlogByWorkflow": "Backlog לפי workflow",
-    "reports.backlogByPriority": "Backlog לפי עדיפות",
+    "reports.backlogByWorkflow": "משימות פתוחות לפי שלב",
+    "reports.backlogByPriority": "משימות פתוחות לפי עדיפות",
     "reports.trendLastDays": "מגמה ב-{days} הימים האחרונים",
     "reports.failedMarginLeakage": "טעינת דליפת המרווח נכשלה",
     "reports.openIssuesAtRisk": "תקלות פתוחות בסיכון",
@@ -387,17 +391,17 @@ const reportsOverrides: Record<Locale, Record<string, string>> = {
     "reports.blockedProfit": "רווח חסום {amount}",
     "reports.delayedDoors": "דלתות מושהות",
     "reports.delayedProfit": "רווח מושהה {amount}",
-    "reports.addonUplift": "תרומת Add-on",
+    "reports.addonUplift": "תרומת עבודות נוספות",
     "reports.summary": "סיכום",
     "reports.openIssuesExposure": "חשיפת תקלות פתוחות",
     "reports.delayedNotInstalled": "מושהות ולא מותקנות",
-    "reports.addonRealized": "Add-on ממומש",
+    "reports.addonRealized": "עבודות נוספות שבוצעו",
     "reports.delayedByReason": "עיכוב לפי סיבה / פגם",
     "reports.noDelayedReasons": "אין סיבות עיכוב.",
-    "reports.addonProfitImpact": "השפעת Add-on על הרווח",
-    "reports.addon": "Add-on",
+    "reports.addonProfitImpact": "השפעת עבודות נוספות על הרווח",
+    "reports.addon": "עבודה נוספת",
     "reports.missingPlans": "תוכניות חסרות",
-    "reports.noAddonImpactRows": "אין שורות השפעה של Add-on.",
+    "reports.noAddonImpactRows": "אין נתוני השפעה של עבודות נוספות.",
     "reports.installerProfitabilityMatrix": "מטריצת רווחיות מתקינים",
     "reports.installerProfitabilitySubtitle":
       "דירוג לפי תפוקה כספית, איכות מרווח ולחץ תקלות",
@@ -1432,7 +1436,11 @@ function ReportsInsightChart({
   variant: ReportsInsight["variant"];
 }) {
   const stroke =
-    tone === "red" ? "#c0392b" : tone === "orange" ? "#a65300" : "#2d8f4e";
+    tone === "red"
+      ? "var(--dmx-status-problem-fg)"
+      : tone === "orange"
+        ? "var(--dmx-status-warning-fg)"
+        : "var(--dmx-status-ok-fg)";
 
   if (variant === "bars") {
     return (
@@ -1442,7 +1450,7 @@ function ReportsInsightChart({
         viewBox="0 0 320 100"
         preserveAspectRatio="xMidYMid meet"
       >
-        <line x1="18" y1="78" x2="306" y2="78" stroke="#e5e5e7" />
+        <line x1="18" y1="78" x2="306" y2="78" stroke="var(--dmx-border)" />
         {[64, 38, 28, 18, 12, 10, 8, 6].map((height, index) => (
           <rect
             key={index}
@@ -1451,7 +1459,7 @@ function ReportsInsightChart({
             width="24"
             height={height}
             rx="3"
-            fill={index === 0 ? "#ff8a3d" : "#ffc83a"}
+            fill={index === 0 ? "var(--dmx-kpi-orange)" : "var(--dmx-kpi-yellow)"}
             opacity={index === 0 ? 1 : 0.7}
           />
         ))}
@@ -1460,7 +1468,7 @@ function ReportsInsightChart({
           y1="35"
           x2="306"
           y2="35"
-          stroke="#cfcfd2"
+          stroke="var(--dmx-border-strong)"
           strokeDasharray="3 3"
         />
       </svg>
@@ -1479,9 +1487,9 @@ function ReportsInsightChart({
       viewBox="0 0 320 100"
       preserveAspectRatio="xMidYMid meet"
     >
-      <line x1="40" y1="20" x2="308" y2="20" stroke="#efeff1" />
-      <line x1="40" y1="45" x2="308" y2="45" stroke="#efeff1" />
-      <line x1="40" y1="70" x2="308" y2="70" stroke="#efeff1" />
+      <line x1="40" y1="20" x2="308" y2="20" stroke="var(--dmx-border-subtle)" />
+      <line x1="40" y1="45" x2="308" y2="45" stroke="var(--dmx-border-subtle)" />
+      <line x1="40" y1="70" x2="308" y2="70" stroke="var(--dmx-border-subtle)" />
       <polyline
         points={points}
         fill="none"
@@ -1490,7 +1498,7 @@ function ReportsInsightChart({
         strokeLinejoin="round"
         strokeWidth="2.2"
       />
-      <circle cx="304" cy={variant === "line-up" ? 22 : 72} r="4" fill="#fff" stroke={stroke} strokeWidth="2" />
+      <circle cx="304" cy={variant === "line-up" ? 22 : 72} r="4" fill="var(--dmx-bg-surface)" stroke={stroke} strokeWidth="2" />
     </svg>
   );
 }
@@ -1502,7 +1510,7 @@ function ReportsInsightCard({ insight }: { insight: ReportsInsight }) {
     <button
       type="button"
       onClick={insight.onClick}
-      className="overflow-hidden rounded-[12px] border border-border bg-surface text-start transition hover:border-border-strong hover:shadow-sm"
+      className="overflow-hidden rounded-lg border border-border bg-surface text-start transition-colors hover:border-border-strong"
     >
       <div className={cn("h-[3px]", tone.accent)} />
       <div className="flex items-start justify-between gap-3 px-4 pb-2 pt-4">
@@ -1538,9 +1546,11 @@ function ReportsInsightCard({ insight }: { insight: ReportsInsight }) {
   );
 }
 
-function ReportsLibraryCard({ group }: { group: ReportsLibraryGroup }) {
+function ReportsLibraryCard({ group, locale }: { group: ReportsLibraryGroup; locale: Locale }) {
   const tone = reportsDashboardToneClasses(group.tone);
   const Icon = group.icon;
+  const copy = (en: string, ru: string, he: string) =>
+    locale === "ru" ? ru : locale === "he" ? he : en;
 
   return (
     <div className="overflow-hidden rounded-[12px] border border-border bg-surface">
@@ -1558,7 +1568,7 @@ function ReportsLibraryCard({ group }: { group: ReportsLibraryGroup }) {
             {group.title}
           </div>
           <div className="truncate text-[11px] text-text-secondary">
-            {group.count} reports · {group.subtitle}
+            {group.count} {copy("reports ·", "отчётов ·", "דוחות ·")} {group.subtitle}
           </div>
         </div>
       </div>
@@ -1661,7 +1671,7 @@ async function downloadCsvExport(
   });
   const blob = await response.blob();
   const disposition = response.headers.get("content-disposition") || "";
-  const match = disposition.match(/filename=\"?([^"]+)\"?/i);
+  const match = disposition.match(/filename="?([^"]+)"?/i);
   const filename = match?.[1] || fallbackFilename;
   downloadBlob(blob, filename);
 }
@@ -1807,6 +1817,12 @@ function SectionMessage({
 }
 
 export default function ReportsPage() {
+  const [reportRequestLimiter] = useState(() => createRequestLimiter(4));
+  const reportApiFetch = <T,>(
+    path: string,
+    signal: AbortSignal,
+  ): Promise<T> =>
+    reportRequestLimiter.run(() => apiFetch<T>(path, { signal }), signal);
   const { locale, t } = useI18n();
   const readError = (error: unknown, fallback: string) =>
     readableApiError(error, locale, fallback);
@@ -1841,7 +1857,7 @@ export default function ReportsPage() {
     }
   };
   const reportsFocusCopy = getReportsFocusCopy(t);
-  const reportsOpsPresetCopy = getReportsOpsPresetCopy(t);
+  const reportsOpsPresetCopy = useMemo(() => getReportsOpsPresetCopy(t), [t]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -1859,7 +1875,7 @@ export default function ReportsPage() {
   );
   const financialReportsRestrictedDetail = copy(
     "Your current admin scope can work with operations, but payroll, revenue, profit and price details require finance access.",
-    "Текущий админ-доступ подходит для операций, но payroll, выручка, прибыль и цены требуют финансового доступа.",
+    "Ваша текущая область администратора может работать с операциями, но данные о заработной плате, доходах, прибыли и ценах требуют доступа к финансам.",
     "הרשאת הניהול הנוכחית מתאימה לתפעול, אך שכר, הכנסה, רווח ופרטי מחירים דורשים גישת כספים.",
   );
   const ratesScopeHint = canExportFinancialReports
@@ -1947,79 +1963,94 @@ export default function ReportsPage() {
 
   const alertsQuery = useQuery({
     queryKey: ["limit-alerts", offset],
-    queryFn: () =>
-      apiFetch<LimitAlertsResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<LimitAlertsResponse>(
         `/api/v1/admin/reports/limit-alerts?limit=${PAGE_SIZE}&offset=${offset}`,
+        signal,
       ),
-    refetchInterval: 30_000,
+    refetchInterval: LIVE_REPORT_REFRESH_MS,
   });
 
   const deliveryQuery = useQuery({
     queryKey: ["reports-delivery"],
-    queryFn: () =>
-      apiFetch<DeliveryStatsResponse>("/api/v1/admin/reports/delivery"),
-    refetchInterval: 30_000,
+    queryFn: ({ signal }) =>
+      reportApiFetch<DeliveryStatsResponse>(
+        "/api/v1/admin/reports/delivery",
+        signal,
+      ),
+    refetchInterval: LIVE_REPORT_REFRESH_MS,
   });
 
   const outboxSummaryQuery = useQuery({
     queryKey: ["outbox-summary"],
-    queryFn: () =>
-      apiFetch<OutboxSummaryResponse>("/api/v1/admin/outbox/summary"),
-    refetchInterval: 30_000,
+    queryFn: ({ signal }) =>
+      reportApiFetch<OutboxSummaryResponse>(
+        "/api/v1/admin/outbox/summary",
+        signal,
+      ),
+    refetchInterval: LIVE_REPORT_REFRESH_MS,
   });
 
   const operationsCenterQuery = useQuery({
     queryKey: ["reports-operations-center"],
-    queryFn: () =>
-      apiFetch<OperationsCenterResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<OperationsCenterResponse>(
         "/api/v1/admin/reports/operations-center",
+        signal,
       ),
-    refetchInterval: 30_000,
+    refetchInterval: LIVE_REPORT_REFRESH_MS,
   });
 
   const operationsSlaQuery = useQuery({
     queryKey: ["reports-operations-sla"],
-    queryFn: () =>
-      apiFetch<OperationsSlaResponse>("/api/v1/admin/reports/operations-sla"),
-    refetchInterval: 30_000,
+    queryFn: ({ signal }) =>
+      reportApiFetch<OperationsSlaResponse>(
+        "/api/v1/admin/reports/operations-sla",
+        signal,
+      ),
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const operationsSlaHistoryQuery = useQuery({
     queryKey: ["reports-operations-sla-history", slaHistoryDays],
-    queryFn: () =>
-      apiFetch<OperationsSlaHistoryResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<OperationsSlaHistoryResponse>(
         `/api/v1/admin/reports/operations-sla/history?days=${slaHistoryDays}`,
+        signal,
       ),
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const issuesAnalyticsQuery = useQuery({
     queryKey: ["reports-issues-analytics", ISSUES_ANALYTICS_DAYS],
-    queryFn: () =>
-      apiFetch<IssuesAnalyticsResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<IssuesAnalyticsResponse>(
         `/api/v1/admin/reports/issues-analytics?days=${ISSUES_ANALYTICS_DAYS}`,
+        signal,
       ),
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const issuesAddonsImpactQuery = useQuery({
     queryKey: ["reports-issues-addons-impact"],
-    queryFn: () =>
-      apiFetch<IssuesAddonsImpactResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<IssuesAddonsImpactResponse>(
         "/api/v1/admin/reports/issues-addons-impact",
+        signal,
       ),
     enabled: canExportFinancialReports,
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const riskConcentrationQuery = useQuery({
     queryKey: ["reports-risk-concentration"],
-    queryFn: () =>
-      apiFetch<RiskConcentrationResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<RiskConcentrationResponse>(
         `/api/v1/admin/reports/risk-concentration?limit=${RISK_CONCENTRATION_LIMIT}`,
+        signal,
       ),
     enabled: canExportFinancialReports,
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const installerProfitabilityMatrixQuery = useQuery({
@@ -2028,15 +2059,16 @@ export default function ReportsPage() {
       installerMatrixSortBy,
       installerMatrixSortDir,
     ],
-    queryFn: () =>
-      apiFetch<InstallerProfitabilityMatrixResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<InstallerProfitabilityMatrixResponse>(
         `/api/v1/admin/reports/installers-profitability-matrix` +
           `?limit=${INSTALLER_MATRIX_LIMIT}` +
           `&sort_by=${installerMatrixSortBy}` +
           `&sort_dir=${installerMatrixSortDir}`,
+        signal,
       ),
     enabled: canExportFinancialReports,
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const installerProjectProfitabilityQuery = useQuery({
@@ -2045,88 +2077,100 @@ export default function ReportsPage() {
       installerProjectSortBy,
       installerProjectSortDir,
     ],
-    queryFn: () =>
-      apiFetch<InstallerProjectProfitabilityResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<InstallerProjectProfitabilityResponse>(
         `/api/v1/admin/reports/installer-project-profitability` +
           `?limit=${INSTALLER_PROJECT_LIMIT}` +
           `&sort_by=${installerProjectSortBy}` +
           `&sort_dir=${installerProjectSortDir}`,
+        signal,
       ),
     enabled: canExportFinancialReports,
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const projectsQuery = useQuery({
     queryKey: ["reports-project-options"],
-    queryFn: () =>
-      apiFetch<{ items: ProjectOption[] }>("/api/v1/admin/projects"),
+    queryFn: ({ signal }) =>
+      reportApiFetch<{ items: ProjectOption[] }>(
+        "/api/v1/admin/projects",
+        signal,
+      ),
     refetchInterval: 120_000,
   });
 
   const projectPlanFactQuery = useQuery({
     queryKey: ["reports-project-plan-fact", projectPlanFactProjectId],
-    queryFn: () =>
-      apiFetch<ProjectPlanFactResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<ProjectPlanFactResponse>(
         `/api/v1/admin/reports/project-plan-fact/${projectPlanFactProjectId}`,
+        signal,
       ),
     enabled: canExportFinancialReports && Boolean(projectPlanFactProjectId),
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const projectAddonPlanQuery = useQuery({
     queryKey: ["reports-project-addon-plan", projectPlanFactProjectId],
-    queryFn: async () => {
-      const response = await apiFetch<
+    queryFn: async ({ signal }) => {
+      const response = await reportApiFetch<
         ProjectAddonPlanItem[] | { items?: ProjectAddonPlanItem[] }
-      >(`/api/v1/admin/projects/${projectPlanFactProjectId}/addons/plan`);
-      return Array.isArray(response) ? response : response.items || [];
-    },
-    enabled: canExportFinancialReports && Boolean(projectPlanFactProjectId),
-    refetchInterval: 30_000,
-  });
-
-  const projectUrgencySurchargesQuery = useQuery({
-    queryKey: ["reports-project-urgency-surcharges", projectPlanFactProjectId],
-    queryFn: async () => {
-      const response = await apiFetch<
-        UrgencySurchargeItem[] | { items?: UrgencySurchargeItem[] }
       >(
-        `/api/v1/admin/projects/${projectPlanFactProjectId}/urgency-surcharges`,
+        `/api/v1/admin/projects/${projectPlanFactProjectId}/addons/plan`,
+        signal,
       );
       return Array.isArray(response) ? response : response.items || [];
     },
     enabled: canExportFinancialReports && Boolean(projectPlanFactProjectId),
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
+  });
+
+  const projectUrgencySurchargesQuery = useQuery({
+    queryKey: ["reports-project-urgency-surcharges", projectPlanFactProjectId],
+    queryFn: async ({ signal }) => {
+      const response = await reportApiFetch<
+        UrgencySurchargeItem[] | { items?: UrgencySurchargeItem[] }
+      >(
+        `/api/v1/admin/projects/${projectPlanFactProjectId}/urgency-surcharges`,
+        signal,
+      );
+      return Array.isArray(response) ? response : response.items || [];
+    },
+    enabled: canExportFinancialReports && Boolean(projectPlanFactProjectId),
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const projectRiskDrilldownQuery = useQuery({
     queryKey: ["reports-project-risk-drilldown", projectRiskProjectId],
-    queryFn: () =>
-      apiFetch<ProjectRiskDrilldownResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<ProjectRiskDrilldownResponse>(
         `/api/v1/admin/reports/project-risk-drilldown/${projectRiskProjectId}?limit=5`,
+        signal,
       ),
     enabled: canExportFinancialReports && Boolean(projectRiskProjectId),
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const topProjectsMarginQuery = useQuery({
     queryKey: ["reports-projects-margin", "top"],
-    queryFn: () =>
-      apiFetch<ProjectsMarginResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<ProjectsMarginResponse>(
         `/api/v1/admin/reports/projects-margin?limit=${PROJECT_MARGIN_LIMIT}&sort_by=profit_total&sort_dir=desc`,
+        signal,
       ),
     enabled: canExportFinancialReports,
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const riskProjectsMarginQuery = useQuery({
     queryKey: ["reports-projects-margin", "risk"],
-    queryFn: () =>
-      apiFetch<ProjectsMarginResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<ProjectsMarginResponse>(
         `/api/v1/admin/reports/projects-margin?limit=${PROJECT_MARGIN_LIMIT}&sort_by=profit_total&sort_dir=asc`,
+        signal,
       ),
     enabled: canExportFinancialReports,
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const installersKpiQuery = useQuery({
@@ -2136,22 +2180,24 @@ export default function ReportsPage() {
       installersSortBy,
       installersSortDir,
     ],
-    queryFn: () =>
-      apiFetch<InstallersKpiResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<InstallersKpiResponse>(
         `/api/v1/admin/reports/installers-kpi?${installersParams.toString()}`,
+        signal,
       ),
     enabled: canExportFinancialReports,
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const installerDetailsQuery = useQuery({
     queryKey: ["reports-installer-kpi-details", installerDetailsId],
-    queryFn: () =>
-      apiFetch<InstallerKpiDetailsResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<InstallerKpiDetailsResponse>(
         `/api/v1/admin/reports/installers-kpi/${installerDetailsId}`,
+        signal,
       ),
     enabled: canExportFinancialReports && Boolean(installerDetailsId),
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const orderNumbersKpiQuery = useQuery({
@@ -2163,18 +2209,19 @@ export default function ReportsPage() {
       orderNumbersQueryNormalized,
       orderNumbersProjectId,
     ],
-    queryFn: () =>
-      apiFetch<OrderNumbersKpiResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<OrderNumbersKpiResponse>(
         `/api/v1/admin/reports/order-numbers-kpi?${orderNumbersParams.toString()}`,
+        signal,
       ),
     enabled: canExportFinancialReports,
-    refetchInterval: 30_000,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
   const failedOutboxQuery = useQuery({
     queryKey: ["outbox-failed", scopedDeliveryChannel],
-    queryFn: () =>
-      apiFetch<OutboxListResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<OutboxListResponse>(
         `/api/v1/admin/outbox?${(() => {
           const params = new URLSearchParams();
           params.set("status", "FAILED");
@@ -2184,25 +2231,28 @@ export default function ReportsPage() {
           }
           return params.toString();
         })()}`,
+        signal,
       ),
-    refetchInterval: 30_000,
+    refetchInterval: LIVE_REPORT_REFRESH_MS,
   });
 
   const webhookSignalsQuery = useQuery({
     queryKey: ["reports-webhook-signals", scopedWebhookProvider],
-    queryFn: () =>
-      apiFetch<WebhookSignalListResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<WebhookSignalListResponse>(
         "/api/v1/admin/outbox/webhook-signals?limit=12",
+        signal,
       ),
-    refetchInterval: 30_000,
+    refetchInterval: LIVE_REPORT_REFRESH_MS,
   });
   const retryAuditsQuery = useQuery({
     queryKey: ["reports-outbox-retry-audits", scopedOutboxId],
-    queryFn: () =>
-      apiFetch<OutboxRetryAuditListResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<OutboxRetryAuditListResponse>(
         "/api/v1/admin/outbox/retry-audits?limit=12",
+        signal,
       ),
-    refetchInterval: 30_000,
+    refetchInterval: LIVE_REPORT_REFRESH_MS,
   });
 
   const auditCatalogsQuery = useQuery({
@@ -2214,8 +2264,8 @@ export default function ReportsPage() {
       auditDateFrom,
       auditDateTo,
     ],
-    queryFn: () =>
-      apiFetch<AuditCatalogChangesResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<AuditCatalogChangesResponse>(
         `/api/v1/admin/reports/audit-catalogs?${buildAuditParams({
           entityType: auditEntityType,
           action: auditAction,
@@ -2224,6 +2274,7 @@ export default function ReportsPage() {
           limit: AUDIT_PREVIEW_LIMIT,
           offset: auditOffset,
         })}`,
+        signal,
       ),
     refetchInterval: 60_000,
   });
@@ -2237,8 +2288,8 @@ export default function ReportsPage() {
       issueAuditDateTo,
       issueAuditIssueIdNormalized,
     ],
-    queryFn: () =>
-      apiFetch<AuditCatalogChangesResponse>(
+    queryFn: ({ signal }) =>
+      reportApiFetch<AuditCatalogChangesResponse>(
         `/api/v1/admin/reports/audit-issues?${buildAuditParams({
           entityType: "",
           entityId: issueAuditIssueIdNormalized,
@@ -2248,6 +2299,7 @@ export default function ReportsPage() {
           limit: AUDIT_PREVIEW_LIMIT,
           offset: issueAuditOffset,
         })}`,
+        signal,
       ),
     refetchInterval: 60_000,
   });
@@ -2415,7 +2467,7 @@ export default function ReportsPage() {
       setActionNotice(
         copy(
           "Executive export is ready.",
-          "Executive-экспорт готов.",
+          "Исполнительный экспорт готов.",
           "ייצוא הנהלה מוכן.",
         ),
       );
@@ -2441,7 +2493,10 @@ export default function ReportsPage() {
     installerProfitabilityMatrixQuery.data?.items || [];
   const installerProjectProfitability =
     installerProjectProfitabilityQuery.data?.items || [];
-  const projectOptions = projectsQuery.data?.items || [];
+  const projectOptions = useMemo(
+    () => projectsQuery.data?.items || [],
+    [projectsQuery.data?.items],
+  );
   const scopedProjectInOptions = scopedProjectId
     ? projectOptions.some((project) => project.id === scopedProjectId)
     : false;
@@ -2452,8 +2507,14 @@ export default function ReportsPage() {
       !scopedProjectInOptions,
   );
   const projectPlanFact = projectPlanFactQuery.data;
-  const projectAddonPlan = projectAddonPlanQuery.data || [];
-  const projectUrgencySurcharges = projectUrgencySurchargesQuery.data || [];
+  const projectAddonPlan = useMemo(
+    () => projectAddonPlanQuery.data || [],
+    [projectAddonPlanQuery.data],
+  );
+  const projectUrgencySurcharges = useMemo(
+    () => projectUrgencySurchargesQuery.data || [],
+    [projectUrgencySurchargesQuery.data],
+  );
   const selectedProjectPlanFact = useMemo(
     () =>
       projectOptions.find(
@@ -2583,8 +2644,14 @@ export default function ReportsPage() {
     : [];
   const projectRiskDrilldown = projectRiskDrilldownQuery.data;
   const topProjectsMargin = topProjectsMarginQuery.data?.items || [];
-  const riskProjectsMargin = riskProjectsMarginQuery.data?.items || [];
-  const installersKpiItems = installersKpiQuery.data?.items || [];
+  const riskProjectsMargin = useMemo(
+    () => riskProjectsMarginQuery.data?.items || [],
+    [riskProjectsMarginQuery.data?.items],
+  );
+  const installersKpiItems = useMemo(
+    () => installersKpiQuery.data?.items || [],
+    [installersKpiQuery.data?.items],
+  );
   const scopedInstallerInKpi = scopedInstallerId
     ? installersKpiItems.some((item) => item.installer_id === scopedInstallerId)
     : false;
@@ -2703,7 +2770,7 @@ export default function ReportsPage() {
         (scopedInstallerId && !scopedInstallerMissing),
     );
   const scopedContextLabel = scopedProjectId
-    ? copy("Focused project", "Фокус по проекту", "מיקוד פרויקט")
+    ? copy("Focused project", "Выбранный проект", "הפרויקט שנבחר")
     : scopedInstallerId
       ? copy("Focused installer", "Фокус по монтажнику", "מיקוד מתקין")
       : "";
@@ -2971,7 +3038,7 @@ export default function ReportsPage() {
     const preset = reportsOpsPresetCopy[activeOpsPreset];
     appliedOpsPresetRef.current = activeOpsPreset;
     setSlaHistoryDays(preset.slaHistoryDays);
-  }, [activeOpsPreset]);
+  }, [activeOpsPreset, reportsOpsPresetCopy]);
 
   useEffect(() => {
     if (!scopedProjectId) {
@@ -3321,7 +3388,7 @@ export default function ReportsPage() {
               DIMAX
             </div>
             <div className="min-w-0 flex-1 truncate text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary">
-              DIMAX GROUP · REPORTS
+              {copy("DIMAX GROUP · REPORTS", "DIMAX GROUP · ОТЧЕТЫ", "קבוצת דימקס · דוחות")}
             </div>
             <div className="rounded-full border border-status-warning-border bg-status-warning-bg px-2.5 py-1 text-[10.5px] font-medium text-status-warning-fg">
               {copy("Unread", "Непрочитано", "לא נקראו")} {unreadBadge}
@@ -3330,25 +3397,24 @@ export default function ReportsPage() {
 
           <div className="space-y-5 p-4 md:p-5">
             <div className="truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-link">
-              Dashboard <span className="mx-1 text-text-tertiary">#</span>
-              <span className="text-text">Reports cockpit</span>
+              {copy("Dashboard", "Главная", "ראשי")} <span className="mx-1 text-text-tertiary">#</span>
+              <span className="text-text">{copy("Reports cockpit", "Панель отчётов", "לוח דוחות")}</span>
             </div>
 
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
                 <h1 className="text-[26px] font-semibold leading-tight text-text">
-                  Reports cockpit
+                  {copy("Reports cockpit", "Панель отчётов", "לוח דוחות")}
                 </h1>
                 <p className="mt-1 max-w-4xl text-[12.5px] leading-5 text-text-secondary">
                   <b className="font-medium text-text">
                     {reportsLibraryCount}
                   </b>{" "}
-                  report signals ·{" "}
+                  {copy("report signals ·", "сигналы отчета ·", "אותות דיווח ·")}{" "}
                   <b className="font-medium text-text">
                     {savedPresets.length}
                   </b>{" "}
-                  saved views · scheduled exports are manual in this build ·
-                  last refresh{" "}
+                  {copy("saved views · scheduled exports are manual in this build · last refresh", "сохраненные просмотры · запланированный экспорт в этой сборке выполняется вручную · последнее обновление", "תצוגות שמורות · יצוא מתוכנן הוא ידני בגירסה זו · רענון אחרון")}{" "}
                   <b className="font-medium text-text">
                     {reportsLastRefresh
                       ? formatDateTime(reportsLastRefresh)
@@ -3376,7 +3442,7 @@ export default function ReportsPage() {
                   className="dmx-secondary-action disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <FileText className="h-4 w-4" strokeWidth={1.8} />
-                  Export snapshot
+                  {copy("Export snapshot", "Экспортировать снимок", "ייצא תמונת מצב")}
                 </button>
                 {canOpenOperations ? (
                   <button
@@ -3385,7 +3451,7 @@ export default function ReportsPage() {
                     className="dmx-primary-action"
                   >
                     <Wrench className="h-4 w-4" strokeWidth={1.8} />
-                    Open operations
+                    {copy("Open operations", "Открытие операций", "פעולות פתוחות")}
                   </button>
                 ) : null}
               </div>
@@ -3396,10 +3462,10 @@ export default function ReportsPage() {
                 <div className="flex min-w-0 items-center gap-2">
                   <LineChart className="h-4 w-4 text-text-secondary" />
                   <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary">
-                    Attention this week
+                    {copy("Attention this week", "Внимание на этой неделе", "שימו לב השבוע")}
                   </div>
                   <div className="rounded-full bg-surface px-2 py-0.5 text-[10.5px] text-text-secondary">
-                    live reports
+                    {copy("live reports", "прямые репортажи", "דיווחים חיים")}
                   </div>
                 </div>
                 <button
@@ -3407,7 +3473,7 @@ export default function ReportsPage() {
                   onClick={() => router.push("/operations?actionable=1")}
                   className="text-[11.5px] font-medium text-link"
                 >
-                  Open action queue
+                  {copy("Open action queue", "Открыть очередь действий", "פתיחת תור פעולות")}
                 </button>
               </div>
               <div className="grid gap-3 xl:grid-cols-3">
@@ -3422,19 +3488,19 @@ export default function ReportsPage() {
                 <div className="flex min-w-0 items-center gap-2">
                   <FolderKanban className="h-4 w-4 text-text-secondary" />
                   <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary">
-                    Report library
+                    {copy("Report library", "Библиотека отчетов", "ספריית דוחות")}
                   </div>
                   <div className="rounded-full bg-surface px-2 py-0.5 text-[10.5px] text-text-secondary">
-                    {reportsLibraryCount} mapped
+                    {reportsLibraryCount} {copy("mapped", "сопоставлено", "ממופה")}
                   </div>
                 </div>
                 <div className="text-[11.5px] font-medium text-text-secondary">
-                  API-first, no fake reports
+                  {copy("API-first, no fake reports", "API-прежде всего, никаких поддельных отчетов", "תחילה API, ללא דוחות מזויפים")}
                 </div>
               </div>
               <div className="grid gap-3 xl:grid-cols-2">
                 {reportsLibraryGroups.map((group) => (
-                  <ReportsLibraryCard key={group.title} group={group} />
+                  <ReportsLibraryCard key={group.title} group={group} locale={locale} />
                 ))}
               </div>
             </div>
@@ -3444,10 +3510,10 @@ export default function ReportsPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary">
-                      Saved views
+                      {copy("Saved views", "Сохраненные просмотры", "תצוגות שמורות")}
                     </div>
                     <div className="mt-1 text-[12px] text-text-secondary">
-                      Operator filters stored locally for this browser.
+                      {copy("Operator filters stored locally for this browser.", "Фильтры операторов, хранящиеся локально для этого браузера.", "מסנני מפעיל המאוחסנים באופן מקומי עבור דפדפן זה.")}
                     </div>
                   </div>
                   <button
@@ -3464,20 +3530,19 @@ export default function ReportsPage() {
                     className="dmx-secondary-action"
                   >
                     <Plus className="h-4 w-4" strokeWidth={1.8} />
-                    Save current filter
+                    {copy("Save current filter", "Сохранить текущий фильтр", "שמור את המסנן הנוכחי")}
                   </button>
                 </div>
                 <div className="mt-3 grid gap-2 md:grid-cols-2">
                   {pinnedSavedViews.length === 0 ? (
                     <div className="rounded-[10px] border border-dashed border-border bg-surface-subtle px-4 py-5 text-[12px] leading-5 text-text-secondary md:col-span-2">
-                      No saved report views yet. Save the current filters below
-                      to pin an operator view.
+                      {copy("No saved report views yet. Save the current filters below to pin an operator view.", "Пока нет сохраненных просмотров отчетов. Сохраните текущие фильтры ниже, чтобы закрепить представление оператора.", "אין עדיין תצוגות דוח שמורות. שמור את המסננים הנוכחיים למטה כדי להצמיד תצוגת מפעיל.")}
                     </div>
                   ) : (
                     pinnedSavedViews.map((preset) => (
                       <SavedReportViewCard
                         key={preset.id}
-                        eyebrow="saved view"
+                        eyebrow={copy("saved view", "сохранённый вид", "תצוגה שמורה")}
                         title={preset.name}
                         value={formatDateTime(preset.created_at)}
                         tone="blue"
@@ -3491,11 +3556,10 @@ export default function ReportsPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary">
-                      Scheduled exports
+                      {copy("Scheduled exports", "Экспорт по расписанию", "ייצוא מתוכנן")}
                     </div>
                     <div className="mt-1 text-[12px] leading-5 text-text-secondary">
-                      Scheduler backend is not configured here. Use manual CSV
-                      exports until a real schedule service is added.
+                      {copy("Scheduler backend is not configured here. Use manual CSV exports until a real schedule service is added.", "Серверная часть планировщика здесь не настроена. Используйте экспорт CSV вручную, пока не будет добавлена ​​реальная служба расписания.", "הקצה האחורי של המתזמן אינו מוגדר כאן. השתמש בייצוא CSV ידני עד להוספת שירות לוח זמנים אמיתי.")}
                     </div>
                   </div>
                   <CalendarClock className="h-5 w-5 shrink-0 text-text-tertiary" />
@@ -3511,7 +3575,7 @@ export default function ReportsPage() {
                     title={privilegedActionHint}
                     className="dmx-secondary-action justify-center disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Executive CSV now
+                    {copy("Executive CSV now", "Исполнительный CSV сейчас", "מנהל CSV עכשיו")}
                   </button>
                   <button
                     type="button"
@@ -3523,7 +3587,7 @@ export default function ReportsPage() {
                     title={ratesScopeHint}
                     className="dmx-secondary-action justify-center disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Installers CSV now
+                    {copy("Installers CSV now", "CSV-файл для установки прямо сейчас", "מתקינים CSV עכשיו")}
                   </button>
                   <button
                     type="button"
@@ -3535,7 +3599,7 @@ export default function ReportsPage() {
                     title={ratesScopeHint}
                     className="dmx-secondary-action justify-center disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Orders CSV now
+                    {copy("Orders CSV now", "Заказывает CSV сейчас", "הזמנות CSV עכשיו")}
                   </button>
                 </div>
               </div>
@@ -3583,7 +3647,7 @@ export default function ReportsPage() {
               {t("reports.savePreset")}
             </button>
             <select
-              aria-label="Saved Presets"
+              aria-label={copy("Saved Presets", "Сохранённые наборы", "ערכות שמורות")}
               value={selectedPresetId}
               onChange={(e) => setSelectedPresetId(e.target.value)}
               className="control-input h-8 text-[12px]"
@@ -3868,9 +3932,7 @@ export default function ReportsPage() {
                     {operationsCenter?.imports?.total_runs ?? 0}
                   </div>
                   <div className="mt-1 text-[12px] text-text-secondary">
-                    Success {operationsCenter?.imports?.success_runs ?? 0} |
-                    Partial {operationsCenter?.imports?.partial_runs ?? 0} |
-                    Failed {operationsCenter?.imports?.failed_runs ?? 0}
+                    {copy("Success", "Успех", "הצלחה")} {operationsCenter?.imports?.success_runs ?? 0} {copy("| Partial", "| Частичный", "| חלקי")} {operationsCenter?.imports?.partial_runs ?? 0} {copy("| Failed", "| Не удалось", "| נכשל")} {operationsCenter?.imports?.failed_runs ?? 0}
                   </div>
                 </div>
 
@@ -3902,7 +3964,7 @@ export default function ReportsPage() {
                     {operationsCenter?.outbox?.failed_total ?? 0}
                   </div>
                   <div className="mt-1 text-[12px] text-text-secondary">
-                    Failed | Overdue{" "}
+                    {copy("Failed | Overdue", "Ошибка | Просрочено", "נכשל | באיחור")}{" "}
                     {operationsCenter?.outbox?.pending_overdue_15m ?? 0}
                   </div>
                 </div>
@@ -4113,7 +4175,7 @@ export default function ReportsPage() {
                       onClick={() => router.push(playbook.action_url)}
                       className="h-8 rounded-lg border border-border bg-surface-subtle px-3 text-[12px] font-medium"
                     >
-                      Open Playbook
+                      {copy("Open Playbook", "Открыть план действий", "פתח תוכנית פעולה")}
                     </button>
                   </div>
                 ))}
@@ -4122,7 +4184,7 @@ export default function ReportsPage() {
               <div className="surface-subtle space-y-3 p-4">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-[11px] uppercase text-text-secondary">
-                    SLA Trend (last {slaHistoryDays} days)
+                    {copy("SLA Trend (last", "Тренд SLA (последний", "מגמת SLA (אחרון")} {slaHistoryDays} {copy("days)", "дней)", "ימים)")}
                   </div>
                   <div className="inline-flex items-center rounded-lg border border-border bg-surface-subtle p-0.5">
                     {SLA_HISTORY_DAYS_OPTIONS.map((option) => (
@@ -4173,14 +4235,14 @@ export default function ReportsPage() {
                           {copy("Status Days", "Дней в статусе", "ימים בסטטוס")}
                         </div>
                         <div className="font-semibold">
-                          OK {slaHistorySummary?.ok_days || 0} | WARN{" "}
-                          {slaHistorySummary?.warn_days || 0} | DANGER{" "}
+                          OK {slaHistorySummary?.ok_days || 0} {copy("| WARN", "| ПРЕДУПРЕЖДАТЬ", "| הזהר")}{" "}
+                          {slaHistorySummary?.warn_days || 0} {copy("| DANGER", "| ОПАСНОСТЬ", "| סכנה")}{" "}
                           {slaHistorySummary?.danger_days || 0}
                         </div>
                       </div>
                       <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
                         <div className="text-text-secondary">
-                          Delta Import % (d-1)
+                          {copy("Delta Import % (d-1)", "Дельта импорта, % (d-1)", "% ייבוא דלתא (ד-1)")}
                         </div>
                         <div className="font-semibold">
                           {slaHistorySummary?.delta_import_failure_rate_pct ??
@@ -4189,7 +4251,7 @@ export default function ReportsPage() {
                       </div>
                       <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
                         <div className="text-text-secondary">
-                          Delta Outbox % (d-1)
+                          {copy("Delta Outbox % (d-1)", "Дельта исходящих % (d-1)", "דלתא דואר יוצא % (d-1)")}
                         </div>
                         <div className="font-semibold">
                           {slaHistorySummary?.delta_outbox_failed_rate_pct ?? 0}
@@ -4303,7 +4365,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
                   <div className="text-[11px] uppercase text-text-secondary">
-                    MTTR (h)
+                    {copy("MTTR (h)", "Среднее время восстановления (ч)", "MTTR (ח)")}
                   </div>
                   <div className="mt-1 text-lg font-semibold tabular-nums text-text">
                     {issuesAnalytics?.summary.mttr_hours ?? 0}
@@ -4323,7 +4385,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
                   <div className="text-[11px] uppercase text-text-secondary">
-                    P1 Open
+                    {copy("P1 Open", "P1 Открыть", "P1 פתוח")}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-status-problem-fg">
                     {issuesAnalytics?.summary.p1_open_issues ?? 0}
@@ -4789,7 +4851,7 @@ export default function ReportsPage() {
               </div>
             </div>
             <select
-              aria-label="Project Plan Fact Filter"
+              aria-label={copy("Project Plan Fact Filter", "Фильтр план/факт по объекту", "מסנן תכנון מול ביצוע לפי פרויקט")}
               value={projectPlanFactProjectId}
               onChange={(e) => setProjectPlanFactProjectId(e.target.value)}
               className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] md:w-auto md:max-w-[280px]"
@@ -4902,8 +4964,8 @@ export default function ReportsPage() {
                       <div className="text-[11px] uppercase text-text-secondary">
                         {copy(
                           "Unreconciled add-on facts",
-                          "Несведённые add-on факты",
-                          "ביצועי add-on לא מותאמים",
+                          "Несогласованные дополнительные факты",
+                          "עובדות תוספות לא מתואמות",
                         )}
                       </div>
                       <div className="mt-1 text-lg font-semibold tabular-nums text-text">
@@ -4989,7 +5051,7 @@ export default function ReportsPage() {
                     <div className="mt-1 text-[12px] text-text-secondary">
                       {projectPlanFact.installed_doors} /{" "}
                       {projectPlanFact.total_doors}{" "}
-                      {t("reports.doors").toLowerCase()} installed
+                      {t("reports.doors").toLowerCase()} {copy("installed", "установлен", "מותקן")}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-surface p-3">
@@ -5001,7 +5063,7 @@ export default function ReportsPage() {
                     </div>
                     <div className="mt-1 text-[12px] text-text-secondary">
                       {projectPlanFact.not_installed_doors}{" "}
-                      {t("reports.doors").toLowerCase()} still pending
+                      {t("reports.doors").toLowerCase()} {copy("still pending", "все еще находится на рассмотрении", "עדיין בהמתנה")}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-surface p-3">
@@ -5118,7 +5180,7 @@ export default function ReportsPage() {
                           {copy(
                             "Planned add-on rows that should later reconcile with installer facts.",
                             "Плановые строки доп. работ, которые позже должны сойтись с фактами монтажника.",
-                            "שורות add-on מתוכננות שאמורות בהמשך להתאזן מול דיווחי המתקין.",
+                            "שורות תוספות מתוכננות שאמורות להתאים מאוחר יותר עם עובדות המתקין.",
                           )}
                         </div>
                       </div>
@@ -5413,7 +5475,7 @@ export default function ReportsPage() {
                         <thead className="bg-surface-subtle text-text-secondary">
                           <tr>
                             <th className="px-3 py-2.5 text-start font-medium">
-                              {copy("Scope", "Скоуп", "היקף")}
+                              {copy("Scope", "Раздел", "תחום")}
                             </th>
                             <th className="px-3 py-2.5 text-start font-medium">
                               {copy("Reason", "Причина", "סיבה")}
@@ -5505,7 +5567,7 @@ export default function ReportsPage() {
               </div>
             </div>
             <select
-              aria-label="Project Risk Drilldown Filter"
+              aria-label={copy("Project Risk Drilldown Filter", "Фильтр детализации рисков по объекту", "מסנן פירוט סיכונים לפי פרויקט")}
               value={projectRiskProjectId}
               onChange={(e) => setProjectRiskProjectId(e.target.value)}
               className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] md:w-auto md:max-w-[280px]"
@@ -5541,8 +5603,12 @@ export default function ReportsPage() {
             !projectRiskProjectId && (
               <div className="px-4 py-6">
                 <SectionMessage
-                  title="Select a project"
-                  detail="Choose a project to inspect the exact drivers behind low margin, stalled reasons and risky orders."
+                  title={copy("Select a project", "Выберите объект", "בחרו פרויקט")}
+                  detail={copy(
+                    "Choose a project to inspect the exact drivers behind low margin, stalled reasons and risky orders.",
+                    "Выберите объект, чтобы увидеть причины низкой маржи, задержек и заказов с риском.",
+                    "בחרו פרויקט כדי לראות את הגורמים לרווחיות נמוכה, לעיכובים ולהזמנות בסיכון.",
+                  )}
                 />
               </div>
             )}
@@ -5624,8 +5690,8 @@ export default function ReportsPage() {
                     <div className="mt-1 text-[12px] text-text-secondary">
                       {copy(
                         "rates + addon plan gaps",
-                        "пробелы по ставкам и add-on плану",
-                        "פערי תעריפים ותכנון add-on",
+                        "тарифы + пробелы в дополнительных планах",
+                        "תעריפים + פערי תוכנית תוספות",
                       )}
                     </div>
                   </div>
@@ -5634,7 +5700,7 @@ export default function ReportsPage() {
                 <div className="grid gap-4 xl:grid-cols-3">
                   <div className="rounded-lg border border-border bg-surface p-3 xl:col-span-1">
                     <div className="text-[11px] uppercase text-text-secondary">
-                      Drivers
+                      {copy("Drivers", "Драйверы", "דרייברים")}
                     </div>
                     <div className="mt-3 space-y-2">
                       {(projectRiskDrilldown.drivers || []).map((driver) => (
@@ -5669,7 +5735,7 @@ export default function ReportsPage() {
                     <div className="divide-y divide-border-subtle md:hidden">
                       {(projectRiskDrilldown.top_reasons || []).length === 0 ? (
                         <div className="px-3.5 py-3 text-[12px] text-text-secondary">
-                          No stalled reasons.
+                          {copy("No stalled reasons.", "Нет причин задержки.", "אין סיבות לעיכוב.")}
                         </div>
                       ) : (
                         (projectRiskDrilldown.top_reasons || []).map((item) => (
@@ -5727,7 +5793,7 @@ export default function ReportsPage() {
                               className="px-3 py-3 text-text-secondary"
                               colSpan={3}
                             >
-                              No stalled reasons.
+                              {copy("No stalled reasons.", "Нет причин задержки.", "אין סיבות לעיכוב.")}
                             </td>
                           </tr>
                         ) : (
@@ -5756,7 +5822,7 @@ export default function ReportsPage() {
 
                   <div className="rounded-lg border border-border bg-surface overflow-hidden xl:col-span-1">
                     <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
-                      Risky Orders
+                      {copy("Risky Orders", "Заказы с риском", "הזמנות בסיכון")}
                     </div>
                     <div className="divide-y divide-border-subtle md:hidden">
                       {(projectRiskDrilldown.risky_orders || []).length ===
@@ -6247,13 +6313,13 @@ export default function ReportsPage() {
                 </div>
                 <div className="rounded-lg border border-border bg-surface p-3">
                   <div className="text-[11px] uppercase text-text-secondary">
-                    Risky Installers
+                    {copy("Risky Installers", "Рискованные монтажники", "מתקינים מסוכנים")}
                   </div>
                   <div className="mt-2 text-[22px] font-semibold text-text">
                     {riskConcentration?.summary?.risky_installers ?? 0}
                   </div>
                   <div className="mt-1 text-[12px] text-text-secondary">
-                    Worst order{" "}
+                    {copy("Highest-risk order", "Заказ с наибольшим риском", "הזמנה בסיכון הגבוה ביותר")}{" "}
                     {formatAmount(
                       riskConcentration?.summary?.worst_order_profit_total,
                     )}
@@ -6265,20 +6331,24 @@ export default function ReportsPage() {
                 (riskConcentration?.orders || []).length === 0 &&
                 (riskConcentration?.installers || []).length === 0 && (
                   <SectionMessage
-                    title="No concentrated risk yet"
-                    detail="This tenant does not currently have enough delayed doors, open issues or low-margin rows to populate the cross-cutting executive risk view."
+                    title={copy("No concentrated risk yet", "Скопления рисков пока нет", "אין עדיין ריכוז סיכונים")}
+                    detail={copy(
+                      "This tenant does not currently have enough delayed doors, open issues or low-margin rows to populate the cross-cutting executive risk view.",
+                      "Сейчас недостаточно просроченных дверей, открытых проблем или низкомаржинальных строк для сводного анализа рисков.",
+                      "כרגע אין מספיק דלתות באיחור, תקלות פתוחות או שורות ברווחיות נמוכה להצגת סיכונים משולבת.",
+                    )}
                   />
                 )}
 
               <div className="grid gap-4 xl:grid-cols-3">
                 <div className="rounded-lg border border-border bg-surface overflow-hidden">
                   <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
-                    Projects at Risk
+                    {copy("Projects at Risk", "Проекты под угрозой", "פרויקטים בסיכון")}
                   </div>
                   <div className="divide-y divide-border-subtle md:hidden">
                     {(riskConcentration?.projects || []).length === 0 ? (
                       <div className="px-3.5 py-3 text-[12px] text-text-secondary">
-                        No risky projects.
+                        {copy("No risky projects.", "Никаких рискованных проектов.", "אין פרויקטים מסוכנים.")}
                       </div>
                     ) : (
                       (riskConcentration?.projects || []).map((item) => (
@@ -6290,7 +6360,7 @@ export default function ReportsPage() {
                             {item.project_name}
                           </div>
                           <div className="mt-1 text-[11px] text-text-secondary">
-                            Completion {formatPercent(item.completion_pct)}
+                            {copy("Completion", "Завершение", "השלמה")} {formatPercent(item.completion_pct)}
                           </div>
                           <div className="mt-3 grid grid-cols-3 gap-2">
                             <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
@@ -6346,7 +6416,7 @@ export default function ReportsPage() {
                             className="px-3 py-3 text-text-secondary"
                             colSpan={4}
                           >
-                            No risky projects.
+                            {copy("No risky projects.", "Никаких рискованных проектов.", "אין פרויקטים מסוכנים.")}
                           </td>
                         </tr>
                       ) : (
@@ -6360,7 +6430,7 @@ export default function ReportsPage() {
                                 {item.project_name}
                               </div>
                               <div className="text-[11px] text-text-secondary">
-                                Completion {formatPercent(item.completion_pct)}
+                                {copy("Completion", "Завершение", "השלמה")} {formatPercent(item.completion_pct)}
                               </div>
                             </td>
                             <td className="px-3 py-2 text-end">
@@ -6381,12 +6451,12 @@ export default function ReportsPage() {
 
                 <div className="rounded-lg border border-border bg-surface overflow-hidden">
                   <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
-                    Orders at Risk
+                    {copy("Orders at Risk", "Заказы под угрозой", "הזמנות בסיכון")}
                   </div>
                   <div className="divide-y divide-border-subtle md:hidden">
                     {(riskConcentration?.orders || []).length === 0 ? (
                       <div className="px-3.5 py-3 text-[12px] text-text-secondary">
-                        No risky orders.
+                        {copy("No risky orders.", "Нет заказов с риском.", "אין הזמנות בסיכון.")}
                       </div>
                     ) : (
                       (riskConcentration?.orders || []).map((item) => (
@@ -6448,7 +6518,7 @@ export default function ReportsPage() {
                             className="px-3 py-3 text-text-secondary"
                             colSpan={4}
                           >
-                            No risky orders.
+                            {copy("No risky orders.", "Нет заказов с риском.", "אין הזמנות בסיכון.")}
                           </td>
                         </tr>
                       ) : (
@@ -6478,12 +6548,12 @@ export default function ReportsPage() {
 
                 <div className="rounded-lg border border-border bg-surface overflow-hidden">
                   <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
-                    Installers at Risk
+                    {copy("Installers at Risk", "монтажники в опасности", "מתקינים בסיכון")}
                   </div>
                   <div className="divide-y divide-border-subtle md:hidden">
                     {(riskConcentration?.installers || []).length === 0 ? (
                       <div className="px-3.5 py-3 text-[12px] text-text-secondary">
-                        No risky installers.
+                        {copy("No risky installers.", "Никаких рискованных монтажников.", "אין מתקינים מסוכנים.")}
                       </div>
                     ) : (
                       (riskConcentration?.installers || []).map((item) => (
@@ -6497,7 +6567,7 @@ export default function ReportsPage() {
                                 {item.installer_name}
                               </div>
                               <div className="mt-1 text-[11px] text-text-secondary">
-                                Issues {item.open_issues}
+                                {copy("Issues", "Проблемы", "תקלות")} {item.open_issues}
                               </div>
                             </div>
                             <span
@@ -6557,7 +6627,7 @@ export default function ReportsPage() {
                             className="px-3 py-3 text-text-secondary"
                             colSpan={4}
                           >
-                            No risky installers.
+                            {copy("No risky installers.", "Никаких рискованных монтажников.", "אין מתקינים מסוכנים.")}
                           </td>
                         </tr>
                       ) : (
@@ -6575,7 +6645,7 @@ export default function ReportsPage() {
                                   {item.installer_name}
                                 </div>
                                 <div className="text-[11px] text-text-secondary">
-                                  Issues {item.open_issues}
+                                  {copy("Issues", "Проблемы", "תקלות")} {item.open_issues}
                                 </div>
                               </td>
                               <td className="px-3 py-2.5">
@@ -6621,7 +6691,7 @@ export default function ReportsPage() {
             </div>
             <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center xl:justify-end">
               <select
-                aria-label="Installer Matrix Sort"
+                aria-label={copy("Installer Matrix Sort", "Сортировка матрицы монтажников", "מיון מטריצת מתקינים")}
                 value={installerMatrixSortBy}
                 onChange={(e) =>
                   setInstallerMatrixSortBy(
@@ -6637,7 +6707,7 @@ export default function ReportsPage() {
                 ))}
               </select>
               <select
-                aria-label="Installer Matrix Direction"
+                aria-label={copy("Installer Matrix Direction", "Направление сортировки матрицы монтажников", "כיוון מיון מטריצת מתקינים")}
                 value={installerMatrixSortDir}
                 onChange={(e) =>
                   setInstallerMatrixSortDir(e.target.value as SortDir)
@@ -6877,7 +6947,7 @@ export default function ReportsPage() {
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               <select
-                aria-label="Installer Project Sort"
+                aria-label={copy("Installer Project Sort", "Сортировка объектов монтажника", "מיון פרויקטים של מתקין")}
                 value={installerProjectSortBy}
                 onChange={(e) =>
                   setInstallerProjectSortBy(
@@ -6893,7 +6963,7 @@ export default function ReportsPage() {
                 ))}
               </select>
               <select
-                aria-label="Installer Project Direction"
+                aria-label={copy("Installer Project Direction", "Направление сортировки объектов монтажника", "כיוון מיון פרויקטים של מתקין")}
                 value={installerProjectSortDir}
                 onChange={(e) =>
                   setInstallerProjectSortDir(e.target.value as SortDir)
@@ -6919,8 +6989,8 @@ export default function ReportsPage() {
                 installerProjectProfitabilityQuery.error,
                 copy(
                   "Failed to load installer-project cross-view",
-                  "Не удалось загрузить cross-view по монтажникам и проектам",
-                  "טעינת cross-view למתקינים ופרויקטים נכשלה",
+                  "Не удалось загрузить перекрестное представление проекта монтажника.",
+                  "טעינת הצגה צולבת של מתקין-פרויקט נכשלה",
                 ),
               )}
             </div>
@@ -6929,13 +6999,13 @@ export default function ReportsPage() {
               <SectionMessage
                 title={copy(
                   "No installer-project cross-view rows",
-                  "Нет строк cross-view по монтажникам и проектам",
-                  "אין שורות cross-view למתקינים ופרויקטים",
+                  "Нет строк перекрестного просмотра монтажника и проекта.",
+                  "אין שורות צולבות של פרויקט מתקין",
                 )}
                 detail={copy(
                   "This view appears after installed doors or add-on facts create measurable profitability per installer and project.",
-                  "Этот блок появляется после того, как смонтированные двери или add-on факты формируют измеримую прибыльность по монтажнику и проекту.",
-                  "בלוק זה מופיע לאחר שדלתות מותקנות או עובדות add-on יוצרות רווחיות מדידה לפי מתקין ופרויקט.",
+                  "Это представление появляется после того, как установленные двери или дополнительные элементы создают измеримую прибыльность для каждого монтажника и проекта.",
+                  "תצוגה זו מופיעה לאחר שדלתות מותקנות או עובדות תוספות יוצרות רווחיות מדידה לכל מתקין ופרויקט.",
                 )}
               />
             </div>
@@ -7367,8 +7437,8 @@ export default function ReportsPage() {
             <div className="px-4 py-6 text-[13px] text-text-secondary">
               {copy(
                 "Loading installer drill-down…",
-                "Загружаем drill-down по монтажнику…",
-                "טוען drill-down למתקין…",
+                "Загрузка детализации по монтажнику…",
+                "טוען פירוט לפי מתקין…",
               )}
             </div>
           )}
@@ -7376,8 +7446,8 @@ export default function ReportsPage() {
             <div className="px-4 py-6 text-[13px] text-text-secondary">
               {copy(
                 "No installers available for drill-down.",
-                "Нет монтажников для drill-down.",
-                "אין מתקינים זמינים ל-drill-down.",
+                "Нет монтажников для детализации.",
+                "אין מתקינים זמינים לפירוט.",
               )}
             </div>
           )}
@@ -7446,7 +7516,7 @@ export default function ReportsPage() {
                       {formatAmount(installerDetails.revenue_total)}
                     </div>
                     <div className="mt-1 text-[12px] text-text-secondary">
-                      {copy("Payroll", "Payroll", "שכר")}{" "}
+                      {copy("Payroll", "Начисления", "שכר")}{" "}
                       {formatAmount(installerDetails.payroll_total)} |{" "}
                       {copy("Profit", "Прибыль", "רווח")}{" "}
                       {formatAmount(installerDetails.profit_total)}
@@ -7487,7 +7557,7 @@ export default function ReportsPage() {
                       {tt("reports.addonsImpact")}
                     </div>
                     <div className="mt-2 text-[18px] font-semibold text-text">
-                      Qty {formatAmount(installerDetails.addons_done_qty)}
+                      {copy("Qty", "Кол-во", "כמות")} {formatAmount(installerDetails.addons_done_qty)}
                     </div>
                     <div className="mt-1 text-[12px] text-text-secondary">
                       {tt("reports.addonsProfitMissingPlans")
@@ -7510,8 +7580,8 @@ export default function ReportsPage() {
                         <div className="px-3.5 py-3 text-[12px] text-text-secondary">
                           {copy(
                             "No project drill-down rows.",
-                            "Нет строк по проектному drill-down.",
-                            "אין שורות drill-down לפרויקט.",
+                            "Нет строк детализации по проекту.",
+                            "אין שורות פירוט לפרויקט.",
                           )}
                         </div>
                       ) : (
@@ -7588,8 +7658,8 @@ export default function ReportsPage() {
                             >
                               {copy(
                                 "No project drill-down rows.",
-                                "Нет строк по проектному drill-down.",
-                                "אין שורות drill-down לפרויקט.",
+                                "Нет строк детализации по проекту.",
+                                "אין שורות פירוט לפרויקט.",
                               )}
                             </td>
                           </tr>
@@ -7758,7 +7828,7 @@ export default function ReportsPage() {
             </div>
             <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center xl:justify-end">
               <select
-                aria-label="Order Project Filter"
+                aria-label={copy("Order Project Filter", "Фильтр заказов по объекту", "סינון הזמנות לפי פרויקט")}
                 value={orderNumbersProjectId}
                 onChange={(e) => {
                   setOrderNumbersProjectId(e.target.value);
@@ -7848,7 +7918,7 @@ export default function ReportsPage() {
               {copy("Planned", "План", "מתוכנן")}
             </span>
             <span className="text-end">
-              {copy("Payroll", "Payroll", "שכר")}
+              {copy("Payroll", "Начисления", "שכר")}
             </span>
             <span className="text-end">
               {copy("Profit", "Прибыль", "רווח")}
@@ -7938,7 +8008,7 @@ export default function ReportsPage() {
                     </div>
                     <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
                       <div className="text-[10px] uppercase text-text-secondary">
-                        {copy("Payroll", "Payroll", "שכר")}
+                        {copy("Payroll", "Начисления", "שכר")}
                       </div>
                       <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
                         {formatAmount(item.payroll_total)}
@@ -8016,7 +8086,7 @@ export default function ReportsPage() {
         <div id="reports-delivery-risk" className="grid gap-3 md:grid-cols-4">
           <div className={reportsPanelClass("p-4")}>
             <div className="text-[11px] uppercase text-text-secondary mb-2">
-              Delivery
+              {copy("Delivery", "Доставка", "משלוח")}
             </div>
             {deliveryQuery.isLoading ? (
               <div className="text-[13px] text-text-secondary">
@@ -8026,23 +8096,23 @@ export default function ReportsPage() {
               <div className="space-y-1 text-[13px]">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-link" />
-                  <span>WA pending: {delivery?.whatsapp_pending ?? 0}</span>
+                  <span>{copy("WA pending:", "WhatsApp, ожидают:", "WhatsApp, ממתינות:")} {delivery?.whatsapp_pending ?? 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-emerald-500" />
-                  <span>WA delivered: {delivery?.whatsapp_delivered ?? 0}</span>
+                  <span>{copy("WA delivered:", "WhatsApp, доставлено:", "WhatsApp, נמסרו:")} {delivery?.whatsapp_delivered ?? 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-status-problem-fg" />
-                  <span>WA failed: {delivery?.whatsapp_failed ?? 0}</span>
+                  <span>{copy("WA failed:", "WhatsApp, ошибки:", "WhatsApp, נכשלו:")} {delivery?.whatsapp_failed ?? 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-emerald-500" />
-                  <span>Email sent: {delivery?.email_sent ?? 0}</span>
+                  <span>{copy("Email sent:", "Письмо отправлено:", "אימייל נשלח:")} {delivery?.email_sent ?? 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-status-problem-fg" />
-                  <span>Email failed: {delivery?.email_failed ?? 0}</span>
+                  <span>{copy("Email failed:", "Ошибки эл. почты:", "שגיאות דוא״ל:")} {delivery?.email_failed ?? 0}</span>
                 </div>
               </div>
             )}
@@ -8050,7 +8120,7 @@ export default function ReportsPage() {
 
           <div className={reportsPanelClass("p-4")}>
             <div className="text-[11px] uppercase text-text-secondary mb-2">
-              Outbox Queue
+              {copy("Outbox Queue", "Очередь исходящих сообщений", "תור תיבת דואר יוצא")}
             </div>
             {outboxSummaryQuery.isLoading ? (
               <div className="text-[13px] text-text-secondary">
@@ -8058,17 +8128,17 @@ export default function ReportsPage() {
               </div>
             ) : (
               <div className="space-y-1 text-[13px]">
-                <div>Total: {outboxSummary?.total ?? 0}</div>
-                <div>Failed total: {outboxSummary?.failed_total ?? 0}</div>
+                <div>{copy("Total:", "Итого:", "סך הכל:")} {outboxSummary?.total ?? 0}</div>
+                <div>{copy("Failed total:", "Всего неудачно:", "סך הכל נכשל:")} {outboxSummary?.failed_total ?? 0}</div>
                 <div>
-                  Pending overdue &gt;15m:{" "}
+                  {copy("Pending overdue &gt;15m:", "Ожидается просрочка >15 мин:", "בהמתנה באיחור >15 מ':")}{" "}
                   {outboxSummary?.pending_overdue_15m ?? 0}
                 </div>
                 <div className="text-text-secondary">
-                  Channels: {compactMap(outboxSummary?.by_channel)}
+                  {copy("Channels:", "Каналы:", "ערוצים:")} {compactMap(outboxSummary?.by_channel)}
                 </div>
                 <div className="text-text-secondary">
-                  Status: {compactMap(outboxSummary?.by_status)}
+                  {copy("Status:", "Статус:", "סטטוס:")} {compactMap(outboxSummary?.by_status)}
                 </div>
               </div>
             )}
@@ -8081,24 +8151,24 @@ export default function ReportsPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-[11px] uppercase text-text-secondary mb-2">
-                  Delivery Scope
+                  {copy("Delivery Scope", "Фильтр отправки", "מסנן שליחה")}
                 </div>
                 <div className="space-y-1 text-[13px]">
                   <div>
-                    Channel:{" "}
+                    {copy("Channel:", "Канал:", "ערוץ:")}{" "}
                     <span className="font-medium text-text">
                       {scopedDeliveryChannel || "all channels"}
                     </span>
                   </div>
                   <div>
-                    Webhook provider:{" "}
+                    {copy("Webhook provider:", "Провайдер вебхука:", "ספק Webhook:")}{" "}
                     <span className="font-medium text-text">
                       {scopedWebhookProvider || "all providers"}
                     </span>
                   </div>
                   {scopedOutboxId ? (
                     <div>
-                      Outbox:{" "}
+                      {copy("Outbox:", "Исходящие:", "תיבת דואר יוצא:")}{" "}
                       <span className="font-medium text-text">
                         {scopedOutboxId}
                       </span>
@@ -8122,7 +8192,7 @@ export default function ReportsPage() {
                   }}
                   className="h-8 px-3 rounded-md border border-border bg-surface text-[12px]"
                 >
-                  Clear delivery scope
+                  {copy("Clear delivery scope", "Сбросить фильтр отправки", "נקה מסנן שליחה")}
                 </button>
               )}
             </div>
@@ -8223,10 +8293,10 @@ export default function ReportsPage() {
                         className="rounded-md border border-border-subtle bg-surface px-3 py-2 text-[13px]"
                       >
                         <div className="font-medium text-text">
-                          Outbox {item.outbox_id}
+                          {copy("Outbox", "Исходящие", "תיבת דואר יוצא")} {item.outbox_id}
                         </div>
                         <div className="text-text-secondary">
-                          {formatDateTime(item.created_at)} | actor{" "}
+                          {formatDateTime(item.created_at)} {copy("| actor", "| пользователь", "| משתמש")}{" "}
                           {item.actor_user_id}
                         </div>
                         <div className="text-text-secondary">
@@ -8371,8 +8441,8 @@ export default function ReportsPage() {
                     {item.last_error ||
                       copy(
                         "No error payload",
-                        "Нет payload ошибки",
-                        "אין payload לשגיאה",
+                        "Нет данных об ошибке",
+                        "אין נתוני שגיאה",
                       )}
                   </div>
                   <button
@@ -8398,8 +8468,8 @@ export default function ReportsPage() {
                     {item.last_error ||
                       copy(
                         "No error payload",
-                        "Нет payload ошибки",
-                        "אין payload לשגיאה",
+                        "Нет данных об ошибке",
+                        "אין נתוני שגיאה",
                       )}
                   </div>
                   <button
@@ -8659,7 +8729,7 @@ export default function ReportsPage() {
           </div>
           {auditCatalogsQuery.isLoading && (
             <div className="px-4 py-6 text-[13px] text-text-secondary">
-              {copy("Loading audit…", "Загружаем аудит…", "טוען audit…")}
+              {copy("Loading audit…", "Загружаем аудит…", "טוען ביקורת...")}
             </div>
           )}
           {!auditCatalogsQuery.isLoading && auditItems.length === 0 && (
@@ -8834,7 +8904,7 @@ export default function ReportsPage() {
               {copy(
                 "Loading issue audit…",
                 "Загружаем аудит проблем…",
-                "טוען audit תקלות…",
+                "טוען ביקורת בעיה...",
               )}
             </div>
           )}
@@ -8872,8 +8942,8 @@ export default function ReportsPage() {
                         className="h-8 shrink-0 rounded-md border border-border bg-surface px-3 text-[12px]"
                       >
                         {isExpanded
-                          ? copy("Hide Diff", "Скрыть diff", "הסתר diff")
-                          : copy("Show Diff", "Показать diff", "הצג diff")}
+                          ? copy("Hide Diff", "Скрыть изменения", "הסתר שינויים")
+                          : copy("Show Diff", "Показать изменения", "הצג שינויים")}
                       </button>
                     </div>
                     <div className="mt-2 text-[12px] leading-5 text-text-secondary">
@@ -8974,8 +9044,8 @@ export default function ReportsPage() {
                         className="h-8 px-3 rounded-md border border-border bg-surface text-[12px]"
                       >
                         {isExpanded
-                          ? copy("Hide Diff", "Скрыть diff", "הסתר diff")
-                          : copy("Show Diff", "Показать diff", "הצג diff")}
+                          ? copy("Hide Diff", "Скрыть изменения", "הסתר שינויים")
+                          : copy("Show Diff", "Показать изменения", "הצג שינויים")}
                       </button>
                     </div>
                   </div>

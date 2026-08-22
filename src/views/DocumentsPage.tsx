@@ -197,6 +197,8 @@ function filenameFromDisposition(
 export default function DocumentsPage() {
   const queryClient = useQueryClient();
   const { locale } = useI18n();
+  const copy = (en: string, ru: string, he: string) =>
+    locale === "ru" ? ru : locale === "he" ? he : en;
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [uploadName, setUploadName] = useState("");
@@ -272,7 +274,10 @@ export default function DocumentsPage() {
     () => normalizeItems<DocumentGenerationDTO>(generatedQuery.data),
     [generatedQuery.data],
   );
-  const fields = contextQuery.data?.fields || {};
+  const fields = useMemo(
+    () => contextQuery.data?.fields || {},
+    [contextQuery.data?.fields],
+  );
   const fieldEntries = useMemo(
     () =>
       Object.entries(fields).sort(([left], [right]) =>
@@ -569,10 +574,14 @@ export default function DocumentsPage() {
     <DashboardLayout>
       <div className="page-shell page-stack-tight motion-stagger">
         <DimaxPageHeader
-          eyebrow="Document operations"
-          title="Documents"
-          badge="Admin"
-          subtitle="Project templates, field preview and generated files for DIMAX object paperwork."
+          eyebrow={copy("Document operations", "Работа с документами", "תפעול מסמכים")}
+          title={copy("Documents", "Документы", "מסמכים")}
+          badge={copy("Admin", "Администратор", "מנהל")}
+          subtitle={copy(
+            "Project templates, field preview and generated files for DIMAX object paperwork.",
+            "Шаблоны, предварительный просмотр полей и готовые документы по объектам DIMAX.",
+            "תבניות, תצוגה מקדימה של שדות ומסמכים מוכנים לפרויקטים של DIMAX.",
+          )}
           actions={
             <button
               type="button"
@@ -591,34 +600,34 @@ export default function DocumentsPage() {
                 ]);
               }}
             >
-              Refresh
+              {copy("Refresh", "Обновить", "רענן")}
             </button>
           }
         />
 
         <div className="grid gap-3 md:grid-cols-4">
           <DimaxKpiCard
-            label="Active templates"
+            label={copy("Active templates", "Активные шаблоны", "תבניות פעילות")}
             value={activeTemplates.length}
-            hint="Available for generation"
+            hint={copy("Available for generation", "Доступны для формирования", "זמינות ליצירת מסמכים")}
             barColor="green"
           />
           <DimaxKpiCard
-            label="Archived templates"
+            label={copy("Archived templates", "Архивные шаблоны", "תבניות בארכיון")}
             value={archivedTemplates.length}
-            hint="Kept for document history"
+            hint={copy("Kept for document history", "Сохранены для истории документов", "נשמרו להיסטוריית מסמכים")}
             barColor="yellow"
           />
           <DimaxKpiCard
-            label="Projects"
+            label={copy("Projects", "Объекты", "פרויקטים")}
             value={projects.length}
-            hint="Render targets"
+            hint={copy("Render targets", "Объекты для формирования", "פרויקטים ליצירת מסמכים")}
             barColor="blue"
           />
           <DimaxKpiCard
-            label="Generated"
+            label={copy("Generated", "Сформировано", "נוצרו")}
             value={generatedDocuments.length}
-            hint="Ready files"
+            hint={copy("Ready files", "Готовые файлы", "קבצים מוכנים")}
             barColor="orange"
           />
         </div>
@@ -639,8 +648,8 @@ export default function DocumentsPage() {
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
           <WidgetCard
-            title="Add document template"
-            headerMeta="Template upload"
+            title={copy("Add document template", "Добавить шаблон документа", "הוספת תבנית מסמך")}
+            headerMeta={copy("Template upload", "Загрузка шаблона", "העלאת תבנית")}
             actionSlot={
               <UploadCloud
                 className="h-5 w-5 shrink-0 text-accent"
@@ -651,7 +660,7 @@ export default function DocumentsPage() {
 
             <div className="grid gap-4">
               <div className="field-stack">
-                <Label htmlFor="document-template-name">Template name</Label>
+                <Label htmlFor="document-template-name">{copy("Template name", "Имя шаблона", "שם התבנית")}</Label>
                 <Input
                   id="document-template-name"
                   value={uploadName}
@@ -661,7 +670,7 @@ export default function DocumentsPage() {
               </div>
               <div className="field-stack">
                 <Label htmlFor="document-template-description">
-                  Description
+                  {copy("Description", "Описание", "תיאור")}
                 </Label>
                 <Textarea
                   id="document-template-description"
@@ -673,7 +682,7 @@ export default function DocumentsPage() {
               </div>
               <div className="field-stack">
                 <Label htmlFor="document-template-file">
-                  Template file (.docx, .html, .txt)
+                  {copy("Template file (.docx, .html, .txt)", "Файл шаблона (.docx, .html, .txt)", "קובץ תבנית (.docx, .html, .txt)")}
                 </Label>
                 <Input
                   id="document-template-file"
@@ -699,14 +708,14 @@ export default function DocumentsPage() {
                 ) : (
                   <UploadCloud className="h-4 w-4" />
                 )}
-                Upload template
+                {copy("Upload template", "Загрузить шаблон", "העלאת תבנית")}
               </button>
             </div>
           </WidgetCard>
 
           <WidgetCard
-            title="Generate filled document"
-            headerMeta="Project render"
+            title={copy("Generate filled document", "Сформировать документ", "יצירת מסמך מלא")}
+            headerMeta={copy("Project render", "Документ по объекту", "מסמך לפרויקט")}
             actionSlot={
               <FileText
                 className="h-5 w-5 shrink-0 text-accent"
@@ -717,14 +726,14 @@ export default function DocumentsPage() {
 
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="field-stack">
-                <Label htmlFor="document-project">Project</Label>
+                <Label htmlFor="document-project">{copy("Project", "Проект", "פרויקט")}</Label>
                 <select
                   id="document-project"
                   value={selectedProjectId}
                   onChange={(event) => setSelectedProjectId(event.target.value)}
                   className="control-input"
                 >
-                  <option value="">Select project</option>
+                  <option value="">{copy("Select project", "Выбор проекта", "בחר פרויקט")}</option>
                   {projects.map((project) => (
                     <option key={project.id} value={project.id}>
                       {project.code
@@ -735,7 +744,7 @@ export default function DocumentsPage() {
                 </select>
               </div>
               <div className="field-stack">
-                <Label htmlFor="document-template">Template</Label>
+                <Label htmlFor="document-template">{copy("Template", "Шаблон", "תבנית")}</Label>
                 <select
                   id="document-template"
                   value={selectedTemplate?.is_active ? selectedTemplateId : ""}
@@ -744,7 +753,7 @@ export default function DocumentsPage() {
                   }
                   className="control-input"
                 >
-                  <option value="">Select template</option>
+                  <option value="">{copy("Select template", "Выбор шаблона", "בחר תבנית")}</option>
                   {activeTemplates.map((template) => (
                     <option key={template.id} value={template.id}>
                       {template.name}
@@ -778,7 +787,7 @@ export default function DocumentsPage() {
                     {formatBytes(selectedTemplate.size_bytes)}
                   </span>
                   <span className="dmx-week-pill">
-                    {selectedTemplate.placeholders.length} placeholders
+                    {selectedTemplate.placeholders.length} {copy("placeholders", "заполнители", "מצייני מקום")}
                   </span>
                 </div>
                 {selectedTemplate.placeholders.length > 0 ? (
@@ -795,7 +804,7 @@ export default function DocumentsPage() {
                 ) : null}
                 {unresolvedPlaceholders.length > 0 ? (
                   <div className="rounded-md border border-status-warning-border bg-status-warning-bg px-3 py-2 text-[12px] text-status-warning-fg">
-                    Fields required before generation:{" "}
+                    {copy("Fields required before generation:", "Поля, необходимые перед генерацией:", "שדות נדרשים לפני היצירה:")}{" "}
                     {unresolvedPlaceholders.join(", ")}
                   </div>
                 ) : null}
@@ -803,7 +812,7 @@ export default function DocumentsPage() {
             ) : null}
 
             <div className="field-stack">
-              <Label htmlFor="document-overrides">Manual fields JSON</Label>
+              <Label htmlFor="document-overrides">{copy("Manual fields JSON", "Ручные поля JSON", "שדות ידניים JSON")}</Label>
               <Textarea
                 id="document-overrides"
                 rows={6}
@@ -825,19 +834,19 @@ export default function DocumentsPage() {
               ) : (
                 <Play className="h-4 w-4" />
               )}
-              Generate document
+              {copy("Generate document", "Создать документ", "צור מסמך")}
             </button>
           </WidgetCard>
         </div>
 
         <WidgetCard
-          title="Available fields"
-          headerMeta="Project field preview"
+          title={copy("Available fields", "Доступные поля", "שדות זמינים")}
+          headerMeta={copy("Project field preview", "Предпросмотр данных объекта", "תצוגה מקדימה של נתוני הפרויקט")}
           actionSlot={
             contextQuery.isFetching ? (
               <div className="inline-flex items-center gap-2 text-[12px] text-text-secondary">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Loading fields
+                {copy("Loading fields", "Загрузка полей", "טוען שדות")}
               </div>
             ) : null
           }
@@ -847,7 +856,7 @@ export default function DocumentsPage() {
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {fieldEntries.length === 0 && !contextQuery.isLoading ? (
                 <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3 text-[13px] text-text-secondary">
-                  No fields available.
+                  {copy("No fields available.", "Нет доступных полей.", "אין שדות זמינים.")}
                 </div>
               ) : (
                 fieldEntries.map(([key, value]) => (
@@ -867,7 +876,7 @@ export default function DocumentsPage() {
             </div>
           ) : (
             <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3 text-[13px] text-text-secondary">
-              Select a project to preview fields.
+              {copy("Select a project to preview fields.", "Выберите проект для предварительного просмотра полей.", "בחר פרויקט לתצוגה מקדימה של שדות.")}
             </div>
           )}
         </WidgetCard>
@@ -879,7 +888,7 @@ export default function DocumentsPage() {
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search templates..."
+                placeholder={copy("Search templates...", "Поиск шаблонов...", "חיפוש תבניות...")}
                 className="control-input ps-10"
               />
             </div>
@@ -888,21 +897,21 @@ export default function DocumentsPage() {
               className={filterButtonClass(templateFilter === "active")}
               onClick={() => setTemplateFilter("active")}
             >
-              Active
+              {copy("Active", "Активные", "פעילים")}
             </button>
             <button
               type="button"
               className={filterButtonClass(templateFilter === "all")}
               onClick={() => setTemplateFilter("all")}
             >
-              All
+              {copy("All", "Все", "הכל")}
             </button>
             <button
               type="button"
               className={filterButtonClass(templateFilter === "archived")}
               onClick={() => setTemplateFilter("archived")}
             >
-              Archived
+              {copy("Archived", "В архиве", "הועבר לארכיון")}
             </button>
           </div>
         </section>
@@ -912,13 +921,13 @@ export default function DocumentsPage() {
             <Table>
               <TableHeader className="data-table-head">
                 <TableRow className="border-b border-border hover:bg-transparent">
-                  <TableHead>Name</TableHead>
-                  <TableHead>File</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Placeholders</TableHead>
-                  <TableHead>Size</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead className="w-[144px] text-end">Actions</TableHead>
+                  <TableHead>{copy("Name", "Имя", "שם")}</TableHead>
+                  <TableHead>{copy("File", "Файл", "קובץ")}</TableHead>
+                  <TableHead>{copy("Status", "Статус", "סטטוס")}</TableHead>
+                  <TableHead>{copy("Placeholders", "Заполнители", "מצייני מקום")}</TableHead>
+                  <TableHead>{copy("Size", "Размер", "גודל")}</TableHead>
+                  <TableHead>{copy("Updated", "Обновлено", "עודכן")}</TableHead>
+                  <TableHead className="w-[144px] text-end">{copy("Actions", "Действия", "פעולות")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -928,7 +937,7 @@ export default function DocumentsPage() {
                       colSpan={7}
                       className="py-8 text-sm text-text-secondary"
                     >
-                      Loading templates...
+                      {copy("Loading templates...", "Загрузка шаблонов...", "טוען תבניות...")}
                     </TableCell>
                   </TableRow>
                 ) : filteredTemplates.length === 0 ? (
@@ -937,7 +946,7 @@ export default function DocumentsPage() {
                       colSpan={7}
                       className="py-8 text-sm text-text-secondary"
                     >
-                      No templates found.
+                      {copy("No templates found.", "Шаблоны не найдены.", "לא נמצאו תבניות.")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -985,8 +994,8 @@ export default function DocumentsPage() {
                               templateDownloadMutation.mutate(template)
                             }
                             disabled={templateDownloadMutation.isPending}
-                            aria-label={`Download template ${template.name}`}
-                            title="Download template"
+                            aria-label={`${copy("Download template", "Скачать шаблон", "הורדת תבנית")} ${template.name}`}
+                            title={copy("Download template", "Скачать шаблон", "הורדת תבנית")}
                           >
                             <Download className="h-3.5 w-3.5" />
                           </button>
@@ -1034,7 +1043,7 @@ export default function DocumentsPage() {
                   <div className="mt-1 text-[12px] text-text-secondary">
                     {template.source_filename} -{" "}
                     {formatBytes(template.size_bytes)} -{" "}
-                    {template.placeholders.length} placeholders
+                    {template.placeholders.length} {copy("placeholders", "заполнители", "מצייני מקום")}
                   </div>
                 </button>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1047,7 +1056,7 @@ export default function DocumentsPage() {
                     onClick={() => templateDownloadMutation.mutate(template)}
                   >
                     <Download className="h-3.5 w-3.5" />
-                    Download
+                    {copy("Download", "Скачать", "הורד")}
                   </button>
                   <button
                     type="button"
@@ -1066,7 +1075,7 @@ export default function DocumentsPage() {
             ))}
             {!templatesQuery.isLoading && filteredTemplates.length === 0 ? (
               <div className="px-4 py-8 text-sm text-text-secondary">
-                No templates found.
+                {copy("No templates found.", "Шаблоны не найдены.", "לא נמצאו תבניות.")}
               </div>
             ) : null}
           </div>
@@ -1077,13 +1086,13 @@ export default function DocumentsPage() {
             <Table>
               <TableHeader className="data-table-head">
                 <TableRow className="border-b border-border hover:bg-transparent">
-                  <TableHead>Generated file</TableHead>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Template</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Size</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="w-[112px] text-end">Action</TableHead>
+                  <TableHead>{copy("Generated file", "Сгенерированный файл", "קובץ שנוצר")}</TableHead>
+                  <TableHead>{copy("Project", "Проект", "פרויקט")}</TableHead>
+                  <TableHead>{copy("Template", "Шаблон", "תבנית")}</TableHead>
+                  <TableHead>{copy("Status", "Статус", "סטטוס")}</TableHead>
+                  <TableHead>{copy("Size", "Размер", "גודל")}</TableHead>
+                  <TableHead>{copy("Created", "Создано", "נוצר")}</TableHead>
+                  <TableHead className="w-[112px] text-end">{copy("Action", "Действие", "פעולה")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1093,7 +1102,7 @@ export default function DocumentsPage() {
                       colSpan={7}
                       className="py-8 text-sm text-text-secondary"
                     >
-                      Loading generated documents...
+                      {copy("Loading generated documents...", "Загрузка сгенерированных документов...", "טוען מסמכים שנוצרו...")}
                     </TableCell>
                   </TableRow>
                 ) : generatedDocuments.length === 0 ? (
@@ -1102,7 +1111,7 @@ export default function DocumentsPage() {
                       colSpan={7}
                       className="py-8 text-sm text-text-secondary"
                     >
-                      No generated documents yet.
+                      {copy("No generated documents yet.", "Пока нет созданных документов.", "עדיין לא נוצרו מסמכים.")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -1186,13 +1195,13 @@ export default function DocumentsPage() {
                   disabled={downloadMutation.isPending}
                 >
                   <Download className="h-3.5 w-3.5" />
-                  Download
+                  {copy("Download", "Скачать", "הורד")}
                 </button>
               </article>
             ))}
             {!generatedQuery.isLoading && generatedDocuments.length === 0 ? (
               <div className="px-4 py-8 text-sm text-text-secondary">
-                No generated documents yet.
+                {copy("No generated documents yet.", "Пока нет созданных документов.", "עדיין לא נוצרו מסמכים.")}
               </div>
             ) : null}
           </div>

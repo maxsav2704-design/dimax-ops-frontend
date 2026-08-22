@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AnchorHTMLAttributes } from "react";
@@ -79,7 +79,22 @@ describe("AppSidebar", () => {
     const calendarLink = await screen.findByRole("link", { name: /calendar/i });
     expect(calendarLink).toBeInTheDocument();
     expect(calendarLink).toHaveAttribute("href", "/calendar");
-    expect(await screen.findByRole("link", { name: /library/i })).toHaveAttribute("href", "/library");
+    expect(screen.getByText("Work")).toBeInTheDocument();
+    expect(screen.getByText("Money and reports")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /create project/i }),
+    ).toHaveAttribute("href", "/projects?create=1");
+
+    const referenceButton = screen.getByRole("button", {
+      name: /reference data/i,
+    });
+    expect(referenceButton).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(referenceButton);
+    expect(referenceButton).toHaveAttribute("aria-expanded", "true");
+    expect(await screen.findByRole("link", { name: /library/i })).toHaveAttribute(
+      "href",
+      "/library",
+    );
   }, 15000);
 
   it("hides operations navigation for finance scope", async () => {
@@ -107,5 +122,44 @@ describe("AppSidebar", () => {
     expect(await screen.findByRole("link", { name: /reports/i })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /projects/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /library/i })).not.toBeInTheDocument();
+  });
+
+  it("forwards wheel movement over the fixed sidebar to the page content", () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AppSidebar />
+        <main data-admin-scroll />
+      </QueryClientProvider>,
+    );
+
+    const sidebar = screen.getByRole("complementary", {
+      name: /admin navigation/i,
+    });
+    const content = document.querySelector<HTMLElement>("[data-admin-scroll]");
+    const scrollBy = vi.fn();
+    Object.defineProperty(content, "scrollBy", {
+      configurable: true,
+      value: scrollBy,
+    });
+
+    fireEvent.wheel(sidebar, { deltaY: 160 });
+    fireEvent.wheel(sidebar, { deltaY: -80 });
+
+    expect(scrollBy).toHaveBeenNthCalledWith(1, {
+      top: 160,
+      behavior: "auto",
+    });
+    expect(scrollBy).toHaveBeenNthCalledWith(2, {
+      top: -80,
+      behavior: "auto",
+    });
   });
 });
