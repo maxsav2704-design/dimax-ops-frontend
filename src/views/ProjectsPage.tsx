@@ -1461,6 +1461,30 @@ export default function ProjectsPage() {
     }
     return LOCATION_LABELS[value]?.[locale] || value;
   };
+  const importRowErrorLabel = (message: string): string => {
+    const match = /^missing required row values:\s*(.+)$/i.exec(message.trim());
+    if (!match) {
+      return message;
+    }
+    const fieldLabels: Record<string, string> = {
+      house_number: copy("house", "дом", "בניין"),
+      floor_label: copy("floor", "этаж", "קומה"),
+      apartment_number: copy("apartment/location", "квартира/позиция", "דירה/מיקום"),
+      door_marking: copy("door marking", "маркировка двери", "סימון דלת"),
+      order_number: copy("order number", "номер заказа", "מספר הזמנה"),
+    };
+    const fields = match[1]
+      .split(",")
+      .map((field) => field.trim())
+      .filter(Boolean)
+      .map((field) => fieldLabels[field] || field)
+      .join(", ");
+    return `${copy(
+      "Missing required values",
+      "Не заполнены обязательные поля",
+      "חסרים ערכי חובה",
+    )}: ${fields}`;
+  };
   const importProfileLabel = (code: string, fallback = code) => {
     switch (code) {
       case "auto_v1":
@@ -9672,10 +9696,13 @@ export default function ProjectsPage() {
                             <div>
                               {t("projects.errorsPreviewInline").replace(
                                 "{value}",
-                                importResult.errors
-                                  .slice(0, 5)
-                                  .map((e) => `#${e.row} ${e.message}`)
-                                  .join(" | "),
+                                  importResult.errors
+                                    .slice(0, 5)
+                                    .map(
+                                      (e) =>
+                                        `#${e.row} ${importRowErrorLabel(e.message)}`,
+                                    )
+                                    .join(" | "),
                               )}
                             </div>
                             <Button
