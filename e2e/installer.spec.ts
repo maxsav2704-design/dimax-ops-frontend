@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { fillReadyLoginForm, LOGIN_RESPONSE_TIMEOUT } from "./login-helpers";
+
 const COMPANY_ID =
   process.env.E2E_COMPANY_ID || "1f16d537-5617-4c4b-a944-dafba2bcead9";
 const INSTALLER_EMAIL = process.env.E2E_INSTALLER_EMAIL || "";
@@ -10,35 +12,36 @@ const REQUIRE_INSTALLER_CREDENTIALS_IN_CI = process.env.CI === "true";
 
 async function loginInstaller(page) {
   await page.goto("/login");
-  await page.getByLabel("Company ID").fill(COMPANY_ID);
-  await page.getByLabel("Email").fill(INSTALLER_EMAIL);
-  await page.getByLabel("Password").fill(INSTALLER_PASSWORD);
+  const submit = await fillReadyLoginForm(page, {
+    companyId: COMPANY_ID,
+    email: INSTALLER_EMAIL,
+    password: INSTALLER_PASSWORD,
+  });
 
   const loginResponsePromise = page.waitForResponse(
     (response) =>
       response.url().includes("/api/v1/auth/login") &&
       response.request().method() === "POST",
-    { timeout: 30_000 }
+    { timeout: LOGIN_RESPONSE_TIMEOUT }
   );
 
-  await page.getByRole("button", { name: "Sign In" }).click();
+  await submit.click();
   const loginResponse = await loginResponsePromise;
   expect(loginResponse.ok()).toBeTruthy();
-
-  await page.waitForFunction(
-    () => Boolean(window.localStorage.getItem("dimax_access_token")),
-    undefined,
-    { timeout: 30_000 }
-  );
+  const loginBody = (await loginResponse.json()) as { access_token?: string };
 
   await expect(page).toHaveURL(/\/installer(?:\/)?$/, { timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "Installer Workspace" })).toBeVisible({
     timeout: 30_000,
   });
+  await page.waitForFunction(
+    () => Boolean(window.sessionStorage.getItem("dimax_refresh_token")),
+    undefined,
+    { timeout: 30_000 }
+  );
 
-  const token = await page.evaluate(() => window.localStorage.getItem("dimax_access_token"));
-  expect(token).toBeTruthy();
-  return token as string;
+  expect(loginBody.access_token).toBeTruthy();
+  return loginBody.access_token as string;
 }
 
 test.describe.serial("Installer web smoke", () => {
@@ -72,7 +75,9 @@ test.describe.serial("Installer web smoke", () => {
     await page.getByRole("button", { name: "Today" }).click();
     await page.getByRole("button", { name: "Next 30 days" }).click();
 
-    await page.getByRole("link", { name: "Workspace" }).click();
+    await page
+      .getByRole("link", { name: "Workspace", exact: true })
+      .click();
     await expect(page.getByRole("heading", { name: "Installer Workspace" })).toBeVisible({
       timeout: 30_000,
     });
@@ -87,7 +92,9 @@ test.describe.serial("Installer web smoke", () => {
     await expect(page.getByRole("heading", { name: "My Schedule" })).toBeVisible({
       timeout: 30_000,
     });
-    await page.getByRole("link", { name: "Workspace" }).click();
+    await page
+      .getByRole("link", { name: "Workspace", exact: true })
+      .click();
 
     const projectsResponse = await request.get(`${API_BASE_URL}/api/v1/installer/projects`, {
       headers: {
@@ -107,48 +114,68 @@ test.describe.serial("Installer web smoke", () => {
 
     const targetProject = projectsBody.items[0];
 
-    const cardScheduleLink = page.locator('a[href^="/installer/calendar?project_id="]').first();
+    const cardScheduleLink = page.locator(
+      `a[href="/installer/calendar?project_id=${targetProject.id}"]`
+    );
     await expect(cardScheduleLink).toBeVisible({ timeout: 30_000 });
     await cardScheduleLink.click();
-    await expect(page).toHaveURL(/\/installer\/calendar\?project_id=/, { timeout: 30_000 });
-    await expect(page.getByRole("heading", { name: "My Schedule" })).toBeVisible({
-      timeout: 30_000,
-    });
-    await page.getByRole("link", { name: "Workspace" }).click();
-    await expect(page.getByRole("heading", { name: "Installer Workspace" })).toBeVisible({
-      timeout: 30_000,
-    });
-
-    const todayOnProjectLink = page.locator(
-      `a[href="/installer/calendar?preset=today&project_id=${targetProject.id}"]`
-    );
-    await expect(todayOnProjectLink).toBeVisible({ timeout: 30_000 });
-    await todayOnProjectLink.click();
     await expect(page).toHaveURL(
-      new RegExp(`/installer/calendar\\?preset=today&project_id=${targetProject.id}`)
+      new RegExp(`/installer/calendar\\?project_id=${targetProject.id}$`),
+      { timeout: 30_000 }
     );
     await expect(page.getByRole("heading", { name: "My Schedule" })).toBeVisible({
       timeout: 30_000,
     });
-    await page.getByRole("link", { name: "Workspace" }).click();
+    await page
+      .getByRole("link", { name: "Workspace", exact: true })
+      .click();
     await expect(page.getByRole("heading", { name: "Installer Workspace" })).toBeVisible({
       timeout: 30_000,
     });
 
-    const priorityDoorsLink = page.locator(
-      `a[href="/installer/projects/${targetProject.id}#project-doors"]`
+    const projectEarningsLink = page.locator(
+      `a[href="/installer/earnings?project_id=${targetProject.id}"]`
     );
-    await expect(priorityDoorsLink).toBeVisible({ timeout: 30_000 });
-    await priorityDoorsLink.click();
+    await expect(projectEarningsLink).toBeVisible({ timeout: 30_000 });
+    await projectEarningsLink.click();
     await expect(page).toHaveURL(
-      new RegExp(`/installer/projects/${targetProject.id}#project-doors$`)
+      new RegExp(`/installer/earnings\\?project_id=${targetProject.id}$`)
     );
-    await expect(page.getByText("Door filters")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: "Installer earnings" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await page
+      .getByRole("link", { name: "Workspace", exact: true })
+      .click();
+    await expect(page.getByRole("heading", { name: "Installer Workspace" })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const projectLink = page
+      .locator(`a[href="/installer/projects/${targetProject.id}"]`)
+      .first();
+    await expect(projectLink).toBeVisible({ timeout: 60_000 });
+    await expect(projectLink).toHaveAccessibleName(/Open project/i);
+    await projectLink.click();
+    await expect(page).toHaveURL(
+      new RegExp(`/installer/projects/${targetProject.id}$`)
+    );
+    await expect(
+      page.getByRole("heading", { name: "Door filters", exact: true })
+    ).toBeVisible({ timeout: 30_000 });
     await expect(page.locator("#project-doors")).toBeVisible({ timeout: 30_000 });
 
-    await page.goto(`/installer/projects/${targetProject.id}`);
-    await expect(page.getByText("Door filters")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("Add-on fact")).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.getByRole("heading", { name: "Add-on fact", exact: true })
+    ).toBeVisible({ timeout: 30_000 });
+    const projectAction = (name: string) =>
+      page
+        .getByRole("link", { name, exact: true })
+        .or(page.getByRole("button", { name, exact: true }))
+        .first();
+    await expect(projectAction("Open Waze")).toBeVisible({ timeout: 30_000 });
+    await expect(projectAction("Open WhatsApp")).toBeVisible({ timeout: 30_000 });
+    await expect(projectAction("Call contact")).toBeVisible({ timeout: 30_000 });
 
     const problemProject = projectsBody.items.find((project) => project.status === "PROBLEM");
     if (problemProject) {
@@ -204,7 +231,10 @@ test.describe.serial("Installer web smoke", () => {
 
     await page.getByRole("button", { name: "Reset filters" }).click();
     await expect(page).toHaveURL(/\/installer\/calendar$/);
-    await expect(page.getByLabel("Range", { exact: true })).toHaveValue("7d");
+    await expect(page.getByRole("button", { name: "Next 7 days" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
     await expect(page.getByLabel("Event type")).toHaveValue("ALL");
     await expect(page.getByLabel("Project")).toHaveValue("ALL");
   });
@@ -237,5 +267,27 @@ test.describe.serial("Installer web smoke", () => {
       "aria-pressed",
       "true"
     );
+  });
+
+  test("persists installer locale across navigation and reload", async ({ page }) => {
+    await loginInstaller(page);
+
+    await page.getByRole("button", { name: "עב" }).click();
+    await expect(page.locator("html")).toHaveAttribute("lang", "he");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect
+      .poll(async () => page.evaluate(() => window.localStorage.getItem("dimax_locale")))
+      .toBe("he");
+
+    await page.goto("/installer/calendar");
+    await expect(page.locator("html")).toHaveAttribute("lang", "he");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("lang", "he");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect
+      .poll(async () => page.evaluate(() => window.localStorage.getItem("dimax_locale")))
+      .toBe("he");
   });
 });

@@ -54,15 +54,19 @@ describe("InstallerSchedulePage", () => {
     expect(await screen.findByText("My Schedule")).toBeInTheDocument();
     expect(await screen.findByText("Site visit")).toBeInTheDocument();
     expect(screen.getByText("Project project-1")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Priority doors" })).toHaveAttribute(
-      "href",
-      "/installer/projects/project-1#project-doors"
-    );
     expect(screen.getByRole("link", { name: "Open issues" })).toHaveAttribute(
       "href",
-      "/installer/projects/project-1?door_filter=WITH_ISSUES&issue_status=BLOCKED&issue_search=Site+visit#project-open-issues"
+      "/installer/issues?project_id=project-1&issue_status=BLOCKED&issue_search=Site+visit"
     );
     expect(await screen.findByRole("link", { name: "Open project" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open earnings" })).toHaveAttribute(
+      "href",
+      "/installer/earnings?project_id=project-1"
+    );
+    expect(screen.getByRole("link", { name: "Open sync queue" })).toHaveAttribute(
+      "href",
+      "/installer/sync-queue?project_id=project-1"
+    );
   });
 
   it("applies project query filter and event-type filter", async () => {
@@ -119,6 +123,13 @@ describe("InstallerSchedulePage", () => {
 
     expect(await screen.findByText("Delivery Project 2")).toBeInTheDocument();
     expect(screen.queryByText("Install Project 1")).not.toBeInTheDocument();
+    expect(
+      screen.getByText((_, element) => element?.textContent === "Focused project project-2")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Show full calendar" })).toHaveAttribute(
+      "href",
+      "/installer/calendar"
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Overdue only" }));
     expect(await screen.findByText("No events match current filters.")).toBeInTheDocument();
@@ -424,7 +435,10 @@ describe("InstallerSchedulePage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Reset filters" }));
     expect(window.location.search).toBe("");
-    expect(screen.getByLabelText("Range")).toHaveValue("7d");
+    expect(screen.getByRole("button", { name: "Next 7 days" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
     expect(screen.getByLabelText("Event type")).toHaveValue("ALL");
     expect(screen.getByLabelText("Project")).toHaveValue("ALL");
     expect(screen.getByRole("button", { name: "Overdue only" })).toHaveAttribute(

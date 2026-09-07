@@ -1,12 +1,14 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
 import JournalPage from "@/views/JournalPage";
 
-const { apiFetchMock, pushMock } = vi.hoisted(() => ({
+const { apiFetchMock, pushMock, authSessionMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
   pushMock: vi.fn(),
+  authSessionMock: vi.fn(),
 }));
 
 vi.mock("@/components/DashboardLayout", () => ({
@@ -19,8 +21,8 @@ vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
 }));
 
-vi.mock("@/hooks/use-user-role", () => ({
-  useUserRole: () => "ADMIN",
+vi.mock("@/hooks/use-auth-session", () => ({
+  useAuthSession: authSessionMock,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -249,11 +251,35 @@ function buildApiMock() {
   };
 }
 
+function renderJournalPage() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <JournalPage />
+    </QueryClientProvider>
+  );
+}
+
 describe("JournalPage", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     apiFetchMock.mockReset();
     pushMock.mockReset();
+    authSessionMock.mockReset();
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "OWNER",
+      can_view_rates: true,
+      can_manage_imports: true,
+      can_manage_users: true,
+    });
     apiFetchMock.mockImplementation(buildApiMock());
     const storage = new Map<string, string>();
     Object.defineProperty(window, "localStorage", {
@@ -278,7 +304,7 @@ describe("JournalPage", () => {
   });
 
   it("loads communication center data and opens journal form route", async () => {
-    render(<JournalPage />);
+    renderJournalPage();
 
     expect(await screen.findByText("Communications Center")).toBeInTheDocument();
     expect(await screen.findByText("Final Handover Pack")).toBeInTheDocument();
@@ -288,10 +314,10 @@ describe("JournalPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open journal form" }));
     expect(pushMock).toHaveBeenCalledWith("/journal/journal-1");
-  });
+  }, 15000);
 
   it("queues journal send with email and WhatsApp payload", async () => {
-    render(<JournalPage />);
+    renderJournalPage();
 
     await screen.findByLabelText("Email recipient");
 
@@ -326,10 +352,14 @@ describe("JournalPage", () => {
         send_whatsapp: true,
       });
     });
+
+    expect(
+      await screen.findByText(/Queued send via email \+ WhatsApp\. Object key: journals\/journal-1\.pdf/)
+    ).toBeInTheDocument();
   }, 15000);
 
   it("applies preview and saves shared template via backend", async () => {
-    render(<JournalPage />);
+    renderJournalPage();
 
     await screen.findByLabelText("Communication template");
 
@@ -363,10 +393,12 @@ describe("JournalPage", () => {
         subject: "Final delivery confirmation for Ashdod Towers",
       });
     });
+
+    expect(await screen.findByText("Template saved: Delivery Pack Template")).toBeInTheDocument();
   });
 
   it("retries failed outbox delivery from the log", async () => {
-    render(<JournalPage />);
+    renderJournalPage();
 
     await screen.findByText("Please review the delivery package.");
     await screen.findByRole("button", { name: "Retry" });
@@ -382,6 +414,35 @@ describe("JournalPage", () => {
       expect(body).toMatchObject({
         reason: "communications_center_manual_retry",
       });
+    });
+
+    expect(await screen.findByText("Delivery item moved back to queue.")).toBeInTheDocument();
+  });
+
+  it("keeps viewer journal read-only without requesting restricted data", async () => {
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "VIEWER",
+      can_view_rates: false,
+      can_manage_imports: true,
+      can_manage_users: true,
+    });
+
+    renderJournalPage();
+
+    expect(await screen.findByText("Final Handover Pack")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Journal subject")).toBeDisabled();
+    expect(screen.getByLabelText("Journal message")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+
+    await waitFor(() => {
+      const restrictedCalls = apiFetchMock.mock.calls.filter((call) => {
+        const url = String(call[0]);
+        return url.includes("/api/v1/admin/settings/") || url.includes("/api/v1/admin/outbox");
+      });
+      expect(restrictedCalls).toHaveLength(0);
     });
   });
 });

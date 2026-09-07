@@ -12,7 +12,15 @@ dist
 dist-ssr
 *.local
 .next
+.next-dev
 .next-*.log
+.preview-web.*
+installer-calendar-preview.png
+installer-workspace-preview.png
+tmp-*.cjs
+visual-audit/
+artifacts/
+.preview-seed.json
 tsconfig.tsbuildinfo
 .env.e2e.local
 

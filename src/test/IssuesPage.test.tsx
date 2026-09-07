@@ -1,5 +1,6 @@
-﻿import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
@@ -11,8 +12,8 @@ const { apiFetchMock } = vi.hoisted(() => ({
 const { searchParamsMock } = vi.hoisted(() => ({
   searchParamsMock: vi.fn(),
 }));
-const { userRoleMock } = vi.hoisted(() => ({
-  userRoleMock: vi.fn(),
+const { authSessionMock } = vi.hoisted(() => ({
+  authSessionMock: vi.fn(),
 }));
 
 vi.mock("@/components/DashboardLayout", () => ({
@@ -25,8 +26,8 @@ vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
 }));
 
-vi.mock("@/hooks/use-user-role", () => ({
-  useUserRole: userRoleMock,
+vi.mock("@/hooks/use-auth-session", () => ({
+  useAuthSession: authSessionMock,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -38,9 +39,13 @@ describe("IssuesPage", () => {
     vi.restoreAllMocks();
     apiFetchMock.mockReset();
     searchParamsMock.mockReset();
-    userRoleMock.mockReset();
+    authSessionMock.mockReset();
     searchParamsMock.mockReturnValue(new URLSearchParams(""));
-    userRoleMock.mockReturnValue("ADMIN");
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "OWNER",
+      can_view_rates: true,
+    });
   });
 
   afterEach(() => {
@@ -124,7 +129,13 @@ describe("IssuesPage", () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText("Install blocked")).toBeInTheDocument();
+    const issuesControl = await screen.findByTestId("issues-control-v26");
+    expect(within(issuesControl).getByText("SLA breached")).toBeInTheDocument();
+    expect(
+      within(issuesControl).getByRole("button", { name: /Export CSV/i })
+    ).toBeInTheDocument();
+
+    expect(await screen.findByText("Install blocked", {}, { timeout: 5000 })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Status filter"), {
       target: { value: "OPEN" },
@@ -251,8 +262,80 @@ describe("IssuesPage", () => {
     expect(screen.getByText("B-202 / 8fa68e09-d216-4b3c-b5ef-206efe47d458")).toBeInTheDocument();
   }, 15000);
 
-  it("disables privileged workflow actions for installer role", async () => {
-    userRoleMock.mockReturnValue("INSTALLER");
+  it("does not select another issue when issue_id deep link is unavailable", async () => {
+    searchParamsMock.mockReturnValue(new URLSearchParams("issue_id=missing-issue"));
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/api/v1/admin/installers")) {
+        return [];
+      }
+      if (path.includes("/api/v1/admin/issues")) {
+        return {
+          items: [
+            {
+              id: "issue-1",
+              company_id: "company-1",
+              door_id: "door-1",
+              project_id: "project-1",
+              door_unit_label: "A-101",
+              status: "OPEN",
+              workflow_state: "NEW",
+              priority: "P3",
+              owner_user_id: null,
+              due_at: null,
+              is_overdue: false,
+              title: "Install blocked",
+              details: "Client requested delay",
+              created_at: "2026-02-20T10:00:00Z",
+              updated_at: "2026-02-22T10:00:00Z",
+            },
+          ],
+        };
+      }
+      return {};
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <IssuesPage />
+      </QueryClientProvider>
+    );
+
+    expect(
+      await screen.findByText(
+        "Requested issue missing-issue is not available in the current issue list. Another issue was not selected automatically.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Install blocked")).toBeInTheDocument();
+    expect(screen.getByText("Select an issue to edit workflow.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show issue list" }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          "Requested issue missing-issue is not available in the current issue list. Another issue was not selected automatically.",
+        ),
+      ).not.toBeInTheDocument();
+    });
+  }, 15000);
+
+  it("keeps viewer workflow actions read-only", async () => {
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "VIEWER",
+      can_view_rates: false,
+      can_manage_imports: true,
+      can_manage_users: true,
+    });
 
     apiFetchMock.mockImplementation(async (path: string) => {
       if (path.includes("/api/v1/admin/installers")) {
@@ -298,10 +381,106 @@ describe("IssuesPage", () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText("Installer role has read-only access to issue workflow controls.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Your access level has read-only access to issue workflow controls.", {}, { timeout: 5000 })
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByText("Install blocked"));
     expect(await screen.findByRole("button", { name: "Save Workflow" })).toBeDisabled();
     expect(screen.getByRole("button", { name: /Apply To Filtered/i })).toBeDisabled();
-  });
+  }, 15000);
+
+  it("shows issue comments and opens media attachments for the selected issue", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/api/v1/admin/installers")) {
+        return [];
+      }
+      if (path === "/api/v1/admin/issues?limit=200") {
+        return {
+          items: [
+            {
+              id: "issue-1",
+              company_id: "company-1",
+              door_id: "door-1",
+              project_id: "project-1",
+              door_unit_label: "A-101",
+              status: "OPEN",
+              workflow_state: "NEW",
+              priority: "P2",
+              owner_user_id: null,
+              due_at: null,
+              is_overdue: false,
+              title: "Install blocked",
+              details: "Client requested delay",
+              created_at: "2026-02-20T10:00:00Z",
+              updated_at: "2026-02-22T10:00:00Z",
+            },
+          ],
+        };
+      }
+      if (path === "/api/v1/admin/issues/issue-1/comments") {
+        return {
+          items: [
+            {
+              id: "comment-1",
+              body: "Called the customer and confirmed the delay.",
+              author_name: "Dispatcher One",
+              created_at: "2026-02-22T12:00:00Z",
+            },
+          ],
+        };
+      }
+      if (path === "/api/v1/admin/issues/issue-1/media") {
+        return {
+          items: [
+            {
+              id: "media-1",
+              file_name: "lock-photo.jpg",
+              content_type: "image/jpeg",
+              created_at: "2026-02-22T12:30:00Z",
+            },
+          ],
+        };
+      }
+      if (path === "/api/v1/media/media-1/url") {
+        return {
+          url: "https://files.dimax.test/lock-photo.jpg",
+        };
+      }
+      return {};
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <IssuesPage />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Install blocked")).toBeInTheDocument();
+    expect(await screen.findByText("Called the customer and confirmed the delay.", {}, { timeout: 5000 })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show" }));
+    expect(await screen.findByText("lock-photo.jpg")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+
+    await waitFor(() => {
+      expect(apiFetchMock).toHaveBeenCalledWith("/api/v1/media/media-1/url");
+      expect(openSpy).toHaveBeenCalledWith(
+        "https://files.dimax.test/lock-photo.jpg",
+        "_blank",
+        "noopener,noreferrer"
+      );
+    });
+  }, 15000);
 });
 

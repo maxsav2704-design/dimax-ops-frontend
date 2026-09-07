@@ -68,6 +68,15 @@ npm run test:e2e:installer:strict:local
 
 See `TESTING.md` for the full bootstrap and local flow.
 
+## Design
+
+Design handoff and review docs:
+
+- `DESIGN_SYSTEM.md`
+- `DEMO_REVIEW_PACK.md`
+- `SCREENSHOT_ROUTES.md`
+- `PR_DESIGN_SUMMARY.md`
+
 ## Environment
 
 The frontend expects an API base URL in environment configuration.

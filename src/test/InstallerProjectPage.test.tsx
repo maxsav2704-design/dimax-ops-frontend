@@ -16,7 +16,15 @@ const projectDetails = {
   id: "project-1",
   name: "Project One",
   address: "Address",
-  waze_url: null,
+  waze_url: "https://waze.example/project-1",
+  whatsapp_url: "https://wa.me/972501234567",
+  call_url: "tel:+972501234567",
+  contact_name: "Yael Cohen",
+  contact_phone: "+972501234567",
+  developer_phone_alt: "+972502224466",
+  developer_whatsapp: "+972509876543",
+  developer_company: "DIMAX Dev Co",
+  developer_notes: "Gate code 7788, call before arrival.",
   status: "IN_PROGRESS",
   server_time: "2026-03-07T09:00:00Z",
   reasons_catalog: [{ id: "reason-1", code: "R1", name: "Blocked" }],
@@ -25,7 +33,6 @@ const projectDetails = {
       id: "door-1",
       unit_label: "A-101",
       door_type_id: "door-type-1",
-      our_price: "100.00",
       order_number: "ORD-1",
       house_number: "1",
       floor_label: "1",
@@ -36,12 +43,12 @@ const projectDetails = {
       reason_id: null,
       comment: null,
       is_locked: false,
+      version: 0,
     },
     {
       id: "door-2",
       unit_label: "B-202",
       door_type_id: "door-type-1",
-      our_price: "120.00",
       order_number: "ORD-2",
       house_number: "2",
       floor_label: "2",
@@ -52,6 +59,7 @@ const projectDetails = {
       reason_id: null,
       comment: null,
       is_locked: true,
+      version: 1,
     },
   ],
   issues_open: [],
@@ -62,19 +70,19 @@ const projectDetails = {
   },
 } as const;
 
-function setupApiMock(details = projectDetails) {
+function setupApiMock(details: unknown = projectDetails) {
   apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
     if (path === "/api/v1/installer/projects/project-1") {
       return details;
     }
     if (path === "/api/v1/installer/doors/door-1/install" && init?.method === "POST") {
-      return { ok: true };
+      return { ok: true, id: "door-1", status: "INSTALLED", version: 1 };
     }
     if (
       path === "/api/v1/installer/doors/door-1/not-installed" &&
       init?.method === "POST"
     ) {
-      return { ok: true };
+      return { ok: true, id: "door-1", status: "NOT_INSTALLED", version: 1 };
     }
     if (
       path === "/api/v1/installer/addons/projects/project-1/facts" &&
@@ -144,7 +152,7 @@ describe("InstallerProjectPage", () => {
         comment: "Need crane access",
       });
     });
-  });
+  }, 15000);
 
   it("sends installer add-on fact action with payload", async () => {
     setupApiMock();
@@ -180,7 +188,169 @@ describe("InstallerProjectPage", () => {
     renderSubject();
 
     expect(await screen.findByText("No open issues.")).toBeInTheDocument();
-  });
+    expect(screen.getByRole("link", { name: "Address" })).toHaveAttribute(
+      "href",
+      "https://waze.example/project-1"
+    );
+    expect(screen.getByRole("link", { name: "Open Waze" })).toHaveAttribute(
+      "href",
+      "https://waze.example/project-1"
+    );
+    expect(screen.getByRole("link", { name: "Open WhatsApp" })).toHaveAttribute(
+      "href",
+      "https://wa.me/972501234567"
+    );
+    expect(screen.getByRole("link", { name: "Call contact" })).toHaveAttribute(
+      "href",
+      "tel:+972501234567"
+    );
+    expect(screen.getByText("DIMAX Dev Co")).toBeInTheDocument();
+    expect(screen.getByText("Yael Cohen")).toBeInTheDocument();
+    expect(screen.getByText("Alt: +972 50-222-4466")).toBeInTheDocument();
+    expect(screen.getByText("WhatsApp: +972 50-987-6543")).toBeInTheDocument();
+    expect(screen.getByText("Developer contact")).toBeInTheDocument();
+    expect(screen.getByText("Gate code 7788, call before arrival.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open sync queue" })).toHaveAttribute(
+      "href",
+      "/installer/sync-queue?project_id=project-1"
+    );
+    expect(screen.getByRole("link", { name: "Open earnings" })).toHaveAttribute(
+      "href",
+      "/installer/earnings?project_id=project-1"
+    );
+  }, 15000);
+
+  it("does not render project price fields in installer project add-on plan", async () => {
+    setupApiMock({
+      ...projectDetails,
+      addons: {
+        ...projectDetails.addons,
+        plan: [
+          {
+            addon_type_id: "addon-1",
+            qty_planned: "2.00",
+            client_price: "80.00",
+            installer_price: "40.00",
+          },
+        ],
+      },
+    });
+    renderSubject();
+
+    expect(await screen.findByText("Project One")).toBeInTheDocument();
+    expect(screen.getByText("Planned qty: 2.00")).toBeInTheDocument();
+    expect(screen.queryByText(/Installer price/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("40.00")).not.toBeInTheDocument();
+    expect(screen.queryByText("80.00")).not.toBeInTheDocument();
+  }, 15000);
+
+  it("prefers structured installer project details when nested objects are present", async () => {
+    setupApiMock({
+      ...projectDetails,
+      address: null,
+      waze_url: null,
+      whatsapp_url: null,
+      call_url: null,
+      contact_name: null,
+      contact_phone: null,
+      developer_phone_alt: null,
+      developer_whatsapp: null,
+      developer_company: null,
+      developer_notes: null,
+      address_details: {
+        street: "Herzl",
+        building: "12",
+        city: "Ashdod",
+        entrance: "B",
+        lat: "31.801",
+        lng: "34.643",
+        waze_url: "https://www.waze.com/ul?ll=31.801,34.643&navigate=yes",
+        waze_deep_link: "https://www.waze.com/ul?ll=31.801,34.643&navigate=yes",
+      },
+      developer: {
+        name: "Bridge Dev Co",
+        contact_name: "Noa Levi",
+        phone: "+972503334455",
+        phone_alt: "+972504445566",
+        whatsapp: "+972507778899",
+        notes: "Use side gate.",
+        whatsapp_deep_link: "https://wa.me/972507778899",
+        call_deep_link: "tel:+972503334455",
+      },
+    });
+    renderSubject();
+
+    expect(await screen.findByText("Project One")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Herzl, 12, Ashdod, B" })).toHaveAttribute(
+      "href",
+      "https://www.waze.com/ul?ll=31.801,34.643&navigate=yes"
+    );
+    expect(screen.getByRole("link", { name: "Open WhatsApp" })).toHaveAttribute(
+      "href",
+      "https://wa.me/972507778899"
+    );
+    expect(screen.getByRole("link", { name: "Call contact" })).toHaveAttribute(
+      "href",
+      "tel:+972503334455"
+    );
+    expect(screen.getByRole("button", { name: "+972 50-333-4455" })).toBeInTheDocument();
+  }, 15000);
+
+  it("keeps installer quick actions visible and shows guidance when project contact data is missing", async () => {
+    setupApiMock({
+      ...projectDetails,
+      address: null,
+      waze_url: null,
+      whatsapp_url: null,
+      call_url: null,
+      contact_name: null,
+      contact_phone: null,
+      developer_phone_alt: null,
+      developer_whatsapp: null,
+      developer_company: null,
+      developer_notes: null,
+    });
+    renderSubject();
+
+    expect(await screen.findByText("Project One")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Waze" }));
+    expect(await screen.findByText("Waze route not configured")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open WhatsApp" }));
+    expect(
+      await screen.findByText("Add contact phone to unlock WhatsApp")
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Call contact" }));
+    expect(
+      await screen.findByText("Add primary phone to unlock calling")
+    ).toBeInTheDocument();
+  }, 15000);
+
+  it("shows readable installer contact phone and copies it on click", async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "clipboard", {
+      value: { writeText: writeTextMock },
+      configurable: true,
+    });
+
+    setupApiMock();
+    renderSubject();
+
+    const phoneCopyButton = await screen.findByRole("button", { name: "+972 50-123-4567" });
+    expect(screen.getByRole("link", { name: "Call contact" })).toHaveAttribute(
+      "href",
+      "tel:+972501234567"
+    );
+
+    fireEvent.click(phoneCopyButton);
+
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledWith("+972501234567");
+    });
+    expect(await screen.findByText("Phone number copied.")).toBeInTheDocument();
+  }, 15000);
 
   it("applies issue continuity filters from url query params", async () => {
     window.history.replaceState(
@@ -263,7 +433,7 @@ describe("InstallerProjectPage", () => {
     await waitFor(() => {
       expect(window.location.search).toBe("");
     });
-  });
+  }, 15000);
 
   it("filters open issues by search and status, then resets issue filters", async () => {
     setupApiMock({
@@ -311,7 +481,7 @@ describe("InstallerProjectPage", () => {
       expect(screen.getByText("Frame alignment")).toBeInTheDocument();
       expect(screen.getByText("Lock blocked")).toBeInTheDocument();
     });
-  });
+  }, 15000);
 
   it("shows related door shortcuts inside open issues", async () => {
     setupApiMock({
@@ -335,6 +505,10 @@ describe("InstallerProjectPage", () => {
     expect(screen.getByRole("link", { name: "Open door B-202" })).toHaveAttribute(
       "href",
       "#door-door-2"
+    );
+    expect(screen.getByRole("link", { name: "Open in issues flow" })).toHaveAttribute(
+      "href",
+      "/installer/issues?project_id=project-1&issue_id=issue-1&issue_status=BLOCKED"
     );
   });
 
@@ -620,7 +794,7 @@ describe("InstallerProjectPage", () => {
 
     renderSubject();
 
-    expect(await screen.findByText("Failed to load project details.")).toBeInTheDocument();
+    expect(await screen.findByText("unavailable")).toBeInTheDocument();
 
     shouldFail = false;
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));

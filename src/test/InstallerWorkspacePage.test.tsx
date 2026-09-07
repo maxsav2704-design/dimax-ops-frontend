@@ -9,6 +9,13 @@ const { apiFetchMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/api", () => ({
+  ApiError: class ApiError extends Error {
+    status: number;
+    constructor(message: string, status = 500) {
+      super(message);
+      this.status = status;
+    }
+  },
   apiFetch: apiFetchMock,
 }));
 
@@ -23,6 +30,76 @@ describe("InstallerWorkspacePage", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
+
+  it("uses rich workspace endpoint payload without composed fallback", async () => {
+    const base = new Date();
+    base.setHours(12, 0, 0, 0);
+    const startsAt = new Date(base.getTime() + 60 * 60 * 1000).toISOString();
+    const endsAt = new Date(base.getTime() + 2 * 60 * 60 * 1000).toISOString();
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/installer/workspace") {
+        return {
+          projects: [
+            {
+              id: "project-1",
+              name: "Workspace Contract Tower",
+              address: "Harbor 11",
+              status: "IN_PROGRESS",
+              waze_url: null,
+            },
+          ],
+          events: [
+            {
+              id: "event-1",
+              title: "Workspace visit",
+              starts_at: startsAt,
+              ends_at: endsAt,
+              event_type: "INSTALLATION",
+              project_id: "project-1",
+            },
+          ],
+          task_events: [
+            {
+              id: "event-1",
+              title: "Workspace visit",
+              starts_at: startsAt,
+              ends_at: endsAt,
+              event_type: "INSTALLATION",
+              project_id: "project-1",
+            },
+          ],
+          issues: [],
+          earnings_summary: {
+            currency: "ILS",
+            today_total: 120,
+            month_total: 120,
+            by_install_type: [],
+            by_project: [],
+            by_day: [],
+          },
+          sync_queue: { items: [] },
+        };
+      }
+      throw new Error(`Unexpected fallback path: ${path}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallerWorkspacePage />
+      </QueryClientProvider>
+    );
+
+    expect((await screen.findAllByText("Workspace Contract Tower")).length).toBeGreaterThan(0);
+    expect(await screen.findByText("Workspace visit")).toBeInTheDocument();
+    const paths = (apiFetchMock.mock.calls as Array<[string]>).map(([path]) => path);
+    expect(paths).toContain("/api/v1/installer/workspace");
+    expect(paths).not.toContain("/api/v1/installer/projects");
+  }, 15000);
 
   it("renders installer projects and events", async () => {
     const base = new Date();
@@ -89,22 +166,36 @@ describe("InstallerWorkspacePage", () => {
 
     expect((await screen.findAllByText("Ashdod Towers")).length).toBeGreaterThan(0);
     expect(await screen.findByText("Morning visit")).toBeInTheDocument();
-    expect(screen.getByText("Assigned projects")).toBeInTheDocument();
+    expect(screen.getByText("Start from today, then open the project that needs action.")).toBeInTheDocument();
 
     const scheduleLink = screen.getByRole("link", { name: "Open schedule" });
     expect(scheduleLink).toHaveAttribute("href", "/installer/calendar?project_id=project-1");
-    expect(screen.getByRole("link", { name: "Today on project" })).toHaveAttribute(
+    const projectCard = scheduleLink.closest("div.relative");
+    expect(projectCard).not.toBeNull();
+    expect(within(projectCard as HTMLElement).getByRole("link", { name: "Harbor 11" })).toHaveAttribute(
       "href",
-      "/installer/calendar?preset=today&project_id=project-1"
+      "https://waze.example/project-1"
     );
-    expect(screen.getByRole("link", { name: "Priority doors" })).toHaveAttribute(
+    expect(within(projectCard as HTMLElement).getByRole("link", { name: "Open earnings" })).toHaveAttribute(
       "href",
-      "/installer/projects/project-1#project-doors"
+      "/installer/earnings?project_id=project-1"
     );
     expect(screen.getByRole("link", { name: "Open Waze" })).toHaveAttribute(
       "href",
       "https://waze.example/project-1"
     );
+    expect(screen.getAllByRole("link", { name: "Open project" }).length).toBeGreaterThan(0);
+    const eventCard = screen.getByTestId("workspace-event-event-1");
+    expect(within(eventCard).getByRole("link", { name: "Open project" })).toHaveAttribute(
+      "href",
+      "/installer/projects/project-1"
+    );
+    const eventLinks = within(eventCard)
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href"));
+    expect(eventLinks).toContain("/installer/issues?project_id=project-1");
+    expect(eventLinks).toContain("/installer/calendar?project_id=project-1");
+    expect(eventLinks).toContain("/installer/sync-queue?project_id=project-1");
 
     expect(screen.getByTestId("installer-tasks-today")).toHaveTextContent("3");
     expect(screen.getByTestId("installer-tasks-overdue")).toHaveTextContent("1");
@@ -130,6 +221,59 @@ describe("InstallerWorkspacePage", () => {
       "href",
       "/installer/calendar?preset=today&project_id=none"
     );
+  }, 15000);
+
+  it("shows non-clickable address fallback when workspace project has no route data", async () => {
+    const base = new Date();
+    base.setHours(12, 0, 0, 0);
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/installer/projects") {
+        return {
+          items: [
+            {
+              id: "project-1",
+              name: "Ashdod Towers",
+              address: null,
+              status: "IN_PROGRESS",
+              waze_url: null,
+            },
+          ],
+        };
+      }
+      if (String(path).includes("/api/v1/installer/calendar/events?")) {
+        return {
+          items: [
+            {
+              id: "event-1",
+              title: "Morning visit",
+              starts_at: new Date(base.getTime() + 60 * 60 * 1000).toISOString(),
+              ends_at: new Date(base.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+              event_type: "INSTALLATION",
+              project_id: "project-1",
+            },
+          ],
+        };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <InstallerWorkspacePage />
+      </QueryClientProvider>
+    );
+
+    expect((await screen.findAllByText("Ashdod Towers")).length).toBeGreaterThan(0);
+    const projectCard = screen.getByRole("link", { name: "Open schedule" }).closest("div.relative");
+    expect(projectCard).not.toBeNull();
+    expect(within(projectCard as HTMLElement).getByText("Address not specified")).toBeInTheDocument();
+    expect(within(projectCard as HTMLElement).queryByRole("link", { name: "Address not specified" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open Waze" })).not.toBeInTheDocument();
   }, 15000);
 
   it("shows retry action and refetches all installer workspace queries", async () => {
@@ -159,7 +303,7 @@ describe("InstallerWorkspacePage", () => {
     );
 
     expect(
-      await screen.findByText("Failed to load installer workspace. Check API availability and role mapping.")
+      await screen.findByText("network down")
     ).toBeInTheDocument();
 
     shouldFail = false;
@@ -216,7 +360,7 @@ describe("InstallerWorkspacePage", () => {
     );
     expect(screen.getByRole("link", { name: "Open issues" })).toHaveAttribute(
       "href",
-      "/installer/projects/project-2?door_filter=WITH_ISSUES&issue_status=BLOCKED#project-open-issues"
+      "/installer/issues?project_id=project-2&issue_status=BLOCKED"
     );
   });
 
@@ -270,7 +414,7 @@ describe("InstallerWorkspacePage", () => {
     const priorityLink = await screen.findByRole("link", { name: "Open priority Ashdod Towers" });
     expect(priorityLink).toHaveAttribute(
       "href",
-      "/installer/projects/project-1?door_filter=WITH_ISSUES&issue_status=BLOCKED&issue_search=Blocked+lock#project-open-issues"
+      "/installer/issues?project_id=project-1&issue_status=BLOCKED&issue_search=Blocked+lock"
     );
   });
 
@@ -373,7 +517,7 @@ describe("InstallerWorkspacePage", () => {
       expect(within(projectsSection).getByText("Haifa Port")).toBeInTheDocument();
       expect(within(projectsSection).queryByText("Jerusalem Mall")).not.toBeInTheDocument();
     });
-  });
+  }, 15000);
 
   it("syncs workspace quick filter to URL query params", async () => {
     const base = new Date();

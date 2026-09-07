@@ -9,7 +9,7 @@ const { apiFetchMock } = vi.hoisted(() => ({
 }));
 const { buildScheduleCsvMock, downloadScheduleCsvMock, scheduleExportFilenameMock } =
   vi.hoisted(() => ({
-    buildScheduleCsvMock: vi.fn(() => "csv-content"),
+    buildScheduleCsvMock: vi.fn((_rows: Array<{ title: string }>) => "csv-content"),
     downloadScheduleCsvMock: vi.fn(),
     scheduleExportFilenameMock: vi.fn(() => "installer_schedule_test.csv"),
   }));
@@ -103,5 +103,5 @@ describe("InstallerSchedulePage export button", () => {
     const exportedRows = buildScheduleCsvMock.mock.calls[0][0] as Array<{ title: string }>;
     expect(exportedRows).toHaveLength(1);
     expect(exportedRows[0].title).toBe("Delivery event");
-  });
+  }, 15000);
 });

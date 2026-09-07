@@ -26,7 +26,7 @@ describe("schedule-export", () => {
   });
 
   it("downloads CSV blob with provided filename", () => {
-    const createObjectURLMock = vi.fn(() => "blob:mock");
+    const createObjectURLMock = vi.fn((_blob: Blob) => "blob:mock");
     const revokeObjectURLMock = vi.fn();
     const clickSpy = vi
       .spyOn(HTMLAnchorElement.prototype, "click")

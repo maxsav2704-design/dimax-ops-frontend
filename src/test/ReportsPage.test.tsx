@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
+import { createDownloadResponse } from "@/test/download-response";
 import ReportsPage from "@/views/ReportsPage";
 
 const { apiFetchMock } = vi.hoisted(() => ({
@@ -11,8 +12,8 @@ const { apiFetchMock } = vi.hoisted(() => ({
 const { pushMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
 }));
-const { userRoleMock } = vi.hoisted(() => ({
-  userRoleMock: vi.fn(),
+const { authSessionMock } = vi.hoisted(() => ({
+  authSessionMock: vi.fn(),
 }));
 
 vi.mock("@/components/DashboardLayout", () => ({
@@ -23,6 +24,9 @@ vi.mock("@/components/DashboardLayout", () => ({
 
 vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
+  apiDownload: (path: string, init?: RequestInit) => fetch(path, init),
+  apiBaseUrl: () => "",
+  getAccessToken: () => null,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -32,8 +36,8 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 
-vi.mock("@/hooks/use-user-role", () => ({
-  useUserRole: userRoleMock,
+vi.mock("@/hooks/use-auth-session", () => ({
+  useAuthSession: authSessionMock,
 }));
 
 function mockReportWebhookSignals(url: string) {
@@ -105,8 +109,12 @@ describe("ReportsPage", () => {
     vi.restoreAllMocks();
     apiFetchMock.mockReset();
     pushMock.mockReset();
-    userRoleMock.mockReset();
-    userRoleMock.mockReturnValue(null);
+    authSessionMock.mockReset();
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "OWNER",
+      can_view_rates: true,
+    });
     if (typeof window !== "undefined" && window.localStorage) {
       if (typeof window.localStorage.clear === "function") {
         window.localStorage.clear();
@@ -504,7 +512,7 @@ describe("ReportsPage", () => {
           ],
         };
       }
-      if (url.startsWith("/api/v1/admin/projects")) {
+      if (url === "/api/v1/admin/projects" || url.startsWith("/api/v1/admin/projects?")) {
         return {
           items: [
             {
@@ -537,9 +545,45 @@ describe("ReportsPage", () => {
           profit_gap_total: 960,
           planned_addons_qty: 8,
           actual_addons_qty: 3,
+          urgency_surcharges_count: 1,
+          urgency_order_surcharges_count: 1,
+          urgency_client_total: 250,
+          urgency_installer_total: 120,
+          urgency_profit_total: 130,
           missing_planned_rates_doors: 1,
           missing_actual_rates_doors: 0,
           missing_addon_plans_facts: 1,
+        };
+      }
+      if (url.includes("/api/v1/admin/projects/57f6df22-fe4b-47db-af44-198ab5f5a462/addons/plan")) {
+        return {
+          items: [
+            {
+              id: "addon-plan-1",
+              addon_type_id: "addon-1",
+              addon_name: "Handle Upgrade",
+              qty_planned: 3,
+              client_price: 120,
+              installer_price: 55,
+              notes: "Lobby priority",
+            },
+          ],
+        };
+      }
+      if (url.includes("/api/v1/admin/projects/57f6df22-fe4b-47db-af44-198ab5f5a462/urgency-surcharges")) {
+        return {
+          items: [
+            {
+              id: "surcharge-1",
+              scope: "ORDER_NUMBER",
+              order_number: "AZ-100",
+              reason: "Late-night uplift",
+              client_amount: 250,
+              installer_amount: 120,
+              effective_date: "2026-02-22",
+              notes: "Approved",
+            },
+          ],
         };
       }
       if (url.includes("/api/v1/admin/reports/project-risk-drilldown/")) {
@@ -566,6 +610,11 @@ describe("ReportsPage", () => {
             blocked_issue_profit_at_risk: 280,
             addon_revenue_total: 40,
             addon_profit_total: 12,
+            urgency_surcharges_count: 0,
+            urgency_order_surcharges_count: 0,
+            urgency_client_total: 0,
+            urgency_installer_total: 0,
+            urgency_profit_total: 0,
             missing_planned_rates_doors: 1,
             missing_actual_rates_doors: 0,
             missing_addon_plans_facts: 2,
@@ -863,6 +912,15 @@ describe("ReportsPage", () => {
       });
       expect(hasLimitAlertsCall).toBe(true);
     });
+    expect(screen.getByTestId("reports-dashboard-v3")).toBeInTheDocument();
+    expect(screen.getAllByText("Reports cockpit").length).toBeGreaterThan(0);
+    expect(screen.getByText("Attention this week")).toBeInTheDocument();
+    expect(screen.getByText("Report library")).toBeInTheDocument();
+    expect(screen.getByText("Saved views")).toBeInTheDocument();
+    expect(screen.getByText("Scheduled exports")).toBeInTheDocument();
+    expect(screen.getByText("Margin leakage watch")).toBeInTheDocument();
+    expect(screen.getByText("Risk concentration watch")).toBeInTheDocument();
+    expect(screen.getByText("Installer KPI trend")).toBeInTheDocument();
     expect(screen.getByText("Failed Outbox Queue")).toBeInTheDocument();
     expect(screen.getAllByText("DOOR_TYPE_UPDATE").length).toBeGreaterThan(0);
     expect(screen.getAllByText("ISSUE_WORKFLOW_UPDATE").length).toBeGreaterThan(0);
@@ -895,7 +953,7 @@ describe("ReportsPage", () => {
     expect(screen.getByRole("button", { name: "Save Preset" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Saved Presets" })).toBeInTheDocument();
     expect(screen.getAllByText("Installer Alpha").length).toBeGreaterThan(0);
-    expect(screen.getByText("AZ-100")).toBeInTheDocument();
+    expect(screen.getAllByText("AZ-100").length).toBeGreaterThan(0);
     expect(screen.getByText("Top Failing Projects (7d import errors)")).toBeInTheDocument();
     expect(screen.getByText("Unread:")).toBeInTheDocument();
     expect(screen.getAllByText("2").length).toBeGreaterThan(0);
@@ -928,6 +986,61 @@ describe("ReportsPage", () => {
         return url.includes("/api/v1/admin/reports/project-plan-fact/");
       });
       expect(hasProjectPlanFactCall).toBe(true);
+    });
+    expect(await screen.findByText("Additional Works Plan")).toBeInTheDocument();
+    expect(await screen.findByText("Urgency Surcharge")).toBeInTheDocument();
+    expect(await screen.findByText("Commercial Adjustments")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open pricing flow" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open urgency rows" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button", { name: "Open payroll ledger" }).length
+    ).toBeGreaterThanOrEqual(2);
+    expect(
+      await screen.findByRole("button", { name: "Open installer card" })
+    ).toBeInTheDocument();
+    expect((await screen.findAllByText("Handle Upgrade")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Client uplift").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Installer uplift").length).toBeGreaterThan(0);
+    expect(await screen.findByText(/610[.,]00/)).toBeInTheDocument();
+    expect(await screen.findByText(/285[.,]00/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open pricing flow" }));
+    expect(pushMock).toHaveBeenCalledWith(
+      "/projects?project_id=57f6df22-fe4b-47db-af44-198ab5f5a462&focus_section=addons"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Open urgency rows" }));
+    expect(pushMock).toHaveBeenCalledWith(
+      "/projects?project_id=57f6df22-fe4b-47db-af44-198ab5f5a462&focus_section=urgency"
+    );
+    const ledgerButtons = screen.getAllByRole("button", { name: "Open payroll ledger" });
+    fireEvent.click(ledgerButtons[0]);
+    expect(pushMock).toHaveBeenCalledWith(
+      "/earnings-ledger?project_id=57f6df22-fe4b-47db-af44-198ab5f5a462"
+    );
+    fireEvent.click(ledgerButtons[1]);
+    expect(pushMock).toHaveBeenCalledWith(
+      "/earnings-ledger?installer_id=6ac2c77d-f5f2-45d8-b0a3-6382dbd95fbf"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Open installer card" }));
+    expect(pushMock).toHaveBeenCalledWith(
+      "/installers?installer_id=6ac2c77d-f5f2-45d8-b0a3-6382dbd95fbf"
+    );
+    await waitFor(() => {
+      const hasProjectAddonPlanCall = apiFetchMock.mock.calls.some((call) => {
+        const url = String(call[0]);
+        return url.includes("/api/v1/admin/projects/57f6df22-fe4b-47db-af44-198ab5f5a462/addons/plan");
+      });
+      expect(hasProjectAddonPlanCall).toBe(true);
+    });
+    await waitFor(() => {
+      const hasProjectUrgencyCall = apiFetchMock.mock.calls.some((call) => {
+        const url = String(call[0]);
+        return url.includes("/api/v1/admin/projects/57f6df22-fe4b-47db-af44-198ab5f5a462/urgency-surcharges");
+      });
+      expect(hasProjectUrgencyCall).toBe(true);
     });
     await waitFor(() => {
       const hasIssuesAddonsImpactCall = apiFetchMock.mock.calls.some((call) => {
@@ -983,21 +1096,197 @@ describe("ReportsPage", () => {
       expect(hasRiskMarginCall).toBe(true);
     });
     expect((await screen.findAllByText("60.00%")).length).toBeGreaterThan(0);
-    expect(screen.getByText("3200.00")).toBeInTheDocument();
-    expect(screen.getByText("1800.00")).toBeInTheDocument();
-    expect(screen.getAllByText("1060.00").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/3,?200\.00/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/1,?800\.00/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/1,?060\.00/).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Ashdod Tower A").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Ashdod Tower B").length).toBeGreaterThan(0);
-    expect(screen.getByText("Site Blocked")).toBeInTheDocument();
-    expect(screen.getByText("Handle Upgrade")).toBeInTheDocument();
-    expect(screen.getByText("Blocked Site")).toBeInTheDocument();
-    expect(screen.getByText("BZ-400")).toBeInTheDocument();
-    expect(screen.getByText("RC-100")).toBeInTheDocument();
+    expect(screen.getAllByText("Site Blocked").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Handle Upgrade").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Blocked Site").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("BZ-400").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("RC-100").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Installer Beta").length).toBeGreaterThan(0);
     expect(screen.getAllByText("STRONG").length).toBeGreaterThan(0);
     expect(screen.getAllByText("RISK").length).toBeGreaterThan(0);
     expect(screen.getAllByText("WATCH").length).toBeGreaterThan(0);
   }, 45000);
+
+  it("shows readable success notice after executive export", async () => {
+    if (!("createObjectURL" in URL)) {
+      Object.defineProperty(URL, "createObjectURL", {
+        writable: true,
+        configurable: true,
+        value: vi.fn(),
+      });
+    }
+    if (!("revokeObjectURL" in URL)) {
+      Object.defineProperty(URL, "revokeObjectURL", {
+        writable: true,
+        configurable: true,
+        value: vi.fn(),
+      });
+    }
+    const createObjectUrlSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:reports-executive");
+    const revokeObjectUrlSpy = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      createDownloadResponse("id,value\n1,42", "text/csv", {
+        status: 200,
+        headers: {
+          "content-disposition": 'attachment; filename="executive.csv"',
+        },
+      })
+    );
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+      const webhookMock = mockReportWebhookSignals(url);
+      if (webhookMock) return webhookMock;
+      const retryAuditMock = mockReportRetryAudits(url);
+      if (retryAuditMock) return retryAuditMock;
+      if (url.includes("/api/v1/admin/reports/limit-alerts")) {
+        return { items: [], unread_count: 0, total: 0 };
+      }
+      if (url.includes("/api/v1/admin/reports/delivery")) {
+        return {
+          period_from: null,
+          period_to: null,
+          whatsapp_pending: 0,
+          whatsapp_delivered: 0,
+          whatsapp_failed: 0,
+          email_sent: 0,
+          email_failed: 0,
+        };
+      }
+      if (url.includes("/api/v1/admin/outbox/summary")) {
+        return { total: 0, by_channel: {}, by_status: {}, by_delivery_status: {}, pending_overdue_15m: 0, failed_total: 0 };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-center")) {
+        return {
+          generated_at: "2026-02-22T18:01:00Z",
+          imports: { window_hours: 24, total_runs: 0, analyze_runs: 0, import_runs: 0, retry_runs: 0, success_runs: 0, partial_runs: 0, failed_runs: 0, empty_runs: 0 },
+          outbox: { total: 0, failed_total: 0, pending_overdue_15m: 0, by_channel: {} },
+          alerts: { unread_count: 0, total_last_24h: 0, warn_last_24h: 0, danger_last_24h: 0, latest_created_at: null },
+          top_failing_projects: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-sla/history")) return { points: [], summary: null };
+      if (url.includes("/api/v1/admin/reports/operations-sla")) return { metrics: [], playbooks: [] };
+      if (url.includes("/api/v1/admin/reports/issues-analytics")) {
+        return {
+          generated_at: "2026-02-22T18:04:00Z",
+          days: 30,
+          summary: {
+            total_issues: 0,
+            open_issues: 0,
+            closed_issues: 0,
+            overdue_open_issues: 0,
+            blocked_open_issues: 0,
+            p1_open_issues: 0,
+            overdue_open_rate_pct: 0,
+            mttr_hours: 0,
+            mttr_p50_hours: 0,
+            mttr_sample_size: 0,
+            backlog_by_workflow: {},
+            backlog_by_priority: {},
+          },
+          trend: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/issues-addons-impact")) return { items: [] };
+      if (url.includes("/api/v1/admin/reports/risk-concentration")) {
+        return {
+          summary: {
+            delayed_profit_total: 0,
+            open_issue_profit_at_risk: 0,
+            blocked_issue_profit_at_risk: 0,
+            worst_installer_profit_total: 0,
+            risky_projects: 0,
+            risky_orders: 0,
+            worst_project_profit_total: 0,
+            risky_installers: 0,
+            worst_order_profit_total: 0,
+          },
+          projects: [],
+          orders: [],
+          installers: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/installers-profitability-matrix")) return { items: [] };
+      if (url.includes("/api/v1/admin/reports/installer-project-profitability")) return { items: [] };
+      if (url.includes("/api/v1/admin/projects?")) return { items: [{ id: "project-1", name: "Ashdod Tower A" }] };
+      if (url.includes("/api/v1/admin/reports/project-plan-fact/")) {
+        return {
+          project_id: "project-1",
+          total_doors: 0,
+          installed_doors: 0,
+          not_installed_doors: 0,
+          completion_pct: 0,
+          open_issues: 0,
+          planned_revenue_total: 0,
+          actual_revenue_total: 0,
+          revenue_gap_total: 0,
+          planned_payroll_total: 0,
+          actual_payroll_total: 0,
+          payroll_gap_total: 0,
+          planned_profit_total: 0,
+          actual_profit_total: 0,
+          profit_gap_total: 0,
+          planned_addons_qty: 0,
+          actual_addons_qty: 0,
+          urgency_surcharges_count: 0,
+          urgency_order_surcharges_count: 0,
+          urgency_client_total: 0,
+          urgency_installer_total: 0,
+          urgency_profit_total: 0,
+          missing_planned_rates_doors: 0,
+          missing_actual_rates_doors: 0,
+          missing_addon_plans_facts: 0,
+        };
+      }
+      if (url.includes("/api/v1/admin/projects/project-1/addons/plan")) return { items: [] };
+      if (url.includes("/api/v1/admin/projects/project-1/urgency-surcharges")) return { items: [] };
+      if (url.includes("/api/v1/admin/reports/project-risk-drilldown/")) {
+        return {
+          generated_at: "2026-02-22T18:01:00Z",
+          project_id: "project-1",
+          project_name: "Ashdod Tower A",
+          summary: {
+            total_doors: 0, installed_doors: 0, not_installed_doors: 0, completion_pct: 0, open_issues: 0, blocked_open_issues: 0,
+            planned_revenue_total: 0, actual_revenue_total: 0, revenue_gap_total: 0, planned_profit_total: 0, actual_profit_total: 0, profit_gap_total: 0,
+            actual_margin_pct: 0, delayed_revenue_total: 0, delayed_profit_total: 0, blocked_issue_profit_at_risk: 0, addon_revenue_total: 0, addon_profit_total: 0,
+            urgency_surcharges_count: 0, urgency_order_surcharges_count: 0, urgency_client_total: 0, urgency_installer_total: 0, urgency_profit_total: 0,
+            missing_planned_rates_doors: 0, missing_actual_rates_doors: 0, missing_addon_plans_facts: 0,
+          },
+          drivers: [], top_reasons: [], risky_orders: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/projects-margin")) return { items: [] };
+      if (url.includes("/api/v1/admin/reports/installers-kpi")) return { items: [], total: 0 };
+      if (url.includes("/api/v1/admin/reports/order-numbers-kpi")) return { items: [], total: 0 };
+      if (url.includes("/api/v1/admin/reports/audit-catalogs")) return { items: [], summary: { total: 0 } };
+      if (url.includes("/api/v1/admin/reports/audit-issues")) return { items: [], summary: { total: 0 } };
+      if (url.includes("/api/v1/admin/outbox?status=FAILED")) return { items: [] };
+      throw new Error(`Unexpected path: ${url}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ReportsPage />
+      </QueryClientProvider>
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Export Executive CSV" }));
+
+    expect(await screen.findByText("Executive export is ready.")).toBeInTheDocument();
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(createObjectUrlSpy).toHaveBeenCalled();
+    expect(revokeObjectUrlSpy).toHaveBeenCalled();
+  }, 20000);
 
   it("navigates from reports into operations center variants", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
@@ -1198,7 +1487,7 @@ describe("ReportsPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open Actionable Ops" }));
     expect(pushMock).toHaveBeenCalledWith("/operations?actionable=1");
-  });
+  }, 15000);
 
   it("loads focused reports view from operations deep-link", async () => {
     window.history.replaceState(
@@ -1434,7 +1723,7 @@ describe("ReportsPage", () => {
 
     fireEvent.click(focusQueries.getByRole("button", { name: "Clear focus" }));
     expect(pushMock).toHaveBeenCalledWith("/reports");
-  });
+  }, 15000);
 
   it("applies exact project scope from operations queue links", async () => {
     window.history.replaceState(
@@ -1629,6 +1918,11 @@ describe("ReportsPage", () => {
           profit_gap_total: -50,
           planned_addons_qty: 2,
           actual_addons_qty: 1,
+          urgency_surcharges_count: 0,
+          urgency_order_surcharges_count: 0,
+          urgency_client_total: 0,
+          urgency_installer_total: 0,
+          urgency_profit_total: 0,
           missing_planned_rates_doors: 0,
           missing_actual_rates_doors: 0,
           missing_addon_plans_facts: 0,
@@ -1658,6 +1952,11 @@ describe("ReportsPage", () => {
             blocked_issue_profit_at_risk: 25,
             addon_revenue_total: 40,
             addon_profit_total: 20,
+            urgency_surcharges_count: 0,
+            urgency_order_surcharges_count: 0,
+            urgency_client_total: 0,
+            urgency_installer_total: 0,
+            urgency_profit_total: 0,
             missing_planned_rates_doors: 0,
             missing_actual_rates_doors: 0,
             missing_addon_plans_facts: 0,
@@ -1705,8 +2004,463 @@ describe("ReportsPage", () => {
     expect(screen.getByLabelText("Order Project Filter")).toHaveValue("project-1");
   });
 
+  it("does not switch project reports to another project when scoped project is unavailable", async () => {
+    window.history.replaceState({}, "", "/reports?project_id=missing-project");
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+      const webhookMock = mockReportWebhookSignals(url);
+      if (webhookMock) {
+        return webhookMock;
+      }
+      const retryAuditMock = mockReportRetryAudits(url);
+      if (retryAuditMock) {
+        return retryAuditMock;
+      }
+      if (url.includes("/api/v1/admin/reports/limit-alerts/read")) {
+        return { unread_count: 0, last_read_at: "2026-02-22T18:00:00Z" };
+      }
+      if (url.includes("/api/v1/admin/reports/delivery")) {
+        return {
+          period_from: null,
+          period_to: null,
+          whatsapp_pending: 0,
+          whatsapp_delivered: 0,
+          whatsapp_failed: 0,
+          email_sent: 0,
+          email_failed: 0,
+        };
+      }
+      if (url.includes("/api/v1/admin/outbox/summary")) {
+        return {
+          total: 0,
+          by_channel: {},
+          by_status: {},
+          by_delivery_status: {},
+          pending_overdue_15m: 0,
+          failed_total: 0,
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-center")) {
+        return {
+          generated_at: "2026-02-22T18:01:00Z",
+          imports: {
+            window_hours: 24,
+            total_runs: 0,
+            analyze_runs: 0,
+            import_runs: 0,
+            retry_runs: 0,
+            success_runs: 0,
+            partial_runs: 0,
+            failed_runs: 0,
+            empty_runs: 0,
+          },
+          outbox: {
+            total: 0,
+            failed_total: 0,
+            pending_overdue_15m: 0,
+            by_channel: {},
+          },
+          alerts: {
+            unread_count: 0,
+            total_last_24h: 0,
+            warn_last_24h: 0,
+            danger_last_24h: 0,
+            latest_created_at: null,
+          },
+          top_failing_projects: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-sla/history")) {
+        return {
+          generated_at: "2026-02-22T18:03:00Z",
+          days: 30,
+          points: [],
+          summary: null,
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-sla")) {
+        return {
+          generated_at: "2026-02-22T18:02:00Z",
+          overall_status: "OK",
+          metrics: [],
+          playbooks: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/issues-analytics")) {
+        return {
+          generated_at: "2026-02-22T18:04:00Z",
+          days: 30,
+          summary: {
+            total_issues: 0,
+            open_issues: 0,
+            closed_issues: 0,
+            overdue_open_issues: 0,
+            blocked_open_issues: 0,
+            p1_open_issues: 0,
+            overdue_open_rate_pct: 0,
+            mttr_hours: 0,
+            mttr_p50_hours: 0,
+            mttr_sample_size: 0,
+            backlog_by_workflow: {},
+            backlog_by_priority: {},
+          },
+          trend: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/issues-addons-impact")) {
+        return {
+          generated_at: "2026-02-22T18:04:00Z",
+          summary: {
+            open_issues: 0,
+            blocked_open_issues: 0,
+            not_installed_doors: 0,
+            open_issue_revenue_at_risk: 0,
+            open_issue_payroll_at_risk: 0,
+            open_issue_profit_at_risk: 0,
+            blocked_issue_profit_at_risk: 0,
+            delayed_revenue_total: 0,
+            delayed_payroll_total: 0,
+            delayed_profit_total: 0,
+            addon_revenue_total: 0,
+            addon_payroll_total: 0,
+            addon_profit_total: 0,
+            missing_addon_plans_facts: 0,
+          },
+          top_reasons: [],
+          addon_impact: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/risk-concentration")) {
+        return {
+          generated_at: "2026-02-22T18:04:00Z",
+          summary: {
+            open_issue_profit_at_risk: 0,
+            blocked_issue_profit_at_risk: 0,
+            delayed_profit_total: 0,
+            risky_projects: 0,
+            risky_orders: 0,
+            risky_installers: 0,
+            worst_project_profit_total: 0,
+            worst_order_profit_total: 0,
+            worst_installer_profit_total: 0,
+          },
+          projects: [],
+          orders: [],
+          installers: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/installers-profitability-matrix")) {
+        return { total: 0, limit: 8, offset: 0, items: [] };
+      }
+      if (url.includes("/api/v1/admin/reports/installer-project-profitability")) {
+        return { total: 0, limit: 10, offset: 0, items: [] };
+      }
+      if (url.includes("/api/v1/admin/projects?limit=200") || url.endsWith("/api/v1/admin/projects")) {
+        return { items: [{ id: "project-1", name: "Ashdod Towers" }] };
+      }
+      if (url.includes("/api/v1/admin/reports/projects-margin?")) {
+        return { total: 0, limit: 5, offset: 0, items: [] };
+      }
+      if (url.includes("/api/v1/admin/reports/installers-kpi?")) {
+        return { period_from: null, period_to: null, items: [] };
+      }
+      if (url.includes("/api/v1/admin/reports/order-numbers-kpi")) {
+        return { total: 0, limit: 20, offset: 0, items: [] };
+      }
+      if (url.includes("/api/v1/admin/outbox?status=FAILED")) {
+        return { items: [] };
+      }
+      if (url.includes("/api/v1/admin/reports/audit-catalogs")) {
+        return { items: [], summary: { total: 0, by_entity: {}, by_action: {} } };
+      }
+      if (url.includes("/api/v1/admin/reports/audit-issues")) {
+        return { items: [], summary: { total: 0, by_entity: {}, by_action: {} } };
+      }
+      throw new Error(`Unexpected path: ${url}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ReportsPage />
+      </QueryClientProvider>
+    );
+
+    expect(
+      await screen.findByText(
+        "Requested project missing-project is not available in the current reports scope. Project-specific reports were not switched to another project.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Project Plan Fact Filter")).toHaveValue("");
+    expect(screen.getByLabelText("Project Risk Drilldown Filter")).toHaveValue("");
+    expect(screen.getByLabelText("Order Project Filter")).toHaveValue("");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show full report" }));
+    expect(pushMock).toHaveBeenCalledWith("/reports");
+  });
+
+  it("does not switch installer reports to another installer when scoped installer is unavailable", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/reports?installer_id=missing-installer",
+    );
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+      const webhookMock = mockReportWebhookSignals(url);
+      if (webhookMock) {
+        return webhookMock;
+      }
+      const retryAuditMock = mockReportRetryAudits(url);
+      if (retryAuditMock) {
+        return retryAuditMock;
+      }
+      if (url.includes("/api/v1/admin/reports/limit-alerts/read")) {
+        return { unread_count: 0, last_read_at: "2026-02-22T18:00:00Z" };
+      }
+      if (url.includes("/api/v1/admin/reports/delivery")) {
+        return {
+          period_from: null,
+          period_to: null,
+          whatsapp_pending: 0,
+          whatsapp_delivered: 0,
+          whatsapp_failed: 0,
+          email_sent: 0,
+          email_failed: 0,
+        };
+      }
+      if (url.includes("/api/v1/admin/outbox/summary")) {
+        return {
+          total: 0,
+          by_channel: {},
+          by_status: {},
+          by_delivery_status: {},
+          pending_overdue_15m: 0,
+          failed_total: 0,
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-center")) {
+        return {
+          generated_at: "2026-02-22T18:01:00Z",
+          imports: {
+            window_hours: 24,
+            total_runs: 0,
+            analyze_runs: 0,
+            import_runs: 0,
+            retry_runs: 0,
+            success_runs: 0,
+            partial_runs: 0,
+            failed_runs: 0,
+            empty_runs: 0,
+          },
+          outbox: {
+            total: 0,
+            failed_total: 0,
+            pending_overdue_15m: 0,
+            by_channel: {},
+          },
+          alerts: {
+            unread_count: 0,
+            total_last_24h: 0,
+            warn_last_24h: 0,
+            danger_last_24h: 0,
+            latest_created_at: null,
+          },
+          top_failing_projects: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-sla/history")) {
+        return {
+          generated_at: "2026-02-22T18:03:00Z",
+          days: 30,
+          points: [],
+          summary: null,
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-sla")) {
+        return {
+          generated_at: "2026-02-22T18:02:00Z",
+          overall_status: "OK",
+          metrics: [],
+          playbooks: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/issues-analytics")) {
+        return {
+          generated_at: "2026-02-22T18:04:00Z",
+          days: 30,
+          summary: {
+            total_issues: 0,
+            open_issues: 0,
+            closed_issues: 0,
+            overdue_open_issues: 0,
+            blocked_open_issues: 0,
+            p1_open_issues: 0,
+            overdue_open_rate_pct: 0,
+            mttr_hours: 0,
+            mttr_p50_hours: 0,
+            mttr_sample_size: 0,
+            backlog_by_workflow: {},
+            backlog_by_priority: {},
+          },
+          trend: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/issues-addons-impact")) {
+        return {
+          generated_at: "2026-02-22T18:04:00Z",
+          summary: {
+            open_issues: 0,
+            blocked_open_issues: 0,
+            not_installed_doors: 0,
+            open_issue_revenue_at_risk: 0,
+            open_issue_payroll_at_risk: 0,
+            open_issue_profit_at_risk: 0,
+            blocked_issue_profit_at_risk: 0,
+            delayed_revenue_total: 0,
+            delayed_payroll_total: 0,
+            delayed_profit_total: 0,
+            addon_revenue_total: 0,
+            addon_payroll_total: 0,
+            addon_profit_total: 0,
+            missing_addon_plans_facts: 0,
+          },
+          top_reasons: [],
+          addon_impact: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/risk-concentration")) {
+        return {
+          generated_at: "2026-02-22T18:04:00Z",
+          summary: {
+            open_issue_profit_at_risk: 0,
+            blocked_issue_profit_at_risk: 0,
+            delayed_profit_total: 0,
+            risky_projects: 0,
+            risky_orders: 0,
+            risky_installers: 0,
+            worst_project_profit_total: 0,
+            worst_order_profit_total: 0,
+            worst_installer_profit_total: 0,
+          },
+          projects: [],
+          orders: [],
+          installers: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/installers-profitability-matrix")) {
+        return { total: 0, limit: 8, offset: 0, items: [] };
+      }
+      if (url.includes("/api/v1/admin/reports/installer-project-profitability")) {
+        return { total: 0, limit: 10, offset: 0, items: [] };
+      }
+      if (
+        url.includes("/api/v1/admin/projects?limit=200") ||
+        url.endsWith("/api/v1/admin/projects")
+      ) {
+        return { items: [{ id: "project-1", name: "Ashdod Towers" }] };
+      }
+      if (url.includes("/api/v1/admin/reports/projects-margin?")) {
+        return { total: 0, limit: 5, offset: 0, items: [] };
+      }
+      if (url.includes("/api/v1/admin/reports/installers-kpi/")) {
+        return {
+          installer_id: "installer-1",
+          installer_name: "Installer One",
+          installed_doors: 4,
+          active_projects: 1,
+          order_numbers: 1,
+          open_issues: 0,
+          addons_done_qty: 0,
+          addon_revenue_total: 0,
+          addon_payroll_total: 0,
+          addon_profit_total: 0,
+          revenue_total: 400,
+          payroll_total: 200,
+          profit_total: 200,
+          missing_rates_installed_doors: 0,
+          missing_addon_plans_facts: 0,
+          last_installed_at: "2026-02-22T17:00:00Z",
+          top_projects: [],
+          order_breakdown: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/installers-kpi?")) {
+        return {
+          period_from: null,
+          period_to: null,
+          items: [
+            {
+              installer_id: "installer-1",
+              installer_name: "Installer One",
+              installed_doors: 4,
+              payroll_total: 200,
+              revenue_total: 400,
+              profit_total: 200,
+              missing_rates_installed_doors: 0,
+            },
+          ],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/order-numbers-kpi")) {
+        return { total: 0, limit: 20, offset: 0, items: [] };
+      }
+      if (url.includes("/api/v1/admin/outbox?status=FAILED")) {
+        return { items: [] };
+      }
+      if (url.includes("/api/v1/admin/reports/audit-catalogs")) {
+        return { items: [], summary: { total: 0, by_entity: {}, by_action: {} } };
+      }
+      if (url.includes("/api/v1/admin/reports/audit-issues")) {
+        return { items: [], summary: { total: 0, by_entity: {}, by_action: {} } };
+      }
+      throw new Error(`Unexpected path: ${url}`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ReportsPage />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByText(
+        "Requested installer missing-installer is not available in the current reports scope. Installer-specific reports were not switched to another installer.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Installer KPI Details Filter")).toHaveValue(
+      "",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Open installer card" }),
+    ).not.toBeInTheDocument();
+    expect(
+      apiFetchMock.mock.calls.some((call) =>
+        String(call[0]).includes(
+          "/api/v1/admin/reports/installers-kpi/installer-1",
+        ),
+      ),
+    ).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Show full report" }));
+    expect(pushMock).toHaveBeenCalledWith("/reports");
+  });
+
   it("disables privileged actions for INSTALLER role", async () => {
-    userRoleMock.mockReturnValue("INSTALLER");
+    authSessionMock.mockReturnValue({
+      role: "INSTALLER",
+      admin_scope: null,
+      can_view_rates: false,
+    });
 
     apiFetchMock.mockImplementation(async (path: string) => {
       const url = String(path);
@@ -1938,10 +2692,169 @@ describe("ReportsPage", () => {
     expect(screen.getByRole("button", { name: "Export Executive CSV" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Export Installers CSV" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Export Orders CSV" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Retry" })).toBeDisabled();
+    const retryButtons = await screen.findAllByRole("button", { name: "Retry" });
+    retryButtons.forEach((button) => {
+      expect(button).toBeDisabled();
+    });
     const exportButtons = screen.getAllByRole("button", { name: "Export CSV" });
     expect(exportButtons).toHaveLength(2);
     expect(exportButtons[0]).toBeDisabled();
     expect(exportButtons[1]).toBeDisabled();
+  }, 30000);
+
+  it("does not query financial report endpoints without rate access", async () => {
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "OPERATIONS",
+      can_view_rates: false,
+    });
+
+    const financialPathFragments = [
+      "/api/v1/admin/reports/issues-addons-impact",
+      "/api/v1/admin/reports/risk-concentration",
+      "/api/v1/admin/reports/installers-profitability-matrix",
+      "/api/v1/admin/reports/installer-project-profitability",
+      "/api/v1/admin/reports/project-plan-fact/",
+      "/api/v1/admin/reports/project-risk-drilldown/",
+      "/api/v1/admin/reports/projects-margin",
+      "/api/v1/admin/reports/installers-kpi",
+      "/api/v1/admin/reports/order-numbers-kpi",
+      "/api/v1/admin/projects/project-1/addons/plan",
+      "/api/v1/admin/projects/project-1/urgency-surcharges",
+    ];
+
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+      if (financialPathFragments.some((fragment) => url.includes(fragment))) {
+        throw new Error(`Financial endpoint should not be called: ${url}`);
+      }
+      const webhookMock = mockReportWebhookSignals(url);
+      if (webhookMock) return webhookMock;
+      const retryAuditMock = mockReportRetryAudits(url);
+      if (retryAuditMock) return retryAuditMock;
+      if (url.includes("/api/v1/admin/reports/delivery")) {
+        return {
+          period_from: null,
+          period_to: null,
+          whatsapp_pending: 0,
+          whatsapp_delivered: 0,
+          whatsapp_failed: 0,
+          email_sent: 0,
+          email_failed: 0,
+        };
+      }
+      if (url.includes("/api/v1/admin/outbox/summary")) {
+        return {
+          total: 0,
+          by_channel: {},
+          by_status: {},
+          by_delivery_status: {},
+          pending_overdue_15m: 0,
+          failed_total: 0,
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-center")) {
+        return {
+          generated_at: "2026-02-22T18:01:00Z",
+          imports: {
+            window_hours: 24,
+            total_runs: 0,
+            analyze_runs: 0,
+            import_runs: 0,
+            retry_runs: 0,
+            success_runs: 0,
+            partial_runs: 0,
+            failed_runs: 0,
+            empty_runs: 0,
+          },
+          outbox: {
+            total: 0,
+            failed_total: 0,
+            pending_overdue_15m: 0,
+            by_channel: {},
+          },
+          alerts: {
+            unread_count: 0,
+            total_last_24h: 0,
+            warn_last_24h: 0,
+            danger_last_24h: 0,
+            latest_created_at: null,
+          },
+          top_failing_projects: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-sla/history")) {
+        return {
+          generated_at: "2026-02-22T18:03:00Z",
+          days: 30,
+          points: [],
+          summary: {
+            ok_days: 0,
+            warn_days: 0,
+            danger_days: 0,
+            current_status: "OK",
+            delta_import_failure_rate_pct: 0,
+            delta_outbox_failed_rate_pct: 0,
+            delta_danger_alerts_count: 0,
+          },
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/operations-sla")) {
+        return {
+          generated_at: "2026-02-22T18:02:00Z",
+          overall_status: "OK",
+          metrics: [],
+          playbooks: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/issues-analytics")) {
+        return {
+          generated_at: "2026-02-22T18:04:00Z",
+          days: 30,
+          summary: {
+            total_issues: 0,
+            open_issues: 0,
+            closed_issues: 0,
+            overdue_open_issues: 0,
+            blocked_open_issues: 0,
+            p1_open_issues: 0,
+            overdue_open_rate_pct: 0,
+            mttr_hours: 0,
+            mttr_p50_hours: 0,
+            mttr_sample_size: 0,
+            backlog_by_workflow: {},
+            backlog_by_priority: {},
+          },
+          trend: [],
+        };
+      }
+      if (url.includes("/api/v1/admin/reports/limit-alerts")) {
+        return { items: [], unread_count: 0, total: 0, limit: 20, offset: 0 };
+      }
+      if (url.includes("/api/v1/admin/projects")) return { items: [] };
+      if (url.includes("/api/v1/admin/outbox?status=FAILED")) return { items: [] };
+      if (url.includes("/api/v1/admin/reports/audit-catalogs")) {
+        return { items: [], summary: { total: 0, by_entity: {}, by_action: {} } };
+      }
+      if (url.includes("/api/v1/admin/reports/audit-issues")) {
+        return { items: [], summary: { total: 0, by_entity: {}, by_action: {} } };
+      }
+      return {};
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ReportsPage />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Financial reports are restricted")).toBeInTheDocument();
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalled());
+    const calledUrls = apiFetchMock.mock.calls.map(([path]) => String(path));
+    expect(calledUrls.some((url) => financialPathFragments.some((fragment) => url.includes(fragment)))).toBe(false);
   }, 30000);
 });

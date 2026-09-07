@@ -1,11 +1,12 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 
-import { getAccessToken } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
+import { normalizeAuthSession } from "@/lib/auth-session";
 
 import Index from "./views/Index";
 import CalendarPage from "./views/CalendarPage";
@@ -15,16 +16,46 @@ import JournalFormPage from "./views/JournalFormPage";
 import LoginPage from "./views/LoginPage";
 import ProjectsPage from "./views/ProjectsPage";
 import ReportsPage from "./views/ReportsPage";
+import DocumentsPage from "./views/DocumentsPage";
+import EarningsLedgerPage from "./views/EarningsLedgerPage";
 import SettingsPage from "./views/SettingsPage";
 import NotFound from "./views/NotFound";
 
 const queryClient = new QueryClient();
 
+type AuthMeResponse = {
+  role: "ADMIN" | "INSTALLER";
+  admin_scope?: "OWNER" | "OPERATIONS" | "FINANCE" | "VIEWER" | null;
+  can_view_rates?: boolean | null;
+};
+
 function RequireAuth({ children }: { children: ReactNode }) {
-  const token = getAccessToken();
-  if (!token) {
-    return <Navigate to="/login" replace />;
+  const location = useLocation();
+  const authQuery = useQuery({
+    queryKey: ["legacy-auth-me"],
+    queryFn: async () => {
+      const response = await apiFetch<AuthMeResponse>("/api/v1/auth/me");
+      return normalizeAuthSession(response);
+    },
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  if (authQuery.isPending) {
+    return null;
   }
+
+  const session = authQuery.data ?? null;
+  const next = `${location.pathname}${location.search}${location.hash}`;
+
+  if (!session) {
+    return <Navigate to={`/login?next=${encodeURIComponent(next)}&error=auth_required`} replace />;
+  }
+
+  if (session.role !== "ADMIN") {
+    return <Navigate to={`/login?next=${encodeURIComponent(next)}&error=admin_only`} replace />;
+  }
+
   return <>{children}</>;
 }
 
@@ -89,6 +120,22 @@ const App = () => (
             element={
               <RequireAuth>
                 <ReportsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/documents"
+            element={
+              <RequireAuth>
+                <DocumentsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/earnings-ledger"
+            element={
+              <RequireAuth>
+                <EarningsLedgerPage />
               </RequireAuth>
             }
           />

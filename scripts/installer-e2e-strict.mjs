@@ -9,6 +9,7 @@ const REQUIRED_ENV_VARS = [
   "E2E_INSTALLER_PASSWORD",
   "NEXT_PUBLIC_API_BASE_URL",
 ];
+const DEFAULT_DEVICE_ID = "e2e-installer-web-smoke";
 
 function parseArgs(argv) {
   const result = {
@@ -75,7 +76,14 @@ function mergeEnv(fileEnv) {
       merged[key] = value;
     }
   }
+  if (!merged.E2E_DEVICE_ID) {
+    merged.E2E_DEVICE_ID = DEFAULT_DEVICE_ID;
+  }
   return merged;
+}
+
+function shouldReuseExistingWebServer(env) {
+  return Boolean(String(env.PLAYWRIGHT_BASE_URL || "").trim());
 }
 
 const args = parseArgs(process.argv.slice(2));
@@ -88,6 +96,8 @@ if (args.help) {
   for (const key of REQUIRED_ENV_VARS) {
     console.log(`- ${key}`);
   }
+  console.log("Optional env vars:");
+  console.log(`- E2E_DEVICE_ID (default: ${DEFAULT_DEVICE_ID})`);
   console.log("Usage:");
   console.log("  node scripts/installer-e2e-strict.mjs");
   console.log("  node scripts/installer-e2e-strict.mjs --check-auth-only");
@@ -137,6 +147,7 @@ async function validateInstallerCredentialsOrExit(env) {
       company_id: env.E2E_COMPANY_ID,
       email: env.E2E_INSTALLER_EMAIL,
       password: env.E2E_INSTALLER_PASSWORD,
+      device_id: env.E2E_DEVICE_ID,
     }),
   }).catch((error) => {
     console.error(
@@ -185,5 +196,7 @@ if (checkAuthOnly) {
   process.exit(0);
 }
 
-runOrExit("npm", ["run", "build"], env);
+if (!shouldReuseExistingWebServer(env)) {
+  runOrExit("npm", ["run", "build"], env);
+}
 runOrExit("node", ["./node_modules/@playwright/test/cli.js", "test", "e2e/installer.spec.ts"], env);

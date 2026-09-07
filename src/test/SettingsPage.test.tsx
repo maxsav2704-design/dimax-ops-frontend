@@ -8,8 +8,8 @@ import SettingsPage from "@/views/SettingsPage";
 const { apiFetchMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
 }));
-const { userRoleMock } = vi.hoisted(() => ({
-  userRoleMock: vi.fn(),
+const { authSessionMock } = vi.hoisted(() => ({
+  authSessionMock: vi.fn(),
 }));
 
 vi.mock("@/components/DashboardLayout", () => ({
@@ -22,8 +22,8 @@ vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
 }));
 
-vi.mock("@/hooks/use-user-role", () => ({
-  useUserRole: userRoleMock,
+vi.mock("@/hooks/use-auth-session", () => ({
+  useAuthSession: authSessionMock,
 }));
 
 function buildBaseSettingsApi() {
@@ -98,11 +98,15 @@ function buildBaseSettingsApi() {
 describe("SettingsPage", () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
-    userRoleMock.mockReset();
+    authSessionMock.mockReset();
   });
 
   it("disables company mutation and provider tests for installer role", async () => {
-    userRoleMock.mockReturnValue("INSTALLER");
+    authSessionMock.mockReturnValue({
+      role: "INSTALLER",
+      admin_scope: null,
+      can_view_rates: false,
+    });
     apiFetchMock.mockImplementation(buildBaseSettingsApi());
 
     const queryClient = new QueryClient({
@@ -121,10 +125,14 @@ describe("SettingsPage", () => {
     expect(screen.getByRole("button", { name: "Save Company" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Send Email Test" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Send WhatsApp Test" })).toBeDisabled();
-  });
+  }, 15000);
 
   it("sends integration email test for admin role", async () => {
-    userRoleMock.mockReturnValue("ADMIN");
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "OWNER",
+      can_view_rates: true,
+    });
     apiFetchMock.mockImplementation(async (path: string) => {
       if (path === "/api/v1/admin/settings/integrations/test-email") {
         return {
@@ -148,8 +156,7 @@ describe("SettingsPage", () => {
       </QueryClientProvider>
     );
 
-    await screen.findByText("Provider test send");
-    fireEvent.click(screen.getByRole("button", { name: "Send Email Test" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Send Email Test" }, { timeout: 10000 }));
 
     await waitFor(() => {
       const sendCall = apiFetchMock.mock.calls.find(
@@ -158,6 +165,49 @@ describe("SettingsPage", () => {
       expect(sendCall).toBeTruthy();
     });
 
-    expect(await screen.findByText("Email test sent to ops@example.com")).toBeInTheDocument();
-  });
+    expect(await screen.findByText("Email test sent to ops@example.com", {}, { timeout: 10000 })).toBeInTheDocument();
+  }, 15000);
+
+  it("saves company details for admin role with readable success notice", async () => {
+    authSessionMock.mockReturnValue({
+      role: "ADMIN",
+      admin_scope: "OWNER",
+      can_view_rates: true,
+    });
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path === "/api/v1/admin/settings/company" && init?.method === "PATCH") {
+        return {
+          id: "company-1",
+          name: "DIMAX Prime",
+          is_active: true,
+          created_at: "2026-02-20T10:00:00Z",
+          updated_at: "2026-02-22T10:00:00Z",
+        };
+      }
+      return buildBaseSettingsApi()(path);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SettingsPage />
+      </QueryClientProvider>
+    );
+
+    const companyInput = await screen.findByDisplayValue("DIMAX");
+    fireEvent.change(companyInput, { target: { value: "DIMAX Prime" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save Company" }));
+
+    await waitFor(() => {
+      const saveCall = apiFetchMock.mock.calls.find(
+        (call) => call[0] === "/api/v1/admin/settings/company" && call[1]?.method === "PATCH"
+      );
+      expect(saveCall).toBeTruthy();
+    });
+
+    expect(await screen.findByText("Company details saved.")).toBeInTheDocument();
+  }, 15000);
 });

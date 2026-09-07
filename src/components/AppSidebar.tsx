@@ -1,49 +1,251 @@
+"use client";
+
+import { useEffect, useState, type WheelEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertTriangle,
-  LayoutDashboard,
-  FolderKanban,
-  Users,
-  CalendarDays,
-  BookOpen,
-  DoorOpen,
-  MessageSquare,
-  BarChart3,
   ActivitySquare,
+  AlertTriangle,
+  BarChart3,
+  BookOpen,
+  CalendarDays,
+  ChevronDown,
+  DoorOpen,
+  FileText,
+  FolderKanban,
+  LayoutDashboard,
+  MessageSquare,
+  Package2,
+  Plus,
+  ReceiptText,
   Settings,
-  HelpCircle,
+  SlidersHorizontal,
+  Users,
 } from "lucide-react";
+
 import { apiFetch } from "@/lib/api";
-import { useUserRole } from "@/hooks/use-user-role";
-import { canAccessAdminPath } from "@/lib/admin-access";
+import { useAuthSession } from "@/hooks/use-auth-session";
+import {
+  type AdminModule,
+  canAccessAdminModule,
+} from "@/lib/admin-access";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { title: "Dashboard", path: "/", icon: LayoutDashboard },
-  { title: "Projects", path: "/projects", icon: FolderKanban },
-  { title: "Issues", path: "/issues", icon: AlertTriangle },
-  { title: "Installers", path: "/installers", icon: Users },
-  { title: "Calendar", path: "/calendar", icon: CalendarDays },
-  { title: "Journal", path: "/journal", icon: BookOpen },
-  { title: "Door Types", path: "/door-types", icon: DoorOpen },
-  { title: "Reasons", path: "/reasons", icon: MessageSquare },
-  { title: "Reports", path: "/reports", icon: BarChart3 },
-  { title: "Operations", path: "/operations", icon: ActivitySquare },
-  { title: "Settings", path: "/settings", icon: Settings },
-];
+type SidebarItem = {
+  title: string;
+  path: string;
+  icon: typeof LayoutDashboard;
+  module: AdminModule;
+};
+
+type SidebarGroup = {
+  id: "work" | "finance" | "reference" | "system";
+  title: string;
+  icon: typeof LayoutDashboard;
+  collapsible: boolean;
+  items: SidebarItem[];
+};
+
+function sidebarCopy(locale: "en" | "ru" | "he") {
+  if (locale === "ru") {
+    return {
+      createProject: "Создать проект",
+      work: "Работа",
+      finance: "Деньги и отчёты",
+      reference: "Справочники",
+      system: "Система",
+      documents: "Документы",
+    };
+  }
+  if (locale === "he") {
+    return {
+      createProject: "יצירת פרויקט",
+      work: "עבודה",
+      finance: "כספים ודוחות",
+      reference: "ספריות",
+      system: "מערכת",
+      documents: "מסמכים",
+    };
+  }
+  return {
+    createProject: "Create project",
+    work: "Work",
+    finance: "Money and reports",
+    reference: "Reference data",
+    system: "System",
+    documents: "Documents",
+  };
+}
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const userRole = useUserRole();
-  const visibleNavItems = navItems.filter((item) => canAccessAdminPath(userRole, item.path));
+  const session = useAuthSession();
+  const { locale, t } = useI18n();
+  const copy = sidebarCopy(locale);
+  const [expandedGroups, setExpandedGroups] = useState({
+    reference: false,
+    system: false,
+  });
+
+  const groups: SidebarGroup[] = [
+    {
+      id: "work",
+      title: copy.work,
+      icon: LayoutDashboard,
+      collapsible: false,
+      items: [
+        {
+          title: t("nav.dashboard"),
+          path: "/",
+          icon: LayoutDashboard,
+          module: "dashboard",
+        },
+        {
+          title: t("nav.projects"),
+          path: "/projects",
+          icon: FolderKanban,
+          module: "projects",
+        },
+        {
+          title: t("nav.calendar"),
+          path: "/calendar",
+          icon: CalendarDays,
+          module: "calendar",
+        },
+        {
+          title: t("nav.issues"),
+          path: "/issues",
+          icon: AlertTriangle,
+          module: "issues",
+        },
+        {
+          title: t("nav.installers"),
+          path: "/installers",
+          icon: Users,
+          module: "installers",
+        },
+        {
+          title: t("nav.journal"),
+          path: "/journal",
+          icon: BookOpen,
+          module: "journal",
+        },
+      ],
+    },
+    {
+      id: "finance",
+      title: copy.finance,
+      icon: BarChart3,
+      collapsible: false,
+      items: [
+        {
+          title: t("nav.reports"),
+          path: "/reports",
+          icon: BarChart3,
+          module: "reports",
+        },
+        {
+          title: t("nav.earningsLedger"),
+          path: "/earnings-ledger",
+          icon: ReceiptText,
+          module: "reports",
+        },
+        {
+          title: copy.documents,
+          path: "/documents",
+          icon: FileText,
+          module: "projects",
+        },
+      ],
+    },
+    {
+      id: "reference",
+      title: copy.reference,
+      icon: SlidersHorizontal,
+      collapsible: true,
+      items: [
+        {
+          title: t("nav.library"),
+          path: "/library",
+          icon: Package2,
+          module: "library",
+        },
+        {
+          title: t("nav.doorTypes"),
+          path: "/door-types",
+          icon: DoorOpen,
+          module: "door-types",
+        },
+        {
+          title: t("nav.reasons"),
+          path: "/reasons",
+          icon: MessageSquare,
+          module: "reasons",
+        },
+      ],
+    },
+    {
+      id: "system",
+      title: copy.system,
+      icon: Settings,
+      collapsible: true,
+      items: [
+        {
+          title: t("nav.operations"),
+          path: "/operations",
+          icon: ActivitySquare,
+          module: "operations",
+        },
+        {
+          title: t("nav.settings"),
+          path: "/settings",
+          icon: Settings,
+          module: "settings",
+        },
+      ],
+    },
+  ];
+
+  const visibleGroups = groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) =>
+        canAccessAdminModule(session, item.module),
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const isItemActive = (path: string) =>
+    path === "/"
+      ? pathname === "/"
+      : pathname === path || pathname?.startsWith(`${path}/`);
+
+  useEffect(() => {
+    const activeGroup = ["/library", "/door-types", "/reasons"].some(
+      (path) => pathname === path || pathname?.startsWith(`${path}/`),
+    )
+      ? "reference"
+      : ["/operations", "/settings"].some(
+            (path) => pathname === path || pathname?.startsWith(`${path}/`),
+          )
+        ? "system"
+        : null;
+    if (activeGroup) {
+      setExpandedGroups((current) => ({
+        ...current,
+        [activeGroup]: true,
+      }));
+    }
+  }, [pathname]);
+
   const unreadAlertsQuery = useQuery({
     queryKey: ["limit-alerts-unread"],
     queryFn: async () => {
       try {
         const data = await apiFetch<{ unread_count: number }>(
-          "/api/v1/admin/reports/limit-alerts?limit=1&offset=0"
+          "/api/v1/admin/reports/limit-alerts?limit=1&offset=0",
         );
         return data.unread_count || 0;
       } catch {
@@ -51,83 +253,142 @@ export function AppSidebar() {
       }
     },
     refetchInterval: 30_000,
+    enabled: canAccessAdminModule(session, "reports"),
   });
 
   const unreadCount = unreadAlertsQuery.data || 0;
 
-  return (
-    <aside className="flex flex-col w-[240px] min-h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border shrink-0">
-      {/* Brand */}
-      <div className="px-5 pt-6 pb-8">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center text-accent-foreground font-semibold text-sm transition-shadow duration-300 hover:shadow-[0_0_12px_hsl(var(--accent)/0.4)]">
-            D
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold text-sidebar-accent-foreground tracking-tight">
-              DIMAX Admin
-            </h1>
-            <p className="text-[11px] text-sidebar-foreground/60">Operations Suite</p>
-          </div>
-        </div>
-      </div>
+  const handleWheel = (event: WheelEvent<HTMLElement>) => {
+    if (
+      event.deltaY === 0 ||
+      Math.abs(event.deltaY) <= Math.abs(event.deltaX)
+    ) {
+      return;
+    }
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3">
-        <ul className="space-y-0.5">
-          {visibleNavItems.map((item) => {
-            const isActive =
-              item.path === "/"
-                ? pathname === "/"
-                : pathname === item.path || pathname?.startsWith(`${item.path}/`);
-            return (
-              <li key={item.title}>
-                <Link
-                  href={item.path}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 ease-in-out group/nav",
-                    isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-ring)/0.15)]"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                  )}
+    const navigation = event.currentTarget.querySelector<HTMLElement>(
+      "[data-sidebar-scroll]",
+    );
+    const eventTarget = event.target;
+    if (
+      navigation &&
+      eventTarget instanceof Node &&
+      navigation.contains(eventTarget)
+    ) {
+      const maxScrollTop = navigation.scrollHeight - navigation.clientHeight;
+      const canScrollNavigation =
+        event.deltaY < 0
+          ? navigation.scrollTop > 0
+          : navigation.scrollTop < maxScrollTop;
+      if (canScrollNavigation) {
+        return;
+      }
+    }
+
+    const content = document.querySelector<HTMLElement>("[data-admin-scroll]");
+    if (!content) {
+      return;
+    }
+
+    event.preventDefault();
+    content.scrollBy({ top: event.deltaY, behavior: "auto" });
+  };
+
+  const renderItem = (item: SidebarItem) => {
+    const isActive = isItemActive(item.path);
+    return (
+      <Link
+        key={item.path}
+        href={item.path}
+        aria-label={item.title}
+        title={item.title}
+        aria-current={isActive ? "page" : undefined}
+        data-active={isActive ? "true" : "false"}
+        className="dmx-sidebar-link"
+      >
+        <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.9} />
+        <span className="dmx-sidebar-label">{item.title}</span>
+        {item.path === "/reports" && unreadCount > 0 ? (
+          <span className="dmx-sidebar-badge">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        ) : null}
+      </Link>
+    );
+  };
+
+  return (
+    <aside
+      className="dmx-sidebar"
+      aria-label="Admin navigation"
+      onWheel={handleWheel}
+    >
+      {canAccessAdminModule(session, "projects") ? (
+        <Link
+          href="/projects?create=1"
+          aria-label={copy.createProject}
+          title={copy.createProject}
+          className="dmx-sidebar-create"
+        >
+          <Plus className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+          <span className="dmx-sidebar-label">{copy.createProject}</span>
+        </Link>
+      ) : null}
+
+      <nav
+        className="min-h-0 flex-1 overflow-y-auto py-1"
+        data-sidebar-scroll
+      >
+        {visibleGroups.map((group) => {
+          const isExpandable = group.id === "reference" || group.id === "system";
+          const isExpanded = isExpandable ? expandedGroups[group.id] : true;
+          const hasActiveItem = group.items.some((item) =>
+            isItemActive(item.path),
+          );
+
+          return (
+            <section className="dmx-sidebar-group" key={group.id}>
+              {group.collapsible ? (
+                <button
+                  type="button"
+                  className="dmx-sidebar-group-toggle"
+                  aria-expanded={isExpanded}
+                  aria-label={group.title}
+                  title={group.title}
+                  onClick={() =>
+                    setExpandedGroups((current) => ({
+                      ...current,
+                      [group.id]: !isExpanded,
+                    }))
+                  }
                 >
-                  <item.icon
+                  <group.icon
+                    className="h-4 w-4 shrink-0 md:hidden"
+                    strokeWidth={1.8}
+                  />
+                  <span className="dmx-sidebar-group-title">{group.title}</span>
+                  <ChevronDown
                     className={cn(
-                      "w-[18px] h-[18px] shrink-0 transition-all duration-250 ease-in-out",
-                      isActive
-                        ? "text-accent drop-shadow-[0_0_6px_hsl(var(--accent)/0.4)]"
-                        : "group-hover/nav:text-accent group-hover/nav:scale-110 group-hover/nav:drop-shadow-[0_0_5px_hsl(var(--accent)/0.3)]"
+                      "hidden h-3.5 w-3.5 shrink-0 transition-transform md:block",
+                      isExpanded && "rotate-180",
                     )}
                     strokeWidth={1.8}
                   />
-                  <span>{item.title}</span>
-                  {item.path === "/reports" && unreadCount > 0 ? (
-                    <span className="ml-auto inline-flex min-w-5 h-5 px-1 rounded-full items-center justify-center text-[10px] font-semibold bg-accent text-accent-foreground">
-                      {unreadCount > 99 ? "99+" : unreadCount}
-                    </span>
+                  {hasActiveItem && !isExpanded ? (
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent md:hidden" />
                   ) : null}
-                </Link>
-              </li>
-            );
-          })}
-          {visibleNavItems.length === 0 ? (
-            <li className="px-3 py-2 text-[12px] text-sidebar-foreground/60">
-              No admin modules available for your role.
-            </li>
-          ) : null}
-        </ul>
-      </nav>
+                </button>
+              ) : (
+                <div className="dmx-sidebar-group-title">{group.title}</div>
+              )}
 
-      {/* Footer */}
-      <div className="px-5 py-5 border-t border-sidebar-border">
-        <div className="flex items-center gap-2 text-sidebar-foreground/50 group/help cursor-pointer transition-colors duration-200 hover:text-sidebar-foreground/80">
-          <HelpCircle className="w-4 h-4 transition-all duration-250 ease-in-out group-hover/help:text-accent group-hover/help:scale-110 group-hover/help:drop-shadow-[0_0_5px_hsl(var(--accent)/0.3)]" strokeWidth={1.5} />
-          <div>
-            <p className="text-[11px] font-medium">Support</p>
-            <p className="text-[10px]">help@dimax.co.il</p>
-          </div>
-        </div>
-      </div>
+              <div className={cn("space-y-0.5", !isExpanded && "hidden")}>
+                {group.items.map(renderItem)}
+              </div>
+            </section>
+          );
+        })}
+      </nav>
     </aside>
   );
 }

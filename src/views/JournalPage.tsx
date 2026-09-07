@@ -1,4 +1,3 @@
-﻿
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -19,9 +18,16 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { useUserRole } from "@/hooks/use-user-role";
+import { DimaxPageHeader } from "@/components/DimaxPageHeader";
+import {
+  KpiCard as DimaxKpiCard,
+  WidgetCard,
+} from "@/components/dimax";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
+import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
+import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type ProjectListItem = {
@@ -184,6 +190,17 @@ type CommunicationTemplateRenderPreviewResponse = {
 
 type FeedbackTone = "success" | "error" | "info";
 
+function pickByLocale(
+  locale: Locale,
+  en: string,
+  ru: string,
+  he: string,
+): string {
+  if (locale === "ru") return ru;
+  if (locale === "he") return he;
+  return en;
+}
+
 function formatDateTime(value: string | null): string {
   if (!value) {
     return "Not set";
@@ -220,33 +237,33 @@ function compactDate(value: string | null): string {
 function badgeTone(value: string): string {
   const normalized = value.trim().toUpperCase();
   if (["FAILED", "ERROR", "BLOCKED", "CANCELLED"].includes(normalized)) {
-    return "bg-destructive/10 text-destructive border-destructive/20";
+    return "border-status-problem-border bg-status-problem-bg text-status-problem-fg";
   }
-  if (["READY", "SENT", "DELIVERED", "SIGNED", "ACTIVE", "CONFIGURED"].includes(normalized)) {
-    return "bg-emerald-500/10 text-emerald-300 border-emerald-500/20";
+  if (
+    ["READY", "SENT", "DELIVERED", "SIGNED", "ACTIVE", "CONFIGURED"].includes(
+      normalized,
+    )
+  ) {
+    return "border-status-ok-border bg-status-ok-bg text-status-ok-fg";
   }
-  if (["PENDING", "QUEUED", "PROCESSING", "DRAFT", "WARN"].includes(normalized)) {
-    return "bg-amber-500/10 text-amber-300 border-amber-500/20";
+  if (
+    ["PENDING", "QUEUED", "PROCESSING", "DRAFT", "WARN"].includes(normalized)
+  ) {
+    return "border-status-warning-border bg-status-warning-bg text-status-warning-fg";
   }
-  return "bg-accent/10 text-accent border-accent/20";
+  return "border-status-progress-border bg-status-progress-bg text-status-progress-fg";
 }
 
-function BoolBadge({
-  label,
-  value,
-}: {
-  label: string;
-  value: boolean;
-}) {
+function BoolBadge({ label, value }: { label: string; value: boolean }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-border/70 bg-background/40 px-3 py-2">
-      <span className="text-[12px] text-muted-foreground">{label}</span>
+    <div className="flex items-center justify-between rounded-lg border border-border bg-surface-subtle px-3 py-2">
+      <span className="text-[12px] text-text-secondary">{label}</span>
       <span
         className={cn(
-          "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]",
+          "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
           value
-            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-            : "border-border bg-card text-muted-foreground"
+            ? "border-status-ok-border bg-status-ok-bg text-status-ok-fg"
+            : "border-status-blocked-border bg-status-blocked-bg text-status-blocked-fg",
         )}
       >
         {value ? "ON" : "OFF"}
@@ -255,7 +272,11 @@ function BoolBadge({
   );
 }
 function normalizeTemplateCode(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function SectionMessage({
@@ -270,10 +291,13 @@ function SectionMessage({
   return (
     <div
       className={cn(
-        "rounded-xl border px-4 py-3 text-sm",
-        tone === "error" && "border-destructive/20 bg-destructive/10 text-destructive",
-        tone === "success" && "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
-        tone === "info" && "border-border/70 bg-background/40 text-muted-foreground"
+        "rounded-lg border px-4 py-3 text-sm",
+        tone === "error" &&
+          "border-status-problem-border bg-status-problem-bg text-status-problem-fg",
+        tone === "success" &&
+          "border-status-ok-border bg-status-ok-bg text-status-ok-fg",
+        tone === "info" &&
+          "border-status-progress-border bg-status-progress-bg text-status-progress-fg",
       )}
     >
       <div className="font-medium">{title}</div>
@@ -284,17 +308,24 @@ function SectionMessage({
 
 export default function JournalPage() {
   const router = useRouter();
-  const role = useUserRole();
-  const canManage = canRunPrivilegedAdminActions(role);
+  const { t, locale } = useI18n();
+  const copy = (en: string, ru: string, he: string) =>
+    locale === "ru" ? ru : locale === "he" ? he : en;
+  const session = useAuthSession();
+  const canManage = canRunPrivilegedAdminActions(session);
 
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [journals, setJournals] = useState<JournalListItem[]>([]);
   const [selectedJournalId, setSelectedJournalId] = useState<string>("");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
-  const [selectedJournal, setSelectedJournal] = useState<JournalDetailsResponse | null>(null);
-  const [outboxSummary, setOutboxSummary] = useState<OutboxSummaryResponse | null>(null);
+  const [selectedJournal, setSelectedJournal] =
+    useState<JournalDetailsResponse | null>(null);
+  const [outboxSummary, setOutboxSummary] =
+    useState<OutboxSummaryResponse | null>(null);
   const [outboxItems, setOutboxItems] = useState<OutboxItem[]>([]);
-  const [integrations, setIntegrations] = useState<IntegrationsSettings | null>(null);
+  const [integrations, setIntegrations] = useState<IntegrationsSettings | null>(
+    null,
+  );
 
   const [queueLoading, setQueueLoading] = useState(true);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -313,12 +344,17 @@ export default function JournalPage() {
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
 
-  const [savedTemplates, setSavedTemplates] = useState<CommunicationTemplate[]>([]);
+  const [savedTemplates, setSavedTemplates] = useState<CommunicationTemplate[]>(
+    [],
+  );
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [templateName, setTemplateName] = useState("");
 
   const [refreshTick, setRefreshTick] = useState(0);
-  const [feedback, setFeedback] = useState<{ tone: FeedbackTone; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<{
+    tone: FeedbackTone;
+    message: string;
+  } | null>(null);
   const [busyAction, setBusyAction] = useState<string>("");
 
   useEffect(() => {
@@ -329,21 +365,42 @@ export default function JournalPage() {
   }, [savedTemplates, selectedTemplateId]);
 
   useEffect(() => {
+    if (!feedback || feedback.tone === "error") {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setFeedback(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [feedback]);
+
+  useEffect(() => {
     let alive = true;
 
     async function loadQueue() {
       setQueueLoading(true);
       setPageError("");
       try {
-        const [projectsResponse, journalsResponse, integrationsResponse, templatesResponse] = await Promise.all([
+        const [
+          projectsResponse,
+          journalsResponse,
+          integrationsResponse,
+          templatesResponse,
+        ] = await Promise.all([
           apiFetch<ProjectListResponse>("/api/v1/admin/projects?limit=200"),
           apiFetch<JournalListResponse>(
             `/api/v1/admin/journals?limit=100${
-              statusFilter !== "ALL" ? `&status=${encodeURIComponent(statusFilter)}` : ""
-            }`
+              statusFilter !== "ALL"
+                ? `&status=${encodeURIComponent(statusFilter)}`
+                : ""
+            }`,
           ),
-          apiFetch<IntegrationsSettings>("/api/v1/admin/settings/integrations"),
-          apiFetch<CommunicationTemplatesResponse>("/api/v1/admin/settings/communication-templates"),
+          canManage
+            ? apiFetch<IntegrationsSettings>("/api/v1/admin/settings/integrations")
+            : Promise.resolve<IntegrationsSettings | null>(null),
+          canManage
+            ? apiFetch<CommunicationTemplatesResponse>(
+                "/api/v1/admin/settings/communication-templates",
+              )
+            : Promise.resolve<CommunicationTemplatesResponse>({ items: [] }),
         ]);
 
         if (!alive) {
@@ -354,9 +411,14 @@ export default function JournalPage() {
         setJournals(journalsResponse.items ?? []);
         setIntegrations(integrationsResponse);
         setSavedTemplates(templatesResponse.items ?? []);
-        setSelectedProjectId((current) => current || projectsResponse.items?.[0]?.id || "");
+        setSelectedProjectId(
+          (current) => current || projectsResponse.items?.[0]?.id || "",
+        );
         setSelectedJournalId((current) => {
-          if (current && journalsResponse.items.some((item) => item.id === current)) {
+          if (
+            current &&
+            journalsResponse.items.some((item) => item.id === current)
+          ) {
             return current;
           }
           return journalsResponse.items?.[0]?.id || "";
@@ -365,7 +427,17 @@ export default function JournalPage() {
         if (!alive) {
           return;
         }
-        setPageError(error instanceof Error ? error.message : "Failed to load communications center");
+        setPageError(
+          readableApiError(
+            error,
+            locale,
+            locale === "ru"
+              ? "Не удалось загрузить центр коммуникаций."
+              : locale === "he"
+                ? "לא ניתן לטעון את מרכז התקשורת."
+                : "Failed to load communications center",
+          ),
+        );
       } finally {
         if (alive) {
           setQueueLoading(false);
@@ -378,7 +450,7 @@ export default function JournalPage() {
     return () => {
       alive = false;
     };
-  }, [refreshTick, statusFilter]);
+  }, [canManage, locale, refreshTick, statusFilter]);
 
   useEffect(() => {
     let alive = true;
@@ -393,7 +465,9 @@ export default function JournalPage() {
       setDetailsLoading(true);
       setDetailsError("");
       try {
-        const journal = await apiFetch<JournalDetailsResponse>(`/api/v1/admin/journals/${selectedJournalId}`);
+        const journal = await apiFetch<JournalDetailsResponse>(
+          `/api/v1/admin/journals/${selectedJournalId}`,
+        );
         if (!alive) {
           return;
         }
@@ -402,7 +476,17 @@ export default function JournalPage() {
         if (!alive) {
           return;
         }
-        setDetailsError(error instanceof Error ? error.message : "Failed to load selected journal");
+        setDetailsError(
+          readableApiError(
+            error,
+            locale,
+            locale === "ru"
+              ? "Не удалось загрузить выбранный журнал."
+              : locale === "he"
+                ? "לא ניתן לטעון את היומן שנבחר."
+                : "Failed to load selected journal",
+          ),
+        );
         setSelectedJournal(null);
       } finally {
         if (alive) {
@@ -416,9 +500,15 @@ export default function JournalPage() {
     return () => {
       alive = false;
     };
-  }, [selectedJournalId, refreshTick]);
+  }, [locale, selectedJournalId, refreshTick]);
 
   useEffect(() => {
+    if (!canManage) {
+      setOutboxSummary(null);
+      setOutboxItems([]);
+      setDeliveryLoading(false);
+      return undefined;
+    }
     let alive = true;
 
     async function loadDelivery() {
@@ -428,9 +518,11 @@ export default function JournalPage() {
           ? `?journal_id=${encodeURIComponent(selectedJournalId)}`
           : "";
         const [summaryResponse, outboxResponse] = await Promise.all([
-          apiFetch<OutboxSummaryResponse>(`/api/v1/admin/outbox/summary${journalQuery}`),
+          apiFetch<OutboxSummaryResponse>(
+            `/api/v1/admin/outbox/summary${journalQuery}`,
+          ),
           apiFetch<OutboxListResponse>(
-            `/api/v1/admin/outbox${journalQuery ? `${journalQuery}&limit=12` : "?limit=12"}`
+            `/api/v1/admin/outbox${journalQuery ? `${journalQuery}&limit=12` : "?limit=12"}`,
           ),
         ]);
         if (!alive) {
@@ -442,7 +534,17 @@ export default function JournalPage() {
         if (!alive) {
           return;
         }
-        setPageError(error instanceof Error ? error.message : "Failed to load delivery log");
+        setPageError(
+          readableApiError(
+            error,
+            locale,
+            locale === "ru"
+              ? "Не удалось загрузить журнал доставок."
+              : locale === "he"
+                ? "לא ניתן לטעון את יומן המשלוחים."
+                : "Failed to load delivery log",
+          ),
+        );
       } finally {
         if (alive) {
           setDeliveryLoading(false);
@@ -455,13 +557,16 @@ export default function JournalPage() {
     return () => {
       alive = false;
     };
-  }, [selectedJournalId, refreshTick]);
+  }, [canManage, locale, selectedJournalId, refreshTick]);
 
   const journalsWithProject = useMemo(() => {
-    const projectById = new Map(projects.map((project) => [project.id, project]));
+    const projectById = new Map(
+      projects.map((project) => [project.id, project]),
+    );
     return journals.map((journal) => ({
       ...journal,
-      project_name: projectById.get(journal.project_id)?.name ?? "Unknown project",
+      project_name:
+        projectById.get(journal.project_id)?.name ?? "Unknown project",
       project_address: projectById.get(journal.project_id)?.address ?? "",
     }));
   }, [journals, projects]);
@@ -472,11 +577,16 @@ export default function JournalPage() {
       return journalsWithProject;
     }
     return journalsWithProject.filter((journal) =>
-      [journal.title, journal.project_name, journal.project_address, journal.status]
+      [
+        journal.title,
+        journal.project_name,
+        journal.project_address,
+        journal.status,
+      ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
-        .includes(needle)
+        .includes(needle),
     );
   }, [journalsWithProject, searchTerm]);
 
@@ -502,16 +612,19 @@ export default function JournalPage() {
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) ?? null,
-    [projects, selectedProjectId]
+    [projects, selectedProjectId],
   );
 
   const selectedTemplate = useMemo(
-    () => savedTemplates.find((template) => template.id === selectedTemplateId) ?? null,
-    [savedTemplates, selectedTemplateId]
+    () =>
+      savedTemplates.find((template) => template.id === selectedTemplateId) ??
+      null,
+    [savedTemplates, selectedTemplateId],
   );
 
   const effectiveSendEmail = sendEmail && Boolean(integrations?.email_enabled);
-  const effectiveSendWhatsapp = sendWhatsapp && Boolean(integrations?.whatsapp_enabled);
+  const effectiveSendWhatsapp =
+    sendWhatsapp && Boolean(integrations?.whatsapp_enabled);
   async function handleCreateDraft() {
     if (!canManage || !selectedProjectId) {
       return;
@@ -519,24 +632,40 @@ export default function JournalPage() {
     setBusyAction("create");
     setFeedback(null);
     try {
-      const response = await apiFetch<JournalCreateResponse>("/api/v1/admin/journals", {
-        method: "POST",
-        body: JSON.stringify({
-          project_id: selectedProjectId,
-          title: createTitle.trim() || null,
-        }),
-      });
+      const response = await apiFetch<JournalCreateResponse>(
+        "/api/v1/admin/journals",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            project_id: selectedProjectId,
+            title: createTitle.trim() || null,
+          }),
+        },
+      );
       setCreateTitle("");
       setSelectedJournalId(response.id);
       setRefreshTick((value) => value + 1);
       setFeedback({
         tone: "success",
-        message: `Draft created for ${selectedProject?.name ?? "selected project"}.`,
+        message: pickByLocale(
+          locale,
+          `Draft created for ${selectedProject?.name ?? "selected project"}.`,
+          `Черновик создан для ${selectedProject?.name ?? "выбранного проекта"}.`,
+          `טיוטה נוצרה עבור ${selectedProject?.name ?? "הפרויקט שנבחר"}.`,
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to create journal draft",
+        message: readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось создать черновик журнала."
+            : locale === "he"
+              ? "לא ניתן ליצור טיוטת יומן."
+              : "Failed to create journal draft",
+        ),
       });
     } finally {
       setBusyAction("");
@@ -552,17 +681,30 @@ export default function JournalPage() {
     try {
       const response = await apiFetch<JournalMarkReadyResponse>(
         `/api/v1/admin/journals/${selectedJournalId}/mark-ready`,
-        { method: "POST" }
+        { method: "POST" },
       );
       setRefreshTick((value) => value + 1);
       setFeedback({
         tone: "success",
-        message: `Journal marked ready. Public URL: ${response.public_url}`,
+        message: pickByLocale(
+          locale,
+          `Journal marked ready. Public URL: ${response.public_url}`,
+          `Журнал отмечен как готовый. Публичная ссылка: ${response.public_url}`,
+          `היומן סומן כמוכן. קישור ציבורי: ${response.public_url}`,
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to mark journal ready",
+        message: readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось отметить журнал как готовый."
+            : locale === "he"
+              ? "לא ניתן לסמן את היומן כמוכן."
+              : "Failed to mark journal ready",
+        ),
       });
     } finally {
       setBusyAction("");
@@ -578,16 +720,29 @@ export default function JournalPage() {
     try {
       const response = await apiFetch<JournalExportPdfResponse>(
         `/api/v1/admin/journals/${selectedJournalId}/export-pdf`,
-        { method: "POST" }
+        { method: "POST" },
       );
       setFeedback({
         tone: "success",
-        message: `PDF exported: ${response.file_path} (${response.size_bytes} bytes).`,
+        message: pickByLocale(
+          locale,
+          `PDF exported: ${response.file_path} (${response.size_bytes} bytes).`,
+          `PDF экспортирован: ${response.file_path} (${response.size_bytes} байт).`,
+          `ה-PDF יוצא: ${response.file_path} (${response.size_bytes} בתים).`,
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to export PDF",
+        message: readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось экспортировать PDF."
+            : locale === "he"
+              ? "לא ניתן לייצא PDF."
+              : "Failed to export PDF",
+        ),
       });
     } finally {
       setBusyAction("");
@@ -601,21 +756,36 @@ export default function JournalPage() {
     if (!effectiveSendEmail && !effectiveSendWhatsapp) {
       setFeedback({
         tone: "error",
-        message: "Enable at least one active delivery channel before queueing send.",
+        message: pickByLocale(
+          locale,
+          "Enable at least one active delivery channel before queueing send.",
+          "Перед отправкой включите хотя бы один активный канал доставки.",
+          "לפני השליחה יש להפעיל לפחות ערוץ משלוח פעיל אחד.",
+        ),
       });
       return;
     }
     if (effectiveSendEmail && !emailTo.trim()) {
       setFeedback({
         tone: "error",
-        message: "Email recipient is required when email delivery is enabled.",
+        message: pickByLocale(
+          locale,
+          "Email recipient is required when email delivery is enabled.",
+          "Когда включена email-доставка, нужно указать получателя.",
+          "כאשר משלוח באימייל פעיל, חייבים לציין נמען.",
+        ),
       });
       return;
     }
     if (effectiveSendWhatsapp && !whatsappTo.trim()) {
       setFeedback({
         tone: "error",
-        message: "WhatsApp recipient is required when WhatsApp delivery is enabled.",
+        message: pickByLocale(
+          locale,
+          "WhatsApp recipient is required when WhatsApp delivery is enabled.",
+          "Когда включена доставка через WhatsApp, нужно указать получателя.",
+          "כאשר משלוח ב-WhatsApp פעיל, חייבים לציין נמען.",
+        ),
       });
       return;
     }
@@ -636,7 +806,7 @@ export default function JournalPage() {
             send_email: effectiveSendEmail,
             send_whatsapp: effectiveSendWhatsapp,
           }),
-        }
+        },
       );
       setRefreshTick((value) => value + 1);
       const sentChannels = [
@@ -647,12 +817,25 @@ export default function JournalPage() {
         .join(" + ");
       setFeedback({
         tone: "success",
-        message: `Queued send via ${sentChannels || "selected channels"}. Object key: ${response.object_key}`,
+        message: pickByLocale(
+          locale,
+          `Queued send via ${sentChannels || "selected channels"}. Object key: ${response.object_key}`,
+          `Отправка поставлена в очередь через ${sentChannels || "выбранные каналы"}. Object key: ${response.object_key}`,
+          `השליחה הוכנסה לתור דרך ${sentChannels || "הערוצים שנבחרו"}. Object key: ${response.object_key}`,
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to queue journal send",
+        message: readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось поставить отправку журнала в очередь."
+            : locale === "he"
+              ? "לא ניתן להכניס את שליחת היומן לתור."
+              : "Failed to queue journal send",
+        ),
       });
     } finally {
       setBusyAction("");
@@ -675,12 +858,25 @@ export default function JournalPage() {
       setRefreshTick((value) => value + 1);
       setFeedback({
         tone: "success",
-        message: "Delivery item moved back to queue.",
+        message: pickByLocale(
+          locale,
+          "Delivery item moved back to queue.",
+          "Элемент доставки возвращён в очередь.",
+          "פריט המשלוח הוחזר לתור.",
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to retry outbox item",
+        message: readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось повторно отправить элемент outbox."
+            : locale === "he"
+              ? "לא ניתן לנסות שוב פריט outbox."
+              : "Failed to retry outbox item",
+        ),
       });
     } finally {
       setBusyAction("");
@@ -688,33 +884,48 @@ export default function JournalPage() {
   }
 
   async function applyTemplate() {
+    if (!canManage) return;
     if (!selectedTemplate) {
       return;
     }
     setBusyAction("apply-template");
     try {
-      const preview = await apiFetch<CommunicationTemplateRenderPreviewResponse>(
-        "/api/v1/admin/settings/communication-templates/render-preview",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            template_id: selectedTemplate.id,
-            journal_id: selectedJournalId || null,
-          }),
-        }
-      );
+      const preview =
+        await apiFetch<CommunicationTemplateRenderPreviewResponse>(
+          "/api/v1/admin/settings/communication-templates/render-preview",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              template_id: selectedTemplate.id,
+              journal_id: selectedJournalId || null,
+            }),
+          },
+        );
       setSubject(preview.subject);
       setMessage(preview.message);
       setSendEmail(selectedTemplate.send_email);
       setSendWhatsapp(selectedTemplate.send_whatsapp);
       setFeedback({
         tone: "info",
-        message: `Template applied: ${selectedTemplate.name}`,
+        message: pickByLocale(
+          locale,
+          `Template applied: ${selectedTemplate.name}`,
+          `Шаблон применён: ${selectedTemplate.name}`,
+          `התבנית הוחלה: ${selectedTemplate.name}`,
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to render template preview",
+        message: readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось построить предпросмотр шаблона."
+            : locale === "he"
+              ? "לא ניתן ליצור תצוגה מקדימה לתבנית."
+              : "Failed to render template preview",
+        ),
       });
     } finally {
       setBusyAction("");
@@ -722,11 +933,17 @@ export default function JournalPage() {
   }
 
   async function saveTemplate() {
+    if (!canManage) return;
     const normalizedName = templateName.trim();
     if (!normalizedName) {
       setFeedback({
         tone: "error",
-        message: "Template name is required.",
+        message: pickByLocale(
+          locale,
+          "Template name is required.",
+          "Нужно указать имя шаблона.",
+          "יש לציין שם לתבנית.",
+        ),
       });
       return;
     }
@@ -747,34 +964,54 @@ export default function JournalPage() {
                 send_whatsapp: sendWhatsapp,
                 is_active: true,
               }),
-            }
+            },
           )
-        : await apiFetch<CommunicationTemplate>("/api/v1/admin/settings/communication-templates", {
-            method: "POST",
-            body: JSON.stringify({
-              name: normalizedName,
-              subject: subject.trim(),
-              message: message.trim(),
-              send_email: sendEmail,
-              send_whatsapp: sendWhatsapp,
-              is_active: true,
-            }),
-          });
+        : await apiFetch<CommunicationTemplate>(
+            "/api/v1/admin/settings/communication-templates",
+            {
+              method: "POST",
+              body: JSON.stringify({
+                name: normalizedName,
+                subject: subject.trim(),
+                message: message.trim(),
+                send_email: sendEmail,
+                send_whatsapp: sendWhatsapp,
+                is_active: true,
+              }),
+            },
+          );
 
       setSavedTemplates((current) => {
-        const withoutSameId = current.filter((item) => item.id !== nextTemplate.id);
-        return [nextTemplate, ...withoutSameId].sort((a, b) => a.name.localeCompare(b.name));
+        const withoutSameId = current.filter(
+          (item) => item.id !== nextTemplate.id,
+        );
+        return [nextTemplate, ...withoutSameId].sort((a, b) =>
+          a.name.localeCompare(b.name),
+        );
       });
       setSelectedTemplateId(nextTemplate.id);
       setTemplateName("");
       setFeedback({
         tone: "success",
-        message: `Template saved: ${nextTemplate.name}`,
+        message: pickByLocale(
+          locale,
+          `Template saved: ${nextTemplate.name}`,
+          `Шаблон сохранён: ${nextTemplate.name}`,
+          `התבנית נשמרה: ${nextTemplate.name}`,
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to save template",
+        message: readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось сохранить шаблон."
+            : locale === "he"
+              ? "לא ניתן לשמור את התבנית."
+              : "Failed to save template",
+        ),
       });
     } finally {
       setBusyAction("");
@@ -782,14 +1019,18 @@ export default function JournalPage() {
   }
 
   async function deleteTemplate() {
+    if (!canManage) return;
     if (!selectedTemplateId) {
       return;
     }
     setBusyAction("delete-template");
     try {
-      await apiFetch(`/api/v1/admin/settings/communication-templates/${selectedTemplateId}`, {
-        method: "DELETE",
-      });
+      await apiFetch(
+        `/api/v1/admin/settings/communication-templates/${selectedTemplateId}`,
+        {
+          method: "DELETE",
+        },
+      );
       setSavedTemplates((current) => {
         const next = current.filter((item) => item.id !== selectedTemplateId);
         setSelectedTemplateId(next[0]?.id ?? "");
@@ -797,12 +1038,25 @@ export default function JournalPage() {
       });
       setFeedback({
         tone: "info",
-        message: "Template removed from shared presets.",
+        message: pickByLocale(
+          locale,
+          "Template removed from shared presets.",
+          "Шаблон удалён из общих пресетов.",
+          "התבנית הוסרה מההגדרות המשותפות.",
+        ),
       });
     } catch (error) {
       setFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Failed to delete template",
+        message: readableApiError(
+          error,
+          locale,
+          locale === "ru"
+            ? "Не удалось удалить шаблон."
+            : locale === "he"
+              ? "לא ניתן למחוק את התבנית."
+              : "Failed to delete template",
+        ),
       });
     } finally {
       setBusyAction("");
@@ -811,158 +1065,125 @@ export default function JournalPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="glass-card card-lift rounded-xl p-5 animate-fade-in">
-          <div className="flex flex-col gap-4 border-b border-border/70 pb-5 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/[0.06] px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-accent/80">
-                Communications Center
-              </div>
-              <h1 className="mt-3 text-2xl font-semibold text-card-foreground">
-                Journal queue, delivery channels and resend control
-              </h1>
-              <p className="mt-1 max-w-3xl text-[13px] text-muted-foreground">
-                Control customer communication from one place: create journal drafts, mark them
-                ready, queue email and WhatsApp delivery, and recover failed sends from outbox.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
+      <div className="page-shell page-stack-tight motion-stagger">
+        <DimaxPageHeader
+          eyebrow={t("journal.eyebrow")}
+          title={t("journal.title")}
+          badge={`${t("journal.journals")} ${journalSummary.total}`}
+          subtitle={t("journal.subtitle")}
+          actions={
+            <>
               <button
+                type="button"
                 onClick={() => setRefreshTick((value) => value + 1)}
-                className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
+                className="dmx-secondary-action h-9"
               >
-                <RefreshCw className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                Refresh
+                <RefreshCw className="h-4 w-4" strokeWidth={1.8} />
+                {t("common.refresh")}
               </button>
               <button
-                onClick={() => selectedJournalId && router.push(`/journal/${selectedJournalId}`)}
+                type="button"
+                onClick={() =>
+                  selectedJournalId &&
+                  router.push(`/journal/${selectedJournalId}`)
+                }
                 disabled={!selectedJournalId}
-                className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+                className="dmx-secondary-action h-9 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Open journal form
+                {t("journal.openJournalForm")}
               </button>
-            </div>
-          </div>
+            </>
+          }
+        />
 
-          {!canManage ? (
-            <div className="mt-5">
-              <SectionMessage
-                title="Read-only role"
-                description="Installer role can view communication history but cannot create drafts, queue sends, or retry outbox items."
-                tone="info"
-              />
-            </div>
-          ) : null}
-
-          {feedback ? (
-            <div className="mt-5">
-              <SectionMessage
-                title={feedback.tone === "error" ? "Action failed" : "Action update"}
-                description={feedback.message}
-                tone={feedback.tone}
-              />
-            </div>
-          ) : null}
-
-          {pageError ? (
-            <div className="mt-5">
-              <SectionMessage title="Load error" description={pageError} tone="error" />
-            </div>
-          ) : null}
-
-          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Journals
-              </div>
-              <div className="mt-2 text-xl font-semibold text-card-foreground">
-                {journalSummary.total}
-              </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
-                Draft: {journalSummary.draft}
-              </div>
-            </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Ready
-              </div>
-              <div className="mt-2 text-xl font-semibold text-card-foreground">
-                {journalSummary.ready}
-              </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
-                Signed: {journalSummary.signed}
-              </div>
-            </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Outbox
-              </div>
-              <div className="mt-2 text-xl font-semibold text-card-foreground">
-                {outboxSummary?.total ?? 0}
-              </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
-                Failed: {outboxSummary?.failed_total ?? 0}
-              </div>
-            </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Overdue
-              </div>
-              <div className="mt-2 text-xl font-semibold text-card-foreground">
-                {outboxSummary?.pending_overdue_15m ?? 0}
-              </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
-                Pending over 15m
-              </div>
-            </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Email
-              </div>
-              <div className="mt-2 text-xl font-semibold text-card-foreground">
-                {outboxSummary?.by_channel?.EMAIL ?? 0}
-              </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
-                Enabled: {integrations?.email_enabled ? "yes" : "no"}
-              </div>
-            </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                WhatsApp
-              </div>
-              <div className="mt-2 text-xl font-semibold text-card-foreground">
-                {outboxSummary?.by_channel?.WHATSAPP ?? 0}
-              </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
-                Enabled: {integrations?.whatsapp_enabled ? "yes" : "no"}
-              </div>
-            </div>
-          </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <DimaxKpiCard
+            label={t("journal.journals")}
+            value={journalSummary.total}
+            hint={t("journal.commsRecovery")}
+            barColor="blue"
+          />
+          <DimaxKpiCard
+            label={t("journal.ready")}
+            value={journalSummary.ready}
+            hint={t("journal.openJournalForm")}
+            barColor="green"
+          />
+          <DimaxKpiCard
+            label={t("journal.draft")}
+            value={journalSummary.draft}
+            hint={t("journal.createDraft")}
+            barColor="yellow"
+          />
+          <DimaxKpiCard
+            label={t("journal.failedOutbox")}
+            value={outboxSummary?.failed_total ?? 0}
+            hint={t("journal.retry")}
+            barColor="red"
+            emphasis={
+              (outboxSummary?.failed_total ?? 0) > 0 ? "problem" : "default"
+            }
+          />
         </div>
+
+        {!canManage ? (
+          <div>
+            <SectionMessage
+              title={t("journal.readOnlyRole")}
+              description={t("journal.readOnlyDescription")}
+              tone="info"
+            />
+          </div>
+        ) : null}
+
+        {feedback ? (
+          <div>
+            <SectionMessage
+              title={
+                feedback.tone === "error"
+                  ? t("journal.actionFailed")
+                  : t("journal.actionUpdate")
+              }
+              description={feedback.message}
+              tone={feedback.tone}
+            />
+          </div>
+        ) : null}
+
+        {pageError ? (
+          <div>
+            <SectionMessage
+              title={t("journal.loadError")}
+              description={pageError}
+              tone="error"
+            />
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
           <div className="xl:col-span-4">
-            <div className="glass-card rounded-xl p-5">
-              <div className="mb-4 flex items-center justify-between">
+            <WidgetCard
+              title={t("journal.journalQueue")}
+              headerMeta={t("journal.queueDescription")}
+              actionSlot={
+                <Clock3
+                  className="h-4 w-4 text-text-secondary"
+                  strokeWidth={1.8}
+                />
+              }
+            >
+              <div className="surface-subtle space-y-3 p-4">
                 <div>
-                  <h2 className="text-base font-semibold text-card-foreground">Journal Queue</h2>
-                  <p className="mt-1 text-[12px] text-muted-foreground">
-                    Create drafts, filter by status, and pick the active delivery target.
-                  </p>
-                </div>
-                <Clock3 className="h-4 w-4 text-accent" strokeWidth={1.8} />
-              </div>
-
-              <div className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
-                <div>
-                  <label className="mb-1 block text-[12px] font-medium text-card-foreground">
-                    Project
+                  <label className="mb-1 block text-[12px] font-medium text-text">
+                    {t("journal.project")}
                   </label>
                   <select
-                    aria-label="Create draft project"
+                    aria-label={t("journal.createDraftProject")}
                     value={selectedProjectId}
-                    onChange={(event) => setSelectedProjectId(event.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                    onChange={(event) =>
+                      setSelectedProjectId(event.target.value)
+                    }
+                    className="control-input"
                   >
                     {projects.map((project) => (
                       <option key={project.id} value={project.id}>
@@ -972,63 +1193,67 @@ export default function JournalPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-[12px] font-medium text-card-foreground">
-                    Draft title
+                  <label className="mb-1 block text-[12px] font-medium text-text">
+                    {t("journal.draftTitle")}
                   </label>
                   <input
-                    aria-label="Draft title"
+                    aria-label={t("journal.draftTitle")}
                     value={createTitle}
                     onChange={(event) => setCreateTitle(event.target.value)}
-                    placeholder="Final delivery package"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                    placeholder={t("journal.finalDeliveryPackage")}
+                    className="control-input"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={handleCreateDraft}
-                  disabled={!canManage || !selectedProjectId || busyAction === "create"}
-                  title={!canManage ? "Admin role required" : undefined}
-                  className="btn-premium w-full rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-sm font-medium text-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={
+                    !canManage || !selectedProjectId || busyAction === "create"
+                  }
+                  title={
+                    !canManage ? t("journal.adminRoleRequired") : undefined
+                  }
+                  className="dmx-primary-action h-10 w-full disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <Plus className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                  Create Draft
+                  <Plus className="h-4 w-4" strokeWidth={1.8} />
+                  {t("journal.createDraft")}
                 </button>
               </div>
 
               <div className="mt-4 flex gap-2">
                 <div className="relative flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
                   <input
-                    aria-label="Search journals"
+                    aria-label={t("journal.searchJournals")}
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Search by project, title or status"
-                    className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-card-foreground outline-none focus:border-accent"
+                    placeholder={t("journal.searchPlaceholder")}
+                    className="control-input ps-9"
                   />
                 </div>
                 <select
-                  aria-label="Journal status filter"
+                  aria-label={t("journal.statusFilter")}
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                  className="control-input"
                 >
-                  <option value="ALL">All</option>
-                  <option value="DRAFT">Draft</option>
-                  <option value="READY">Ready</option>
-                  <option value="SIGNED">Signed</option>
+                  <option value="ALL">{t("journal.all")}</option>
+                  <option value="DRAFT">{t("journal.draft")}</option>
+                  <option value="READY">{t("journal.ready")}</option>
+                  <option value="SIGNED">{t("journal.signed")}</option>
                 </select>
               </div>
 
               <div className="mt-4 space-y-3">
                 {queueLoading ? (
                   <SectionMessage
-                    title="Loading queue"
-                    description="Fetching journals, projects and integration state."
+                    title={t("journal.loadingQueue")}
+                    description={t("journal.loadingQueueDescription")}
                   />
                 ) : filteredJournals.length === 0 ? (
                   <SectionMessage
-                    title="No journals found"
-                    description="Create the first draft or loosen the current filters."
+                    title={t("journal.noJournalsFound")}
+                    description={t("journal.noJournalsDescription")}
                   />
                 ) : (
                   filteredJournals.map((journal) => {
@@ -1039,35 +1264,39 @@ export default function JournalPage() {
                         type="button"
                         onClick={() => setSelectedJournalId(journal.id)}
                         className={cn(
-                          "w-full rounded-xl border px-4 py-3 text-left transition-all",
+                          "w-full rounded-lg border px-4 py-3 text-start transition-colors",
                           isSelected
-                            ? "border-accent/40 bg-accent/[0.08]"
-                            : "border-border/70 bg-background/40 hover:border-accent/25 hover:bg-background/60"
+                            ? "border-[var(--dmx-accent)] bg-[var(--dmx-accent-tint)]"
+                            : "border-border bg-surface-subtle hover:border-border-strong hover:bg-surface",
                         )}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <div className="text-sm font-semibold text-card-foreground">
-                              {journal.title || "Untitled journal"}
+                            <div className="text-sm font-semibold text-text">
+                              {journal.title || t("journal.untitledJournal")}
                             </div>
-                            <div className="mt-1 text-[12px] text-muted-foreground">
+                            <div className="mt-1 text-[12px] text-text-secondary">
                               {journal.project_name}
                             </div>
-                            <div className="mt-1 text-[11px] text-muted-foreground/90">
-                              {journal.project_address || "Address not set"}
+                            <div className="mt-1 text-[11px] text-text-secondary/90">
+                              {journal.project_address ||
+                                t("journal.addressNotSet")}
                             </div>
                           </div>
                           <span
                             className={cn(
-                              "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]",
-                              badgeTone(journal.status)
+                              "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
+                              badgeTone(journal.status),
                             )}
                           >
                             {journal.status}
                           </span>
                         </div>
-                        <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
-                          <span>Signed: {compactDate(journal.signed_at)}</span>
+                        <div className="mt-3 flex items-center justify-between text-[11px] text-text-secondary">
+                          <span>
+                            {t("journal.signed")}:{" "}
+                            {compactDate(journal.signed_at)}
+                          </span>
                           <span>{journal.id.slice(0, 8)}</span>
                         </div>
                       </button>
@@ -1075,57 +1304,64 @@ export default function JournalPage() {
                   })
                 )}
               </div>
-            </div>
+            </WidgetCard>
           </div>
 
           <div className="xl:col-span-5">
-            <div className="glass-card rounded-xl p-5">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-semibold text-card-foreground">Send Workspace</h2>
-                  <p className="mt-1 text-[12px] text-muted-foreground">
-                    Prepare the final message, choose channels, and queue delivery for the selected
-                    journal.
-                  </p>
-                </div>
-                <Send className="h-4 w-4 text-accent" strokeWidth={1.8} />
-              </div>
+            <WidgetCard
+              title={t("journal.sendWorkspace")}
+              headerMeta={t("journal.sendWorkspaceDescription")}
+              actionSlot={
+                <Send
+                  className="h-4 w-4 text-text-secondary"
+                  strokeWidth={1.8}
+                />
+              }
+            >
               {!selectedJournalId ? (
                 <SectionMessage
-                  title="No journal selected"
-                  description="Choose a journal from the queue to open the delivery workspace."
+                  title={t("journal.noJournalSelected")}
+                  description={t("journal.noJournalSelectedDescription")}
                 />
               ) : detailsError ? (
-                <SectionMessage title="Journal load failed" description={detailsError} tone="error" />
+                <SectionMessage
+                  title={t("journal.journalLoadFailed")}
+                  description={detailsError}
+                  tone="error"
+                />
               ) : detailsLoading ? (
                 <SectionMessage
-                  title="Loading journal"
-                  description="Fetching delivery status, public token and lock state."
+                  title={t("journal.loadingJournal")}
+                  description={t("journal.loadingJournalDescription")}
                 />
               ) : selectedJournal ? (
                 <div className="space-y-5">
-                  <div className="rounded-xl border border-border/70 bg-background/40 p-4">
+                  <div className="surface-subtle p-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-lg font-semibold text-card-foreground">
-                            {selectedJournal.title || "Untitled journal"}
+                          <h3 className="text-lg font-semibold text-text">
+                            {selectedJournal.title ||
+                              t("journal.untitledJournal")}
                           </h3>
                           <span
                             className={cn(
-                              "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]",
-                              badgeTone(selectedJournal.status)
+                              "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
+                              badgeTone(selectedJournal.status),
                             )}
                           >
                             {selectedJournal.status}
                           </span>
                         </div>
-                        <div className="mt-1 text-[12px] text-muted-foreground">
-                          Snapshot v{selectedJournal.snapshot_version} • Signed: {compactDate(selectedJournal.signed_at)}
+                        <div className="mt-1 text-[12px] text-text-secondary">
+                          {t("journal.snapshotVersion")} v
+                          {selectedJournal.snapshot_version} •{" "}
+                          {t("journal.signed")}:{" "}
+                          {compactDate(selectedJournal.signed_at)}
                         </div>
                         {selectedJournal.signer_name ? (
-                          <div className="mt-1 text-[12px] text-muted-foreground">
-                            Signer: {selectedJournal.signer_name}
+                          <div className="mt-1 text-[12px] text-text-secondary">
+                            {t("journal.signer")}: {selectedJournal.signer_name}
                           </div>
                         ) : null}
                       </div>
@@ -1134,67 +1370,101 @@ export default function JournalPage() {
                           type="button"
                           onClick={handleMarkReady}
                           disabled={!canManage || busyAction === "ready"}
-                          title={!canManage ? "Admin role required" : undefined}
-                          className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+                          title={
+                            !canManage
+                              ? t("journal.adminRoleRequired")
+                              : undefined
+                          }
+                          className="dmx-secondary-action h-9 disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                          <CheckCircle2 className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                          Mark Ready
+                          <CheckCircle2 className="h-4 w-4" strokeWidth={1.8} />
+                          {t("journal.markReady")}
                         </button>
                         <button
                           type="button"
                           onClick={handleExportPdf}
                           disabled={!canManage || busyAction === "export"}
-                          title={!canManage ? "Admin role required" : undefined}
-                          className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+                          title={
+                            !canManage
+                              ? t("journal.adminRoleRequired")
+                              : undefined
+                          }
+                          className="dmx-secondary-action h-9 disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                          <FileDown className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                          Export PDF
+                          <FileDown className="h-4 w-4" strokeWidth={1.8} />
+                          {t("journal.exportPdf")}
                         </button>
                       </div>
                     </div>
 
                     <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <BoolBadge label="Header locked" value={selectedJournal.lock_header} />
-                      <BoolBadge label="Table locked" value={selectedJournal.lock_table} />
-                      <BoolBadge label="Footer locked" value={selectedJournal.lock_footer} />
                       <BoolBadge
-                        label="Public token active"
+                        label={t("journal.headerLocked")}
+                        value={selectedJournal.lock_header}
+                      />
+                      <BoolBadge
+                        label={t("journal.tableLocked")}
+                        value={selectedJournal.lock_table}
+                      />
+                      <BoolBadge
+                        label={t("journal.footerLocked")}
+                        value={selectedJournal.lock_footer}
+                      />
+                      <BoolBadge
+                        label={t("journal.publicTokenActive")}
                         value={Boolean(selectedJournal.public_token)}
                       />
                     </div>
 
                     <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <div className="rounded-xl border border-border/70 bg-card/60 p-3">
-                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                          Email delivery
+                      <div className="rounded-lg border border-border bg-surface-subtle p-3">
+                        <div className="text-[11px] uppercase text-text-secondary">
+                          {t("journal.emailDelivery")}
                         </div>
-                        <div className="mt-2 inline-flex rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-card-foreground">
+                        <div
+                          className={cn(
+                            "mt-2 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
+                            badgeTone(selectedJournal.email_delivery_status),
+                          )}
+                        >
                           {selectedJournal.email_delivery_status}
                         </div>
-                        <div className="mt-2 text-[12px] text-muted-foreground">
-                          Last sent: {formatDateTime(selectedJournal.email_last_sent_at)}
+                        <div className="mt-2 text-[12px] text-text-secondary">
+                          {t("journal.lastSent")}:{" "}
+                          {formatDateTime(selectedJournal.email_last_sent_at)}
                         </div>
                         {selectedJournal.email_last_error ? (
-                          <div className="mt-2 text-[12px] text-destructive">
+                          <div className="mt-2 text-[12px] text-status-problem-fg">
                             {selectedJournal.email_last_error}
                           </div>
                         ) : null}
                       </div>
-                      <div className="rounded-xl border border-border/70 bg-card/60 p-3">
-                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                          WhatsApp delivery
+                      <div className="rounded-lg border border-border bg-surface-subtle p-3">
+                        <div className="text-[11px] uppercase text-text-secondary">
+                          {t("journal.whatsappDelivery")}
                         </div>
-                        <div className="mt-2 inline-flex rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-card-foreground">
+                        <div
+                          className={cn(
+                            "mt-2 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
+                            badgeTone(selectedJournal.whatsapp_delivery_status),
+                          )}
+                        >
                           {selectedJournal.whatsapp_delivery_status}
                         </div>
-                        <div className="mt-2 text-[12px] text-muted-foreground">
-                          Last sent: {formatDateTime(selectedJournal.whatsapp_last_sent_at)}
+                        <div className="mt-2 text-[12px] text-text-secondary">
+                          {t("journal.lastSent")}:{" "}
+                          {formatDateTime(
+                            selectedJournal.whatsapp_last_sent_at,
+                          )}
                         </div>
-                        <div className="mt-1 text-[12px] text-muted-foreground">
-                          Delivered: {formatDateTime(selectedJournal.whatsapp_delivered_at)}
+                        <div className="mt-1 text-[12px] text-text-secondary">
+                          {t("journal.delivered")}:{" "}
+                          {formatDateTime(
+                            selectedJournal.whatsapp_delivered_at,
+                          )}
                         </div>
                         {selectedJournal.whatsapp_last_error ? (
-                          <div className="mt-2 text-[12px] text-destructive">
+                          <div className="mt-2 text-[12px] text-status-problem-fg">
                             {selectedJournal.whatsapp_last_error}
                           </div>
                         ) : null}
@@ -1202,23 +1472,30 @@ export default function JournalPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-border/70 bg-background/40 p-4">
+                  <div className="surface-subtle p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-sm font-semibold text-card-foreground">Templates</h3>
-                        <p className="mt-1 text-[12px] text-muted-foreground">
-                          Save shared server-side presets for client, site manager and installer flows.
+                        <h3 className="text-sm font-semibold text-text">
+                          {t("journal.templates")}
+                        </h3>
+                        <p className="mt-1 text-[12px] text-text-secondary">
+                          {t("journal.templatesDescription")}
                         </p>
                       </div>
-                      <Save className="h-4 w-4 text-accent" strokeWidth={1.8} />
+                      <Save
+                        className="h-4 w-4 text-text-secondary"
+                        strokeWidth={1.8}
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr_1fr]">
                       <select
-                        aria-label="Communication template"
+                        aria-label={t("journal.communicationTemplate")}
                         value={selectedTemplateId}
-                        onChange={(event) => setSelectedTemplateId(event.target.value)}
-                        className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                        onChange={(event) =>
+                          setSelectedTemplateId(event.target.value)
+                        }
+                        className="control-input"
                       >
                         {savedTemplates.map((template) => (
                           <option key={template.id} value={template.id}>
@@ -1230,79 +1507,104 @@ export default function JournalPage() {
                         <button
                           type="button"
                           onClick={applyTemplate}
-                          className="btn-premium flex-1 rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
+                          disabled={!canManage}
+                          className="dmx-secondary-action h-10 flex-1"
                         >
-                          Apply
+                          {t("journal.apply")}
                         </button>
                         <button
                           type="button"
                           onClick={deleteTemplate}
-                          className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
+                          disabled={!canManage}
+                          className="dmx-secondary-action h-10"
                         >
-                          Delete
+                          {t("journal.delete")}
                         </button>
                       </div>
                     </div>
 
                     <div className="mt-3 flex gap-2">
                       <input
-                        aria-label="Template name"
+                        aria-label={t("journal.templateName")}
                         value={templateName}
-                        onChange={(event) => setTemplateName(event.target.value)}
-                        placeholder="Save current message as template"
-                        className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                        disabled={!canManage}
+                        onChange={(event) =>
+                          setTemplateName(event.target.value)
+                        }
+                        placeholder={t("journal.templatePlaceholder")}
+                        className="control-input flex-1"
                       />
                       <button
                         type="button"
                         onClick={saveTemplate}
-                        className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent"
+                        disabled={!canManage}
+                        className="dmx-secondary-action h-10"
                       >
-                        <Save className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                        Save
+                        <Save className="h-4 w-4" strokeWidth={1.8} />
+                        {t("journal.save")}
                       </button>
                     </div>
                   </div>
-                  <div className="rounded-xl border border-border/70 bg-background/40 p-4">
+                  <div className="surface-subtle p-4">
                     <div className="mb-3 flex items-center justify-between">
                       <div>
-                        <h3 className="text-sm font-semibold text-card-foreground">Delivery channels</h3>
-                        <p className="mt-1 text-[12px] text-muted-foreground">
-                          Queue email and WhatsApp from the selected journal snapshot.
+                        <h3 className="text-sm font-semibold text-text">
+                          {t("journal.deliveryChannels")}
+                        </h3>
+                        <p className="mt-1 text-[12px] text-text-secondary">
+                          {t("journal.deliveryChannelsDescription")}
                         </p>
                       </div>
-                      <Mail className="h-4 w-4 text-accent" strokeWidth={1.8} />
+                      <Mail
+                        className="h-4 w-4 text-text-secondary"
+                        strokeWidth={1.8}
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <label className="flex items-start gap-3 rounded-xl border border-border/70 bg-card/60 p-3">
+                      <label className="flex items-start gap-3 rounded-lg border border-border bg-surface-subtle p-3">
                         <input
-                          aria-label="Send email"
+                          aria-label={copy("Send email", "Отправить по эл. почте", "שליחה בדוא״ל")}
                           type="checkbox"
                           checked={sendEmail}
-                          onChange={(event) => setSendEmail(event.target.checked)}
-                          disabled={!integrations?.email_enabled}
+                          onChange={(event) =>
+                            setSendEmail(event.target.checked)
+                          }
+                          disabled={!canManage || !integrations?.email_enabled}
                           className="mt-1"
                         />
                         <div>
-                          <div className="text-sm font-medium text-card-foreground">Email</div>
-                          <div className="mt-1 text-[12px] text-muted-foreground">
-                            SMTP configured: {integrations?.smtp_configured ? "yes" : "no"}
+                          <div className="text-sm font-medium text-text">
+                            {t("journal.email")}
+                          </div>
+                          <div className="mt-1 text-[12px] text-text-secondary">
+                            {t("journal.smtpConfigured")}:{" "}
+                            {integrations?.smtp_configured
+                              ? t("journal.yes")
+                              : t("journal.no")}
                           </div>
                         </div>
                       </label>
-                      <label className="flex items-start gap-3 rounded-xl border border-border/70 bg-card/60 p-3">
+                      <label className="flex items-start gap-3 rounded-lg border border-border bg-surface-subtle p-3">
                         <input
-                          aria-label="Send WhatsApp"
+                          aria-label={copy("Send WhatsApp", "Отправить в WhatsApp", "שליחה ב-WhatsApp")}
                           type="checkbox"
                           checked={sendWhatsapp}
-                          onChange={(event) => setSendWhatsapp(event.target.checked)}
-                          disabled={!integrations?.whatsapp_enabled}
+                          onChange={(event) =>
+                            setSendWhatsapp(event.target.checked)
+                          }
+                          disabled={!canManage || !integrations?.whatsapp_enabled}
                           className="mt-1"
                         />
                         <div>
-                          <div className="text-sm font-medium text-card-foreground">WhatsApp</div>
-                          <div className="mt-1 text-[12px] text-muted-foreground">
-                            Twilio configured: {integrations?.twilio_configured ? "yes" : "no"}
+                          <div className="text-sm font-medium text-text">
+                            {t("journal.whatsapp")}
+                          </div>
+                          <div className="mt-1 text-[12px] text-text-secondary">
+                            {t("journal.twilioConfigured")}:{" "}
+                            {integrations?.twilio_configured
+                              ? t("journal.yes")
+                              : t("journal.no")}
                           </div>
                         </div>
                       </label>
@@ -1310,55 +1612,61 @@ export default function JournalPage() {
 
                     <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                       <div>
-                        <label className="mb-1 block text-[12px] font-medium text-card-foreground">
-                          Email recipient
+                        <label className="mb-1 block text-[12px] font-medium text-text">
+                          {t("journal.emailRecipient")}
                         </label>
                         <input
-                          aria-label="Email recipient"
+                          aria-label={copy("Email recipient", "Получатель эл. почты", "נמען דוא״ל")}
                           value={emailTo}
+                          disabled={!canManage}
                           onChange={(event) => setEmailTo(event.target.value)}
                           placeholder="client@example.com"
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                          className="control-input"
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-[12px] font-medium text-card-foreground">
-                          WhatsApp recipient
+                        <label className="mb-1 block text-[12px] font-medium text-text">
+                          {t("journal.whatsappRecipient")}
                         </label>
                         <input
-                          aria-label="WhatsApp recipient"
+                          aria-label={copy("WhatsApp recipient", "Получатель WhatsApp", "נמען WhatsApp")}
                           value={whatsappTo}
-                          onChange={(event) => setWhatsappTo(event.target.value)}
+                          disabled={!canManage}
+                          onChange={(event) =>
+                            setWhatsappTo(event.target.value)
+                          }
                           placeholder="+9725xxxxxxx"
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                          className="control-input"
                         />
                       </div>
                     </div>
 
                     <div className="mt-4">
-                      <label className="mb-1 block text-[12px] font-medium text-card-foreground">
-                        Subject
+                      <label className="mb-1 block text-[12px] font-medium text-text">
+                        {t("journal.subject")}
                       </label>
                       <input
-                        aria-label="Journal subject"
+                        aria-label={copy("Journal subject", "Тема сообщения журнала", "נושא הודעת היומן")}
                         value={subject}
+                        disabled={!canManage}
                         onChange={(event) => setSubject(event.target.value)}
-                        placeholder="Project handover package"
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                        placeholder={t("journal.projectHandoverPackage")}
+                        className="control-input"
                       />
                     </div>
 
                     <div className="mt-4">
-                      <label className="mb-1 block text-[12px] font-medium text-card-foreground">
-                        Message
+                      <label className="mb-1 block text-[12px] font-medium text-text">
+                        {t("journal.message")}
                       </label>
                       <textarea
-                        aria-label="Journal message"
+                        aria-label={copy("Journal message", "Сообщение журнала", "הודעת היומן")}
                         value={message}
+                        disabled={!canManage}
                         onChange={(event) => setMessage(event.target.value)}
-                        placeholder="Add the customer-facing context for this journal send."
+                        placeholder={t("journal.messagePlaceholder")}
                         rows={6}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground outline-none focus:border-accent"
+                        className="control-textarea"
                       />
                     </div>
 
@@ -1367,68 +1675,89 @@ export default function JournalPage() {
                         type="button"
                         onClick={handleQueueSend}
                         disabled={!canManage || busyAction === "send"}
-                        title={!canManage ? "Admin role required" : undefined}
-                        className="btn-premium rounded-lg border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-medium text-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-40"
+                        title={
+                          !canManage
+                            ? t("journal.adminRoleRequired")
+                            : undefined
+                        }
+                        className="dmx-primary-action h-10 disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        <Send className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                        Queue Send
+                        <Send className="h-4 w-4" strokeWidth={1.8} />
+                        {t("journal.queueSend")}
                       </button>
                       <button
                         type="button"
-                        onClick={() => selectedJournalId && router.push(`/journal/${selectedJournalId}`)}
-                        className="btn-premium rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:text-accent"
+                        onClick={() =>
+                          selectedJournalId &&
+                          router.push(`/journal/${selectedJournalId}`)
+                        }
+                        className="dmx-secondary-action h-10"
                       >
-                        Edit journal form
+                        {t("journal.editJournalForm")}
                       </button>
                     </div>
                   </div>
                 </div>
               ) : (
                 <SectionMessage
-                  title="Journal not available"
-                  description="Select a queue item to load the communication workspace."
+                  title={t("journal.journalNotAvailable")}
+                  description={t("journal.journalNotAvailableDescription")}
                 />
               )}
-            </div>
+            </WidgetCard>
           </div>
 
           <div className="xl:col-span-3">
-            <div className="glass-card rounded-xl p-5">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-semibold text-card-foreground">Delivery Log</h2>
-                  <p className="mt-1 text-[12px] text-muted-foreground">
-                    Monitor outbox delivery, provider errors and retry queue recovery.
-                  </p>
-                </div>
-                <MessageSquare className="h-4 w-4 text-accent" strokeWidth={1.8} />
-              </div>
-
+            <WidgetCard
+              title={t("journal.deliveryLog")}
+              headerMeta={t("journal.deliveryLogDescription")}
+              actionSlot={
+                <MessageSquare
+                  className="h-4 w-4 text-text-secondary"
+                  strokeWidth={1.8}
+                />
+              }
+            >
               {deliveryLoading ? (
                 <SectionMessage
-                  title="Loading outbox"
-                  description="Fetching delivery summary and recent communication attempts."
+                  title={t("journal.loadingOutbox")}
+                  description={t("journal.loadingOutboxDescription")}
                 />
               ) : (
                 <>
                   <div className="grid grid-cols-1 gap-3">
-                    <div className="rounded-xl border border-border/70 bg-background/40 p-3">
-                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                        Channel mix
+                    <div className="surface-subtle p-3">
+                      <div className="text-[11px] uppercase text-text-secondary">
+                        {t("journal.channelMix")}
                       </div>
-                      <div className="mt-2 flex flex-wrap gap-2 text-[12px] text-card-foreground">
-                        <span>Email: {outboxSummary?.by_channel?.EMAIL ?? 0}</span>
-                        <span>WhatsApp: {outboxSummary?.by_channel?.WHATSAPP ?? 0}</span>
+                      <div className="mt-2 flex flex-wrap gap-2 text-[12px] text-text">
+                        <span>
+                          {t("journal.email")}:{" "}
+                          {outboxSummary?.by_channel?.EMAIL ?? 0}
+                        </span>
+                        <span>
+                          {t("journal.whatsapp")}:{" "}
+                          {outboxSummary?.by_channel?.WHATSAPP ?? 0}
+                        </span>
                       </div>
                     </div>
-                    <div className="rounded-xl border border-border/70 bg-background/40 p-3">
-                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                        Delivery status
+                    <div className="surface-subtle p-3">
+                      <div className="text-[11px] uppercase text-text-secondary">
+                        {t("journal.deliveryStatus")}
                       </div>
-                      <div className="mt-2 flex flex-wrap gap-2 text-[12px] text-card-foreground">
-                        <span>Delivered: {outboxSummary?.by_delivery_status?.DELIVERED ?? 0}</span>
-                        <span>Pending: {outboxSummary?.by_delivery_status?.PENDING ?? 0}</span>
-                        <span>Failed: {outboxSummary?.by_delivery_status?.FAILED ?? 0}</span>
+                      <div className="mt-2 flex flex-wrap gap-2 text-[12px] text-text">
+                        <span>
+                          {t("journal.delivered")}:{" "}
+                          {outboxSummary?.by_delivery_status?.DELIVERED ?? 0}
+                        </span>
+                        <span>
+                          {locale === "ru" ? "Ожидает" : locale === "he" ? "ממתין" : "Pending"}:{" "}
+                          {outboxSummary?.by_delivery_status?.PENDING ?? 0}
+                        </span>
+                        <span>
+                          {t("journal.failed")}:{" "}
+                          {outboxSummary?.by_delivery_status?.FAILED ?? 0}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1436,66 +1765,89 @@ export default function JournalPage() {
                   <div className="mt-4 space-y-3">
                     {outboxItems.length === 0 ? (
                       <SectionMessage
-                        title="No delivery items"
-                        description="Send a journal or clear the current filter to inspect outbox traffic."
+                        title={t("journal.noDeliveryItems")}
+                        description={t("journal.noDeliveryItemsDescription")}
                       />
                     ) : (
                       outboxItems.map((item) => (
-                        <div key={item.id} className="rounded-xl border border-border/70 bg-background/40 p-4">
+                        <div key={item.id} className="surface-subtle p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm font-semibold text-card-foreground">
+                                <span className="text-sm font-semibold text-text">
                                   {item.channel}
                                 </span>
                                 <span
                                   className={cn(
-                                    "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]",
-                                    badgeTone(item.status)
+                                    "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
+                                    badgeTone(item.status),
                                   )}
                                 >
                                   {item.status}
                                 </span>
                               </div>
-                              <div className="mt-1 text-[12px] text-muted-foreground">
-                                {item.recipient || "Recipient missing"}
+                              <div className="mt-1 text-[12px] text-text-secondary">
+                                {item.recipient ||
+                                  t("journal.recipientMissing")}
                               </div>
                             </div>
                             <button
                               type="button"
                               onClick={() => handleRetryOutbox(item.id)}
-                              disabled={!canManage || busyAction === `retry:${item.id}`}
-                              title={!canManage ? "Admin role required" : undefined}
-                              className="btn-premium rounded-lg border border-border px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+                              disabled={
+                                !canManage || busyAction === `retry:${item.id}`
+                              }
+                              title={
+                                !canManage
+                                  ? t("journal.adminRoleRequired")
+                                  : undefined
+                              }
+                              className="dmx-secondary-action h-9 disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                              <RotateCcw className="mr-1 inline h-4 w-4" strokeWidth={1.8} />
-                              Retry
+                              <RotateCcw
+                                className="h-4 w-4"
+                                strokeWidth={1.8}
+                              />
+                              {t("journal.retry")}
                             </button>
                           </div>
                           {item.subject ? (
-                            <div className="mt-2 text-[12px] font-medium text-card-foreground">
+                            <div className="mt-2 text-[12px] font-medium text-text">
                               {item.subject}
                             </div>
                           ) : null}
                           {item.template_name ? (
-                            <div className="mt-1 text-[11px] uppercase tracking-[0.18em] text-accent">
-                              Template: {item.template_name}
+                            <div className="mt-1 text-[11px] uppercase text-link">
+                              {t("journal.template")}: {item.template_name}
                             </div>
                           ) : null}
                           {item.message_preview ? (
-                            <div className="mt-2 text-[12px] text-muted-foreground">
+                            <div className="mt-2 text-[12px] text-text-secondary">
                               {item.message_preview}
                             </div>
                           ) : null}
-                          <div className="mt-3 space-y-1 text-[11px] text-muted-foreground">
-                            <div>Scheduled: {formatDateTime(item.scheduled_at)}</div>
+                          <div className="mt-3 space-y-1 text-[11px] text-text-secondary">
                             <div>
-                              Attempts: {item.attempts}/{item.max_attempts}
+                              {t("journal.scheduled")}:{" "}
+                              {formatDateTime(item.scheduled_at)}
                             </div>
-                            <div>Delivery: {item.delivery_status}</div>
-                            {item.attachment_name ? <div>Attachment: {item.attachment_name}</div> : null}
+                            <div>
+                              {t("journal.attempts")}: {item.attempts}/
+                              {item.max_attempts}
+                            </div>
+                            <div>
+                              {t("journal.delivery")}: {item.delivery_status}
+                            </div>
+                            {item.attachment_name ? (
+                              <div>
+                                {t("journal.attachment")}:{" "}
+                                {item.attachment_name}
+                              </div>
+                            ) : null}
                             {item.last_error ? (
-                              <div className="text-destructive">Error: {item.last_error}</div>
+                              <div className="text-status-problem-fg">
+                                {t("journal.error")}: {item.last_error}
+                              </div>
                             ) : null}
                           </div>
                         </div>
@@ -1505,43 +1857,60 @@ export default function JournalPage() {
                 </>
               )}
 
-              <div className="mt-5 rounded-xl border border-border/70 bg-background/40 p-4">
+              <div className="surface-subtle mt-5 p-4">
                 <div className="mb-3 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-accent" strokeWidth={1.8} />
-                  <h3 className="text-sm font-semibold text-card-foreground">Integration snapshot</h3>
+                  <AlertCircle
+                    className="h-4 w-4 text-text-secondary"
+                    strokeWidth={1.8}
+                  />
+                  <h3 className="text-sm font-semibold text-text">
+                    {t("journal.integrationSnapshot")}
+                  </h3>
                 </div>
                 {integrations ? (
                   <div className="space-y-2">
-                    <BoolBadge label="Email enabled" value={integrations.email_enabled} />
-                    <BoolBadge label="WhatsApp enabled" value={integrations.whatsapp_enabled} />
-                    <BoolBadge label="Storage configured" value={integrations.storage_configured} />
                     <BoolBadge
-                      label="WhatsApp fallback to email"
+                      label={t("journal.emailEnabled")}
+                      value={integrations.email_enabled}
+                    />
+                    <BoolBadge
+                      label={t("journal.whatsappEnabled")}
+                      value={integrations.whatsapp_enabled}
+                    />
+                    <BoolBadge
+                      label={t("journal.storageConfigured")}
+                      value={integrations.storage_configured}
+                    />
+                    <BoolBadge
+                      label={t("journal.whatsappFallbackToEmail")}
                       value={integrations.whatsapp_fallback_to_email}
                     />
                     <BoolBadge
-                      label="Waze navigation enabled"
+                      label={t("journal.wazeNavigationEnabled")}
                       value={integrations.waze_navigation_enabled}
                     />
-                    <div className="rounded-xl border border-border/70 bg-card/60 p-3 text-[12px] text-muted-foreground">
-                      <div>Public base URL: {integrations.public_base_url}</div>
+                    <div className="rounded-lg border border-border bg-surface p-3 text-[12px] text-text-secondary">
+                      <div>
+                        {t("journal.publicBaseUrl")}:{" "}
+                        {integrations.public_base_url}
+                      </div>
                       <div className="mt-1">
-                        Journal token TTL: {integrations.journal_public_token_ttl_sec}s
+                        {t("journal.tokenTtl")}:{" "}
+                        {integrations.journal_public_token_ttl_sec}s
                       </div>
                     </div>
                   </div>
                 ) : (
                   <SectionMessage
-                    title="Integration settings unavailable"
-                    description="The settings endpoint did not return a snapshot."
+                    title={t("journal.integrationUnavailable")}
+                    description={t("journal.integrationUnavailableDescription")}
                   />
                 )}
               </div>
-            </div>
+            </WidgetCard>
           </div>
         </div>
       </div>
     </DashboardLayout>
   );
 }
-

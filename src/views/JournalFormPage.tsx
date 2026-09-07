@@ -1,15 +1,16 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import {
-  ArrowLeft,
-  Save,
-  CheckCircle2,
-  FileDown,
-  ChevronRight,
   AppWindow,
+  ArrowLeft,
+  CheckCircle2,
+  ChevronRight,
   Eye,
+  FileDown,
+  Save,
 } from "lucide-react";
+
+import { DashboardLayout } from "@/components/DashboardLayout";
 import {
   Tooltip,
   TooltipContent,
@@ -24,10 +25,16 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { toast } from "@/hooks/use-toast";
-import { MasterCircle, computeCircleState } from "@/components/journal/MasterCircle";
-import InspectionTable, { createEmptyRows, type RowData } from "@/components/journal/InspectionTable";
+import {
+  MasterCircle,
+  computeCircleState,
+} from "@/components/journal/MasterCircle";
+import InspectionTable, {
+  createEmptyRows,
+  type RowData,
+} from "@/components/journal/InspectionTable";
+import { useI18n } from "@/lib/i18n";
 
-/* ── underline input component ── */
 function UInput({
   value,
   onChange,
@@ -36,7 +43,7 @@ function UInput({
   placeholder = "",
 }: {
   value?: string;
-  onChange?: (v: string) => void;
+  onChange?: (value: string) => void;
   disabled?: boolean;
   className?: string;
   placeholder?: string;
@@ -44,21 +51,21 @@ function UInput({
   return (
     <input
       value={value}
-      onChange={(e) => onChange?.(e.target.value)}
+      onChange={(event) => onChange?.(event.target.value)}
       disabled={disabled}
       placeholder={placeholder}
-      dir="rtl"
-      className={`bg-transparent border-0 border-b border-foreground/20 outline-none text-[13px] text-foreground px-0.5 py-0.5 w-full focus:border-accent transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed placeholder:text-foreground/15 ${className}`}
+      className={`w-full border-0 border-b border-foreground/16 bg-transparent px-0.5 py-1 text-[13px] text-text outline-none transition-colors duration-200 placeholder:text-text/25 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45 ${className}`}
     />
   );
 }
 
-/* ── main page ── */
 export default function JournalFormPage() {
   const router = useRouter();
+  const { locale } = useI18n();
+  const copy = (en: string, ru: string, he: string) =>
+    locale === "ru" ? ru : locale === "he" ? he : en;
   const [viewMode, setViewMode] = useState<"app" | "document">("document");
 
-  /* header fields */
   const [header, setHeader] = useState({
     contractor: "",
     project: "",
@@ -68,224 +75,326 @@ export default function JournalFormPage() {
     installer: "",
   });
 
-  /* footer fields */
   const [footer, setFooter] = useState({
     clientName: "",
     phone: "",
   });
 
-  /* section locks */
   const [headerLocked, setHeaderLocked] = useState(false);
   const [tableLocked, setTableLocked] = useState(false);
   const [footerLocked, setFooterLocked] = useState(false);
-
-  /* table rows */
   const [rows, setRows] = useState<RowData[]>(createEmptyRows());
 
-  /* header completion state */
-  const headerFields = [
-    header.contractor,
-    header.project,
-    header.address,
-    header.building,
-    header.date,
-    header.installer,
-  ];
   const headerCircleState = computeCircleState(
-    headerFields.map((f) => f.trim().length > 0)
+    [
+      header.contractor,
+      header.project,
+      header.address,
+      header.building,
+      header.date,
+      header.installer,
+    ].map((field) => field.trim().length > 0),
   );
 
-  /* footer completion state */
-  const footerFields = [footer.clientName, footer.phone];
   const footerCircleState = computeCircleState(
-    footerFields.map((f) => f.trim().length > 0)
+    [footer.clientName, footer.phone].map((field) => field.trim().length > 0),
   );
 
   const handleSave = () => {
-    toast({ title: "Saved (mock)", description: "Draft saved successfully." });
+    toast({
+      title: copy("Draft saved", "Черновик сохранён", "טיוטה נשמרה"),
+      description: copy(
+        "The form was saved successfully.",
+        "Форма успешно сохранена.",
+        "הטופס נשמר בהצלחה.",
+      ),
+    });
   };
 
   const handleMarkReady = () => {
-    toast({ title: "Marked as Ready", description: "Form status updated." });
+    toast({
+      title: copy("Form is ready", "Форма готова", "הטופס מוכן"),
+      description: copy(
+        "Journal status updated.",
+        "Статус журнала обновлён.",
+        "סטטוס היומן עודכן.",
+      ),
+    });
   };
 
   return (
     <DashboardLayout>
-      <div className="p-4 lg:p-6">
-        {/* ── top action bar ── */}
-        <div className="flex items-center justify-between mb-5 max-w-[920px] mx-auto">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/journal")}
-              className="btn-premium w-9 h-9 rounded-lg border border-border bg-card flex items-center justify-center group/back"
-            >
-              <ArrowLeft className="w-4 h-4 text-muted-foreground transition-all duration-200 group-hover/back:text-accent group-hover/back:-translate-x-0.5" strokeWidth={1.8} />
-            </button>
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink
-                    className="text-[13px] text-muted-foreground hover:text-accent cursor-pointer transition-colors"
-                    onClick={() => router.push("/journal")}
-                  >
-                    Journal
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </BreadcrumbSeparator>
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="text-[13px]" dir="rtl">
-                    טופס אישור מסירה סופי - דלתות אש
-                  </BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* view toggle */}
-            <div className="flex items-center gap-0.5 p-0.5 rounded-lg border border-border bg-card mr-2">
+      <div className="page-shell page-stack motion-stagger">
+        <div className="mx-auto w-full max-w-[1120px] rounded-lg border border-border bg-surface p-4 sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
               <button
-                onClick={() => setViewMode("document")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-200 ${
-                  viewMode === "document"
-                    ? "bg-accent text-accent-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                type="button"
+                onClick={() => router.push("/journal")}
+                aria-label={copy(
+                  "Back to journal",
+                  "Назад к журналу",
+                  "חזרה ליומן",
+                )}
+                className="btn-premium inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-text-secondary hover:text-accent"
               >
-                <Eye className="w-3 h-3" strokeWidth={1.8} />
-                Document
+                <ArrowLeft className="h-4 w-4" strokeWidth={1.8} />
               </button>
-              <button
-                onClick={() => setViewMode("app")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-200 ${
-                  viewMode === "app"
-                    ? "bg-accent text-accent-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <AppWindow className="w-3 h-3" strokeWidth={1.8} />
-                App
-              </button>
+              <div className="min-w-0">
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink
+                        className="cursor-pointer text-[13px] text-text-secondary transition-colors hover:text-accent"
+                        onClick={() => router.push("/journal")}
+                      >
+                        {copy("Journal", "Журнал", "יומן")}
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </BreadcrumbSeparator>
+                    <BreadcrumbItem>
+                      <BreadcrumbPage className="text-[13px] font-medium text-text">
+                        {copy(
+                          "Final handoff form",
+                          "Финальная форма сдачи",
+                          "טופס מסירה סופי",
+                        )}
+                      </BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+                <h1 className="mt-2 text-xl font-semibold text-text">
+                  {copy(
+                    "Final project handoff form",
+                    "Финальная форма сдачи проекта",
+                    "טופס מסירה סופי של הפרויקט",
+                  )}
+                </h1>
+                <p className="mt-1 text-[13px] leading-6 text-text-secondary">
+                  {copy(
+                    "A compiled document for client handoff, door verification, and final installation confirmation.",
+                    "Собранный документ для передачи клиенту, проверки дверей и финального подтверждения монтажа.",
+                    "מסמך מרוכז למסירה ללקוח, בדיקת דלתות ואישור סופי של ההתקנה.",
+                  )}
+                </p>
+              </div>
             </div>
 
-            <button
-              onClick={handleSave}
-              className="btn-premium h-8 px-3 rounded-lg border border-border bg-card text-[12px] font-medium text-foreground flex items-center gap-1.5 hover:text-accent"
-            >
-              <Save className="w-3.5 h-3.5" strokeWidth={1.8} />
-              Save Draft
-            </button>
-            <button
-              onClick={handleMarkReady}
-              className="btn-premium h-8 px-3 rounded-lg border border-accent/30 bg-accent/5 text-[12px] font-medium text-accent flex items-center gap-1.5 hover:bg-accent/10"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.8} />
-              Mark Ready
-            </button>
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-0.5 rounded-lg border border-border bg-surface-sunken p-1">
                 <button
-                  disabled
-                  className="h-8 px-3 rounded-lg border border-border bg-card text-[12px] font-medium text-muted-foreground flex items-center gap-1.5 opacity-40 cursor-not-allowed"
+                  type="button"
+                  onClick={() => setViewMode("document")}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors duration-200 ${
+                    viewMode === "document"
+                      ? "bg-accent text-accent-foreground"
+                      : "text-text-secondary hover:text-text"
+                  }`}
                 >
-                  <FileDown className="w-3.5 h-3.5" strokeWidth={1.8} />
-                  Export PDF
+                  <Eye className="h-3.5 w-3.5" strokeWidth={1.8} />
+                  {copy("Document", "Документ", "מסמך")}
                 </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Backend integration pending</p>
-              </TooltipContent>
-            </Tooltip>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("app")}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors duration-200 ${
+                    viewMode === "app"
+                      ? "bg-accent text-accent-foreground"
+                      : "text-text-secondary hover:text-text"
+                  }`}
+                >
+                  <AppWindow className="h-3.5 w-3.5" strokeWidth={1.8} />
+                  {copy("App", "Приложение", "אפליקציה")}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSave}
+                className="btn-premium inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-surface px-4 text-[13px] font-medium text-text hover:text-accent"
+              >
+                <Save className="h-4 w-4" strokeWidth={1.8} />
+                {copy("Save draft", "Сохранить черновик", "שמור טיוטה")}
+              </button>
+              <button
+                type="button"
+                onClick={handleMarkReady}
+                className="btn-premium inline-flex h-10 items-center gap-2 rounded-lg border border-transparent bg-accent px-4 text-[13px] font-medium text-accent-foreground hover:bg-[var(--dmx-accent-hover)]"
+              >
+                <CheckCircle2 className="h-4 w-4" strokeWidth={1.8} />
+                {copy("Mark ready", "Отметить готовой", "סמן כמוכן")}
+              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-surface px-4 text-[13px] font-medium text-text-secondary opacity-45"
+                  >
+                    <FileDown className="h-4 w-4" strokeWidth={1.8} />
+                    {copy("Export PDF", "Экспорт PDF", "ייצוא PDF")}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {copy(
+                      "Export integration will be connected on the backend.",
+                      "Экспортная интеграция будет подключена на бэкенде.",
+                      "שילוב הייצוא יהיה מחובר בקצה העורפי.",
+                    )}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         </div>
 
-        {/* ── A4 paper ── */}
         <div
-          className="mx-auto bg-white rounded shadow-[0_2px_20px_-4px_rgba(0,0,0,0.12)] overflow-hidden"
+          className="mx-auto w-full max-w-[1120px] overflow-hidden rounded-lg border border-border bg-surface"
           style={{
             width: "210mm",
             maxWidth: "100%",
             minHeight: viewMode === "document" ? "297mm" : "auto",
-            fontFamily: "'Heebo', 'Assistant', 'Segoe UI', sans-serif",
           }}
-          dir="rtl"
         >
-          {/* ─── HEADER BLOCK ─── */}
-          <div className={`relative transition-opacity duration-300 ${headerLocked ? "opacity-40" : ""}`}>
-            {/* master circle */}
+          <div
+            className={`relative border-b border-border px-8 py-7 transition-opacity duration-300 ${headerLocked ? "opacity-45" : ""}`}
+          >
             {viewMode === "app" && (
-              <div className="absolute top-2 left-2 z-10">
+              <div className="absolute left-4 top-4 z-10">
                 <MasterCircle
                   state={headerLocked ? "complete" : headerCircleState}
-                  onClick={() => setHeaderLocked((l) => !l)}
+                  onClick={() => setHeaderLocked((locked) => !locked)}
                   size="md"
                 />
               </div>
             )}
 
-            {/* top header row */}
-            <div className="flex items-start justify-between px-8 pt-6 pb-2">
-              <div className="flex items-center gap-3">
-                <div className="text-[11px] text-gray-500 leading-tight">
-                  חטיבת<br />השירות
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <div className="text-[11px] font-semibold uppercase text-text-secondary">
+                  DIMAX Operations
                 </div>
-                <div className="w-10 h-10 bg-gray-800 rounded flex items-center justify-center">
-                  <span className="text-white text-[8px] font-bold leading-tight text-center">רב<br/>בריח</span>
+                <div className="mt-2 text-[28px] font-semibold leading-none text-text">
+                  {copy(
+                    "Final handoff form",
+                    "Финальная форма сдачи",
+                    "טופס מסירה סופי",
+                  )}
+                </div>
+                <div className="mt-2 text-[13px] leading-6 text-text-secondary">
+                  {copy(
+                    "A document for door inspection, status capture, and customer handoff confirmation.",
+                    "Документ для проверки дверей, фиксации статуса и подтверждения передачи клиенту.",
+                    "מסמך לבדיקת דלתות, לקיבוע סטטוס ולאישור המסירה ללקוח.",
+                  )}
                 </div>
               </div>
-              <div className="text-center flex-1 mx-8">
-                <h1 className="text-[22px] font-bold text-gray-900 leading-tight">
-                  טופס אישור מסירה סופי - דלתות אש
-                </h1>
-                <p className="text-[14px] text-gray-500 mt-1 font-medium">002110</p>
+              <div className="rounded-lg border border-border bg-surface-subtle px-4 py-3 text-end">
+                <div className="text-[11px] font-semibold uppercase text-text-secondary">
+                  {copy("Form", "Форма", "טופס")}
+                </div>
+                <div className="mt-1 text-lg font-semibold text-text">
+                  JR-002110
+                </div>
               </div>
-              <div className="w-20" />
             </div>
 
-            {/* fields grid */}
-            <div className="px-8 pt-2 pb-4">
-              <div className="grid grid-cols-2 gap-x-12 gap-y-2">
-                <div className="space-y-2.5">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">שם הקבלן:</span>
-                    <UInput value={header.contractor} onChange={(v) => setHeader((h) => ({ ...h, contractor: v }))} disabled={headerLocked} />
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">שם הפרויקט:</span>
-                    <UInput value={header.project} onChange={(v) => setHeader((h) => ({ ...h, project: v }))} disabled={headerLocked} />
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">כתובת / מגרש:</span>
-                    <UInput value={header.address} onChange={(v) => setHeader((h) => ({ ...h, address: v }))} disabled={headerLocked} />
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">בניין:</span>
-                    <UInput value={header.building} onChange={(v) => setHeader((h) => ({ ...h, building: v }))} disabled={headerLocked} />
-                  </div>
+            <div className="mt-8 grid gap-x-10 gap-y-4 md:grid-cols-2">
+              <div className="space-y-4">
+                <div className="field-stack">
+                  <label className="field-label text-text-secondary">
+                    {copy("Contractor", "Подрядчик", "קבלן")}
+                  </label>
+                  <UInput
+                    value={header.contractor}
+                    onChange={(value) =>
+                      setHeader((prev) => ({ ...prev, contractor: value }))
+                    }
+                    disabled={headerLocked}
+                  />
                 </div>
-                <div className="space-y-2.5">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">תאריך:</span>
-                    <UInput value={header.date} onChange={(v) => setHeader((h) => ({ ...h, date: v }))} disabled={headerLocked} placeholder="DD/MM/YYYY" />
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">שם המתקין:</span>
-                    <UInput value={header.installer} onChange={(v) => setHeader((h) => ({ ...h, installer: v }))} disabled={headerLocked} />
-                  </div>
+                <div className="field-stack">
+                  <label className="field-label text-text-secondary">
+                    {copy("Project", "Проект", "פרויקט")}
+                  </label>
+                  <UInput
+                    value={header.project}
+                    onChange={(value) =>
+                      setHeader((prev) => ({ ...prev, project: value }))
+                    }
+                    disabled={headerLocked}
+                  />
+                </div>
+                <div className="field-stack">
+                  <label className="field-label text-text-secondary">
+                    {copy("Address / site", "Адрес / участок", "כתובת / אתר")}
+                  </label>
+                  <UInput
+                    value={header.address}
+                    onChange={(value) =>
+                      setHeader((prev) => ({ ...prev, address: value }))
+                    }
+                    disabled={headerLocked}
+                  />
+                </div>
+                <div className="field-stack">
+                  <label className="field-label text-text-secondary">
+                    {copy(
+                      "Building / section",
+                      "Корпус / секция",
+                      "בניין / אגף",
+                    )}
+                  </label>
+                  <UInput
+                    value={header.building}
+                    onChange={(value) =>
+                      setHeader((prev) => ({ ...prev, building: value }))
+                    }
+                    disabled={headerLocked}
+                  />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="field-stack">
+                  <label className="field-label text-text-secondary">
+                    {copy("Date", "Дата", "תאריך")}
+                  </label>
+                  <UInput
+                    value={header.date}
+                    onChange={(value) =>
+                      setHeader((prev) => ({ ...prev, date: value }))
+                    }
+                    disabled={headerLocked}
+                    placeholder={copy("DD.MM.YYYY", "ДД.ММ.ГГГГ", "DD.MM.YYYY")}
+                  />
+                </div>
+                <div className="field-stack">
+                  <label className="field-label text-text-secondary">
+                    {copy("Installer", "Монтажник", "מתקין")}
+                  </label>
+                  <UInput
+                    value={header.installer}
+                    onChange={(value) =>
+                      setHeader((prev) => ({ ...prev, installer: value }))
+                    }
+                    disabled={headerLocked}
+                  />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ─── TABLE BLOCK ─── */}
-          <div className={`relative px-8 py-3 transition-opacity duration-300 ${tableLocked ? "opacity-40" : ""}`}>
+          <div
+            className={`relative border-b border-border px-8 py-6 transition-opacity duration-300 ${tableLocked ? "opacity-45" : ""}`}
+          >
             {viewMode === "app" && (
-              <div className="absolute top-1 left-2 z-10">
+              <div className="absolute left-4 top-4 z-10">
                 <MasterCircle
                   state={tableLocked ? "complete" : "empty"}
-                  onClick={() => setTableLocked((l) => !l)}
+                  onClick={() => setTableLocked((locked) => !locked)}
                   size="md"
                 />
               </div>
@@ -298,56 +407,81 @@ export default function JournalFormPage() {
             />
           </div>
 
-          {/* ─── FOOTER BLOCK ─── */}
-          <div className={`relative px-8 pt-4 pb-6 transition-opacity duration-300 ${footerLocked ? "opacity-40" : ""}`}>
+          <div
+            className={`relative px-8 py-7 transition-opacity duration-300 ${footerLocked ? "opacity-45" : ""}`}
+          >
             {viewMode === "app" && (
-              <div className="absolute top-2 left-2 z-10">
+              <div className="absolute left-4 top-4 z-10">
                 <MasterCircle
                   state={footerLocked ? "complete" : footerCircleState}
-                  onClick={() => setFooterLocked((l) => !l)}
+                  onClick={() => setFooterLocked((locked) => !locked)}
                   size="md"
                 />
               </div>
             )}
 
-            <div className="border border-gray-300 p-4">
-              <div className="flex items-baseline gap-8">
-                <div className="flex items-baseline gap-2 flex-1">
-                  <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">שם הלקוח:</span>
-                  <UInput value={footer.clientName} onChange={(v) => setFooter((f) => ({ ...f, clientName: v }))} disabled={footerLocked} />
+            <div className="rounded-lg border border-border bg-surface-subtle px-5 py-5">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="field-stack">
+                  <label className="field-label text-text-secondary">
+                    {copy("Client name", "Имя клиента", "שם הלקוח")}
+                  </label>
+                  <UInput
+                    value={footer.clientName}
+                    onChange={(value) =>
+                      setFooter((prev) => ({ ...prev, clientName: value }))
+                    }
+                    disabled={footerLocked}
+                  />
                 </div>
-                <div className="flex items-baseline gap-2 flex-1">
-                  <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">טלפון:</span>
-                  <UInput value={footer.phone} onChange={(v) => setFooter((f) => ({ ...f, phone: v }))} disabled={footerLocked} placeholder="+972-XX-XXX-XXXX" />
+                <div className="field-stack">
+                  <label className="field-label text-text-secondary">
+                    {copy("Phone", "Телефон", "טלפון")}
+                  </label>
+                  <UInput
+                    value={footer.phone}
+                    onChange={(value) =>
+                      setFooter((prev) => ({ ...prev, phone: value }))
+                    }
+                    disabled={footerLocked}
+                    placeholder="+972-XX-XXX-XXXX"
+                  />
                 </div>
-                <div className="flex items-baseline gap-2 flex-1">
-                  <span className="text-[13px] font-semibold text-gray-700 whitespace-nowrap">חתימת הלקוח:</span>
-                  <div className="flex-1 h-[32px] border-b border-gray-300 relative">
-                    {viewMode === "app" && !footerLocked && (
-                      <span className="absolute inset-0 flex items-center justify-center text-[10px] text-gray-300 italic">
-                        signature pad (coming soon)
-                      </span>
-                    )}
+                <div className="field-stack">
+                  <label className="field-label text-text-secondary">
+                    {copy("Client signature", "Подпись клиента", "חתימת הלקוח")}
+                  </label>
+                  <div className="flex h-[38px] items-end border-b border-border-strong text-[11px] text-text-tertiary">
+                    {viewMode === "app" && !footerLocked
+                      ? copy(
+                          "Signature support will be connected later",
+                          "Подпись будет подключена позже",
+                          "תמיכה בחתימה תחובר בהמשך",
+                        )
+                      : ""}
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="text-center mt-4 space-y-0.5">
-              <p className="text-[9px] text-gray-400">
-                רב בריח (08) תעשיות בע"מ ח.פ. 514160530
+            <div className="mt-5 space-y-1 text-center text-[10px] leading-5 text-text-tertiary">
+              <p>
+                {copy(
+                  "DIMAX Operations Suite · Final project handoff",
+                  "DIMAX Operations Suite · Финальная передача проекта",
+                  "DIMAX Operations Suite · מסירת פרויקט סופית",
+                )}
               </p>
-              <p className="text-[9px] text-gray-400">
-                חוצות היוצר 32 ת.ד. 3032, אשקלון 7878030 טלפון 100-800-800-1
-              </p>
-              <p className="text-[9px] text-gray-400">
-                WWW.RAV-BARIACH.CO.IL
+              <p>
+                {copy(
+                  "The document records installation completion, inspection, and acceptance.",
+                  "Документ предназначен для фиксации факта монтажа, проверки и приёмки.",
+                  "המסמך נועד לתעד את סיום ההתקנה, הבדיקה והקבלה.",
+                )}
               </p>
             </div>
           </div>
         </div>
-
-        <div className="h-12" />
       </div>
     </DashboardLayout>
   );
