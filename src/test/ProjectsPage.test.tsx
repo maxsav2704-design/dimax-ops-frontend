@@ -507,7 +507,7 @@ describe("ProjectsPage", () => {
     const { container } = render(<ProjectsPage />);
 
     const portfolioHeader = await screen.findByTestId("projects-list-v25");
-    expect(within(portfolioHeader).getByText("Dashboard # Projects")).toBeInTheDocument();
+    expect(within(portfolioHeader).getByText("Dashboard / Projects")).toBeInTheDocument();
     expect(within(portfolioHeader).getByText("Portfolio")).toBeInTheDocument();
     expect(within(portfolioHeader).getByRole("button", { name: /Active/i })).toBeInTheDocument();
 
@@ -816,7 +816,9 @@ describe("ProjectsPage", () => {
 
     expect(await screen.findByText("Project Detail Matrix")).toBeInTheDocument();
     expect(screen.getByText("Door Allocation Matrix")).toBeInTheDocument();
-    expect(screen.getByText("בניין / House")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("project-detail-v28-full-floor-row-1-2")).getByText(/^House/),
+    ).toHaveTextContent("House 1");
     expect(
       screen.getByTestId("project-detail-v28-full-floor-row-1-2"),
     ).toBeInTheDocument();
@@ -3850,8 +3852,8 @@ describe("ProjectsPage", () => {
     expect(screen.getByLabelText("Building")).toHaveValue("14");
     expect(screen.getByLabelText("City")).toHaveValue("Ashdod");
     expect(screen.getByLabelText("Entrance")).toHaveValue("A");
-    expect(screen.getByLabelText("Lat")).toHaveValue("31.8014");
-    expect(screen.getByLabelText("Lng")).toHaveValue("34.6435");
+    expect(screen.getByLabelText("Latitude")).toHaveValue("31.8014");
+    expect(screen.getByLabelText("Longitude")).toHaveValue("34.6435");
     expect(screen.getByText("Coordinates: 31.8014, 34.6435")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Test Waze" })).toHaveAttribute(
       "href",
@@ -3946,8 +3948,8 @@ describe("ProjectsPage", () => {
     render(<ProjectsPage />);
     fireEvent.click(await screen.findByRole("button", { name: "New project" }));
 
-    fireEvent.change(screen.getByLabelText("Lat"), { target: { value: "31.8014" } });
-    fireEvent.change(screen.getByLabelText("Lng"), { target: { value: "34.6435" } });
+    fireEvent.change(screen.getByLabelText("Latitude"), { target: { value: "31.8014" } });
+    fireEvent.change(screen.getByLabelText("Longitude"), { target: { value: "34.6435" } });
     fireEvent.change(screen.getByLabelText("Waze URL override"), {
       target: { value: "https://waze.com/ul?q=Manual+Override" },
     });

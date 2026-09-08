@@ -5,7 +5,11 @@ on:
   push:
     branches:
       - main
+      - 'codex/release-hardening-*'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: frontend-quality-gate-${{ github.ref }}
