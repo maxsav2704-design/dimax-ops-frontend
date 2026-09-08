@@ -1759,11 +1759,11 @@ export default function ProjectsPage() {
   const deepLinkOrderNumber = (searchParams?.get("order_number") || "").trim();
   const focusedSectionLabel =
     deepLinkFocusSection === "doors"
-      ? "Doors"
+      ? copy("Doors", "Двери", "דלתות")
       : deepLinkFocusSection === "addons"
-        ? "Additional works"
+        ? copy("Additional works", "Дополнительные работы", "עבודות נוספות")
         : deepLinkFocusSection === "urgency"
-          ? "Urgency surcharge"
+          ? copy("Urgency surcharge", "Доплата за срочность", "תוספת דחיפות")
           : "";
   const deepLinkLibraryProductId = (
     searchParams?.get("library_product_id") || ""
@@ -1818,32 +1818,29 @@ export default function ProjectsPage() {
     };
   }, [projects]);
 
-  const projectStatusTabs = useMemo(
-    () => [
-      { id: "ALL" as const, label: "All", count: projectPortfolioStats.total },
+  const projectStatusTabs = [
+      { id: "ALL" as const, label: copy("All", "Все", "הכל"), count: projectPortfolioStats.total },
       {
         id: "ACTIVE" as const,
-        label: "Active",
+        label: copy("Active", "Активные", "פעילים"),
         count: projectPortfolioStats.active,
       },
       {
         id: "PROBLEM" as const,
-        label: "Problem",
+        label: copy("Problem", "Проблемные", "בעייתיים"),
         count: projectPortfolioStats.problem,
       },
       {
         id: "COMPLETED" as const,
-        label: "Completed",
+        label: copy("Completed", "Завершённые", "הושלמו"),
         count: projectPortfolioStats.completed,
       },
       {
         id: "ARCHIVED" as const,
-        label: "Cancelled",
+        label: copy("Archived / cancelled", "Архив / отменённые", "ארכיון / בוטלו"),
         count: projectPortfolioStats.archived,
       },
-    ],
-    [projectPortfolioStats],
-  );
+    ];
 
   const filteredProjectIds = useMemo(
     () => filteredProjects.map((p) => p.id),
@@ -4672,8 +4669,8 @@ export default function ProjectsPage() {
       <div className="page-shell motion-stagger readability-wrap flex flex-col gap-4 lg:gap-5">
         <Breadcrumbs
           items={[
-            { label: "Dashboard", href: "/" },
-            { label: "Projects" },
+            { label: copy("Dashboard", "Главная", "ראשי"), href: "/" },
+            { label: copy("Projects", "Проекты", "פרויקטים") },
             ...(selectedProject
               ? [{ label: selectedProjectCode }]
               : []),
@@ -4682,33 +4679,16 @@ export default function ProjectsPage() {
 
         <section
           className={cn(
-            "rounded-lg border border-border bg-surface px-4 py-4 md:px-5",
+            "border-b border-border pb-4",
             projectDetailFocused ? "order-5" : "order-1",
           )}
           data-testid="projects-list-v25"
         >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <div className="inline-flex min-h-8 items-center rounded-full bg-[var(--dmx-accent-tint)] px-3 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-accent">
-                {copy("Dashboard / Projects", "Главная / Проекты", "ראשי / פרויקטים")}
-              </div>
-              <h1 className="mt-4 text-[32px] font-semibold leading-tight text-text md:text-[42px]">
+              <h1 className="dmx-page-title">
                 {copy("Projects", "Проекты", "פרויקטים")}
               </h1>
-              <p className="mt-2 max-w-3xl text-[13px] leading-6 text-text-secondary">
-                <b className="font-semibold text-text">
-                  {projectsLoaded ? projectPortfolioStats.active : "—"}
-                </b>{" "}
-                {copy("active projects ·", "активных проектов ·", "פרויקטים פעילים ·")}{" "}
-                <b className="font-semibold text-text">
-                  {projectsLoaded ? projectPortfolioStats.problem : "—"}
-                </b>{" "}
-                {copy("problem ·", "проблемных ·", "בעייתיים ·")}{" "}
-                <b className="font-semibold text-text">
-                  {projectsLoaded ? filteredProjects.length : "—"}
-                </b>{" "}
-                {copy("visible after filters - updated from live project API", "отображается после фильтров — обновлено из API действующего проекта.", "גלוי לאחר מסננים - עודכן מ-API של פרויקט חי")}
-              </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button
@@ -4750,50 +4730,40 @@ export default function ProjectsPage() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-[12px]">
             {[
               {
-                label: "Portfolio",
-                value: projectPortfolioStats.total,
-                note: "projects in admin scope",
+                label: copy("Portfolio", "Всего проектов", "כל הפרויקטים"),
+                value: projectsLoaded ? projectPortfolioStats.total : "—",
               },
               {
-                label: "Active",
-                value: projectPortfolioStats.active,
-                note: "not completed or archived",
+                label: copy("Active", "Активные", "פעילים"),
+                value: projectsLoaded ? projectPortfolioStats.active : "—",
               },
               {
-                label: "Problem",
-                value: projectPortfolioStats.problem,
-                note: "risk, blocked or overdue",
+                label: copy("Problem", "Проблемные", "בעייתיים"),
+                value: projectsLoaded ? projectPortfolioStats.problem : "—",
               },
               {
-                label: "Selected",
+                label: copy("Selected", "Выбрано", "נבחרו"),
                 value: bulkSelectedProjectIds.length,
-                note: "ready for bulk actions",
               },
               {
-                label: "Import queue",
-                value: failedQueue?.total || 0,
-                note: "failed Excel runs",
+                label: copy("Failed imports", "Ошибки импорта", "שגיאות ייבוא"),
+                value: failedQueue?.total ?? "—",
               },
             ].map((item) => (
               <div
                 key={item.label}
-                className="rounded-lg border border-border bg-surface-subtle px-4 py-3"
+                className="flex items-baseline gap-2"
               >
-                <div className={projectsMetricLabelClass}>{item.label}</div>
-                <div className="mt-3 text-[30px] font-semibold leading-none text-text">
-                  {projectsLoaded ? item.value : "—"}
-                </div>
-                <div className="mt-2 truncate text-[12px] text-text-secondary">
-                  {item.note}
-                </div>
+                <dt className="text-text-secondary">{item.label}</dt>
+                <dd className="font-semibold tabular-nums text-text">{item.value}</dd>
               </div>
             ))}
-          </div>
+          </dl>
 
-          <div className="mt-5 border-t border-border-subtle pt-4">
+          <div className="mt-4">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex flex-wrap gap-2">
                 {projectStatusTabs.map((tab) => {
@@ -4803,8 +4773,9 @@ export default function ProjectsPage() {
                       key={tab.id}
                       type="button"
                       onClick={() => setProjectStatusFilter(tab.id)}
+                      aria-pressed={active}
                       className={cn(
-                        "inline-flex min-h-9 items-center gap-2 rounded-full border px-3 text-[12px] font-semibold transition-colors",
+                        "inline-flex min-h-8 items-center gap-2 rounded-md border px-2.5 text-[12px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--dmx-link)]",
                         active
                           ? "border-accent bg-[var(--dmx-accent-tint)] text-text"
                           : "border-border bg-surface text-text-secondary hover:border-border-strong hover:text-text",
@@ -4817,15 +4788,6 @@ export default function ProjectsPage() {
                     </button>
                   );
                 })}
-              </div>
-              <div className="relative w-full xl:max-w-sm">
-                <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={copy("Search by project, address or status", "Поиск по объекту, адресу или статусу", "חיפוש לפי פרויקט, כתובת או סטטוס")}
-                  className="h-10 w-full rounded-full border border-border bg-surface ps-9 pe-3 text-[12.5px] text-text placeholder:text-text-tertiary focus:border-border-strong focus:outline-none"
-                />
               </div>
             </div>
             {bulkSelectedProjectIds.length > 0 ? (
@@ -4845,9 +4807,9 @@ export default function ProjectsPage() {
           </div>
         </section>
 
-        <section
+        {selectedProjectId && selectedProjectId === deepLinkProjectId ? <section
           className={cn(
-            "rounded-lg border border-border bg-surface px-4 py-3",
+            "border-b border-border py-3",
             projectDetailFocused ? "order-3" : "order-2",
           )}
         >
@@ -4899,7 +4861,7 @@ export default function ProjectsPage() {
               </div>
             ) : null}
           </div>
-        </section>
+        </section> : null}
 
         {error && (
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-status-problem-border bg-status-problem-bg px-4 py-3 text-[13px] text-status-problem-fg">
@@ -4970,17 +4932,14 @@ export default function ProjectsPage() {
               projectDetailFocused ? "order-2" : "",
             )}
           >
-            <div className="mb-4 border-b border-border-subtle pb-3">
+            <div className="mb-3 border-b border-border-subtle pb-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                  <div className="text-[10.5px] font-medium uppercase text-text-secondary">
+                  <h2 className="text-[13.5px] font-medium leading-5 text-text">
                     {tt("projects.projectList")}
-                  </div>
-                  <h2 className="mt-1 text-[13.5px] font-medium leading-5 text-text">
-                    {tt("projects.portfolioNavigator")}
                   </h2>
                   <p className="mt-1 text-[12px] leading-5 text-text-secondary">
-                    {tt("projects.filteredCount")} {filteredProjects.length} ·{" "}
+                    {tt("projects.filteredCount")} {projectsLoaded ? filteredProjects.length : "—"} ·{" "}
                     {tt("projects.selectedCount")}{" "}
                     {bulkSelectedProjectIds.length}
                   </p>
@@ -4992,19 +4951,21 @@ export default function ProjectsPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                aria-label={tt("projects.searchProject")}
                 placeholder={tt("projects.searchProject")}
-                className="h-9 w-full rounded-full border border-border bg-surface ps-9 pe-3 text-[12.5px] text-text placeholder:text-text-tertiary focus:border-border-strong focus:outline-none"
+                className="h-9 w-full rounded-md border border-border bg-surface ps-9 pe-3 text-[12.5px] text-text placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--dmx-link)]"
               />
             </div>
-            <div className="mb-3 space-y-3 rounded-lg border border-border bg-surface-subtle p-3">
-              <div className="text-[12px] font-medium text-text">
+            <details className="mb-3 border-b border-border-subtle pb-3" open={bulkSelectedProjectIds.length > 0 || deepLinkedFailedCount > 0}>
+              <summary className="cursor-pointer py-1 text-[12px] font-medium text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--dmx-link)]">
                 {locale === "ru"
                   ? "\u041c\u0430\u0441\u0441\u043e\u0432\u044b\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f"
                   : locale === "he"
                     ? "\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05e8\u05d5\u05d1\u05d5\u05ea"
                     : "Batch actions"}
-              </div>
-              <div className="space-y-3">
+                {bulkSelectedProjectIds.length > 0 ? ` (${bulkSelectedProjectIds.length})` : ""}
+              </summary>
+              <div className="mt-3 space-y-3">
                 <label className="inline-flex items-start gap-2 text-[12px] leading-snug text-text-secondary">
                   <input
                     type="checkbox"
@@ -5050,7 +5011,7 @@ export default function ProjectsPage() {
                   </button>
                 </div>
               </div>
-              <div className="border-t border-border-subtle pt-3">
+              <div className="mt-3 border-t border-border-subtle pt-3">
                 <label className="inline-flex items-center gap-2 text-[12px] text-text-secondary">
                   <input
                     type="checkbox"
@@ -5060,7 +5021,7 @@ export default function ProjectsPage() {
                   {tt("projects.retryFailedLatestOnly")}
                 </label>
               </div>
-            </div>
+            </details>
             <div
               className={cn(
                 "space-y-2 overflow-auto pe-1",

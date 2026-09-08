@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
 import { ApiError } from "@/lib/api";
+import { LanguageProvider } from "@/lib/i18n";
+import { LOCALE_STORAGE_KEY } from "@/lib/locale";
 import { createDownloadResponse } from "@/test/download-response";
 import ProjectsPage from "@/views/ProjectsPage";
 
@@ -54,7 +56,18 @@ vi.mock("@/hooks/use-auth-session", () => ({
 }));
 
 describe("ProjectsPage", () => {
+  const storageDescriptor = Object.getOwnPropertyDescriptor(window, "localStorage");
+
   beforeEach(() => {
+    const storage = new Map<string, string>();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => { storage.set(key, value); },
+        removeItem: (key: string) => { storage.delete(key); },
+      },
+    });
     vi.restoreAllMocks();
     apiFetchMock.mockReset();
     apiDownloadMock.mockReset();
@@ -73,6 +86,30 @@ describe("ProjectsPage", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    if (storageDescriptor) Object.defineProperty(window, "localStorage", storageDescriptor);
+    else Reflect.deleteProperty(window, "localStorage");
+    document.documentElement.lang = "en";
+    document.documentElement.dir = "ltr";
+  });
+
+  it.each([
+    { locale: "ru", title: "Проекты", active: "Активные", completed: "Завершённые", imports: "Ошибки импорта", search: "Поиск проекта..." },
+    { locale: "he", title: "פרויקטים", active: "פעילים", completed: "הושלמו", imports: "שגיאות ייבוא", search: "חיפוש לפי שם או כתובת" },
+  ])("localizes the portfolio toolbar and exposes one search in $locale", async ({ locale, title, active, completed, imports, search }) => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+    apiFetchMock.mockImplementation(async (path: string) =>
+      path === "/api/v1/admin/projects" ? { items: [] } : []);
+    render(<LanguageProvider><ProjectsPage /></LanguageProvider>);
+    expect(await screen.findByRole("heading", { name: title, level: 1 })).toBeInTheDocument();
+    const header = within(screen.getByTestId("projects-list-v25"));
+    expect(header.getByRole("button", { name: new RegExp(active) })).toHaveAttribute("aria-pressed", "false");
+    const completedFilter = header.getByRole("button", { name: new RegExp(completed) });
+    fireEvent.click(completedFilter);
+    expect(completedFilter).toHaveAttribute("aria-pressed", "true");
+    expect(header.getByText(imports)).toBeInTheDocument();
+    expect(header.queryByText("Portfolio")).not.toBeInTheDocument();
+    expect(header.queryByText("Import queue")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("textbox", { name: search })).toHaveLength(1);
   });
 
   it("does not show an empty project list while loading or after a failed request", async () => {
@@ -524,7 +561,7 @@ describe("ProjectsPage", () => {
     const { container } = render(<ProjectsPage />);
 
     const portfolioHeader = await screen.findByTestId("projects-list-v25");
-    expect(within(portfolioHeader).getByText("Dashboard / Projects")).toBeInTheDocument();
+    expect(within(portfolioHeader).getByRole("heading", { name: "Projects", level: 1 })).toBeInTheDocument();
     expect(within(portfolioHeader).getByText("Portfolio")).toBeInTheDocument();
     expect(within(portfolioHeader).getByRole("button", { name: /Active/i })).toBeInTheDocument();
 
@@ -3369,8 +3406,8 @@ describe("ProjectsPage", () => {
 
     expect(await screen.findByText("Select all filtered (2)")).toBeInTheDocument();
 
-    const checkboxes = screen.getAllByRole("checkbox");
-    fireEvent.click(checkboxes[0]);
+    fireEvent.click(screen.getByText("Batch actions"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select all filtered (2)" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Review Selected (2)" }));
 
