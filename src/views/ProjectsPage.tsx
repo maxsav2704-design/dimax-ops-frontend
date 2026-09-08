@@ -1737,6 +1737,7 @@ export default function ProjectsPage() {
   const [matrixLocation, setMatrixLocation] = useState("all");
   const [matrixDoorType, setMatrixDoorType] = useState("all");
   const [matrixStatus, setMatrixStatus] = useState("all");
+  const [matrixInstaller, setMatrixInstaller] = useState("all");
   const [matrixIssueFilter, setMatrixIssueFilter] = useState<"all" | "issues">(
     "all",
   );
@@ -2177,11 +2178,23 @@ export default function ProjectsPage() {
       if (matrixDoorType !== "all" && row.door_type_id !== matrixDoorType)
         return false;
       if (matrixStatus !== "all" && row.status !== matrixStatus) return false;
+      if (matrixInstaller === "unassigned" && row.installer_id) return false;
+      if (
+        matrixInstaller !== "all" &&
+        matrixInstaller !== "unassigned" &&
+        row.installer_id !== matrixInstaller
+      )
+        return false;
       if (matrixIssueFilter === "issues" && row.issue_count === 0)
         return false;
       if (aptQ && !row.apartment_number.toLowerCase().includes(aptQ))
         return false;
-      if (markingQ && !row.door_marking.toLowerCase().includes(markingQ))
+      if (
+        markingQ &&
+        ![row.door_marking, row.unit_label, row.apartment_number].some((value) =>
+          value.toLowerCase().includes(markingQ),
+        )
+      )
         return false;
       return true;
     });
@@ -2193,6 +2206,7 @@ export default function ProjectsPage() {
     matrixLocation,
     matrixDoorType,
     matrixStatus,
+    matrixInstaller,
     matrixIssueFilter,
     matrixApartmentSearch,
     matrixMarkingSearch,
@@ -2217,6 +2231,35 @@ export default function ProjectsPage() {
   const allFilteredDoorsSelected =
     filteredDoorIds.length > 0 &&
     selectedFilteredDoorCount === filteredDoorIds.length;
+  const hiddenSelectedDoorCount = selectedDoorIds.length - selectedFilteredDoorCount;
+
+  const resetMatrixFilters = () => {
+    setMatrixOrderNumber("all");
+    setMatrixHouse("all");
+    setMatrixFloor("all");
+    setMatrixLocation("all");
+    setMatrixDoorType("all");
+    setMatrixStatus("all");
+    setMatrixInstaller("all");
+    setMatrixIssueFilter("all");
+    setMatrixApartmentSearch("");
+    setMatrixMarkingSearch("");
+  };
+
+  const matrixInstallerFilterControl = (
+    <select
+      aria-label={copy("Door assignment", "Назначение дверей", "שיבוץ דלתות")}
+      value={matrixInstaller}
+      onChange={(event) => setMatrixInstaller(event.target.value)}
+      className="control-input h-9 min-w-0 max-w-full text-[12px]"
+    >
+      <option value="all">{copy("All installers", "Все монтажники", "כל המתקינים")}</option>
+      <option value="unassigned">{copy("Unassigned", "Без назначения", "לא שובצו")}</option>
+      {projectAssignedInstallerSummary.map((installer) => (
+        <option key={installer.id} value={installer.id}>{installer.name}</option>
+      ))}
+    </select>
+  );
 
   const existingDoorMarkings = useMemo(() => {
     const values = new Set<string>();
@@ -2551,10 +2594,12 @@ export default function ProjectsPage() {
     if (typeof document === "undefined") {
       return;
     }
-    document.getElementById(sectionId)?.scrollIntoView?.({
-      behavior: "smooth",
+    const target = document.getElementById(sectionId);
+    target?.scrollIntoView?.({
+      behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
       block: "start",
     });
+    target?.focus({ preventScroll: true });
   };
 
   const renderImportPreviewGroups = (
@@ -3319,6 +3364,7 @@ export default function ProjectsPage() {
     setFocusedDoorOverrideReason("");
     setBulkAssignInstallerId("");
     setMatrixIssueFilter("all");
+    setMatrixInstaller("all");
   }, [selectedProjectId]);
 
   useEffect(() => {
@@ -5452,7 +5498,7 @@ export default function ProjectsPage() {
                           },
                           {
                             key: "activity",
-                            label: copy("Activity", "Активность", "פעילות"),
+                            label: copy("Import history", "История импорта", "היסטוריית ייבוא"),
                             count: importHistory.length,
                             active: false,
                             danger: false,
@@ -5496,6 +5542,7 @@ export default function ProjectsPage() {
                           <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
                           <input
                             value={matrixMarkingSearch}
+                            aria-label={copy("Search doors", "Поиск дверей", "חיפוש דלתות")}
                             onChange={(event) =>
                               setMatrixMarkingSearch(event.target.value)
                             }
@@ -5537,30 +5584,19 @@ export default function ProjectsPage() {
                           </option>
                           {matrixStatusOptions.map((value) => (
                             <option key={value} value={value}>
-                              {value}
+                              {tokenLabel(value)}
                             </option>
                           ))}
                         </select>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMatrixOrderNumber("all");
-                            setMatrixHouse("all");
-                            setMatrixFloor("all");
-                            setMatrixLocation("all");
-                            setMatrixDoorType("all");
-                            setMatrixStatus("all");
-                            setMatrixIssueFilter("all");
-                            setMatrixApartmentSearch("");
-                            setMatrixMarkingSearch("");
-                          }}
-                          className="inline-flex h-9 items-center rounded-full border border-dashed border-border-strong bg-surface px-3 text-[11.5px] font-medium text-text-secondary hover:text-text"
-                        >
-                          {copy("+ filter", "+ фильтр", "+ מסנן")}
-                        </button>
+                        <div className="min-w-0 max-w-full">{matrixInstallerFilterControl}</div>
+                        <Button type="button" variant="outline" size="sm" onClick={resetMatrixFilters}>
+                          <FilterX className="h-3.5 w-3.5" aria-hidden="true" />
+                          {copy("Reset filters", "Сбросить фильтры", "איפוס מסננים")}
+                        </Button>
                         <div className="inline-flex h-9 items-center rounded-full border border-border bg-surface p-0.5">
                           <button
                             type="button"
+                            onClick={() => scrollToProjectSection("project-door-matrix")}
                             className="h-7 rounded-full bg-text px-3 text-[11.5px] font-medium text-text-inverse"
                           >
                             {copy("Matrix", "Матрица", "מטריצה")}
@@ -5568,7 +5604,7 @@ export default function ProjectsPage() {
                           <button
                             type="button"
                             onClick={() =>
-                              scrollToProjectSection("project-door-matrix")
+                              scrollToProjectSection("project-door-ledger")
                             }
                             className="h-7 rounded-full px-3 text-[11.5px] font-medium text-text-secondary hover:text-text"
                           >
@@ -10253,6 +10289,7 @@ export default function ProjectsPage() {
 
                 <div
                   id="project-door-matrix"
+                  tabIndex={-1}
                   className={projectsPanelClass("overflow-hidden p-4")}
                 >
                   <div className="-mx-4 -mt-4 mb-4 flex gap-0.5 overflow-x-auto border-b border-border bg-surface px-2 pt-1">
@@ -10311,7 +10348,7 @@ export default function ProjectsPage() {
                       },
                       {
                         key: "activity",
-                        label: copy("Activity", "Активность", "פעילות"),
+                        label: copy("Import history", "История импорта", "היסטוריית ייבוא"),
                         count: importHistory.length,
                         active: false,
                         danger: false,
@@ -10484,7 +10521,7 @@ export default function ProjectsPage() {
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-5 xl:grid-cols-9 gap-2 mb-3">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-3">
                     <select
                       value={matrixOrderNumber}
                       onChange={(e) => setMatrixOrderNumber(e.target.value)}
@@ -10559,7 +10596,7 @@ export default function ProjectsPage() {
                       <option value="all">{t("projects.allStatuses")}</option>
                       {matrixStatusOptions.map((value) => (
                         <option key={value} value={value}>
-                          {value}
+                          {tokenLabel(value)}
                         </option>
                       ))}
                     </select>
@@ -10571,6 +10608,7 @@ export default function ProjectsPage() {
                       autoComplete="off"
                       className="control-input h-9 text-[12px]"
                     />
+                    {matrixInstallerFilterControl}
                     <input
                       value={matrixMarkingSearch}
                       onChange={(e) => setMatrixMarkingSearch(e.target.value)}
@@ -10583,17 +10621,7 @@ export default function ProjectsPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setMatrixOrderNumber("all");
-                        setMatrixHouse("all");
-                        setMatrixFloor("all");
-                        setMatrixLocation("all");
-                        setMatrixDoorType("all");
-                        setMatrixStatus("all");
-                        setMatrixIssueFilter("all");
-                        setMatrixApartmentSearch("");
-                        setMatrixMarkingSearch("");
-                      }}
+                      onClick={resetMatrixFilters}
                       className="h-9 text-[12px]"
                     >
                       <FilterX className="w-3.5 h-3.5" aria-hidden="true" />
@@ -10998,10 +11026,21 @@ export default function ProjectsPage() {
                         <div className="text-[12px] text-text-secondary">
                           {copy("Selected", "Выбрано", "נבחרו")}:{" "}
                           {selectedDoorIds.length}
-                          {filteredDoorIds.length > 0
-                            ? ` / ${filteredDoorIds.length}`
-                            : ""}
+                          {hiddenSelectedDoorCount > 0 && (
+                            <span role="status" className="ms-2 text-status-warning-fg">
+                              {copy("Hidden by filters", "Скрыто фильтрами", "מוסתרות על ידי מסננים")}: {hiddenSelectedDoorCount}
+                            </span>
+                          )}
                         </div>
+                        {canManageProjects && hiddenSelectedDoorCount > 0 && (
+                          <Button
+                            type="button" variant="outline" size="sm" disabled={bulkAssignLoading}
+                            onClick={() => setSelectedDoorIds((current) => current.filter((id) => filteredDoorIds.includes(id)))}
+                          >
+                            <FilterX className="h-3.5 w-3.5" aria-hidden="true" />
+                            {copy("Deselect hidden", "Снять скрытое выделение", "ביטול בחירה מוסתרת")}
+                          </Button>
+                        )}
                       </div>
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <select
@@ -11695,7 +11734,7 @@ export default function ProjectsPage() {
                     </div>
                   )}
 
-                  <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
+                  <div id="project-door-ledger" tabIndex={-1} className="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
                     <div className="flex flex-col gap-3 border-b border-border bg-surface px-3 py-3 md:flex-row md:items-center md:justify-between">
                       <div>
                         <div className={projectsMetricLabelClass}>

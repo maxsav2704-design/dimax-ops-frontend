@@ -124,6 +124,14 @@ describe("AppSidebar", () => {
     expect(screen.queryByRole("link", { name: /library/i })).not.toBeInTheDocument();
   });
 
+  it("keeps project reading available without offering creation to viewers", async () => {
+    authSessionMock.mockReturnValue({ role: "ADMIN", admin_scope: "VIEWER" });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={queryClient}><AppSidebar /></QueryClientProvider>);
+    expect(await screen.findByRole("link", { name: "Projects" })).toHaveAttribute("href", "/projects");
+    expect(screen.queryByRole("link", { name: /create project/i })).not.toBeInTheDocument();
+  });
+
   it("forwards wheel movement over the fixed sidebar to the page content", () => {
     const queryClient = new QueryClient({
       defaultOptions: {

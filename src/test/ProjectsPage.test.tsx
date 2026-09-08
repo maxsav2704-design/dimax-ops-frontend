@@ -728,6 +728,66 @@ describe("ProjectsPage", () => {
     expect(await screen.findByText("Document generated: handover-1234.txt")).toBeInTheDocument();
   }, 30000);
 
+  it("finds doors by position and assignment without hiding selected work silently", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/api/v1/admin/door-types") || path.includes("/api/v1/admin/reasons")) return [];
+      if (path === "/api/v1/admin/projects") return { items: [{ id: "project-1", name: "Tower", status: "ACTIVE" }] };
+      if (path === "/api/v1/admin/projects/project-1") return { id: "project-1", name: "Tower", status: "ACTIVE", issues_open: [] };
+      if (path.includes("/api/v1/admin/installers?")) return { items: [{ id: "installer-1", full_name: "Alex", is_active: true, status: "ACTIVE" }] };
+      if (path.includes("/doors/layout")) return {
+        project_id: "project-1", total_doors: 2,
+        buckets: [{
+          order_number: "ORDER-1", house_number: "1", floor_label: "2", location_code: "dira",
+          door_marking: "D", total: 2, status_breakdown: { NOT_INSTALLED: 2 },
+          doors: [
+            { id: "door-1", door_marking: "D-101", unit_label: "North entry", apartment_number: "21", status: "NOT_INSTALLED", installer_id: null, door_type_id: "type-1" },
+            { id: "door-2", door_marking: "D-102", unit_label: "South entry", apartment_number: "22", status: "NOT_INSTALLED", installer_id: "installer-1", door_type_id: "type-1" },
+          ],
+        }],
+      };
+      return { items: [], total: 0 };
+    });
+    render(<ProjectsPage />);
+    await screen.findByTestId("project-detail-v28-door-tile-door-1");
+    const workspace = within(screen.getByTestId("project-detail-v28-door-workspace"));
+    const search = workspace.getByRole("textbox", { name: "Search doors" });
+    const assignment = workspace.getByRole("combobox", { name: "Door assignment" });
+    for (const query of ["21", "north entry", "D-101"]) {
+      fireEvent.change(search, { target: { value: query } });
+      expect(screen.getByTestId("project-detail-v28-door-tile-door-1")).toBeInTheDocument();
+      expect(screen.queryByTestId("project-detail-v28-door-tile-door-2")).not.toBeInTheDocument();
+    }
+    fireEvent.click(workspace.getByRole("button", { name: "Reset filters" }));
+    fireEvent.click(screen.getAllByRole("checkbox", { name: "Select visible doors" })[0]);
+    fireEvent.change(assignment, { target: { value: "unassigned" } });
+    expect(screen.getByTestId("project-detail-v28-door-tile-door-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("project-detail-v28-door-tile-door-2")).not.toBeInTheDocument();
+    expect(screen.getByText("Hidden by filters: 1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Deselect hidden" }));
+    expect(screen.queryByText("Hidden by filters: 1")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Bulk assign installer")).toBeEnabled();
+    fireEvent.change(assignment, { target: { value: "installer-1" } });
+    expect(screen.queryByTestId("project-detail-v28-door-tile-door-1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("project-detail-v28-door-tile-door-2")).toBeInTheDocument();
+    fireEvent.click(workspace.getByRole("button", { name: "Reset filters" }));
+    expect(assignment).toHaveValue("all");
+    expect(search).toHaveValue("");
+    const ledger = document.getElementById("project-door-ledger")!;
+    const matrix = document.getElementById("project-door-matrix")!;
+    const scrollLedger = vi.fn();
+    const scrollMatrix = vi.fn();
+    ledger.scrollIntoView = scrollLedger;
+    matrix.scrollIntoView = scrollMatrix;
+    fireEvent.click(workspace.getByRole("button", { name: "Table" }));
+    expect(scrollLedger).toHaveBeenCalledOnce();
+    expect(ledger).toHaveFocus();
+    fireEvent.click(workspace.getByRole("button", { name: "Matrix" }));
+    expect(scrollMatrix).toHaveBeenCalledOnce();
+    expect(matrix).toHaveFocus();
+    expect(workspace.getByRole("button", { name: /Import history/ })).toBeInTheDocument();
+    expect(apiFetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  }, 20000);
+
   it("shows order number in allocation matrix and allows filtering by order", async () => {
     apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
       const url = String(path);
@@ -1259,14 +1319,14 @@ describe("ProjectsPage", () => {
 
     expect(await screen.findByText("Project Detail Matrix")).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("checkbox", { name: "Select visible doors" })[0]);
-    expect(screen.getByText("Selected: 2 / 2")).toBeInTheDocument();
+    expect(screen.getByText("Selected: 2")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Bulk assign installer"), {
       target: { value: "installer-1" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Assign selected" }));
 
     expect(await screen.findByText("Door is locked. Cannot reassign installer.")).toBeInTheDocument();
-    expect(screen.getByText("Selected: 2 / 2")).toBeInTheDocument();
+    expect(screen.getByText("Selected: 2")).toBeInTheDocument();
   }, 20000);
 
   it("clears selected doors when switching the active project", async () => {
@@ -1427,7 +1487,7 @@ describe("ProjectsPage", () => {
 
     expect(await screen.findByText("Project Detail Matrix")).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("checkbox", { name: "Select visible doors" })[0]);
-    expect(screen.getByText("Selected: 2 / 2")).toBeInTheDocument();
+    expect(screen.getByText("Selected: 2")).toBeInTheDocument();
 
     const projectBButton = screen
       .getAllByText("Project B")
@@ -1437,7 +1497,7 @@ describe("ProjectsPage", () => {
     fireEvent.click(projectBButton!);
 
     await waitFor(() => {
-      expect(screen.getByText("Selected: 0 / 1")).toBeInTheDocument();
+      expect(within(document.getElementById("project-door-matrix")!).getByText("Selected: 0")).toBeInTheDocument();
     });
     expect(screen.getByLabelText("Bulk assign installer")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Assign selected" })).toBeDisabled();

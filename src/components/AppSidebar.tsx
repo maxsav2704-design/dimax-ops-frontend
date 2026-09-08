@@ -29,6 +29,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import {
   type AdminModule,
   canAccessAdminModule,
+  canRunPrivilegedAdminActions,
 } from "@/lib/admin-access";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -323,7 +324,7 @@ export function AppSidebar() {
       aria-label="Admin navigation"
       onWheel={handleWheel}
     >
-      {canAccessAdminModule(session, "projects") ? (
+      {canRunPrivilegedAdminActions(session) ? (
         <Link
           href="/projects?create=1"
           aria-label={copy.createProject}
