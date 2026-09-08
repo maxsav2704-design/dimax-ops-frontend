@@ -22,6 +22,7 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DataStateNotice } from "@/components/DataStateNotice";
+import { DoorMatrixTile } from "@/components/projects/DoorMatrixTile";
 import {
   Breadcrumbs,
   KpiCard as DimaxKpiCard,
@@ -1416,10 +1417,7 @@ function matrixCompletionPct(installedCount: number, totalDoors: number): number
 }
 
 function matrixDoorTileLabel(row: MatrixRow): string {
-  const marking = row.door_marking.trim();
-  const trailingNumber = marking.match(/(\d+)\D*$/)?.[1];
-  const label = trailingNumber || marking || row.unit_label;
-  return label.slice(-4);
+  return row.door_marking.trim() || row.unit_label;
 }
 
 function issueLabel(issue: ProjectOpenIssue): string {
@@ -5878,48 +5876,21 @@ export default function ProjectsPage() {
                                   </div>
                                 </div>
                                 <div className="pe-4 ps-5 py-3">
-                                  <div className="flex flex-wrap gap-1.5">
+                                  <div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-2">
                                     {floorDoors.map((door) => (
-                                      <button
+                                      <DoorMatrixTile
                                         key={`${floor.house_number}-${floor.floor_label}-${door.door_id}-top`}
-                                        type="button"
-                                        aria-pressed={
-                                          focusedDoorId === door.door_id
-                                        }
-                                        aria-label={`${door.door_marking} - ${tokenLabel(
-                                          door.status,
-                                        )}`}
-                                        data-testid={`project-detail-v28-door-tile-${door.door_id}`}
-                                        title={`${door.door_marking} - ${tokenLabel(
-                                          door.status,
-                                        )}`}
-                                        onClick={() =>
-                                          setFocusedDoorId(door.door_id)
-                                        }
-                                        onDoubleClick={() =>
-                                          toggleDoorSelection(door.door_id)
-                                        }
-                                        className={cn(
-                                          "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-md border px-1 text-[11px] font-medium leading-none tabular-nums transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35",
-                                          matrixDoorTileTone(door),
-                                          focusedDoorId === door.door_id &&
-                                            "shadow-[0_0_0_2px_var(--dmx-accent)]",
-                                          selectedDoorIdSet.has(
-                                            door.door_id,
-                                          ) &&
-                                            "shadow-[0_0_0_2px_var(--dmx-text)]",
-                                        )}
-                                      >
-                                        <LtrText as="span" className="truncate">
-                                          {matrixDoorTileLabel(door)}
-                                        </LtrText>
-                                        {door.issue_count > 0 ? (
-                                          <span
-                                            className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-kpi-red"
-                                            aria-hidden="true"
-                                          />
-                                        ) : null}
-                                      </button>
+                                        marking={matrixDoorTileLabel(door)}
+                                        status={tokenLabel(door.status)}
+                                        tone={matrixDoorTileTone(door)}
+                                        focused={focusedDoorId === door.door_id}
+                                        selected={selectedDoorIdSet.has(door.door_id)}
+                                        hasIssues={door.issue_count > 0}
+                                        inspectLabel={`${door.door_marking} - ${tokenLabel(door.status)}`}
+                                        testId={`project-detail-v28-door-tile-${door.door_id}`}
+                                        onInspect={() => setFocusedDoorId(door.door_id)}
+                                        onToggleSelection={() => toggleDoorSelection(door.door_id)}
+                                      />
                                     ))}
                                   </div>
                                 </div>
@@ -11332,15 +11303,17 @@ export default function ProjectsPage() {
                                       {copy("locations", "локаций", "מיקומים")}
                                     </span>
                                   </div>
-                                  <div className="grid grid-cols-[repeat(auto-fill,minmax(42px,1fr))] gap-1.5">
+                                  <div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-2">
                                     {floorDoors.map(({ apartment, cell, door }) => (
-                                      <button
+                                      <DoorMatrixTile
                                             key={`${house.house_number}-${floor.floor_label}-${apartment.apartment_number}-${cell.location_code}-${door.door_id}-tile`}
-                                            type="button"
-                                            aria-pressed={selectedDoorIdSet.has(
-                                              door.door_id,
-                                            )}
-                                            aria-label={copy(
+                                            marking={matrixDoorTileLabel(door)}
+                                            status={tokenLabel(door.status)}
+                                            tone={matrixDoorTileTone(door)}
+                                            focused={focusedDoorId === door.door_id}
+                                            selected={selectedDoorIdSet.has(door.door_id)}
+                                            hasIssues={door.issue_count > 0}
+                                            inspectLabel={copy(
                                               "Inspect door {door}",
                                               "Открыть дверь {door}",
                                               "פתח דלת {door}",
@@ -11348,41 +11321,16 @@ export default function ProjectsPage() {
                                               "{door}",
                                               door.door_marking,
                                             )}
-                                            title={`${door.door_marking} · ${tokenLabel(
-                                              door.status,
-                                            )} · ${apartment.apartment_number} · ${locationLabel(
+                                            context={`${apartment.apartment_number} · ${locationLabel(
                                               cell.location_code,
                                             )}`}
-                                            onClick={() =>
+                                            onInspect={() =>
                                               setFocusedDoorId(door.door_id)
                                             }
-                                            onDoubleClick={() =>
+                                            onToggleSelection={() =>
                                               toggleDoorSelection(door.door_id)
                                             }
-                                            className={cn(
-                                              "relative flex aspect-square min-h-10 items-center justify-center rounded-md border px-1 text-[11px] font-medium leading-none tabular-nums transition-transform hover:-translate-y-0.5 hover:ring-2 hover:ring-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35",
-                                              matrixDoorTileTone(door),
-                                              focusedDoorId === door.door_id &&
-                                                "shadow-[0_0_0_2px_var(--dmx-accent)]",
-                                              selectedDoorIdSet.has(
-                                                door.door_id,
-                                              ) &&
-                                                "shadow-[0_0_0_2px_var(--dmx-text)]",
-                                            )}
-                                          >
-                                            <LtrText
-                                              as="span"
-                                              className="truncate"
-                                            >
-                                              {matrixDoorTileLabel(door)}
-                                            </LtrText>
-                                            {door.issue_count > 0 ? (
-                                              <span
-                                                className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-kpi-red"
-                                                aria-hidden="true"
-                                              />
-                                            ) : null}
-                                      </button>
+                                      />
                                     ))}
                                   </div>
                                 </div>

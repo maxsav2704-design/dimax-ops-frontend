@@ -437,6 +437,46 @@
     @apply h-1.5 rounded-full;
   }
 
+  .dmx-door-tile {
+    position: relative;
+    isolation: isolate;
+    border-radius: var(--dmx-radius-sm);
+  }
+
+  .dmx-door-tile-face {
+    box-shadow: inset 3px 0 0 currentColor;
+    transition: box-shadow 160ms ease, border-color 160ms ease;
+  }
+
+  [dir="rtl"] .dmx-door-tile-face {
+    box-shadow: inset -3px 0 0 currentColor;
+  }
+
+  .dmx-door-tile[data-focused="true"] {
+    outline: 2px solid var(--dmx-link);
+    outline-offset: 2px;
+  }
+
+  .dmx-door-tile[data-selected="true"] .dmx-door-tile-face {
+    border-color: var(--dmx-text);
+  }
+
+  .dmx-door-tile-face:focus-visible {
+    outline: 2px solid var(--dmx-link);
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .dmx-door-tile {
+      transition: transform 160ms var(--dmx-easing-standard), box-shadow 160ms ease;
+    }
+
+    .dmx-door-tile:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 12px rgba(0, 0, 0, 0.08);
+    }
+  }
+
   .shell-grid {
     background-image:
       linear-gradient(hsl(var(--foreground) / 0.045) 1px, transparent 1px),
