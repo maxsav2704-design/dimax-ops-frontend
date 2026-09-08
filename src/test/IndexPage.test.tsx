@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -52,13 +52,26 @@ function renderSubject() {
     },
   });
 
-  return render(
+  const result = render(
     <LanguageProvider>
       <QueryClientProvider client={queryClient}>
         <Index />
       </QueryClientProvider>
     </LanguageProvider>,
   );
+  return { ...result, queryClient };
+}
+
+function emptyDashboardResponse(path: string) {
+  if (path.includes("reports/dashboard?")) return {
+    kpi: { installed_doors: 0, not_installed_doors: 0, payroll_total: "0", revenue_total: "0", profit_total: "0" },
+    limits: { projects: { current: 0 } },
+  };
+  if (path.includes("dispatcher-board?")) return {
+    summary: { projects_needing_dispatch: 0, unassigned_doors: 0, open_issues: 0, available_installers: 0, busy_installers: 0 },
+    projects: [], installers: [],
+  };
+  return { items: [] };
 }
 
 describe("Index dashboard", () => {
@@ -72,6 +85,41 @@ describe("Index dashboard", () => {
     });
     document.documentElement.lang = "en";
     document.documentElement.dir = "ltr";
+  });
+
+  it("does not present missing data as zero or all clear while loading", () => {
+    apiFetchMock.mockImplementation(() => new Promise(() => {}));
+    renderSubject();
+    expect(screen.getAllByRole("status")).toHaveLength(3);
+    for (const tile of screen.getAllByTestId("dashboard-kpi")) {
+      expect(tile).toHaveAttribute("aria-busy", "true");
+      expect(within(tile).queryByText("0")).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText("All clear")).not.toBeInTheDocument();
+    expect(screen.queryByText("No upcoming events.")).not.toBeInTheDocument();
+  });
+
+  it("offers retry after failures and distinguishes successful empty responses", async () => {
+    apiFetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    renderSubject();
+    expect(await screen.findAllByRole("alert")).toHaveLength(3);
+    expect(screen.queryByText("All clear")).not.toBeInTheDocument();
+    expect(screen.queryByText("No upcoming events.")).not.toBeInTheDocument();
+    apiFetchMock.mockImplementation(async (path: string) => emptyDashboardResponse(path));
+    for (const button of screen.getAllByRole("button", { name: "Try again" })) fireEvent.click(button);
+    expect(await screen.findByText("All clear")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryAllByRole("alert")).toHaveLength(0));
+    expect(screen.getAllByTestId("dashboard-kpi")[0]).toHaveTextContent("0");
+  });
+
+  it("keeps loaded values with a stale warning when refresh fails", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => emptyDashboardResponse(path));
+    const { queryClient } = renderSubject();
+    await screen.findByText("All clear");
+    apiFetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    await act(async () => { await queryClient.refetchQueries(); });
+    expect(await screen.findAllByText(/Showing the last loaded data/)).toHaveLength(3);
+    expect(screen.getByText("All clear")).toBeInTheDocument();
   });
 
   it("renders DIMAX dashboard v2.4 shell with live business sections", async () => {

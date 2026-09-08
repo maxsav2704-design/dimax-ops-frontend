@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CalendarDays, Plus } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { DataStateNotice } from "@/components/DataStateNotice";
 import { getDashboardCopy } from "@/components/dashboard/copy";
 import { DispatcherBoard } from "@/components/dashboard/DispatcherBoard";
 import { NextSchedule } from "@/components/dashboard/NextSchedule";
@@ -241,7 +242,8 @@ type DashboardV24Tone = "blue" | "green" | "neutral" | "orange" | "red" | "yello
 type DashboardV24Kpi = {
   detail: string;
   label: string;
-  progress: number;
+  ready: boolean;
+  pending: boolean;
   status: string;
   tone: DashboardV24Tone;
   value: string | number;
@@ -297,11 +299,15 @@ function dashboardToneClasses(tone: DashboardV24Tone) {
 }
 
 function DashboardV24KpiTile({ item }: { item: DashboardV24Kpi }) {
-  const tone = dashboardToneClasses(item.tone);
-  const progress = Math.min(Math.max(item.progress, 0), 100);
+  const { locale } = useI18n();
+  const tone = dashboardToneClasses(item.ready ? item.tone : "neutral");
+  const unavailable = locale === "ru" ? "Нет данных" : locale === "he" ? "אין נתונים" : "Unavailable";
+  const loading = locale === "ru" ? "Загрузка" : locale === "he" ? "טוען" : "Loading";
 
   return (
     <div
+      data-testid="dashboard-kpi"
+      aria-busy={item.pending}
       className={cn(
         "relative min-h-[128px] overflow-hidden rounded-lg border border-border bg-surface px-4 py-3 before:absolute before:inset-y-3 before:left-0 before:w-[3px] before:rounded-r-full",
         tone.bar,
@@ -318,7 +324,7 @@ function DashboardV24KpiTile({ item }: { item: DashboardV24Kpi }) {
               tone.status,
             )}
           >
-            {item.status}
+            {item.ready ? item.status : item.pending ? loading : unavailable}
           </span>
         </div>
         <div
@@ -327,16 +333,10 @@ function DashboardV24KpiTile({ item }: { item: DashboardV24Kpi }) {
             tone.value,
           )}
         >
-          {item.value}
-        </div>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
-          <div
-            className={cn("h-full rounded-full", tone.progress)}
-            style={{ width: `${progress}%` }}
-          />
+          {item.ready ? item.value : "—"}
         </div>
         <div className="mt-3 line-clamp-2 min-h-8 text-[10.5px] leading-4 text-text-secondary">
-          {item.detail}
+          {item.ready ? item.detail : item.pending ? loading : unavailable}
         </div>
       </div>
     </div>
@@ -380,16 +380,7 @@ const Index = () => {
   const dashboard = dashboardQuery.data;
   const dispatcherSummary = dispatcherBoardQuery.data?.summary;
   const kpi = dashboard?.kpi;
-  const projectUtilization = dashboard?.limits.projects.utilization_pct ?? 0;
   const notInstalled = kpi?.not_installed_doors ?? 0;
-  const profitPct =
-    kpi && decimalToNumber(kpi.revenue_total) > 0
-      ? Math.round(
-          (decimalToNumber(kpi.profit_total) /
-            decimalToNumber(kpi.revenue_total)) *
-            100,
-        )
-      : 0;
   const openIssues = dispatcherSummary?.open_issues ?? 0;
   const blockedIssues = dispatcherSummary?.blocked_issues ?? 0;
   const pendingDoors = dispatcherSummary?.pending_doors ?? notInstalled;
@@ -427,7 +418,8 @@ const Index = () => {
       label: copy.kpi.activeProjects,
       value: dashboard?.limits.projects.current ?? 0,
       detail: `${pendingDoors} ${labels.doorsLeft}`,
-      progress: projectUtilization || 0,
+      ready: !!dashboard,
+      pending: dashboardQuery.isPending,
       status: labels.active,
       tone: "yellow",
     },
@@ -435,14 +427,8 @@ const Index = () => {
       label: labels.installed7d,
       value: kpi?.installed_doors ?? 0,
       detail: `${pendingDoors} ${labels.doorsLeft}`,
-      progress:
-        (kpi?.installed_doors ?? 0) + pendingDoors > 0
-          ? Math.round(
-              ((kpi?.installed_doors ?? 0) /
-                ((kpi?.installed_doors ?? 0) + pendingDoors)) *
-                100,
-            )
-          : 0,
+      ready: !!dashboard,
+      pending: dashboardQuery.isPending,
       status: labels.week,
       tone: "green",
     },
@@ -450,7 +436,8 @@ const Index = () => {
       label: copy.dispatcher.metrics.issues,
       value: openIssues,
       detail: `${blockedIssues} ${labels.blocked}`,
-      progress: Math.min(openIssues * 6, 100),
+      ready: !!dispatcherSummary,
+      pending: dispatcherBoardQuery.isPending,
       status:
         openIssues > 0 ? labels.needsAttention : labels.everythingFine,
       tone: openIssues > 0 ? "red" : "green",
@@ -459,10 +446,8 @@ const Index = () => {
       label: labels.freeInstallers,
       value: availableInstallers,
       detail: `${busyInstallers} ${labels.busy}`,
-      progress:
-        installerCapacityTotal > 0
-          ? Math.round((availableInstallers / installerCapacityTotal) * 100)
-          : 0,
+      ready: !!dispatcherSummary,
+      pending: dispatcherBoardQuery.isPending,
       status: labels.availableNow,
       tone: teamUtilization > 85 ? "orange" : "blue",
     },
@@ -472,7 +457,8 @@ const Index = () => {
       detail: kpi
         ? `${copy.kpi.payroll}: ${formatCurrency(kpi.payroll_total, locale)}`
         : `${copy.kpi.payroll}: 0.00 NIS`,
-      progress: profitPct,
+      ready: !!dashboard,
+      pending: dashboardQuery.isPending,
       status: labels.week,
       tone: "green",
     },
@@ -487,11 +473,6 @@ const Index = () => {
       })),
     [locale, nextScheduleQuery.data?.items],
   );
-
-  const hasError =
-    dashboardQuery.isError ||
-    dispatcherBoardQuery.isError ||
-    nextScheduleQuery.isError;
 
   return (
     <DashboardLayout>
@@ -514,7 +495,7 @@ const Index = () => {
                 {dashboardSubtitle}
               </p>
               <p className="mt-1 text-[11px] text-text-tertiary">
-                {labels.lastRefresh}: {refreshLabel}
+                {labels.lastRefresh}: {dashboard || dispatcherSummary ? refreshLabel : "—"}
               </p>
             </div>
 
@@ -547,18 +528,22 @@ const Index = () => {
             </div>
           </div>
 
+          {[
+            { query: dashboardQuery, label: labels.reports },
+            { query: dispatcherBoardQuery, label: labels.issuesAction },
+            { query: nextScheduleQuery, label: copy.nextSchedule.title },
+          ].map(({ query, label }) => query.isError || query.isPending ? (
+            <DataStateNotice key={label} label={label}
+              state={query.isError ? query.data ? "stale" : "error" : "loading"}
+              onRetry={() => { void query.refetch(); }} retrying={query.isFetching} />
+          ) : null)}
+
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
             {dashboardKpis.map((item) => (
               <DashboardV24KpiTile key={item.label} item={item} />
             ))}
           </div>
         </section>
-
-        {hasError && (
-          <div className="mb-4 rounded-lg border border-status-problem-border bg-status-problem-bg px-4 py-3 text-[13px] text-status-problem-fg">
-            {copy.errors.dashboardLoadFailed}
-          </div>
-        )}
 
         {dispatcherBoardQuery.data && (
           <DispatcherBoard
@@ -574,10 +559,10 @@ const Index = () => {
           />
         )}
 
-        <NextSchedule
+        {nextScheduleQuery.data && <NextSchedule
           events={events}
           onOpenCalendar={() => router.push("/calendar")}
-        />
+        />}
       </div>
     </DashboardLayout>
   );

@@ -75,6 +75,23 @@ describe("ProjectsPage", () => {
     vi.restoreAllMocks();
   });
 
+  it("does not show an empty project list while loading or after a failed request", async () => {
+    let rejectProjects!: (error: Error) => void;
+    const pendingProjects = new Promise((_, reject) => { rejectProjects = reject; });
+    apiFetchMock.mockImplementation(async (path: string) =>
+      path === "/api/v1/admin/projects" ? pendingProjects : []);
+    render(<ProjectsPage />);
+    expect(screen.queryByText("No projects found.")).not.toBeInTheDocument();
+    rejectProjects(new TypeError("Failed to fetch"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load data");
+    expect(screen.queryByText("No projects found.")).not.toBeInTheDocument();
+    apiFetchMock.mockImplementation(async (path: string) =>
+      path === "/api/v1/admin/projects" ? { items: [] } : []);
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("No projects found.")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("uploads import file via multipart import-upload endpoint", async () => {
     apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
       const url = String(path);

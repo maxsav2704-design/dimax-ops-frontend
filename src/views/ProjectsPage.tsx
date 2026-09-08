@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { DataStateNotice } from "@/components/DataStateNotice";
 import {
   Breadcrumbs,
   KpiCard as DimaxKpiCard,
@@ -1591,7 +1592,9 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [projectStatusFilter, setProjectStatusFilter] =
     useState<ProjectStatusFilter>("ALL");
-  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
+  const [projectsLoadError, setProjectsLoadError] = useState(false);
   const [loadingDoorTypes, setLoadingDoorTypes] = useState(false);
   const [loadingLibraryProducts, setLoadingLibraryProducts] = useState(false);
   const [loadingInstallers, setLoadingInstallers] = useState(false);
@@ -2714,13 +2717,14 @@ export default function ProjectsPage() {
 
   const loadProjects = useCallback(async () => {
     setLoadingProjects(true);
-    setError(null);
+    setProjectsLoadError(false);
     try {
       const response = await apiFetch<{ items: ProjectListItem[] }>(
         "/api/v1/admin/projects",
       );
       const items = response.items || [];
       setProjects(items);
+      setProjectsLoaded(true);
       const ids = new Set(items.map((x) => x.id));
       setBulkSelectedProjectIds((prev) => prev.filter((id) => ids.has(id)));
       if (deepLinkProjectId) {
@@ -2739,12 +2743,12 @@ export default function ProjectsPage() {
             : items[0]?.id || null,
         );
       }
-    } catch (e) {
-      setError(readableApiError(e, locale, t("projects.failedLoadProjects")));
+    } catch {
+      setProjectsLoadError(true);
     } finally {
       setLoadingProjects(false);
     }
-  }, [deepLinkProjectId, locale, t]);
+  }, [deepLinkProjectId]);
 
   const loadDoorTypes = useCallback(async () => {
     setLoadingDoorTypes(true);
@@ -4695,15 +4699,15 @@ export default function ProjectsPage() {
               </h1>
               <p className="mt-2 max-w-3xl text-[13px] leading-6 text-text-secondary">
                 <b className="font-semibold text-text">
-                  {projectPortfolioStats.active}
+                  {projectsLoaded ? projectPortfolioStats.active : "—"}
                 </b>{" "}
                 {copy("active projects ·", "активных проектов ·", "פרויקטים פעילים ·")}{" "}
                 <b className="font-semibold text-text">
-                  {projectPortfolioStats.problem}
+                  {projectsLoaded ? projectPortfolioStats.problem : "—"}
                 </b>{" "}
                 {copy("problem ·", "проблемных ·", "בעייתיים ·")}{" "}
                 <b className="font-semibold text-text">
-                  {filteredProjects.length}
+                  {projectsLoaded ? filteredProjects.length : "—"}
                 </b>{" "}
                 {copy("visible after filters - updated from live project API", "отображается после фильтров — обновлено из API действующего проекта.", "גלוי לאחר מסננים - עודכן מ-API של פרויקט חי")}
               </p>
@@ -4722,7 +4726,8 @@ export default function ProjectsPage() {
                     void loadImportHistory(selectedProjectId);
                   }
                 }}
-                className="dmx-secondary-action"
+                disabled={loadingProjects}
+                className="dmx-secondary-action disabled:opacity-60"
               >
                 <RefreshCw className="h-4 w-4" strokeWidth={1.8} />
                 {t("common.refresh")}
@@ -4781,7 +4786,7 @@ export default function ProjectsPage() {
               >
                 <div className={projectsMetricLabelClass}>{item.label}</div>
                 <div className="mt-3 text-[30px] font-semibold leading-none text-text">
-                  {item.value}
+                  {projectsLoaded ? item.value : "—"}
                 </div>
                 <div className="mt-2 truncate text-[12px] text-text-secondary">
                   {item.note}
@@ -4809,7 +4814,7 @@ export default function ProjectsPage() {
                     >
                       <span>{tab.label}</span>
                       <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] text-text-secondary">
-                        {tab.count}
+                        {projectsLoaded ? tab.count : "—"}
                       </span>
                     </button>
                   );
@@ -5069,7 +5074,12 @@ export default function ProjectsPage() {
                   {tt("projects.loadingProjects")}
                 </div>
               )}
-              {!loadingProjects && filteredProjects.length === 0 && (
+              {projectsLoadError && (
+                <DataStateNotice label={copy("Projects", "Проекты", "פרויקטים")}
+                  state={projectsLoaded ? "stale" : "error"}
+                  onRetry={() => { void loadProjects(); }} retrying={loadingProjects} />
+              )}
+              {projectsLoaded && !loadingProjects && !projectsLoadError && filteredProjects.length === 0 && (
                 <div className="px-2 py-2 text-[13px] text-text-secondary">
                   {tt("projects.noProjectsFound")}
                 </div>
