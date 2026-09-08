@@ -92,7 +92,7 @@ type Props = {
   onMovePeriod: (direction: -1 | 1) => void;
   onToday: () => void;
   onChangeView: (viewMode: CalendarViewMode) => void;
-  onSelectDate: (date: Date) => void;
+  onSelectDate: (date: Date, viewMode?: CalendarViewMode) => void;
   onToggleEventType: (eventType: ScheduleEventType) => void;
   onSelectEvent: (event: ScheduleEvent) => void;
   onSelectCrew: (crewId: string) => void;
@@ -745,7 +745,8 @@ export function CalendarScheduleSurface(props: Props) {
                       <div key={key} className={cn("min-h-[132px] border-b border-e border-[#e6e8ed] p-2", !isCurrentMonth && "bg-[#fafbfc]") }>
                         <button
                           type="button"
-                          onClick={() => onSelectDate(date)}
+                          onClick={() => onSelectDate(date, "day")}
+                          aria-label={copy("Open day", "Открыть день", "פתיחת יום") + ": " + new Intl.DateTimeFormat(localeTag, { dateStyle: "long" }).format(date)}
                           className={cn(
                             "mb-1 flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums",
                             isSameDay(date, now) ? "bg-[#17191f] text-white" : "text-[#667085] hover:bg-[#f0f2f5]",
@@ -769,9 +770,14 @@ export function CalendarScheduleSurface(props: Props) {
                             </button>
                           ))}
                           {dayEvents.length > 3 ? (
-                            <div className="px-1 text-[9.5px] font-medium text-[#758096]">
+                            <button
+                              type="button"
+                              onClick={() => onSelectDate(date, "day")}
+                              aria-label={copy("Show all events", "Показать все события", "הצגת כל האירועים") + ": " + new Intl.DateTimeFormat(localeTag, { dateStyle: "long" }).format(date)}
+                              className="w-full rounded px-1 py-1 text-start text-[11px] font-medium text-[#4f3a85] hover:bg-[#f2f0fa]"
+                            >
                               +{dayEvents.length - 3} {copy("more", "ещё", "נוספים")}
-                            </div>
+                            </button>
                           ) : null}
                         </div>
                       </div>

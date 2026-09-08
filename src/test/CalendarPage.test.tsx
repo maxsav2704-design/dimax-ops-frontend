@@ -189,6 +189,45 @@ describe("CalendarPage", () => {
     expect(screen.getByRole("button", { name: "Month" })).toHaveAttribute("aria-pressed", "true");
   }, 20000);
 
+  it.each(["Show all events", "Open day"])("opens the exact month day via %s without losing events or filters", async (action) => {
+    const today = new Date();
+    const date = new Date(today.getFullYear(), today.getMonth(), 15);
+    const events = Array.from({ length: 5 }, (_, index) => ({
+      id: `event-${index}`, title: `Door installation ${index + 1}`, event_type: "installation",
+      starts_at: new Date(date.getFullYear(), date.getMonth(), 15, 8 + index).toISOString(),
+      ends_at: new Date(date.getFullYear(), date.getMonth(), 15, 9 + index).toISOString(),
+      location: null, waze_url: null, description: null, project_id: null, installer_ids: [],
+    }));
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/calendar/events?")) return { items: events };
+      if (path.includes("/installers?")) return [];
+      return { items: [] };
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={queryClient}><CalendarPage /></QueryClientProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Today" }));
+    fireEvent.click(screen.getByRole("button", { name: "Month" }));
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Door installation" } });
+    const dateLabel = new Intl.DateTimeFormat("en-US", { dateStyle: "long" }).format(date);
+    await screen.findByRole("button", { name: `Show all events: ${dateLabel}` });
+    expect(screen.queryByRole("button", { name: /Door installation 5/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: `${action}: ${dateLabel}` }));
+    expect(screen.getByRole("button", { name: "Day" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("searchbox")).toHaveValue("Door installation");
+    await screen.findByRole("button", { name: "Door installation 5, 12:00 - 13:00" });
+    const expectedEnd = new Date(date);
+    expectedEnd.setDate(date.getDate() + 1);
+    expect(apiFetchMock.mock.calls.some(([path]) => {
+      if (!String(path).includes("/calendar/events?")) return false;
+      const params = new URL(String(path), "http://localhost").searchParams;
+      return params.get("starts_at") === date.toISOString() && params.get("ends_at") === expectedEnd.toISOString();
+    })).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Door installation 5, 12:00 - 13:00" }));
+    expect(await screen.findByTestId("calendar-event-info-frame")).toHaveTextContent("Door installation 5");
+    expect(apiFetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+    queryClient.clear();
+  }, 20000);
+
   it("creates calendar event from admin page", async () => {
     apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
       const url = String(path);

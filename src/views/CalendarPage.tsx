@@ -778,8 +778,9 @@ export default function CalendarPage() {
     setSelectedLaneId(null);
   };
 
-  const onSelectDate = (date: Date) => {
-    const next = normalizePeriodStart(date, calendarView);
+  const onSelectDate = (date: Date, viewMode: CalendarViewMode = calendarView) => {
+    const next = normalizePeriodStart(date, viewMode);
+    setCalendarView(viewMode);
     setWeekStartDate(next);
     setForm(makeDefaultForm(date));
     setIsInfoFrameOpen(false);
