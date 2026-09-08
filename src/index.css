@@ -437,6 +437,46 @@
     @apply h-1.5 rounded-full;
   }
 
+  .dmx-calendar {
+    container: calendar / inline-size;
+  }
+
+  .dmx-calendar-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dmx-calendar-sidebar {
+    order: 2;
+    border-top-width: 1px;
+  }
+
+  .dmx-calendar-main {
+    order: 1;
+  }
+
+  .dmx-calendar button:focus-visible {
+    outline: 2px solid var(--dmx-link);
+    outline-offset: -2px;
+  }
+
+  /* Use the calendar's available space, excluding the app navigation. */
+  @container calendar (min-width: 1040px) {
+    .dmx-calendar-layout {
+      grid-template-columns: 260px minmax(0, 1fr);
+    }
+
+    .dmx-calendar-sidebar {
+      order: 1;
+      border-top-width: 0;
+      border-inline-end-width: 1px;
+    }
+
+    .dmx-calendar-main {
+      order: 2;
+    }
+  }
+
   .dmx-door-tile {
     position: relative;
     isolation: isolate;

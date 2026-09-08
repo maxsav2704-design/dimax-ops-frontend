@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import {
   CalendarDays,
   Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -381,7 +380,7 @@ export function CalendarScheduleSurface(props: Props) {
         aria-label={`${event.title}, ${timeLabel(event.starts_at)} - ${timeLabel(event.ends_at)}`}
         className={cn(
           "absolute z-10 overflow-hidden rounded-[7px] border-s-[3px] px-2.5 py-2 text-start shadow-[0_4px_14px_rgba(25,35,50,0.07)]",
-          "transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(25,35,50,0.12)]",
+          "motion-safe:transition-[box-shadow,transform] motion-safe:duration-150 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(25,35,50,0.12)]",
           EVENT_STYLE[event.event_type],
           event.isAtRisk && "border-[#e89a96] bg-[#fff0ef] text-[#922f2a]",
           selectedEventId === event.id && "ring-2 ring-[#17191f] ring-offset-1",
@@ -411,8 +410,8 @@ export function CalendarScheduleSurface(props: Props) {
   };
 
   return (
-    <section className="overflow-hidden rounded-lg border border-[#dfe2e8] bg-[#f6f7fa] shadow-[0_18px_60px_rgba(29,38,53,0.08)]">
-      <div className="flex flex-col gap-3 border-b border-[#e2e4e9] px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+    <section className="dmx-calendar overflow-hidden rounded-lg border border-border bg-[#f6f7fa]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e2e4e9] px-4 py-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2.5">
           <h1 className="min-w-0 text-[22px] font-semibold capitalize text-[#101828]">
             {monthTitle}
@@ -449,6 +448,16 @@ export function CalendarScheduleSurface(props: Props) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={onAddEvent}
+            disabled={!canManageCalendar}
+            title={privilegedActionHint}
+            className="dmx-primary-action min-h-10 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Plus aria-hidden="true" className="h-4 w-4" />
+            {copy("Add Event", "Добавить событие", "הוסף אירוע")}
+          </button>
           <div className="inline-flex h-9 items-center rounded-md border border-[#dde1e8] bg-white p-0.5">
             {(["day", "week", "month"] as CalendarViewMode[]).map((viewMode) => (
               <button
@@ -471,7 +480,7 @@ export function CalendarScheduleSurface(props: Props) {
               </button>
             ))}
           </div>
-          <label className="flex h-10 min-w-[190px] flex-1 items-center gap-2 rounded-lg border border-[#dde1e8] bg-white px-3 focus-within:border-[#aeb7c6] lg:w-[220px] lg:flex-none">
+          <label className="flex h-10 min-w-[120px] flex-1 items-center gap-2 rounded-lg border border-[#dde1e8] bg-white px-3 focus-within:border-[#aeb7c6] lg:w-[180px] lg:flex-none">
             <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-[#758096]" />
             <span className="sr-only">{copy("Search schedule", "Поиск в календаре", "חיפוש ביומן")}</span>
             <input
@@ -558,19 +567,8 @@ export function CalendarScheduleSurface(props: Props) {
         </div>
       ) : null}
 
-      <div className="grid min-h-[720px] grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="order-2 space-y-4 border-t border-[#e2e4e9] bg-[#f3f4f7] p-4 lg:order-1 lg:border-e lg:border-t-0">
-          <button
-            type="button"
-            onClick={onAddEvent}
-            disabled={!canManageCalendar}
-            title={privilegedActionHint}
-            className="flex h-14 w-full items-center justify-center gap-3 rounded-lg border border-[#dde1e8] bg-white text-[14px] font-semibold text-[#101828] shadow-[0_4px_12px_rgba(29,38,53,0.05)] hover:border-[#bdc4d0] hover:shadow-[0_7px_18px_rgba(29,38,53,0.08)] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {copy("Add Event", "Добавить событие", "הוסף אירוע")}
-            <Plus aria-hidden="true" className="h-5 w-5" />
-          </button>
-
+      <div className="dmx-calendar-layout">
+        <aside className="dmx-calendar-sidebar space-y-4 border-[#e2e4e9] bg-[#f3f4f7] p-3">
           <div className="rounded-lg border border-[#e0e3e9] bg-white p-4 shadow-[0_4px_14px_rgba(29,38,53,0.04)]">
             <div className="mb-4 flex items-center justify-between gap-2">
               <button
@@ -627,7 +625,7 @@ export function CalendarScheduleSurface(props: Props) {
                     aria-label={new Intl.DateTimeFormat(localeTag, { dateStyle: "full" }).format(date)}
                     aria-current={isToday ? "date" : undefined}
                     className={cn(
-                      "mx-auto flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-medium tabular-nums",
+                      "mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-medium tabular-nums",
                       !isCurrentMonth && "text-[#c2c7d0]",
                       isCurrentMonth && "text-[#344054] hover:bg-[#f0f2f5]",
                       isSelected && "bg-[#17191f] text-white hover:bg-[#17191f]",
@@ -646,7 +644,6 @@ export function CalendarScheduleSurface(props: Props) {
               <h2 className="text-[13px] font-semibold text-[#101828]">
                 {copy("My Schedule", "Моё расписание", "לוח הזמנים שלי")}
               </h2>
-              <ChevronDown aria-hidden="true" className="h-4 w-4 text-[#758096]" />
             </div>
             <div className="space-y-1">
               {EVENT_TYPES.map((eventType) => {
@@ -660,11 +657,11 @@ export function CalendarScheduleSurface(props: Props) {
                       type="checkbox"
                       checked={enabled}
                       onChange={() => onToggleEventType(eventType)}
-                      className="sr-only"
+                      className="peer sr-only"
                     />
                     <span
                       className={cn(
-                        "flex h-5 w-5 items-center justify-center rounded-[5px] border",
+                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--dmx-link)]",
                         enabled
                           ? "border-[#7457c8] bg-[#7457c8] text-white"
                           : "border-[#cfd4dc] bg-white text-transparent",
@@ -712,15 +709,15 @@ export function CalendarScheduleSurface(props: Props) {
                     {crew.initials}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[11.5px] font-semibold text-[#344054]">
+                    <span className="block break-words text-[12px] font-semibold leading-4 text-[#344054]">
                       {crew.title}
                     </span>
-                    <span className="block truncate text-[10px] text-[#98a2b3]">
+                    <span className="mt-1 block break-words text-[11px] leading-4 text-[#667085]">
                       {laneLoadLabel(crew.id)}
                     </span>
                   </span>
-                  <span className="text-[10px] font-semibold tabular-nums text-[#758096]">
-                    {crew.busyDays}d
+                  <span className="shrink-0 text-[10px] font-semibold tabular-nums text-[#758096]">
+                    {crew.busyDays} {copy("d", "дн.", "ימים")}
                   </span>
                 </button>
               ))}
@@ -728,10 +725,10 @@ export function CalendarScheduleSurface(props: Props) {
           </div>
         </aside>
 
-        <div className="order-1 min-w-0 bg-white lg:order-2">
+        <div className="dmx-calendar-main min-w-0 bg-white">
           {calendarView === "month" ? (
             <div className="overflow-x-auto">
-              <div className="min-w-[820px]">
+              <div className="min-w-[640px]">
                 <div className="grid grid-cols-7 border-b border-[#e2e4e9] bg-[#fafbfc]">
                   {miniWeekdays.map((weekday, index) => (
                     <div key={`${weekday}-${index}`} className="border-e border-[#e6e8ed] px-3 py-3 text-center text-[11px] font-semibold text-[#667085] last:border-e-0">
@@ -785,10 +782,10 @@ export function CalendarScheduleSurface(props: Props) {
             </div>
           ) : (
             <div className="max-h-[760px] overflow-auto overscroll-contain">
-              <div className={cn(calendarView === "day" ? "min-w-[680px]" : "min-w-[980px]") }>
+              <div className={cn(calendarView === "day" ? "min-w-[280px]" : "min-w-[700px]") }>
                 <div
                   className="sticky top-0 z-30 grid border-b border-[#dfe2e8] bg-white"
-                  style={{ gridTemplateColumns: `78px repeat(${calendarDays.length}, minmax(${calendarView === "day" ? "520px" : "128px"}, 1fr))` }}
+                  style={{ gridTemplateColumns: `64px repeat(${calendarDays.length}, minmax(0, 1fr))` }}
                 >
                   <div className="flex items-end justify-center pb-4 text-[10px] font-semibold text-[#758096]">
                     {timezoneLabel}
@@ -819,14 +816,14 @@ export function CalendarScheduleSurface(props: Props) {
 
                 <div
                   className="grid"
-                  style={{ gridTemplateColumns: `78px repeat(${calendarDays.length}, minmax(${calendarView === "day" ? "520px" : "128px"}, 1fr))` }}
+                  style={{ gridTemplateColumns: `64px repeat(${calendarDays.length}, minmax(0, 1fr))` }}
                 >
                   <div className="relative bg-white" style={{ height: `${BODY_HEIGHT}px` }}>
                     {hours.map((hour, index) => (
                       <span
                         key={hour}
                         className="absolute end-3 -translate-y-1/2 text-[10px] font-semibold tabular-nums text-[#758096]"
-                        style={{ top: `${index * HOUR_HEIGHT}px` }}
+                        style={{ top: `${index === 0 ? 8 : index * HOUR_HEIGHT}px` }}
                       >
                         {hourLabel(hour, locale)}
                       </span>

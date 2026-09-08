@@ -31,7 +31,8 @@ export function DoorMatrixTile({ marking, status, tone, inspectLabel, context, f
         onClick={onInspect}
         className={cn("dmx-door-tile-face flex h-full min-h-24 w-full flex-col items-start justify-between gap-2 rounded-md border px-2.5 pb-2.5 pt-8 text-start", tone)}
       >
-        <span dir="auto" className="w-full break-all text-[13px] font-semibold leading-4 tabular-nums">{marking}</span>
+        {context && <span dir="auto" className="absolute start-2.5 top-2 max-w-[calc(100%-42px)] truncate text-[10px] font-medium">{context}</span>}
+        <span dir="auto" className="w-full break-words text-[13px] font-semibold leading-4 tabular-nums [overflow-wrap:anywhere]">{marking}</span>
         <span className="flex w-full items-start gap-1 text-[10px] leading-4">
           {hasIssues && <AlertTriangle aria-hidden="true" className="mt-0.5 h-3 w-3 shrink-0" />}
           <span>{status}</span>

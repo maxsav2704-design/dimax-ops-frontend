@@ -127,6 +127,9 @@ describe("CalendarPage", () => {
     expect(await screen.findByTestId("calendar-v27")).toBeInTheDocument();
     expect(screen.getByRole("searchbox")).toBeInTheDocument();
     expect(screen.getByText("My Schedule")).toBeInTheDocument();
+    const addEventButtons = screen.getAllByRole("button", { name: "Add Event" });
+    expect(addEventButtons).toHaveLength(1);
+    expect(addEventButtons[0].closest("aside")).toBeNull();
     expect(screen.getByText("Crews")).toBeInTheDocument();
     expect(await screen.findByText("Installer Alpha")).toBeInTheDocument();
     expect(await screen.findByText("1 event · busy 1 day")).toBeInTheDocument();

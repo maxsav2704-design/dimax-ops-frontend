@@ -5837,11 +5837,12 @@ export default function ProjectsPage() {
                                   </div>
                                 </div>
                                 <div className="pe-4 ps-5 py-3">
-                                  <div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-2">
+                                  <div className="grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-2">
                                     {floorDoors.map((door) => (
                                       <DoorMatrixTile
                                         key={`${floor.house_number}-${floor.floor_label}-${door.door_id}-top`}
                                         marking={matrixDoorTileLabel(door)}
+                                        context={door.unit_label}
                                         status={tokenLabel(door.status)}
                                         tone={matrixDoorTileTone(door)}
                                         focused={focusedDoorId === door.door_id}
@@ -11264,7 +11265,7 @@ export default function ProjectsPage() {
                                       {copy("locations", "локаций", "מיקומים")}
                                     </span>
                                   </div>
-                                  <div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-2">
+                                  <div className="grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-2">
                                     {floorDoors.map(({ apartment, cell, door }) => (
                                       <DoorMatrixTile
                                             key={`${house.house_number}-${floor.floor_label}-${apartment.apartment_number}-${cell.location_code}-${door.door_id}-tile`}

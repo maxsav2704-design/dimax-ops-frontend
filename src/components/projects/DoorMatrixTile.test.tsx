@@ -18,10 +18,12 @@ describe("DoorMatrixTile", () => {
   it("separates opening a door from selection and exposes both states", () => {
     const onInspect = vi.fn();
     const onToggleSelection = vi.fn();
-    render(<DoorMatrixTile {...props} marking="A-101" inspectLabel="Inspect A-101" focused selected onInspect={onInspect} onToggleSelection={onToggleSelection} />);
+    render(<DoorMatrixTile {...props} marking="A-101" context="Apartment 21" inspectLabel="Inspect A-101" focused selected onInspect={onInspect} onToggleSelection={onToggleSelection} />);
     const button = screen.getByRole("button", { name: "Inspect A-101" });
     const checkbox = screen.getByRole("checkbox", { name: "Select door A-101" });
     expect(button).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Apartment 21")).toBeInTheDocument();
+    expect(button).toHaveAttribute("title", "A-101 · Installed · Apartment 21");
     expect(checkbox).toBeChecked();
     fireEvent.click(button);
     expect(onInspect).toHaveBeenCalledOnce();
