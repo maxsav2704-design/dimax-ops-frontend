@@ -22,6 +22,7 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DataStateNotice } from "@/components/DataStateNotice";
+import { useReferenceList } from "@/hooks/use-reference-list";
 import { DoorMatrixTile } from "@/components/projects/DoorMatrixTile";
 import {
   Breadcrumbs,
@@ -1558,21 +1559,36 @@ export default function ProjectsPage() {
     "היקף ניהול זה יכול לנהל את פעולות הפרויקט, דלתות וייבוא, אך מחירים, שכר, רווח, תוכניות תוספות ושורות היטלים דחופים דורשים גישה למימון.",
   );
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
-  const [doorTypes, setDoorTypes] = useState<DoorType[]>([]);
-  const [libraryProducts, setLibraryProducts] = useState<LibraryProductItem[]>(
-    [],
+  const doorTypesReference = useReferenceList<DoorType>("/api/v1/admin/door-types?limit=200", 200);
+  const libraryReference = useReferenceList<LibraryProductItem>("/api/v1/admin/library?status=ACTIVE&limit=500");
+  const installersReference = useReferenceList<InstallerListItem>("/api/v1/admin/installers?limit=200");
+  const reasonsReference = useReferenceList<ReasonItem>("/api/v1/admin/reasons?is_active=true&limit=200");
+  const addonTypesReference = useReferenceList<AddonTypeItem>("/api/v1/admin/addons/types");
+  const templatesReference = useReferenceList<DocumentTemplateDTO>("/api/v1/admin/documents/templates");
+  const { items: doorTypes, loading: loadingDoorTypes } = doorTypesReference;
+  const { items: libraryProducts, loading: loadingLibraryProducts } = libraryReference;
+  const { items: installers } = installersReference;
+  const { items: reasons, loading: loadingReasons } = reasonsReference;
+  const { items: addonTypes, loading: loadingAddonTypes } = addonTypesReference;
+  const { items: documentTemplates, loading: loadingDocumentTemplates } = templatesReference;
+  const references = [
+    { key: "door-types", label: copy("Door types", "Типы дверей", "סוגי דלתות"), data: doorTypesReference },
+    { key: "library", label: copy("Product library", "Каталог изделий", "קטלוג מוצרים"), data: libraryReference },
+    { key: "installers", label: copy("Installers", "Монтажники", "מתקינים"), data: installersReference },
+    { key: "reasons", label: copy("Issue reasons", "Причины проблем", "סיבות לתקלות"), data: reasonsReference },
+    { key: "addons", label: copy("Additional work types", "Виды доп. работ", "סוגי עבודות נוספות"), data: addonTypesReference },
+    { key: "templates", label: copy("Document templates", "Шаблоны документов", "תבניות מסמכים"), data: templatesReference },
+  ];
+  const referenceUnavailable = copy(
+    "Reference data is unavailable. Try loading it again.",
+    "Справочник недоступен. Повторите его загрузку.",
+    "נתוני הקטלוג אינם זמינים. יש לטעון אותם שוב.",
   );
-  const [installers, setInstallers] = useState<InstallerListItem[]>([]);
-  const [reasons, setReasons] = useState<ReasonItem[]>([]);
-  const [addonTypes, setAddonTypes] = useState<AddonTypeItem[]>([]);
   const [projectAddonPlan, setProjectAddonPlan] = useState<
     ProjectAddonPlanItem[]
   >([]);
   const [urgencySurcharges, setUrgencySurcharges] = useState<
     UrgencySurchargeItem[]
-  >([]);
-  const [documentTemplates, setDocumentTemplates] = useState<
-    DocumentTemplateDTO[]
   >([]);
   const [projectDocuments, setProjectDocuments] = useState<
     DocumentGenerationDTO[]
@@ -1593,15 +1609,8 @@ export default function ProjectsPage() {
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [projectsLoaded, setProjectsLoaded] = useState(false);
   const [projectsLoadError, setProjectsLoadError] = useState(false);
-  const [loadingDoorTypes, setLoadingDoorTypes] = useState(false);
-  const [loadingLibraryProducts, setLoadingLibraryProducts] = useState(false);
-  const [loadingInstallers, setLoadingInstallers] = useState(false);
-  const [loadingReasons, setLoadingReasons] = useState(false);
-  const [loadingAddonTypes, setLoadingAddonTypes] = useState(false);
   const [loadingProjectAddonPlan, setLoadingProjectAddonPlan] = useState(false);
   const [loadingUrgencySurcharges, setLoadingUrgencySurcharges] =
-    useState(false);
-  const [loadingDocumentTemplates, setLoadingDocumentTemplates] =
     useState(false);
   const [loadingProjectDocuments, setLoadingProjectDocuments] = useState(false);
   const [loadingProjectDetails, setLoadingProjectDetails] = useState(false);
@@ -2005,6 +2014,14 @@ export default function ProjectsPage() {
     return map;
   }, [doorTypes]);
 
+  const missingDoorTypeLabel = loadingDoorTypes
+    ? copy("Loading type...", "Загружаем тип...", "טוען סוג...")
+    : doorTypesReference.error
+      ? copy("Type unavailable", "Тип недоступен", "הסוג אינו זמין")
+      : copy("Unknown type", "Неизвестный тип", "סוג לא ידוע");
+  const doorTypeLabel = useCallback((id: string) =>
+    doorTypeLabelById.get(id) || missingDoorTypeLabel, [doorTypeLabelById, missingDoorTypeLabel]);
+
   const issuesByDoorId = useMemo(() => {
     const map = new Map<string, ProjectOpenIssue[]>();
     for (const issue of projectDetails?.issues_open || []) {
@@ -2036,7 +2053,7 @@ export default function ProjectsPage() {
           unit_label: door.unit_label,
           door_type_id: door.door_type_id,
           door_type_label:
-            doorTypeLabelById.get(door.door_type_id) || door.door_type_id,
+            doorTypeLabel(door.door_type_id),
           status: door.status,
           installer_id: door.installer_id,
           issue_count: (issuesByDoorId.get(door.id) || []).length,
@@ -2056,7 +2073,7 @@ export default function ProjectsPage() {
       return compareNatural(a.unit_label, b.unit_label);
     });
     return rows;
-  }, [layout, doorTypeLabelById, issuesByDoorId]);
+  }, [layout, doorTypeLabel, issuesByDoorId]);
 
   const focusedDoorRow = useMemo(
     () => matrixRows.find((row) => row.door_id === focusedDoorId) || null,
@@ -2152,10 +2169,10 @@ export default function ProjectsPage() {
       Array.from(new Set(matrixRows.map((x) => x.door_type_id)))
         .map((id) => ({
           id,
-          label: doorTypeLabelById.get(id) || id,
+          label: doorTypeLabel(id),
         }))
         .sort((a, b) => compareNatural(a.label, b.label)),
-    [matrixRows, doorTypeLabelById],
+    [matrixRows, doorTypeLabel],
   );
   const matrixStatusOptions = useMemo(
     () =>
@@ -2626,7 +2643,7 @@ export default function ProjectsPage() {
                 ? (group.door_type_labels || []).join(", ")
                 : (group.door_type_ids || []).length > 0
                   ? (group.door_type_ids || [])
-                      .map((id) => doorTypeLabelById.get(id) || id)
+                      .map(doorTypeLabel)
                       .join(", ")
                   : "-";
             return (
@@ -2741,7 +2758,7 @@ export default function ProjectsPage() {
                       ? (group.door_type_labels || []).join(", ")
                       : (group.door_type_ids || []).length > 0
                         ? (group.door_type_ids || [])
-                            .map((id) => doorTypeLabelById.get(id) || id)
+                            .map(doorTypeLabel)
                             .join(", ")
                         : "-"}
                   </td>
@@ -2789,82 +2806,6 @@ export default function ProjectsPage() {
       setLoadingProjects(false);
     }
   }, [deepLinkProjectId]);
-
-  const loadDoorTypes = useCallback(async () => {
-    setLoadingDoorTypes(true);
-    setError(null);
-    try {
-      const response = await apiFetch<DoorType[]>(
-        "/api/v1/admin/door-types?is_active=true&limit=200",
-      );
-      setDoorTypes(response || []);
-    } catch (e) {
-      setDoorTypes([]);
-      setError(readableApiError(e, locale, t("projects.failedLoadDoorTypes")));
-    } finally {
-      setLoadingDoorTypes(false);
-    }
-  }, [locale, t]);
-
-  const loadLibraryProducts = async () => {
-    setLoadingLibraryProducts(true);
-    try {
-      const response = await apiFetch<
-        LibraryProductItem[] | { items?: LibraryProductItem[] }
-      >("/api/v1/admin/library?status=ACTIVE&limit=500");
-      setLibraryProducts(
-        Array.isArray(response) ? response : response.items || [],
-      );
-    } catch {
-      setLibraryProducts([]);
-    } finally {
-      setLoadingLibraryProducts(false);
-    }
-  };
-
-  const loadInstallers = async () => {
-    setLoadingInstallers(true);
-    try {
-      const params = new URLSearchParams();
-      params.set("limit", "200");
-      const response = await apiFetch<
-        InstallerListItem[] | { items?: InstallerListItem[] }
-      >(`/api/v1/admin/installers?${params.toString()}`);
-      setInstallers(Array.isArray(response) ? response : response.items || []);
-    } catch {
-      setInstallers([]);
-    } finally {
-      setLoadingInstallers(false);
-    }
-  };
-
-  const loadReasons = async () => {
-    setLoadingReasons(true);
-    try {
-      const response = await apiFetch<ReasonItem[] | { items?: ReasonItem[] }>(
-        "/api/v1/admin/reasons?is_active=true&limit=200",
-      );
-      setReasons(Array.isArray(response) ? response : response.items || []);
-    } catch {
-      setReasons([]);
-    } finally {
-      setLoadingReasons(false);
-    }
-  };
-
-  const loadAddonTypes = async () => {
-    setLoadingAddonTypes(true);
-    try {
-      const response = await apiFetch<
-        AddonTypeItem[] | { items?: AddonTypeItem[] }
-      >("/api/v1/admin/addons/types");
-      setAddonTypes(Array.isArray(response) ? response : response.items || []);
-    } catch {
-      setAddonTypes([]);
-    } finally {
-      setLoadingAddonTypes(false);
-    }
-  };
 
   const loadMappingProfiles = useCallback(async () => {
     setLoadingMappingProfiles(true);
@@ -3025,20 +2966,6 @@ export default function ProjectsPage() {
     ]);
   };
 
-  const loadDocumentTemplates = async () => {
-    setLoadingDocumentTemplates(true);
-    try {
-      const response = await apiFetch<{ items?: DocumentTemplateDTO[] }>(
-        "/api/v1/admin/documents/templates",
-      );
-      setDocumentTemplates(response.items || []);
-    } catch {
-      setDocumentTemplates([]);
-    } finally {
-      setLoadingDocumentTemplates(false);
-    }
-  };
-
   const loadProjectDocuments = async (projectId: string) => {
     setLoadingProjectDocuments(true);
     try {
@@ -3137,14 +3064,8 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     void loadProjects();
-    void loadDoorTypes();
-    void loadLibraryProducts();
-    void loadInstallers();
-    void loadReasons();
-    void loadAddonTypes();
     void loadMappingProfiles();
-    void loadDocumentTemplates();
-  }, [loadDoorTypes, loadMappingProfiles, loadProjects]);
+  }, [loadMappingProfiles, loadProjects]);
 
   useEffect(() => {
     if (
@@ -3875,7 +3796,7 @@ export default function ProjectsPage() {
   };
 
   const handleBulkAssignDoors = async () => {
-    if (!canManageProjects) return;
+    if (!canManageProjects || !installersReference.ready || !activeInstallerById.has(bulkAssignInstallerId)) return;
     if (
       !selectedProjectId ||
       selectedDoorIds.length === 0 ||
@@ -3984,7 +3905,7 @@ export default function ProjectsPage() {
   };
 
   const handleFocusedDoorMarkNotInstalled = async () => {
-    if (!canManageProjects) return;
+    if (!canManageProjects || !reasonsReference.ready) return;
     if (!selectedProjectId || !focusedDoorRow) {
       return;
     }
@@ -4115,7 +4036,7 @@ export default function ProjectsPage() {
   };
 
   const handleGenerateProjectDocument = async () => {
-    if (!canManageProjects) return;
+    if (!canManageProjects || !templatesReference.ready) return;
     if (!selectedProjectId || !selectedDocumentTemplateId) {
       setError(
         copy(
@@ -4359,7 +4280,7 @@ export default function ProjectsPage() {
   };
 
   const openManualDoorDialog = () => {
-    if (!canManageProjects) return;
+    if (!canManageProjects || !libraryReference.ready) return;
     const nextForm = emptyManualDoorForm();
     setManualDoorForm(nextForm);
     setProjectFlowNotice(null);
@@ -4369,7 +4290,8 @@ export default function ProjectsPage() {
   };
 
   const handleManualDoorSubmit = async () => {
-    if (!canManageProjects) return;
+    if (!canManageProjects || !libraryReference.ready ||
+      (manualDoorForm.assigned_installer_id && !installersReference.ready)) return;
     if (!selectedProjectId) {
       return;
     }
@@ -4914,6 +4836,15 @@ export default function ProjectsPage() {
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
+        )}
+
+        {references.some((reference) => reference.data.error) && (
+          <section aria-label={copy("Project catalogs", "Справочники проекта", "קטלוגים לפרויקט")} className="mb-4 space-y-2">
+            {references.filter((reference) => reference.data.error).map(({ key, label, data }) => (
+              <DataStateNotice key={key} label={label} state={data.loaded ? "stale" : "error"}
+                retrying={data.loading} onRetry={() => { void data.reload(); }} />
+            ))}
+          </section>
         )}
 
         {projectFlowNotice && (
@@ -7036,6 +6967,7 @@ export default function ProjectsPage() {
                             !canManageProjects ||
                             !selectedProjectId ||
                             !selectedDocumentTemplateId ||
+                            !templatesReference.ready ||
                             documentGenerating
                           }
                           onClick={() => void handleGenerateProjectDocument()}
@@ -7223,7 +7155,7 @@ export default function ProjectsPage() {
                           className="gap-2"
                           disabled={
                             !canManageProjects ||
-                            loadingLibraryProducts ||
+                            !libraryReference.ready ||
                             activeLibraryProducts.length === 0
                           }
                         >
@@ -7239,9 +7171,10 @@ export default function ProjectsPage() {
                         {loadingLibraryProducts
                           ? copy(
                               "Loading library...",
-                              "Загрузка справочник...",
+                              "Загрузка справочника...",
                               "טוען ספרייה...",
                             )
+                          : libraryReference.error ? referenceUnavailable
                           : activeLibraryProducts.length === 0
                             ? copy(
                                 "Add active products in Library first.",
@@ -7299,7 +7232,7 @@ export default function ProjectsPage() {
                             className="gap-2"
                             disabled={
                               !canManageProjects ||
-                              loadingAddonTypes || activeAddonTypes.length === 0
+                              !addonTypesReference.ready || activeAddonTypes.length === 0
                             }
                           >
                             <Plus className="h-4 w-4" />
@@ -7316,6 +7249,7 @@ export default function ProjectsPage() {
                                   "Загружаем типы доп. работ...",
                                   "טוען סוגי עבודות נוספות...",
                                 )
+                              : addonTypesReference.error ? referenceUnavailable
                               : activeAddonTypes.length === 0
                                 ? copy(
                                     "No active add-on types yet.",
@@ -9314,6 +9248,7 @@ export default function ProjectsPage() {
                     </label>
                     <select
                       aria-label={t("projects.autoByFileCode")}
+                      disabled={!doorTypesReference.ready}
                       value={defaultDoorTypeId}
                       onChange={(e) => {
                         setDefaultDoorTypeId(e.target.value);
@@ -9327,7 +9262,7 @@ export default function ProjectsPage() {
                           ? t("projects.loadingDoorTypes")
                           : t("projects.autoByFileCode")}
                       </option>
-                      {doorTypes.map((doorType) => (
+                      {doorTypes.filter((doorType) => doorType.is_active).map((doorType) => (
                         <option key={doorType.id} value={doorType.id}>
                           {doorType.code} - {doorType.name}
                         </option>
@@ -10821,7 +10756,7 @@ export default function ProjectsPage() {
                                     setFocusedDoorReasonId(event.target.value)
                                   }
                                   disabled={
-                                    loadingReasons || doorStatusAction !== null
+                                    !reasonsReference.ready || doorStatusAction !== null
                                   }
                                   className="control-input h-9 text-[12px]"
                                 >
@@ -10888,7 +10823,9 @@ export default function ProjectsPage() {
                                   className="control-input mt-2 h-9 text-[12px]"
                                 />
                               ) : null}
-                              {activeReasons.length === 0 && !loadingReasons ? (
+                              {reasonsReference.error ? (
+                                <p className="mt-2 text-[11.5px] text-status-problem-fg">{referenceUnavailable}</p>
+                              ) : activeReasons.length === 0 && !loadingReasons ? (
                                 <button
                                   type="button"
                                   onClick={() => router.push("/reasons")}
@@ -10967,6 +10904,7 @@ export default function ProjectsPage() {
                                   !canManageProjects ||
                                   doorStatusAction !== null ||
                                   !focusedDoorReasonId ||
+                                  !reasonsReference.ready ||
                                   (focusedDoorRow.status === "INSTALLED" &&
                                     !focusedDoorOverrideReason.trim())
                                 }
@@ -11055,7 +10993,7 @@ export default function ProjectsPage() {
                           }
                           disabled={
                             !canManageProjects ||
-                            bulkAssignLoading || selectedDoorIds.length === 0
+                            !installersReference.ready || bulkAssignLoading || selectedDoorIds.length === 0
                           }
                           className="control-input h-9 min-w-[220px] text-[12px]"
                         >
@@ -11080,7 +11018,7 @@ export default function ProjectsPage() {
                             !canManageProjects ||
                             bulkAssignLoading ||
                             selectedDoorIds.length === 0 ||
-                            !bulkAssignInstallerId
+                            !installersReference.ready || !activeInstallerById.has(bulkAssignInstallerId)
                           }
                           className="h-9 text-[12px]"
                         >
@@ -13477,6 +13415,7 @@ export default function ProjectsPage() {
               </Label>
               <select
                 id="manual-door-installer"
+                disabled={!installersReference.ready}
                 value={manualDoorForm.assigned_installer_id}
                 onChange={(event) =>
                   setManualDoorForm((prev) => ({
@@ -13551,7 +13490,8 @@ export default function ProjectsPage() {
             </Button>
             <Button
               onClick={() => void handleManualDoorSubmit()}
-              disabled={manualDoorSubmitting}
+              disabled={manualDoorSubmitting || !libraryReference.ready ||
+                Boolean(manualDoorForm.assigned_installer_id && !installersReference.ready)}
             >
               {manualDoorSubmitting
                 ? copy("Saving...", "Сохраняем...", "שומר...")

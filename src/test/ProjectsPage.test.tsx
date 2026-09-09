@@ -129,6 +129,66 @@ describe("ProjectsPage", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("recovers only the failed door-type catalog without losing door selection or position search", async () => {
+    let typeAttempts = 0;
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.startsWith("/api/v1/admin/door-types?")) {
+        if (++typeAttempts === 1) throw new ApiError(503, "Unavailable");
+        return [{ id: "type-private-id", code: "ENTRY", name: "Existing entrance", is_active: false }];
+      }
+      if (path === "/api/v1/admin/projects") return { items: [{ id: "project-1", name: "Tower", status: "ACTIVE" }] };
+      if (path === "/api/v1/admin/projects/project-1") return { id: "project-1", name: "Tower", issues_open: [] };
+      if (path.includes("/doors/layout")) return {
+        project_id: "project-1", total_doors: 1,
+        buckets: [{ house_number: "1", floor_label: "2", total: 1, status_breakdown: { NOT_INSTALLED: 1 }, doors: [
+          { id: "door-1", door_marking: "D-101", unit_label: "Entry", apartment_number: "21", status: "NOT_INSTALLED", installer_id: null, door_type_id: "type-private-id" },
+        ] }],
+      };
+      return { items: [], total: 0 };
+    });
+    render(<ProjectsPage />);
+    await screen.findByTestId("project-detail-v28-door-tile-door-1");
+    const catalogs = within(screen.getByRole("region", { name: "Project catalogs" }));
+    expect(catalogs.getByRole("alert")).toHaveTextContent("Door types");
+    expect(screen.queryByText("type-private-id")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Type unavailable").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole("checkbox", { name: "Select visible doors" })[0]);
+    const search = screen.getByRole("textbox", { name: "Search doors" });
+    fireEvent.change(search, { target: { value: "21" } });
+    const projectRequestsBeforeRetry = apiFetchMock.mock.calls.filter(([path]) => path === "/api/v1/admin/projects").length;
+    fireEvent.click(catalogs.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Project catalogs" })).not.toBeInTheDocument());
+    expect(screen.getAllByText("ENTRY - Existing entrance").length).toBeGreaterThan(0);
+    const importType = within(screen.getByRole("combobox", { name: "Auto by file code (or create missing)" }));
+    expect(importType.queryByRole("option", { name: "ENTRY - Existing entrance" })).not.toBeInTheDocument();
+    expect(search).toHaveValue("21");
+    expect(screen.getAllByRole("checkbox", { name: "Select visible doors" })[0]).toBeChecked();
+    expect(typeAttempts).toBe(2);
+    expect(apiFetchMock.mock.calls.filter(([path]) => path === "/api/v1/admin/projects")).toHaveLength(projectRequestsBeforeRetry);
+    expect(apiFetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  });
+
+  it.each([
+    ["/api/v1/admin/library?", "Product library"],
+    ["/api/v1/admin/installers?", "Installers"],
+    ["/api/v1/admin/reasons?", "Issue reasons"],
+    ["/api/v1/admin/addons/types", "Additional work types"],
+    ["/api/v1/admin/documents/templates", "Document templates"],
+  ])("shows a retry for a failed reference %s rather than treating it as empty", async (failedPath, label) => {
+    let unavailable = true;
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.startsWith(failedPath) && unavailable) throw new TypeError("Failed to fetch");
+      return path === "/api/v1/admin/projects" ? { items: [] } : [];
+    });
+    render(<ProjectsPage />);
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent(label);
+    unavailable = false;
+    fireEvent.click(within(notice).getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    expect(apiFetchMock.mock.calls.filter(([path]) => path.startsWith(failedPath))).toHaveLength(2);
+  });
+
   it("uploads import file via multipart import-upload endpoint", async () => {
     apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
       const url = String(path);
