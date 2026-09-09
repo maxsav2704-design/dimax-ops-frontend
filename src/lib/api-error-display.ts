@@ -9,6 +9,16 @@ type LocalizedTriple = {
 };
 
 const ERROR_COPY: Record<string, LocalizedTriple> = {
+  NETWORK_UNAVAILABLE: {
+    en: "Could not reach the server. Check your connection and try again.",
+    ru: "Нет связи с сервером. Проверьте соединение и повторите попытку.",
+    he: "לא ניתן להתחבר לשרת. יש לבדוק את החיבור ולנסות שוב.",
+  },
+  AUTH_REFRESH_UNAVAILABLE: {
+    en: "Could not verify your session. Please try again shortly.",
+    ru: "Не удалось проверить сессию. Повторите попытку через некоторое время.",
+    he: "לא ניתן לאמת את ההתחברות. יש לנסות שוב בעוד זמן קצר.",
+  },
   AUTH_REQUIRED: {
     en: "Your session expired. Sign in again to continue.",
     ru: "Сессия истекла. Войди снова, чтобы продолжить.",

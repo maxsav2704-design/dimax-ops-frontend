@@ -1,9 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
 import { RequireAuth } from "@/components/RequireAuth";
+import { ApiError } from "@/lib/api";
 
 const { replaceMock, pathnameMock } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
@@ -21,7 +22,8 @@ vi.mock("next/navigation", () => ({
   usePathname: () => pathnameMock(),
 }));
 
-vi.mock("@/lib/api", () => ({
+vi.mock("@/lib/api", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/api")>(),
   apiFetch: apiFetchMock,
 }));
 
@@ -55,8 +57,8 @@ describe("RequireAuth", () => {
     window.history.replaceState({}, "", "/reports");
   });
 
-  it("redirects to login when session bootstrap fails", async () => {
-    apiFetchMock.mockRejectedValue(new Error("unauthorized"));
+  it.each([401, 403])("redirects to login when access is rejected with %s", async (status) => {
+    apiFetchMock.mockRejectedValue(new ApiError(status, "unauthorized"));
 
     renderSubject();
 
@@ -72,7 +74,7 @@ describe("RequireAuth", () => {
       "",
       "/projects?project_id=project-1&focus_section=doors"
     );
-    apiFetchMock.mockRejectedValue(new Error("unauthorized"));
+    apiFetchMock.mockRejectedValue(new ApiError(401, "unauthorized"));
 
     renderSubject();
 
@@ -161,5 +163,49 @@ describe("RequireAuth", () => {
       can_manage_imports: false,
       can_manage_users: false,
     });
+  });
+
+  it.each([
+    new ApiError(0, "Failed to fetch", { error: { code: "NETWORK_UNAVAILABLE" } }),
+    new ApiError(503, "Service unavailable"),
+    new ApiError(429, "Too many requests"),
+  ])("blocks protected content without logging out on temporary failure %j", async (error) => {
+    apiFetchMock.mockRejectedValue(error);
+    const { queryClient } = renderSubject();
+    const cachedSession = { role: "ADMIN", admin_scope: "OPERATIONS" };
+    queryClient.setQueryData(["auth-me"], cachedSession);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not verify access");
+    expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
+    expect(screen.queryByText("protected")).not.toBeInTheDocument();
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(queryClient.getQueryData(["auth-me"])).toEqual(cachedSession);
+  });
+
+  it("recovers on explicit retry without navigating away from the protected URL", async () => {
+    apiFetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce({ role: "ADMIN", admin_scope: "OWNER" });
+    renderSubject();
+    fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("protected")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(apiFetchMock).toHaveBeenCalledTimes(2);
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("hides the next route until its access check succeeds", async () => {
+    apiFetchMock.mockResolvedValueOnce({ role: "ADMIN", admin_scope: "OWNER" });
+    const { rerender, queryClient } = renderSubject();
+    await screen.findByText("protected");
+    pathnameMock.mockReturnValue("/settings");
+    apiFetchMock.mockRejectedValueOnce(new ApiError(503, "Server unavailable"));
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <RequireAuth><div>private settings</div></RequireAuth>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText("private settings")).not.toBeInTheDocument();
+    await screen.findByRole("alert");
+    expect(screen.queryByText("private settings")).not.toBeInTheDocument();
+    expect(replaceMock).not.toHaveBeenCalled();
   });
 });

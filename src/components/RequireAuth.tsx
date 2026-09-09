@@ -1,6 +1,10 @@
 "use client";
 
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
+import { readableApiError } from "@/lib/api-error-display";
+import { useI18n } from "@/lib/i18n";
+import { RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { canAccessAdminPath, resolveAdminHomePath } from "@/lib/admin-access";
 import { buildAuthRequiredLoginPath } from "@/lib/auth-redirect";
 import { useQueryClient } from "@tanstack/react-query";
@@ -66,16 +70,25 @@ export function RequireAuth({
   children: ReactNode;
   scope?: AuthScope;
 }) {
-  const router = useRouter();
+  const { replace } = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
-  const [allowed, setAllowed] = useState(false);
+  const { locale } = useI18n();
+  const [attempt, setAttempt] = useState(0);
+  const [access, setAccess] = useState<{
+    path: string;
+    scope: AuthScope;
+    state: "allowed" | "error";
+    error?: unknown;
+  } | null>(null);
+  const next = pathname || "/";
+  const currentAccess = access?.path === next && access.scope === scope ? access : null;
 
   useEffect(() => {
     let cancelled = false;
+    setAccess(null);
 
     async function checkAccess(): Promise<void> {
-      const next = pathname || "/";
       const currentSearch =
         typeof window !== "undefined" ? window.location.search : "";
       const authRequiredPath = buildAuthRequiredLoginPath(
@@ -92,32 +105,36 @@ export function RequireAuth({
         }
         queryClient.setQueryData(["auth-me"], session);
         if (!session) {
-          router.replace(authRequiredPath);
+          replace(authRequiredPath);
           return;
         }
         if (scope === "admin" && session.role === "INSTALLER") {
-          router.replace("/installer");
+          replace("/installer");
           return;
         }
         if (scope === "installer" && session.role === "ADMIN") {
-          router.replace(resolveAdminHomePath(session));
+          replace(resolveAdminHomePath(session));
           return;
         }
         if (!isAllowed(scope, session, next)) {
           if (session.role === "ADMIN") {
-            router.replace(resolveAdminHomePath(session));
+            replace(resolveAdminHomePath(session));
             return;
           }
-          router.replace(
+          replace(
             buildAuthRequiredLoginPath(next, currentSearch, deniedErrorCode(scope)),
           );
           return;
         }
-        setAllowed(true);
-      } catch {
+        setAccess({ path: next, scope, state: "allowed" });
+      } catch (error) {
         if (!cancelled) {
-          queryClient.setQueryData(["auth-me"], null);
-          router.replace(authRequiredPath);
+          if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+            queryClient.setQueryData(["auth-me"], null);
+            replace(authRequiredPath);
+          } else {
+            setAccess({ path: next, scope, state: "error", error });
+          }
         }
       }
     }
@@ -126,9 +143,50 @@ export function RequireAuth({
     return () => {
       cancelled = true;
     };
-  }, [router, pathname, queryClient, scope]);
+  }, [replace, next, queryClient, scope, attempt]);
 
-  if (!allowed) {
+  if (currentAccess?.state === "error") {
+    const copy = locale === "ru"
+      ? {
+          title: "Не удалось проверить доступ",
+          fallback: "Сервер временно недоступен. Повторите попытку.",
+          retry: "Повторить",
+        }
+      : locale === "he"
+        ? {
+            title: "לא ניתן לבדוק הרשאות גישה",
+            fallback: "השרת אינו זמין כרגע. יש לנסות שוב.",
+            retry: "נסה שוב",
+          }
+        : {
+            title: "Could not verify access",
+            fallback: "The server is temporarily unavailable. Please try again.",
+            retry: "Try again",
+          };
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-canvas px-6 text-text">
+        <div className="w-full max-w-md space-y-4">
+          <div role="alert" className="space-y-2">
+            <h1 className="text-lg font-semibold">{copy.title}</h1>
+            <p className="text-sm text-text-secondary">
+              {readableApiError(currentAccess.error, locale, copy.fallback)}
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={() => {
+              setAccess(null);
+              setAttempt((value) => value + 1);
+            }}
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+            {copy.retry}
+          </Button>
+        </div>
+      </main>
+    );
+  }
+  if (currentAccess?.state !== "allowed") {
     return <AuthGateLoading />;
   }
   return <>{children}</>;

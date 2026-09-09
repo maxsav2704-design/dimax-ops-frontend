@@ -134,6 +134,32 @@ describe("LoginPage", () => {
     });
   });
 
+  it("keeps credentials and enables retry after a connection failure", async () => {
+    apiFetchMock.mockRejectedValueOnce(Object.assign(new Error("Failed to fetch"), {
+      code: "NETWORK_UNAVAILABLE",
+      status: 0,
+    }));
+    render(
+      <LanguageProvider>
+        <LoginPage />
+      </LanguageProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Company ID"), { target: { value: "company-1" } });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "admin@example.com" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
+
+    expect(await screen.findByText("Could not reach the server. Check your connection and try again."))
+      .toBeInTheDocument();
+    expect(screen.getByLabelText("Company ID")).toHaveValue("company-1");
+    expect(screen.getByLabelText("Email")).toHaveValue("admin@example.com");
+    expect(screen.getByLabelText("Password")).toHaveValue("secret");
+    expect(screen.getByRole("button", { name: "Sign In" })).toBeEnabled();
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(apiFetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("clears stale page locks when rendering login", async () => {
     document.documentElement.setAttribute("inert", "");
     document.documentElement.style.overflow = "hidden";

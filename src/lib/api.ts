@@ -81,61 +81,87 @@ function buildHeaders(init: RequestInit | undefined, token: string | null): Head
   return headers;
 }
 
+async function fetchFromApi(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (error) {
+    if (init.signal?.aborted || (error instanceof Error && error.name === "AbortError")) {
+      throw error;
+    }
+    throw new ApiError(0, "The server could not be reached.", {
+      error: { code: "NETWORK_UNAVAILABLE" },
+    });
+  }
+}
+
 async function requestAccessTokenRefresh(): Promise<string | null> {
-  if (refreshPromise) {
-    return refreshPromise;
+  if (refreshPromise) return refreshPromise;
+
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    clearStoredSession();
+    return null;
   }
 
-  refreshPromise = (async () => {
-    const refreshToken = getRefreshToken();
-    if (!refreshToken) {
-      clearStoredSession();
+  const request = (async () => {
+    const response = await fetchFromApi(`${apiBaseUrl()}/api/v1/auth/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        refresh_token: refreshToken,
+        device_id: getOrCreateDeviceId(),
+      }),
+      credentials: "include",
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      if (getRefreshToken() === refreshToken) clearStoredSession();
       return null;
     }
-    try {
-      const response = await fetch(`${apiBaseUrl()}/api/v1/auth/refresh`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          refresh_token: refreshToken,
-          device_id: getOrCreateDeviceId(),
-        }),
-        credentials: "include",
+    if (!response.ok) {
+      throw new ApiError(response.status, "Session verification is temporarily unavailable.", {
+        error: { code: "AUTH_REFRESH_UNAVAILABLE" },
       });
-
-      if (!response.ok) {
-        clearStoredSession();
-        return null;
-      }
-
-      const body = (await response.json()) as RefreshResponse;
-      if (!body.access_token) {
-        clearStoredSession();
-        return null;
-      }
-
-      persistAccessToken(body.access_token);
-      if (body.refresh_token) {
-        persistRefreshToken(body.refresh_token);
-      }
-      return body.access_token;
-    } catch {
-      clearStoredSession();
-      return null;
-    } finally {
-      refreshPromise = null;
     }
+
+    let body: RefreshResponse | null;
+    try {
+      body = (await response.json()) as RefreshResponse | null;
+    } catch {
+      body = null;
+    }
+    if (
+      typeof body?.access_token !== "string" || !body.access_token.trim() ||
+      (body.refresh_token != null && (typeof body.refresh_token !== "string" || !body.refresh_token.trim()))
+    ) {
+      throw new ApiError(502, "The session response is invalid.", {
+        error: { code: "AUTH_REFRESH_UNAVAILABLE" },
+      });
+    }
+
+    // A late refresh must not restore a logged-out or replaced session.
+    if (getRefreshToken() !== refreshToken) return null;
+    persistAccessToken(body.access_token);
+    if (body.refresh_token) {
+      persistRefreshToken(body.refresh_token);
+    }
+    return body.access_token;
   })();
 
-  return refreshPromise;
+  refreshPromise = request;
+  try {
+    return await request;
+  } finally {
+    if (refreshPromise === request) refreshPromise = null;
+  }
 }
 
 async function requestWithToken(path: string, init: RequestInit | undefined, token: string | null): Promise<Response> {
   const headers = buildHeaders(init, token);
 
-  const response = await fetch(`${apiBaseUrl()}${path}`, {
+  const response = await fetchFromApi(`${apiBaseUrl()}${path}`, {
     ...init,
     headers,
     credentials: init?.credentials ?? "include",
