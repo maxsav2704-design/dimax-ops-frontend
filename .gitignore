@@ -13,6 +13,8 @@ dist-ssr
 *.local
 .next
 .next-dev
+.next-acceptance/
+.next-acceptance-preview/
 .next-*.log
 .preview-web.*
 installer-calendar-preview.png

@@ -1,0 +1,50 @@
+name: Acceptance Preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'codex/release-hardening-*'
+    paths:
+      - '.github/workflows/acceptance-preview.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acceptance-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8001
+      NEXT_DIST_DIR: .next-acceptance-preview
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Build isolated acceptance preview
+        run: npm run build
+      - name: Record source revision
+        run: git rev-parse HEAD > .next-acceptance-preview/SOURCE_COMMIT
+      - name: Upload preview without dependency copies or caches
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-preview
+          retention-days: 7
+          include-hidden-files: true
+          if-no-files-found: error
+          path: |
+            .next-acceptance-preview/
+            !.next-acceptance-preview/cache/**
+            !.next-acceptance-preview/standalone/**
