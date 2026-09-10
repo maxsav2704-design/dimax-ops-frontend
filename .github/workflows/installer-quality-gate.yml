@@ -58,7 +58,7 @@ jobs:
         with:
           repository: maxsav2704-design/dimax-ops-backend
           # Test the release backend, not an unrelated default-branch revision.
-          ref: b206ffd6d4dff711642e8c34b34aa007b432b1ad
+          ref: 1acf70d6b6538acf1e205668b3ad4cb2a39f59c5
           path: backend-ci
 
       - name: Prepare backend env
