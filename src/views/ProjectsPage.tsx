@@ -65,6 +65,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ApiError, apiDownload, apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
+import { formatImportRowError } from "@/lib/import-row-error";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import {
   canManageImports,
@@ -1461,30 +1462,7 @@ export default function ProjectsPage() {
     }
     return LOCATION_LABELS[value]?.[locale] || value;
   };
-  const importRowErrorLabel = (message: string): string => {
-    const match = /^missing required row values:\s*(.+)$/i.exec(message.trim());
-    if (!match) {
-      return message;
-    }
-    const fieldLabels: Record<string, string> = {
-      house_number: copy("house", "дом", "בניין"),
-      floor_label: copy("floor", "этаж", "קומה"),
-      apartment_number: copy("apartment/location", "квартира/позиция", "דירה/מיקום"),
-      door_marking: copy("door marking", "маркировка двери", "סימון דלת"),
-      order_number: copy("order number", "номер заказа", "מספר הזמנה"),
-    };
-    const fields = match[1]
-      .split(",")
-      .map((field) => field.trim())
-      .filter(Boolean)
-      .map((field) => fieldLabels[field] || field)
-      .join(", ");
-    return `${copy(
-      "Missing required values",
-      "Не заполнены обязательные поля",
-      "חסרים ערכי חובה",
-    )}: ${fields}`;
-  };
+  const importRowErrorLabel = (message: string): string => formatImportRowError(message, locale);
   const importProfileLabel = (code: string, fallback = code) => {
     switch (code) {
       case "auto_v1":
@@ -10207,7 +10185,7 @@ export default function ProjectsPage() {
                                   >
                                     {t("projects.rowError")
                                       .replace("{row}", String(errorItem.row))
-                                      .replace("{message}", errorItem.message)}
+                                      .replace("{message}", importRowErrorLabel(errorItem.message))}
                                   </div>
                                 ))}
                             </div>
