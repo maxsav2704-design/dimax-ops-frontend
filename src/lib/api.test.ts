@@ -137,6 +137,49 @@ describe("apiFetch", () => {
     expect(retriedHeaders.get("Authorization")).toBe("Bearer fresh-token");
   });
 
+  it("replays the same multipart upload after refreshing an expired access token", async () => {
+    getAccessTokenMock.mockReturnValue("expired-token");
+    getRefreshTokenMock.mockReturnValue("refresh-token");
+    const form = new FormData();
+    form.append("file", new Blob(["unit_label,qty\nA-101,1"], { type: "text/csv" }), "doors.csv");
+    form.append("analyze_only", "true");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ error: { code: "UNAUTHORIZED", message: "Token expired" } }, 401))
+      .mockResolvedValueOnce(jsonResponse({ access_token: "fresh-token", refresh_token: "rotated-refresh" }))
+      .mockResolvedValueOnce(jsonResponse({ would_import: 1 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(apiFetch("/api/v1/admin/projects/test/doors/import-upload", {
+      method: "POST", body: form,
+    })).resolves.toEqual({ would_import: 1 });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    for (const index of [0, 2]) {
+      const init = fetchMock.mock.calls[index]?.[1] as RequestInit;
+      expect(init.method).toBe("POST");
+      expect(init.body).toBe(form);
+      expect(new Headers(init.headers).has("Content-Type")).toBe(false);
+    }
+    const retried = fetchMock.mock.calls[2]?.[1] as RequestInit;
+    expect(new Headers(retried.headers).get("Authorization")).toBe("Bearer fresh-token");
+    expect(persistRefreshTokenMock).toHaveBeenCalledWith("rotated-refresh");
+  });
+
+  it("does not refresh or replay an upload rejected by permissions", async () => {
+    getAccessTokenMock.mockReturnValue("valid-token");
+    getRefreshTokenMock.mockReturnValue("refresh-token");
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ error: { code: "FORBIDDEN_SCOPE", message: "Access denied" } }, 403),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(apiFetch("/api/v1/admin/projects/test/doors/import-upload", {
+      method: "POST", body: new FormData(),
+    })).rejects.toMatchObject({ status: 403, code: "FORBIDDEN_SCOPE" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(persistAccessTokenMock).not.toHaveBeenCalled();
+    expect(clearStoredSessionMock).not.toHaveBeenCalled();
+  });
+
   it("bootstraps a session from refresh when no access token is present", async () => {
     getAccessTokenMock.mockReturnValue(null);
     getRefreshTokenMock.mockReturnValue("refresh-token");
