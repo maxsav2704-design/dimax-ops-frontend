@@ -31,6 +31,22 @@ Or use the dedicated script:
 npm run test:installer
 ```
 
+## Live Dashboard Window Regression
+
+`src/test/IndexPage.test.tsx` advances the clock after an installation and checks
+both query refetch and route remount. The report end and upcoming calendar start
+must advance, new work/payroll must appear, and the query cache must stay bounded.
+The window is rolling seven days, not a fixed calendar-week filter. Existing
+loading, retry and stale-data tests remain required.
+
+```bash
+node node_modules/vitest/vitest.mjs run --pool=forks --maxWorkers=1 src/test/IndexPage.test.tsx
+```
+
+Source tests mock API responses. Live acceptance must additionally complete a
+synthetic door after the dashboard loads and confirm updated totals without a
+full browser reload.
+
 ## E2E (Playwright)
 
 Single-command bootstrap + strict installer gate:

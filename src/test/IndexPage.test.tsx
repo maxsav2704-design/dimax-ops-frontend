@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
 import Index from "@/views/Index";
@@ -75,6 +75,10 @@ function emptyDashboardResponse(path: string) {
 }
 
 describe("Index dashboard", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     apiFetchMock.mockReset();
     pushMock.mockReset();
@@ -120,6 +124,50 @@ describe("Index dashboard", () => {
     await act(async () => { await queryClient.refetchQueries(); });
     expect(await screen.findAllByText(/Showing the last loaded data/)).toHaveLength(3);
     expect(screen.getByText("All clear")).toBeInTheDocument();
+  });
+
+  it.each(["refetch", "remount"])("advances report and calendar windows on %s", async (mode) => {
+    const openedAt = new Date();
+    const completedAt = new Date(openedAt.getTime() + 60_000);
+    const refreshedAt = new Date(openedAt.getTime() + 120_000);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(openedAt);
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const response = emptyDashboardResponse(path);
+      if ("kpi" in response && response.kpi) {
+        const end = new URL(path, "http://localhost").searchParams.get("date_to")!;
+        if (new Date(end) > completedAt) {
+          response.kpi.installed_doors = 3;
+          response.kpi.payroll_total = "750.00";
+        }
+      }
+      return response;
+    });
+    let subject = renderSubject();
+    await screen.findByText("All clear");
+    expect(screen.getAllByTestId("dashboard-kpi")[1]).toHaveTextContent("0");
+
+    vi.setSystemTime(refreshedAt);
+    apiFetchMock.mockClear();
+    if (mode === "remount") {
+      subject.unmount();
+      subject.queryClient.clear();
+      subject = renderSubject();
+      await screen.findByText("All clear");
+    } else {
+      await act(async () => { await subject.queryClient.refetchQueries(); });
+    }
+
+    const paths = apiFetchMock.mock.calls.map(([path]) => String(path));
+    const reports = new URL(paths.find((path) => path.includes("reports/dashboard?"))!, "http://localhost");
+    const calendar = new URL(paths.find((path) => path.includes("calendar/events?"))!, "http://localhost");
+    expect(reports.searchParams.get("date_to")).toBe(refreshedAt.toISOString());
+    expect(reports.searchParams.get("date_from")).toBe(new Date(refreshedAt.getTime() - 7 * 86_400_000).toISOString());
+    expect(calendar.searchParams.get("starts_at")).toBe(refreshedAt.toISOString());
+    expect(calendar.searchParams.get("ends_at")).toBe(new Date(refreshedAt.getTime() + 7 * 86_400_000).toISOString());
+    await waitFor(() => expect(screen.getAllByTestId("dashboard-kpi")[1]).toHaveTextContent("3"));
+    expect(screen.getByText("Payroll: 750.00 NIS")).toBeInTheDocument();
+    expect(subject.queryClient.getQueryCache().getAll()).toHaveLength(3);
   });
 
   it("renders DIMAX dashboard v2.4 shell with live business sections", async () => {

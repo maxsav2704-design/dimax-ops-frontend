@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CalendarDays, Plus } from "lucide-react";
@@ -152,8 +152,6 @@ function createDashboardTimeWindow() {
     eventsTo: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   };
 }
-
-const DASHBOARD_TIME_WINDOW = createDashboardTimeWindow();
 
 function hhmm(value: string, locale: "en" | "ru" | "he"): string {
   const date = new Date(value);
@@ -348,14 +346,17 @@ const Index = () => {
   const { locale } = useI18n();
   const copy = getDashboardCopy(locale);
   const labels = dashboardActionLabels(locale);
-  const { now, dateFrom, dateTo, eventsFrom, eventsTo } = DASHBOARD_TIME_WINDOW;
+  const [openedAt] = useState(() => new Date());
 
   const dashboardQuery = useQuery({
-    queryKey: ["dashboard-reports", dateFrom, dateTo],
-    queryFn: () =>
-      apiFetch<ReportsDashboardResponse>(
+    queryKey: ["dashboard-reports"],
+    queryFn: () => {
+      // A live window must advance on every refetch, not just on module load.
+      const { dateFrom, dateTo } = createDashboardTimeWindow();
+      return apiFetch<ReportsDashboardResponse>(
         `/api/v1/admin/reports/dashboard?date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}`,
-      ),
+      );
+    },
     refetchInterval: 30_000,
   });
 
@@ -369,14 +370,21 @@ const Index = () => {
   });
 
   const nextScheduleQuery = useQuery({
-    queryKey: ["dashboard-next-schedule", eventsFrom, eventsTo],
-    queryFn: () =>
-      apiFetch<CalendarEventsResponse>(
+    queryKey: ["dashboard-next-schedule"],
+    queryFn: () => {
+      const { eventsFrom, eventsTo } = createDashboardTimeWindow();
+      return apiFetch<CalendarEventsResponse>(
         `/api/v1/admin/calendar/events?starts_at=${encodeURIComponent(eventsFrom)}&ends_at=${encodeURIComponent(eventsTo)}`,
-      ),
+      );
+    },
     refetchInterval: 30_000,
   });
 
+  const now = new Date(Math.max(
+    dashboardQuery.dataUpdatedAt,
+    dispatcherBoardQuery.dataUpdatedAt,
+    nextScheduleQuery.dataUpdatedAt,
+  ) || openedAt.getTime());
   const dashboard = dashboardQuery.data;
   const dispatcherSummary = dispatcherBoardQuery.data?.summary;
   const kpi = dashboard?.kpi;
