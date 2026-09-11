@@ -3,6 +3,13 @@ import type { Locale } from "./i18n";
 export function formatImportRowError(message: string, locale: Locale): string {
   const copy = (en: string, ru: string, he: string) =>
     locale === "ru" ? ru : locale === "he" ? he : en;
+  if (message.trim() === "door_type_id or door_type_code is required") {
+    return copy(
+      "Door type not identified: check the type code in the file or select a default door type",
+      "Тип двери не определён: проверьте код типа в файле или выберите тип по умолчанию",
+      "סוג הדלת לא זוהה: בדוק את קוד הסוג בקובץ או בחר סוג דלת כברירת מחדל",
+    );
+  }
   const quantity = /^(?:invalid quantity|quantity out of range|quantity must be a finite whole number):\s*(.*)$/i.exec(message.trim());
   if (quantity) {
     return `${copy(

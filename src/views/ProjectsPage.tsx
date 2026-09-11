@@ -9200,8 +9200,8 @@ export default function ProjectsPage() {
                       "עמודות עיקריות: הזמנה, בניין, קומה, דירה, דגם דלת",
                     )}
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-[1fr_280px_130px] gap-2 mt-3">
-                    <label className="flex h-10 cursor-pointer items-center rounded-lg border border-dashed border-border bg-surface px-3 text-[13px] text-text-secondary transition-colors hover:border-border-strong focus-within:ring-2 focus-within:ring-accent/35">
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <label className="relative flex h-10 min-w-0 basis-52 grow cursor-pointer items-center rounded-lg border border-dashed border-border bg-surface px-3 text-[13px] text-text-secondary transition-colors hover:border-border-strong focus-within:ring-2 focus-within:ring-accent/35">
                       <FileSpreadsheet
                         className="w-4 h-4 mr-2 shrink-0"
                         aria-hidden="true"
@@ -9214,7 +9214,8 @@ export default function ProjectsPage() {
                       <input
                         type="file"
                         disabled={!canManageProjectImports}
-                        className="hidden"
+                        aria-label={t("projects.chooseFile")}
+                        className="sr-only"
                         onChange={(e) => {
                           setImportFile(e.target.files?.[0] || null);
                           setAnalysisReady(false);
@@ -9233,7 +9234,7 @@ export default function ProjectsPage() {
                         setAnalysisReady(false);
                         setAllowPartialImport(false);
                       }}
-                      className="control-input"
+                      className="control-input min-w-0 basis-64 grow"
                     >
                       <option value="">
                         {loadingDoorTypes
@@ -9246,14 +9247,14 @@ export default function ProjectsPage() {
                         </option>
                       ))}
                     </select>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid min-w-0 basis-72 grow grid-cols-2 gap-2">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => void handleImportAction("analyze")}
                         disabled={!canManageProjectImports || !importFile || importLoading}
-                        className="h-10"
+                        className="h-10 min-w-0 px-2"
                       >
                         {importLoading && importAction === "analyze"
                           ? t("projects.analyzing")
@@ -9270,7 +9271,7 @@ export default function ProjectsPage() {
                           !analysisReady ||
                           importBlockedByRowErrors
                         }
-                        className="h-10"
+                        className="h-10 min-w-0 px-2"
                       >
                         {importLoading && importAction === "import"
                           ? t("projects.importing")
@@ -9278,7 +9279,7 @@ export default function ProjectsPage() {
                       </Button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     <select
                       aria-label={t("projects.mappingProfileAuto")}
                       value={mappingProfile}
@@ -9287,7 +9288,7 @@ export default function ProjectsPage() {
                         setAnalysisReady(false);
                         setAllowPartialImport(false);
                       }}
-                      className="control-input h-9 text-[12px]"
+                      className="control-input h-9 min-w-0 basis-52 grow text-[12px]"
                     >
                       {loadingMappingProfiles ? (
                         <option value="auto_v1">
@@ -9314,7 +9315,7 @@ export default function ProjectsPage() {
                         setAnalysisReady(false);
                         setAllowPartialImport(false);
                       }}
-                      className="control-input h-9 text-[12px]"
+                      className="control-input h-9 min-w-0 basis-52 grow text-[12px]"
                     >
                       <option value="">{t("projects.delimiterAuto")}</option>
                       <option value=",">{t("projects.delimiterComma")}</option>
@@ -9324,10 +9325,11 @@ export default function ProjectsPage() {
                       <option value="|">{t("projects.delimiterPipe")}</option>
                       <option value={"\t"}>{t("projects.delimiterTab")}</option>
                     </select>
-                    <label className="checkbox-row h-9 rounded-lg border border-border bg-surface px-3">
+                    <label className="checkbox-row min-h-9 min-w-0 basis-72 grow rounded-lg border border-border bg-surface px-3 py-2">
                       <input
                         type="checkbox"
                         checked={createMissingDoorTypes}
+                        className="shrink-0"
                         onChange={(e) => {
                           setCreateMissingDoorTypes(e.target.checked);
                           setAnalysisReady(false);

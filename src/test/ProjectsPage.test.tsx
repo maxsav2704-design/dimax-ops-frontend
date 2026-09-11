@@ -317,11 +317,14 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    const { container } = render(<ProjectsPage />);
+    render(<ProjectsPage />);
 
     expect(await screen.findByText("Import Factory File")).toBeInTheDocument();
 
-    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const fileInput = screen.getByLabelText("Choose file...") as HTMLInputElement;
+    expect(fileInput).toHaveAttribute("type", "file");
+    expect(fileInput).toHaveClass("sr-only");
+    expect(fileInput).not.toHaveClass("hidden");
     const file = new File(["house,floor,apartment\nA,1,11"], "factory_manifest.csv", {
       type: "text/csv",
     });

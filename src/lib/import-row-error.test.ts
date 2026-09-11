@@ -3,6 +3,14 @@ import { formatImportRowError } from "./import-row-error";
 
 describe("import row error messages", () => {
   it.each([
+    ["en", "Door type not identified: check the type code in the file or select a default door type"],
+    ["ru", "Тип двери не определён: проверьте код типа в файле или выберите тип по умолчанию"],
+    ["he", "סוג הדלת לא זוהה: בדוק את קוד הסוג בקובץ או בחר סוג דלת כברירת מחדל"],
+  ] as const)("explains an unresolved door type in %s", (locale, expected) => {
+    expect(formatImportRowError("door_type_id or door_type_code is required", locale)).toBe(expected);
+  });
+
+  it.each([
     ["en", "Quantity must be a whole number from 1 to 1000"],
     ["ru", "Количество должно быть целым числом от 1 до 1000"],
     ["he", "הכמות חייבת להיות מספר שלם בין 1 ל-1000"],
