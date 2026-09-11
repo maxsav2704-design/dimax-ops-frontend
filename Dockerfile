@@ -28,9 +28,10 @@ RUN addgroup --gid 10001 dimax \
         --no-create-home --home /app dimax
 
 COPY --from=builder --chown=10001:10001 /app/.next/standalone ./
+COPY --from=builder --chown=10001:10001 /app/.next/standalone/server.js ./server.cjs
 COPY --from=builder --chown=10001:10001 /app/.next/static ./.next/static
 COPY --from=builder --chown=10001:10001 /app/public ./public
 
 USER 10001:10001
 EXPOSE 5173
-CMD ["node", "server.js"]
+CMD ["node", "server.cjs"]
