@@ -66,6 +66,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { ApiError, apiDownload, apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { formatImportRowError } from "@/lib/import-row-error";
+import { formatLocaleMoney } from "@/lib/formatting";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import {
   canManageImports,
@@ -463,22 +464,22 @@ type ProjectPlanFactResponse = {
   not_installed_doors: number;
   completion_pct: number;
   open_issues: number;
-  planned_revenue_total: number;
-  actual_revenue_total: number;
-  revenue_gap_total: number;
-  planned_payroll_total: number;
-  actual_payroll_total: number;
-  payroll_gap_total: number;
-  planned_profit_total: number;
-  actual_profit_total: number;
-  profit_gap_total: number;
-  planned_addons_qty: number;
-  actual_addons_qty: number;
+  planned_revenue_total: string | number;
+  actual_revenue_total: string | number;
+  revenue_gap_total: string | number;
+  planned_payroll_total: string | number;
+  actual_payroll_total: string | number;
+  payroll_gap_total: string | number;
+  planned_profit_total: string | number;
+  actual_profit_total: string | number;
+  profit_gap_total: string | number;
+  planned_addons_qty: string | number;
+  actual_addons_qty: string | number;
   urgency_surcharges_count: number;
   urgency_order_surcharges_count: number;
-  urgency_client_total: number;
-  urgency_installer_total: number;
-  urgency_profit_total: number;
+  urgency_client_total: string | number;
+  urgency_installer_total: string | number;
+  urgency_profit_total: string | number;
   missing_planned_rates_doors: number;
   missing_actual_rates_doors: number;
   missing_addon_plans_facts: number;
@@ -488,15 +489,15 @@ type ProjectRiskDriverItem = {
   code: string;
   label: string;
   severity: string;
-  value: number;
+  value: string | number;
 };
 
 type ProjectRiskReasonItem = {
   reason_id: string | null;
   reason_name: string;
   doors: number;
-  revenue_delayed_total: number;
-  profit_delayed_total: number;
+  revenue_delayed_total: string | number;
+  profit_delayed_total: string | number;
 };
 
 type ProjectRiskOrderItem = {
@@ -505,10 +506,10 @@ type ProjectRiskOrderItem = {
   installed_doors: number;
   not_installed_doors: number;
   open_issues: number;
-  planned_revenue_total: number;
-  actual_revenue_total: number;
-  revenue_gap_total: number;
-  actual_profit_total: number;
+  planned_revenue_total: string | number;
+  actual_revenue_total: string | number;
+  revenue_gap_total: string | number;
+  actual_profit_total: string | number;
   completion_pct: number;
 };
 
@@ -519,23 +520,23 @@ type ProjectRiskDrilldownSummary = {
   completion_pct: number;
   open_issues: number;
   blocked_open_issues: number;
-  planned_revenue_total: number;
-  actual_revenue_total: number;
-  revenue_gap_total: number;
-  planned_profit_total: number;
-  actual_profit_total: number;
-  profit_gap_total: number;
+  planned_revenue_total: string | number;
+  actual_revenue_total: string | number;
+  revenue_gap_total: string | number;
+  planned_profit_total: string | number;
+  actual_profit_total: string | number;
+  profit_gap_total: string | number;
   actual_margin_pct: number;
-  delayed_revenue_total: number;
-  delayed_profit_total: number;
-  blocked_issue_profit_at_risk: number;
-  addon_revenue_total: number;
-  addon_profit_total: number;
+  delayed_revenue_total: string | number;
+  delayed_profit_total: string | number;
+  blocked_issue_profit_at_risk: string | number;
+  addon_revenue_total: string | number;
+  addon_profit_total: string | number;
   urgency_surcharges_count: number;
   urgency_order_surcharges_count: number;
-  urgency_client_total: number;
-  urgency_installer_total: number;
-  urgency_profit_total: number;
+  urgency_client_total: string | number;
+  urgency_installer_total: string | number;
+  urgency_profit_total: string | number;
   missing_planned_rates_doors: number;
   missing_actual_rates_doors: number;
   missing_addon_plans_facts: number;
@@ -1323,17 +1324,6 @@ function filenameFromDisposition(
   return match?.[1] || fallback;
 }
 
-function formatMoney(value: number | null | undefined): string {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    return "-";
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 function formatPct(value: number | null | undefined): string {
   if (typeof value !== "number" || Number.isNaN(value)) {
     return "-";
@@ -1453,6 +1443,12 @@ function chunkIds(values: string[], size: number): string[][] {
 
 export default function ProjectsPage() {
   const { locale, t } = useI18n();
+  const formatMoney = (value: string | number | null | undefined): string => {
+    if (value == null || String(value).trim() === "" || !Number.isFinite(Number(value))) {
+      return "-";
+    }
+    return formatLocaleMoney(value, "ILS", locale, { minimumFractionDigits: 2 });
+  };
   const tt = (key: string) => projectsOverrides[locale]?.[key] ?? t(key);
   const copy = (en: string, ru: string, he: string) =>
     locale === "ru" ? ru : locale === "he" ? he : en;
@@ -7989,8 +7985,8 @@ export default function ProjectsPage() {
                                       projectPlanFact.actual_addons_qty,
                                     ),
                                     gap: String(
-                                      projectPlanFact.actual_addons_qty -
-                                        projectPlanFact.planned_addons_qty,
+                                      Number(projectPlanFact.actual_addons_qty) -
+                                        Number(projectPlanFact.planned_addons_qty),
                                     ),
                                   },
                                 ].map((row) => (
@@ -8125,8 +8121,8 @@ export default function ProjectsPage() {
                                         {projectPlanFact.actual_addons_qty}
                                       </td>
                                       <td className="px-3 py-2">
-                                        {projectPlanFact.actual_addons_qty -
-                                          projectPlanFact.planned_addons_qty}
+                                        {Number(projectPlanFact.actual_addons_qty) -
+                                          Number(projectPlanFact.planned_addons_qty)}
                                       </td>
                                     </tr>
                                   </tbody>

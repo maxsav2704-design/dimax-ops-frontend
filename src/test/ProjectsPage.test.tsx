@@ -1566,7 +1566,8 @@ describe("ProjectsPage", () => {
     expect(screen.getByRole("button", { name: "Assign selected" })).toBeDisabled();
   }, 20000);
 
-  it("shows project financial screen with plan fact and risk drill-down", async () => {
+  it.each(["number", "decimal-string"])("shows project financial screen with %s amounts and risk drill-down", async (wireType) => {
+    const amount = (value: number) => wireType === "decimal-string" ? value.toFixed(2) : value;
     apiFetchMock.mockImplementation(async (path: string) => {
       const url = String(path);
 
@@ -1615,15 +1616,15 @@ describe("ProjectsPage", () => {
           not_installed_doors: 4,
           completion_pct: 60,
           open_issues: 3,
-          planned_revenue_total: 20000,
-          actual_revenue_total: 12000,
-          revenue_gap_total: 8000,
-          planned_payroll_total: 9000,
-          actual_payroll_total: 5400,
-          payroll_gap_total: 3600,
-          planned_profit_total: 11000,
-          actual_profit_total: 6600,
-          profit_gap_total: 4400,
+          planned_revenue_total: amount(20000),
+          actual_revenue_total: amount(12000.25),
+          revenue_gap_total: amount(7999.75),
+          planned_payroll_total: amount(9000),
+          actual_payroll_total: amount(5400.10),
+          payroll_gap_total: amount(3599.90),
+          planned_profit_total: amount(11000),
+          actual_profit_total: amount(6600.15),
+          profit_gap_total: amount(4399.85),
           planned_addons_qty: 4,
           actual_addons_qty: 2,
           missing_planned_rates_doors: 1,
@@ -1644,12 +1645,12 @@ describe("ProjectsPage", () => {
             completion_pct: 60,
             open_issues: 3,
             blocked_open_issues: 1,
-            planned_revenue_total: 20000,
-            actual_revenue_total: 12000,
-            revenue_gap_total: 8000,
-            planned_profit_total: 11000,
-            actual_profit_total: 6600,
-            profit_gap_total: 4400,
+            planned_revenue_total: amount(20000),
+            actual_revenue_total: amount(12000.25),
+            revenue_gap_total: amount(7999.75),
+            planned_profit_total: amount(11000),
+            actual_profit_total: amount(6600.15),
+            profit_gap_total: amount(4399.85),
             actual_margin_pct: 55,
             delayed_revenue_total: 5000,
             delayed_profit_total: 2500,
@@ -1665,7 +1666,7 @@ describe("ProjectsPage", () => {
               code: "PROFIT_GAP",
               label: "Profit Gap",
               severity: "DANGER",
-              value: 4400,
+              value: amount(4399.85),
             },
             {
               code: "OPEN_ISSUES",
@@ -1679,8 +1680,8 @@ describe("ProjectsPage", () => {
               reason_id: "reason-1",
               reason_name: "Site access blocked",
               doors: 2,
-              revenue_delayed_total: 3000,
-              profit_delayed_total: 1500,
+              revenue_delayed_total: amount(3000),
+              profit_delayed_total: amount(1500),
             },
           ],
           risky_orders: [
@@ -1690,10 +1691,10 @@ describe("ProjectsPage", () => {
               installed_doors: 1,
               not_installed_doors: 3,
               open_issues: 2,
-              planned_revenue_total: 8000,
-              actual_revenue_total: 2000,
-              revenue_gap_total: 6000,
-              actual_profit_total: 900,
+              planned_revenue_total: amount(8000),
+              actual_revenue_total: amount(2000),
+              revenue_gap_total: amount(6000),
+              actual_profit_total: amount(900),
               completion_pct: 25,
             },
           ],
@@ -1714,11 +1715,17 @@ describe("ProjectsPage", () => {
     render(<ProjectsPage />);
 
     expect(await screen.findByText("Project Financial Screen")).toBeInTheDocument();
-    expect(screen.getByText("Plan vs Fact Ledger")).toBeInTheDocument();
+    expect(await screen.findByText("Plan vs Fact Ledger")).toBeInTheDocument();
     expect(screen.getByText("Risk Drivers")).toBeInTheDocument();
     expect(screen.getByText("Top Delay Reasons")).toBeInTheDocument();
     expect(screen.getByText("Orders at Risk")).toBeInTheDocument();
-    expect(screen.getAllByText("$8,000").length).toBeGreaterThan(0);
+    const finances = within(document.getElementById("project-financial-screen")!);
+    expect(finances.getAllByText("12,000.25 ILS").length).toBeGreaterThan(0);
+    expect(finances.getAllByText("5,400.10 ILS").length).toBeGreaterThan(0);
+    expect(finances.getAllByText("6,600.15 ILS").length).toBeGreaterThan(0);
+    expect(finances.getAllByText("7,999.75 ILS").length).toBeGreaterThan(0);
+    expect(finances.getAllByText("6,000.00 ILS").length).toBeGreaterThan(0);
+    expect(finances.queryByText(/\$/)).not.toBeInTheDocument();
     expect(screen.getAllByText("55.0%").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Site access blocked").length).toBeGreaterThan(0);
     expect(screen.getAllByText("AZ-5001").length).toBeGreaterThan(0);
