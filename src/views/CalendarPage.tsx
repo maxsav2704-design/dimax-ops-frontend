@@ -567,6 +567,10 @@ export default function CalendarPage() {
         method: "DELETE",
       })),
     onSuccess: async (_, eventId) => {
+      if (editingEvent?.id === eventId) {
+        setIsEditOpen(false);
+        setEditingEvent(null);
+      }
       if (selectedEvent?.id === eventId) {
         setSelectedEvent(null);
         setIsInfoFrameOpen(false);
@@ -669,9 +673,12 @@ export default function CalendarPage() {
       setIsInfoFrameOpen(false);
       return;
     }
-    if (!selectedEvent || !visibleEvents.some((event) => event.id === selectedEvent.id)) {
+    const currentEvent = visibleEvents.find((event) => event.id === selectedEvent?.id);
+    if (!currentEvent) {
       setSelectedEvent(visibleEvents[0]);
       setIsInfoFrameOpen(false);
+    } else if (currentEvent !== selectedEvent) {
+      setSelectedEvent(currentEvent);
     }
   }, [selectedEvent, visibleEvents]);
 
@@ -1499,7 +1506,7 @@ export default function CalendarPage() {
                 <button
                   type="button"
                   onClick={() => deleteMutation.mutate(editingEvent.id)}
-                  disabled={!canManageCalendar || deleteMutation.isPending}
+                  disabled={!canManageCalendar || deleteMutation.isPending || updateMutation.isPending}
                   title={privilegedActionHint}
                   className="dmx-secondary-action h-10 text-status-problem-fg disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -1522,7 +1529,8 @@ export default function CalendarPage() {
                   !form.title.trim() ||
                   isInvalidTimeRange ||
                   createMutation.isPending ||
-                  updateMutation.isPending
+                  updateMutation.isPending ||
+                  deleteMutation.isPending
                 }
                 title={privilegedActionHint}
                 className="dmx-primary-action h-10 disabled:cursor-not-allowed disabled:opacity-60"

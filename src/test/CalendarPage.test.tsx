@@ -33,6 +33,82 @@ describe("CalendarPage", () => {
     authSessionMock.mockReturnValue({ role: "ADMIN", admin_scope: "OWNER", can_view_rates: true });
   });
 
+  function mockEditableEvent() {
+    const start = new Date();
+    start.setHours(9, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(10);
+    let items = [{
+      id: "event-edit", title: "Site inspection", event_type: "inspection",
+      starts_at: start.toISOString(), ends_at: end.toISOString(),
+      location: null, waze_url: null, description: null, project_id: null,
+      installer_ids: [],
+    }];
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path === "/api/v1/admin/calendar/events/event-edit") {
+        if (init?.method === "PATCH") {
+          items = [{ ...items[0], ...JSON.parse(String(init.body)) }];
+          return { ok: true };
+        }
+        if (init?.method === "DELETE") {
+          items = [];
+          return { ok: true };
+        }
+      }
+      if (path.includes("/calendar/events?")) return { items };
+      if (path.includes("/installers?")) return [];
+      return { items: [] };
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={queryClient}><CalendarPage /></QueryClientProvider>);
+    return queryClient;
+  }
+
+  async function openEventEditor() {
+    fireEvent.click(await screen.findByRole("button", { name: "Site inspection, 09:00 - 10:00" }));
+    const frame = await screen.findByTestId("calendar-event-info-frame");
+    fireEvent.click(within(frame).getByRole("button", { name: "Edit", exact: true }));
+    return screen.getByRole("dialog", { name: "Edit Event" });
+  }
+
+  it("regression: refreshes the open event panel after saving without another card click", async () => {
+    const queryClient = mockEditableEvent();
+    const dialog = await openEventEditor();
+    fireEvent.change(within(dialog).getByLabelText("Title"), { target: { value: "Updated inspection" } });
+    fireEvent.change(within(dialog).getByLabelText("Start"), { target: { value: "11:00" } });
+    fireEvent.change(within(dialog).getByLabelText("End"), { target: { value: "12:30" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save Changes" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await screen.findByRole("button", { name: "Updated inspection, 11:00 - 12:30" });
+    const frame = screen.getByTestId("calendar-event-info-frame");
+    await waitFor(() => {
+      expect(frame).toHaveTextContent("Updated inspection");
+      expect(frame).toHaveTextContent("11:00 - 12:30");
+      expect(frame).not.toHaveTextContent("09:00 - 10:00");
+    });
+    fireEvent.click(within(frame).getByRole("button", { name: "Edit", exact: true }));
+    expect(within(screen.getByRole("dialog")).getByLabelText("Title")).toHaveValue("Updated inspection");
+    queryClient.clear();
+  });
+
+  it("regression: keeps a failed deletion editable and closes both panels after a successful retry", async () => {
+    const queryClient = mockEditableEvent();
+    const dialog = await openEventEditor();
+    const remove = within(dialog).getByRole("button", { name: "Delete" });
+    apiFetchMock.mockRejectedValueOnce(new Error("Deletion failed"));
+    fireEvent.click(remove);
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Deletion failed");
+    expect(dialog).toBeInTheDocument();
+    fireEvent.click(remove);
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("calendar-event-info-frame")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Site inspection, 09:00 - 10:00" })).not.toBeInTheDocument();
+    });
+    expect(apiFetchMock.mock.calls.filter(([, init]) => init?.method === "DELETE")).toHaveLength(2);
+    queryClient.clear();
+  });
+
   it("button audit: keeps the event editor scrollable and its errors inside the dialog", async () => {
     apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
       if (init?.method === "POST") throw new TypeError("Failed to fetch");

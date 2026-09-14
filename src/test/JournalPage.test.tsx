@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -303,11 +303,78 @@ describe("JournalPage", () => {
     vi.restoreAllMocks();
   });
 
+  it("regression: disables template actions when the shared template list is empty", async () => {
+    const base = buildApiMock();
+    apiFetchMock.mockImplementation((path: string, init?: RequestInit) =>
+      path === "/api/v1/admin/settings/communication-templates"
+        ? Promise.resolve({ items: [] }) : base(path, init));
+    renderJournalPage();
+    await screen.findByLabelText("Communication template");
+    const apply = screen.getByRole("button", { name: "Apply" });
+    const remove = screen.getByRole("button", { name: "Delete" });
+    expect(apply).toBeDisabled();
+    expect(remove).toBeDisabled();
+    fireEvent.click(apply);
+    fireEvent.click(remove);
+    expect(apiFetchMock.mock.calls.some(([, init]) => init?.method)).toBe(false);
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+  });
+
+  it("regression: disables stale template actions during a reload and after a loading failure", async () => {
+    renderJournalPage();
+    await screen.findByLabelText("Communication template");
+    const apply = screen.getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    const remove = screen.getByRole("button", { name: "Delete" });
+    let reject!: (reason: Error) => void;
+    const pending = new Promise<never>((_, rejectPromise) => { reject = rejectPromise; });
+    const base = buildApiMock();
+    apiFetchMock.mockImplementation((path: string, init?: RequestInit) =>
+      path === "/api/v1/admin/settings/communication-templates" ? pending : base(path, init));
+    fireEvent.change(screen.getByRole("combobox", { name: "Journal status filter" }), { target: { value: "DRAFT" } });
+    expect(apply).toBeDisabled();
+    expect(remove).toBeDisabled();
+    await act(async () => { reject(new Error("Templates unavailable")); });
+    expect(apply).toBeDisabled();
+    expect(remove).toBeDisabled();
+    expect(apiFetchMock.mock.calls.some(([, init]) => init?.method)).toBe(false);
+  });
+
+  it.each(["Apply", "Delete"])("regression: prevents repeated template %s requests while pending", async (action) => {
+    renderJournalPage();
+    await screen.findByLabelText("Communication template");
+    const apply = screen.getByRole("button", { name: "Apply" });
+    const remove = screen.getByRole("button", { name: "Delete" });
+    await waitFor(() => expect(screen.getByLabelText("Communication template")).toHaveValue("template-1"));
+    const target = action === "Apply" ? apply : remove;
+    let resolve!: (value: unknown) => void;
+    const pending = new Promise((resolvePromise) => { resolve = resolvePromise; });
+    const path = `/api/v1/admin/settings/communication-templates/${action === "Apply" ? "render-preview" : "template-1"}`;
+    const base = buildApiMock();
+    apiFetchMock.mockImplementation((url: string, init?: RequestInit) => url === path ? pending : base(url, init));
+    fireEvent.click(target);
+    expect(apply).toBeDisabled();
+    expect(remove).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    fireEvent.click(target);
+    expect(apiFetchMock.mock.calls.filter(([url]) => url === path)).toHaveLength(1);
+    await act(async () => { resolve({ subject: "Resolved subject", message: "Resolved message" }); });
+    if (action === "Apply") {
+      expect(screen.getByLabelText("Journal subject")).toHaveValue("Resolved subject");
+      expect(apply).toBeEnabled();
+      expect(remove).toBeEnabled();
+    } else {
+      expect(screen.getByLabelText("Communication template")).toHaveProperty("value", "");
+      expect(apply).toBeDisabled();
+      expect(remove).toBeDisabled();
+    }
+  });
+
   it("loads communication center data and opens journal form route", async () => {
     renderJournalPage();
 
     expect(await screen.findByText("Communications Center")).toBeInTheDocument();
-    expect(await screen.findByText("Final Handover Pack")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Final Handover Pack" })).toBeInTheDocument();
     expect(screen.getAllByText("Ashdod Towers").length).toBeGreaterThan(0);
     expect(await screen.findByText("Please review the delivery package.")).toBeInTheDocument();
     expect(screen.getByText("Integration snapshot")).toBeInTheDocument();
@@ -318,7 +385,7 @@ describe("JournalPage", () => {
 
   it("button audit: sends domain statuses from the journal filter", async () => {
     renderJournalPage();
-    await screen.findByText("Final Handover Pack");
+    await screen.findByRole("heading", { name: "Final Handover Pack" });
     const filter = screen.getByRole("combobox", { name: "Journal status filter" });
     for (const status of ["DRAFT", "ACTIVE", "ARCHIVED"]) {
       fireEvent.change(filter, { target: { value: status } });
@@ -449,7 +516,7 @@ describe("JournalPage", () => {
 
     renderJournalPage();
 
-    expect(await screen.findByText("Final Handover Pack")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Final Handover Pack" })).toBeInTheDocument();
     expect(await screen.findByLabelText("Journal subject")).toBeDisabled();
     expect(screen.getByLabelText("Journal message")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();

@@ -621,6 +621,9 @@ export default function JournalPage() {
       null,
     [savedTemplates, selectedTemplateId],
   );
+  const templateActionsBlocked =
+    !canManage || queueLoading || Boolean(pageError) || Boolean(busyAction);
+  const selectedTemplateActionsBlocked = templateActionsBlocked || !selectedTemplate;
 
   const effectiveSendEmail = sendEmail && Boolean(integrations?.email_enabled);
   const effectiveSendWhatsapp =
@@ -884,8 +887,7 @@ export default function JournalPage() {
   }
 
   async function applyTemplate() {
-    if (!canManage) return;
-    if (!selectedTemplate) {
+    if (selectedTemplateActionsBlocked || !selectedTemplate) {
       return;
     }
     setBusyAction("apply-template");
@@ -933,7 +935,7 @@ export default function JournalPage() {
   }
 
   async function saveTemplate() {
-    if (!canManage) return;
+    if (templateActionsBlocked) return;
     const normalizedName = templateName.trim();
     if (!normalizedName) {
       setFeedback({
@@ -1019,8 +1021,7 @@ export default function JournalPage() {
   }
 
   async function deleteTemplate() {
-    if (!canManage) return;
-    if (!selectedTemplateId) {
+    if (selectedTemplateActionsBlocked) {
       return;
     }
     setBusyAction("delete-template");
@@ -1492,6 +1493,7 @@ export default function JournalPage() {
                       <select
                         aria-label={t("journal.communicationTemplate")}
                         value={selectedTemplateId}
+                        disabled={selectedTemplateActionsBlocked}
                         onChange={(event) =>
                           setSelectedTemplateId(event.target.value)
                         }
@@ -1507,7 +1509,7 @@ export default function JournalPage() {
                         <button
                           type="button"
                           onClick={applyTemplate}
-                          disabled={!canManage}
+                          disabled={selectedTemplateActionsBlocked}
                           className="dmx-secondary-action h-10 flex-1"
                         >
                           {t("journal.apply")}
@@ -1515,7 +1517,7 @@ export default function JournalPage() {
                         <button
                           type="button"
                           onClick={deleteTemplate}
-                          disabled={!canManage}
+                          disabled={selectedTemplateActionsBlocked}
                           className="dmx-secondary-action h-10"
                         >
                           {t("journal.delete")}
@@ -1527,7 +1529,7 @@ export default function JournalPage() {
                       <input
                         aria-label={t("journal.templateName")}
                         value={templateName}
-                        disabled={!canManage}
+                        disabled={templateActionsBlocked}
                         onChange={(event) =>
                           setTemplateName(event.target.value)
                         }
@@ -1537,7 +1539,7 @@ export default function JournalPage() {
                       <button
                         type="button"
                         onClick={saveTemplate}
-                        disabled={!canManage}
+                        disabled={templateActionsBlocked}
                         className="dmx-secondary-action h-10"
                       >
                         <Save className="h-4 w-4" strokeWidth={1.8} />
