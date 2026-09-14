@@ -599,11 +599,11 @@ export default function JournalPage() {
     };
     for (const item of journals) {
       const status = item.status.toUpperCase();
-      if (status === "READY") {
+      if (status === "ACTIVE") {
         summary.ready += 1;
-      } else if (status === "SIGNED") {
+      } else if (status === "ARCHIVED") {
         summary.signed += 1;
-      } else {
+      } else if (status === "DRAFT") {
         summary.draft += 1;
       }
     }
@@ -1239,8 +1239,8 @@ export default function JournalPage() {
                 >
                   <option value="ALL">{t("journal.all")}</option>
                   <option value="DRAFT">{t("journal.draft")}</option>
-                  <option value="READY">{t("journal.ready")}</option>
-                  <option value="SIGNED">{t("journal.signed")}</option>
+                  <option value="ACTIVE">{t("journal.ready")}</option>
+                  <option value="ARCHIVED">{t("journal.signed")}</option>
                 </select>
               </div>
 
@@ -1369,7 +1369,7 @@ export default function JournalPage() {
                         <button
                           type="button"
                           onClick={handleMarkReady}
-                          disabled={!canManage || busyAction === "ready"}
+                          disabled={!canManage || selectedJournal.status !== "DRAFT" || busyAction === "ready"}
                           title={
                             !canManage
                               ? t("journal.adminRoleRequired")

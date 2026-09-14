@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -31,6 +31,51 @@ describe("CalendarPage", () => {
     apiFetchMock.mockReset();
     authSessionMock.mockReset();
     authSessionMock.mockReturnValue({ role: "ADMIN", admin_scope: "OWNER", can_view_rates: true });
+  });
+
+  it("button audit: keeps the event editor scrollable and its errors inside the dialog", async () => {
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (init?.method === "POST") throw new TypeError("Failed to fetch");
+      if (path.includes("/installers?")) return [];
+      return { items: [] };
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={queryClient}><CalendarPage /></QueryClientProvider>);
+    fireEvent.click(await screen.findByRole("button", { name: "Add Event" }));
+    const dialog = screen.getByRole("dialog", { name: "Create Event" });
+    expect(dialog).toHaveClass("overflow-y-auto");
+    expect(dialog.className).toContain("max-h-");
+    fireEvent.change(within(dialog).getByLabelText("Title"), { target: { value: "QA event" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create Event" }));
+    expect(await within(dialog).findByRole("alert")).not.toBeEmptyDOMElement();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add Event" }));
+    expect(within(screen.getByRole("dialog")).queryByRole("alert")).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    queryClient.clear();
+  });
+
+  it("button audit: preserves the selected day when switching calendar views", async () => {
+    apiFetchMock.mockImplementation(async (path: string) =>
+      path.includes("/installers?") ? [] : { items: [] });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={queryClient}><CalendarPage /></QueryClientProvider>);
+    fireEvent.click(await screen.findByRole("button", { name: "Today" }));
+    fireEvent.click(screen.getByRole("button", { name: "Month" }));
+    const now = new Date();
+    const selected = new Date(now.getFullYear(), now.getMonth(), 15);
+    const label = new Intl.DateTimeFormat("en-US", { dateStyle: "long" }).format(selected);
+    fireEvent.click(screen.getByRole("button", { name: `Open day: ${label}` }));
+    for (const name of ["Month", "Week", "Day"]) {
+      fireEvent.click(screen.getByRole("button", { name }));
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Add Event" }));
+    const date = `${selected.getFullYear()}-${String(selected.getMonth() + 1).padStart(2, "0")}-15`;
+    expect(screen.getByLabelText("Date")).toHaveValue(date);
+    expect(apiFetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+    queryClient.clear();
   });
 
   it("renders the premium time grid and keeps schedule interactions working", async () => {

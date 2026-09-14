@@ -630,7 +630,7 @@
   }
 
   .modal-shell {
-    @apply w-full rounded-lg border border-border bg-surface p-5 sm:p-6;
+    @apply max-h-[calc(100dvh-2rem)] w-full overflow-y-auto rounded-lg border border-border bg-surface p-5 sm:p-6;
   }
 
   .modal-header {

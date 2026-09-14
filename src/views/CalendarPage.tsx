@@ -15,6 +15,7 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CalendarScheduleSurface } from "@/components/calendar/CalendarScheduleSurface";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
@@ -406,7 +407,7 @@ export default function CalendarPage() {
     [locale],
   );
   const [weekStartDate, setWeekStartDate] = useState<Date>(
-    startOfWeek(new Date()),
+    new Date(),
   );
   const [calendarView, setCalendarView] = useState<CalendarViewMode>("week");
   const [enabledEventTypes, setEnabledEventTypes] = useState<EventType[]>(
@@ -762,7 +763,7 @@ export default function CalendarPage() {
   };
 
   const onToday = () => {
-    const next = normalizePeriodStart(new Date(), calendarView);
+    const next = new Date();
     setWeekStartDate(next);
     setForm(makeDefaultForm(next));
     setIsInfoFrameOpen(false);
@@ -770,18 +771,15 @@ export default function CalendarPage() {
   };
 
   const onChangeView = (viewMode: CalendarViewMode) => {
-    const next = normalizePeriodStart(periodStartDate, viewMode);
     setCalendarView(viewMode);
-    setWeekStartDate(next);
-    setForm(makeDefaultForm(next));
+    setForm(makeDefaultForm(weekStartDate));
     setIsInfoFrameOpen(false);
     setSelectedLaneId(null);
   };
 
   const onSelectDate = (date: Date, viewMode: CalendarViewMode = calendarView) => {
-    const next = normalizePeriodStart(date, viewMode);
     setCalendarView(viewMode);
-    setWeekStartDate(next);
+    setWeekStartDate(date);
     setForm(makeDefaultForm(date));
     setIsInfoFrameOpen(false);
     setSelectedLaneId(null);
@@ -819,16 +817,31 @@ export default function CalendarPage() {
     );
   };
 
+  const resetEventErrors = () => {
+    createMutation.reset();
+    updateMutation.reset();
+    deleteMutation.reset();
+  };
+
+  const closeEventDialog = () => {
+    setIsCreateOpen(false);
+    setIsEditOpen(false);
+    setEditingEvent(null);
+    resetEventErrors();
+  };
+
   const onOpenCreate = () => {
     if (!canManageCalendar) return;
-    setForm(makeDefaultForm(periodStartDate));
+    resetEventErrors();
+    setForm(makeDefaultForm(weekStartDate));
     setActionNotice(null);
     setIsCreateOpen(true);
   };
 
   const onOpenCreateForLane = (lane: CalendarLane) => {
     if (!canManageCalendar) return;
-    const nextForm = makeDefaultForm(periodStartDate);
+    resetEventErrors();
+    const nextForm = makeDefaultForm(weekStartDate);
     setForm({
       ...nextForm,
       installer_ids: lane.unassigned ? [] : [lane.id],
@@ -839,6 +852,7 @@ export default function CalendarPage() {
 
   const onOpenEdit = (event: CalendarEvent) => {
     if (!canManageCalendar) return;
+    resetEventErrors();
     setEditingEvent(event);
     setForm(eventToForm(event));
     setActionNotice(null);
@@ -919,7 +933,7 @@ export default function CalendarPage() {
         {hasLoadError && (
           <div className={calendarNoticeClass("error")}>{loadErrorMessage}</div>
         )}
-        {hasActionError && (
+        {hasActionError && !isCreateOpen && !isEditOpen && (
           <div className={calendarNoticeClass("error")}>
             {actionErrorMessage}
           </div>
@@ -1289,25 +1303,16 @@ export default function CalendarPage() {
 
       </div>
 
-      {(isCreateOpen || isEditOpen) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[1px]">
-          <div className="modal-shell max-w-[720px]">
-            <div className="modal-header">
-              <h2 className="text-[16px] font-semibold">
+      <Dialog open={isCreateOpen || isEditOpen} onOpenChange={(open) => {
+        if (!open) closeEventDialog();
+      }}>
+          <DialogContent aria-describedby={undefined} className="w-[calc(100vw-2rem)] max-w-[720px] max-h-[calc(100dvh-2rem)]">
+            <div className="pr-6">
+              <DialogTitle className="text-[16px] font-semibold">
                 {isEditOpen
                   ? copy("Edit Event", "Изменить событие", "ערוך אירוע")
                   : copy("Create Event", "Создать событие", "צור אירוע")}
-              </h2>
-              <button
-                onClick={() => {
-                  setIsCreateOpen(false);
-                  setIsEditOpen(false);
-                  setEditingEvent(null);
-                }}
-                className="dmx-secondary-action h-9"
-              >
-                {copy("Close", "Закрыть", "סגור")}
-              </button>
+              </DialogTitle>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1475,7 +1480,7 @@ export default function CalendarPage() {
               </div>
             </div>
             {isInvalidTimeRange && (
-              <div className="mt-4 rounded-lg border border-status-warning-border bg-status-warning-bg px-3 py-2 text-[12px] text-status-warning-fg">
+              <div role="alert" className="mt-4 rounded-lg border border-status-warning-border bg-status-warning-bg px-3 py-2 text-[12px] text-status-warning-fg">
                 {copy(
                   "End time must be later than start time.",
                   "Время окончания должно быть позже времени начала.",
@@ -1484,6 +1489,11 @@ export default function CalendarPage() {
               </div>
             )}
 
+            {hasActionError && (
+              <div role="alert" className={calendarNoticeClass("error")}>
+                {actionErrorMessage}
+              </div>
+            )}
             <div className="modal-footer">
               {isEditOpen && editingEvent ? (
                 <button
@@ -1498,11 +1508,7 @@ export default function CalendarPage() {
                 </button>
               ) : null}
               <button
-                onClick={() => {
-                  setIsCreateOpen(false);
-                  setIsEditOpen(false);
-                  setEditingEvent(null);
-                }}
+                onClick={closeEventDialog}
                 className="dmx-secondary-action h-10"
               >
                 {copy("Cancel", "Отмена", "בטל")}
@@ -1526,9 +1532,8 @@ export default function CalendarPage() {
                   : copy("Create Event", "Создать событие", "צור אירוע")}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

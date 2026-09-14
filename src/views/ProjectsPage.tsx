@@ -1608,6 +1608,7 @@ export default function ProjectsPage() {
   const [projectFormFieldErrors, setProjectFormFieldErrors] =
     useState<ProjectFormFieldErrors>({});
   const [projectSubmitting, setProjectSubmitting] = useState(false);
+  const [projectSubmitError, setProjectSubmitError] = useState<string | null>(null);
   const [manualDoorDialogOpen, setManualDoorDialogOpen] = useState(false);
   const [manualDoorForm, setManualDoorForm] = useState<ManualDoorFormState>(
     emptyManualDoorForm(),
@@ -3672,6 +3673,7 @@ export default function ProjectsPage() {
 
   const openCreateProjectDialog = () => {
     if (!canManageProjects) return;
+    setProjectSubmitError(null);
     setProjectDialogMode("create");
     setProjectForm(emptyProjectForm());
     setProjectFormFieldErrors({});
@@ -3690,6 +3692,7 @@ export default function ProjectsPage() {
       return;
     }
     setCreateProjectDeepLinkApplied(true);
+    setProjectSubmitError(null);
     setProjectDialogMode("create");
     setProjectForm(emptyProjectForm());
     setProjectFormFieldErrors({});
@@ -3705,6 +3708,7 @@ export default function ProjectsPage() {
 
   const openEditProjectDialog = () => {
     if (!canManageProjects) return;
+    setProjectSubmitError(null);
     if (!projectDetails) {
       return;
     }
@@ -4156,7 +4160,7 @@ export default function ProjectsPage() {
   const handleProjectSubmit = async () => {
     if (!canManageProjects) return;
     if (!projectForm.name.trim()) {
-      setError(
+      setProjectSubmitError(
         copy(
           "Project name is required.",
           "Название проекта обязательно.",
@@ -4167,7 +4171,7 @@ export default function ProjectsPage() {
     }
 
     setProjectSubmitting(true);
-    setError(null);
+    setProjectSubmitError(null);
     setProjectFormFieldErrors({});
 
     try {
@@ -4237,7 +4241,7 @@ export default function ProjectsPage() {
           }));
         }
       }
-      setError(
+      setProjectSubmitError(
         readableApiError(
           e,
           locale,
@@ -12871,6 +12875,11 @@ export default function ProjectsPage() {
             </AccordionItem>
           </Accordion>
 
+          {projectSubmitError && (
+            <div role="alert" className="rounded-lg border border-status-problem-border bg-status-problem-bg px-3 py-2 text-sm text-status-problem-fg">
+              {projectSubmitError}
+            </div>
+          )}
           <DialogFooter>
             <Button
               variant="outline"

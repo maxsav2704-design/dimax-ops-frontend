@@ -92,6 +92,28 @@ describe("ProjectsPage", () => {
     document.documentElement.dir = "ltr";
   });
 
+  it("button audit: reports project validation and request errors inside the editor", async () => {
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path === "/api/v1/admin/projects" && init?.method === "POST") {
+        throw new TypeError("Failed to fetch");
+      }
+      return path === "/api/v1/admin/projects" ? { items: [] } : [];
+    });
+    render(<ProjectsPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "New project" }));
+    const dialog = screen.getByRole("dialog", { name: "Create project" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create project" }));
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("Project name is required.");
+    expect(apiFetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+    fireEvent.change(within(dialog).getByLabelText("Project name"), { target: { value: "QA project" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create project" }));
+    await waitFor(() => expect(within(dialog).getByRole("alert")).not.toHaveTextContent("Project name is required."));
+    expect(within(dialog).getByRole("alert")).not.toBeEmptyDOMElement();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "New project" }));
+    expect(within(screen.getByRole("dialog")).queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it.each([
     { locale: "ru", title: "Проекты", active: "Активные", completed: "Завершённые", imports: "Ошибки импорта", search: "Поиск проекта..." },
     { locale: "he", title: "פרויקטים", active: "פעילים", completed: "הושלמו", imports: "שגיאות ייבוא", search: "חיפוש לפי שם או כתובת" },

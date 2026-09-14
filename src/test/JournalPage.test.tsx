@@ -54,7 +54,7 @@ function buildApiMock() {
           {
             id: "journal-1",
             project_id: "project-1",
-            status: "READY",
+            status: "ARCHIVED",
             title: "Final Handover Pack",
             signed_at: "2026-03-02T09:30:00Z",
           },
@@ -152,7 +152,7 @@ function buildApiMock() {
       return {
         id: "journal-1",
         project_id: "project-1",
-        status: "READY",
+        status: "ARCHIVED",
         title: "Final Handover Pack",
         notes: "Customer package",
         public_token: "token-123",
@@ -316,6 +316,24 @@ describe("JournalPage", () => {
     expect(pushMock).toHaveBeenCalledWith("/journal/journal-1");
   }, 15000);
 
+  it("button audit: sends domain statuses from the journal filter", async () => {
+    renderJournalPage();
+    await screen.findByText("Final Handover Pack");
+    const filter = screen.getByRole("combobox", { name: "Journal status filter" });
+    for (const status of ["DRAFT", "ACTIVE", "ARCHIVED"]) {
+      fireEvent.change(filter, { target: { value: status } });
+      await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith(
+        `/api/v1/admin/journals?limit=100&status=${status}`,
+      ));
+    }
+    expect(apiFetchMock.mock.calls.some(([path]) => /status=(READY|SIGNED)/.test(path))).toBe(false);
+  });
+
+  it("button audit: does not offer to activate a signed journal again", async () => {
+    renderJournalPage();
+    expect(await screen.findByRole("button", { name: "Mark Ready" })).toBeDisabled();
+  });
+
   it("queues journal send with email and WhatsApp payload", async () => {
     renderJournalPage();
 
@@ -361,7 +379,8 @@ describe("JournalPage", () => {
   it("applies preview and saves shared template via backend", async () => {
     renderJournalPage();
 
-    await screen.findByLabelText("Communication template");
+    const template = await screen.findByLabelText("Communication template");
+    await waitFor(() => expect(template).toHaveValue("template-1"));
 
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
