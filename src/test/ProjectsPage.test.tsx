@@ -2497,17 +2497,18 @@ describe("ProjectsPage", () => {
     render(<ProjectsPage />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Add door manually" }));
-    fireEvent.change(screen.getByLabelText("Library product"), {
+    const editor = within(screen.getByRole("dialog", { name: "Add door manually" }));
+    fireEvent.change(editor.getByLabelText("Library product"), {
       target: { value: "product-1" },
     });
-    fireEvent.change(screen.getByLabelText("Door code"), {
+    fireEvent.change(editor.getByLabelText("Door code"), {
       target: { value: "D-1201" },
     });
-    fireEvent.change(screen.getByLabelText("Unit / apartment"), {
+    fireEvent.change(editor.getByLabelText("Unit / apartment"), {
       target: { value: "12-05" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Create door" }));
+    fireEvent.click(editor.getByRole("button", { name: "Create door" }));
 
     expect(
       await screen.findByText(
