@@ -642,6 +642,7 @@ export default function JournalPage() {
           body: JSON.stringify({
             project_id: selectedProjectId,
             title: createTitle.trim() || null,
+            pdf_locale: locale,
           }),
         },
       );

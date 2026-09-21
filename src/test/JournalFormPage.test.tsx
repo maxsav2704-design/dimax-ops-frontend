@@ -17,6 +17,7 @@ function fixture(status = "DRAFT") {
   return {
     journal: {
       id: "journal-1", project_id: "project-1", status, title: "Site handoff", notes: "Saved notes",
+      pdf_locale: "en",
       lock_header: false, lock_table: false, lock_footer: false, snapshot_version: 2,
       signed_at: status === "ARCHIVED" ? "2026-09-14T09:00:00Z" : null,
       signer_name: status === "ARCHIVED" ? "Client A" : null,
@@ -84,11 +85,31 @@ describe("JournalFormPage", () => {
     expect(screen.getByRole("button", { name: "Save draft" })).toBeEnabled();
   });
 
+  it("persists the document language and requires save before exporting", async () => {
+    render(<JournalFormPage />);
+    const language = await screen.findByLabelText("PDF language");
+    expect(language).toHaveValue("en");
+    fireEvent.change(language, { target: { value: "he" } });
+    expect(screen.getByRole("button", { name: "Export PDF" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await screen.findByText("Draft saved");
+    expect(model.journal.pdf_locale).toBe("he");
+    expect(language).toHaveValue("he");
+    expect(screen.getByRole("button", { name: "Export PDF" })).toBeEnabled();
+  });
+
+  it("keeps the PDF language locked with the document header", async () => {
+    model.journal.lock_header = true;
+    render(<JournalFormPage />);
+    expect(await screen.findByLabelText("PDF language")).toBeDisabled();
+  });
+
   it.each(["ACTIVE", "ARCHIVED", "VIEWER"])("makes %s read-only", async (status) => {
     model = fixture(status === "VIEWER" ? "DRAFT" : status);
     if (status === "VIEWER") auth.mockReturnValue({ role: "ADMIN", admin_scope: "VIEWER" });
     render(<JournalFormPage />);
     expect(await screen.findByLabelText("Title")).toBeDisabled();
+    expect(screen.getByLabelText("PDF language")).toBeDisabled();
     for (const name of ["Save draft", "Mark ready", "Refresh works"]) {
       const button = screen.getByRole("button", { name });
       expect(button).toBeDisabled();

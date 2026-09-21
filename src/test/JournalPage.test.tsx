@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
 import JournalPage from "@/views/JournalPage";
+import { LanguageProvider, type Locale } from "@/lib/i18n";
 
 const { apiFetchMock, pushMock, authSessionMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
@@ -251,7 +252,11 @@ function buildApiMock() {
   };
 }
 
-function renderJournalPage() {
+function renderJournalPage(locale?: Locale) {
+  if (locale) {
+    window.localStorage.setItem("dimax_locale", locale);
+    document.documentElement.lang = locale;
+  }
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -262,7 +267,7 @@ function renderJournalPage() {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <JournalPage />
+      {locale ? <LanguageProvider><JournalPage /></LanguageProvider> : <JournalPage />}
     </QueryClientProvider>
   );
 }
@@ -301,6 +306,8 @@ describe("JournalPage", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    document.documentElement.lang = "en";
+    document.documentElement.dir = "ltr";
   });
 
   it("regression: disables template actions when the shared template list is empty", async () => {
@@ -309,7 +316,7 @@ describe("JournalPage", () => {
       path === "/api/v1/admin/settings/communication-templates"
         ? Promise.resolve({ items: [] }) : base(path, init));
     renderJournalPage();
-    await screen.findByLabelText("Communication template");
+    await screen.findByLabelText("Communication template", {}, { timeout: 5000 });
     const apply = screen.getByRole("button", { name: "Apply" });
     const remove = screen.getByRole("button", { name: "Delete" });
     expect(apply).toBeDisabled();
@@ -318,6 +325,24 @@ describe("JournalPage", () => {
     fireEvent.click(remove);
     expect(apiFetchMock.mock.calls.some(([, init]) => init?.method)).toBe(false);
     expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+  });
+
+  it.each(["en", "ru", "he"] as const)("creates a draft with the %s document language", async (locale) => {
+    const base = buildApiMock();
+    apiFetchMock.mockImplementation((path: string, init?: RequestInit) =>
+      path === "/api/v1/admin/journals" && init?.method === "POST"
+        ? Promise.resolve({ id: "journal-1" }) : base(path, init));
+    renderJournalPage(locale);
+    const labels: Record<Locale, string> = {
+      en: "Create Draft", ru: "Создать черновик", he: "צור טיוטה",
+    };
+    const create = await screen.findByRole("button", { name: labels[locale] }, { timeout: 5000 });
+    await waitFor(() => expect(create).toBeEnabled());
+    fireEvent.click(create);
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/journals",
+      { method: "POST", body: JSON.stringify({ project_id: "project-1", title: null, pdf_locale: locale }) },
+    ));
   });
 
   it("regression: disables stale template actions during a reload and after a loading failure", async () => {

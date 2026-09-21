@@ -16,6 +16,7 @@ type JournalSnapshot = {
   journal: {
     id: string; project_id: string; status: "DRAFT" | "ACTIVE" | "ARCHIVED";
     title: string | null; notes: string | null; snapshot_version: number;
+    pdf_locale?: "en" | "ru" | "he";
     lock_header: boolean; lock_table: boolean; lock_footer: boolean;
     signed_at: string | null; signer_name: string | null;
   };
@@ -36,11 +37,13 @@ type JournalSnapshot = {
 
 type Draft = Pick<JournalSnapshot["journal"], "lock_header" | "lock_table" | "lock_footer"> & {
   title: string; notes: string;
+  pdf_locale: "en" | "ru" | "he";
 };
 
 function draftFrom({ journal }: JournalSnapshot): Draft {
   return {
     title: journal.title ?? "", notes: journal.notes ?? "",
+    pdf_locale: journal.pdf_locale ?? "en",
     lock_header: journal.lock_header, lock_table: journal.lock_table,
     lock_footer: journal.lock_footer,
   };
@@ -157,7 +160,7 @@ function JournalEditor({ id }: { id: string }) {
       await apiFetch(endpoint, {
         method: "PATCH", signal,
         body: JSON.stringify({
-          ...(!model.journal.lock_header ? { title: draft.title } : {}),
+          ...(!model.journal.lock_header ? { title: draft.title, pdf_locale: draft.pdf_locale } : {}),
           ...(!model.journal.lock_footer ? { notes: draft.notes } : {}),
           lock_header: draft.lock_header,
           lock_table: draft.lock_table,
@@ -297,6 +300,18 @@ function JournalEditor({ id }: { id: string }) {
                   onChange={(event) => setDraft({ ...draft, title: event.target.value })} />
               </label>
               <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label className="field-stack max-w-64">
+                    <span className="field-label">{copy("PDF language", "Язык PDF", "שפת המסמך")}</span>
+                    <select className="control-input" value={draft.pdf_locale}
+                      disabled={blocked || !editable || model.journal.lock_header || draft.lock_header}
+                      onChange={(event) => setDraft({ ...draft, pdf_locale: event.target.value as Draft["pdf_locale"] })}>
+                      <option value="en">English</option>
+                      <option value="ru">Русский</option>
+                      <option value="he">עברית</option>
+                    </select>
+                  </label>
+                </div>
                 {[
                   [copy("Project", "Объект", "פרויקט"), model.project.name],
                   [copy("Address", "Адрес", "כתובת"), model.project.address],
