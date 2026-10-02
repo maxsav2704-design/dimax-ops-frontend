@@ -81,6 +81,7 @@ describe("AppSidebar", () => {
     expect(calendarLink).toHaveAttribute("href", "/calendar");
     expect(screen.getByText("Work")).toBeInTheDocument();
     expect(screen.getByText("Money and reports")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Factory price list" })).toHaveAttribute("href", "/price-lists");
     expect(
       screen.getByRole("link", { name: /create project/i }),
     ).toHaveAttribute("href", "/projects?create=1");
@@ -130,6 +131,7 @@ describe("AppSidebar", () => {
     render(<QueryClientProvider client={queryClient}><AppSidebar /></QueryClientProvider>);
     expect(await screen.findByRole("link", { name: "Projects" })).toHaveAttribute("href", "/projects");
     expect(screen.queryByRole("link", { name: /create project/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Factory price list" })).not.toBeInTheDocument();
   });
 
   it("forwards wheel movement over the fixed sidebar to the page content", () => {

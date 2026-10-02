@@ -9,6 +9,15 @@ import {
 } from "@/lib/admin-access";
 
 describe("admin-access policy", () => {
+  it.each([
+    ["OWNER", true, true], ["OWNER", false, false], ["OPERATIONS", true, true],
+    ["OPERATIONS", false, false], ["FINANCE", true, true], ["FINANCE", false, false],
+    ["VIEWER", true, false], [null, true, false],
+  ] as const)("guards factory prices for %s with rate access %s", (admin_scope, can_view_rates, allowed) => {
+    expect(canAccessAdminPath({ role: "ADMIN", admin_scope, can_view_rates }, "/price-lists")).toBe(allowed);
+    expect(canAccessAdminPath({ role: "ADMIN", admin_scope, can_view_rates }, "/price-lists/?version=1")).toBe(allowed);
+    expect(canAccessAdminPath("INSTALLER", "/price-lists")).toBe(false);
+  });
   it("allows an explicit owner profile across admin routes", () => {
     const owner = {
       role: "ADMIN" as const,

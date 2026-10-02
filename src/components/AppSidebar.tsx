@@ -13,6 +13,7 @@ import {
   ChevronDown,
   DoorOpen,
   FileText,
+  FileCheck2,
   FolderKanban,
   LayoutDashboard,
   MessageSquare,
@@ -58,6 +59,7 @@ function sidebarCopy(locale: "en" | "ru" | "he") {
       reference: "Справочники",
       system: "Система",
       documents: "Документы",
+      prices: "Прайс завода",
     };
   }
   if (locale === "he") {
@@ -68,6 +70,7 @@ function sidebarCopy(locale: "en" | "ru" | "he") {
       reference: "ספריות",
       system: "מערכת",
       documents: "מסמכים",
+      prices: "מחירון מפעל",
     };
   }
   return {
@@ -77,6 +80,7 @@ function sidebarCopy(locale: "en" | "ru" | "he") {
     reference: "Reference data",
     system: "System",
     documents: "Documents",
+    prices: "Factory price list",
   };
 }
 
@@ -141,6 +145,7 @@ export function AppSidebar() {
       icon: BarChart3,
       collapsible: false,
       items: [
+        { title: copy.prices, path: "/price-lists", icon: FileCheck2, module: "price-lists" },
         {
           title: t("nav.reports"),
           path: "/reports",
