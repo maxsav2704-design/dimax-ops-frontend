@@ -22,6 +22,28 @@ export type DraftInput = {
   items: Pick<PriceLine, "kind" | "target_id" | "installer_price">[];
 };
 export type CatalogWork = Omit<PriceLine, "installer_price">;
+export type ReconciliationSource = "INSTALLER_RATE" | "SCHEDULED_RATE" | "DOOR" | "ADDON_PLAN" | "ADDON_DEFAULT" | "ADDON_FACT" | "CATALOG";
+export type ReconciliationStatus = "MATCH" | "DIFFERENT" | "MISSING_PROPOSED" | "MISSING_LEGACY" | "UNAVAILABLE" | "UNIT_CHANGED";
+export type ReconciliationLine = {
+  kind: "DOOR" | "ADDON"; target_id: string; name: string; unit: string;
+  proposed_name: string | null; proposed_unit: string | null;
+  source_type: ReconciliationSource; source_id: string; source_name: string | null;
+  project_id: string | null; project_name: string | null; installer_id: string | null; installer_name: string | null;
+  effective_from: string | null; quantity: string | null;
+  legacy_price: string | null; proposed_price: string | null; delta: string | null; legacy_variants: number;
+  uses_snapshot: boolean; uses_surcharge: boolean; catalog_changed: boolean;
+  source_available: boolean; review_required: boolean; status: ReconciliationStatus;
+};
+export type ReconciliationPage = {
+  price_list_id: string | null; version: number | null; currency: "ILS"; generated_at: string;
+  summary: {
+    total_sources: number; review_sources: number; matching: number; different: number;
+    missing_proposed: number; missing_legacy: number; unavailable: number; unit_changed: number;
+    scheduled_rates: number; door_snapshots: number; door_surcharges: number; catalog_changes: number;
+    urgency_surcharges: number; historical_entries: number; pending_addon_facts: number; multiple_rate_types: number;
+  };
+  items: ReconciliationLine[]; total: number;
+};
 
 export function workKey(item: Pick<PriceLine, "kind" | "target_id">): string {
   return `${item.kind}:${item.target_id}`;

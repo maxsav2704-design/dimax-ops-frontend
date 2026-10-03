@@ -189,4 +189,33 @@ describe("factory price management", () => {
     fireEvent.click(form.getByRole("button", { name: "Confirm action" }));
     await waitFor(() => expect(api).toHaveBeenCalledWith(`${PRICE_API}/list-1/cancel`, expect.objectContaining({ body: JSON.stringify({ reason: "Withdrawn offer" }) })));
   });
+  it("opens reconciliation for finance and clears it when the account changes", async () => {
+    auth.mockReturnValue({ role: "ADMIN", admin_scope: "FINANCE", can_view_rates: true });
+    api.mockImplementation(async (path: string) => path.includes("/reconciliation?") ? {
+      price_list_id: draft.id, version: 1, currency: "ILS", generated_at: "2026-10-03T09:00:00Z", items: [], total: 0,
+      summary: { total_sources: 0, review_sources: 0, missing_proposed: 0, pending_addon_facts: 0,
+        door_snapshots: 0, door_surcharges: 0, catalog_changes: 0, scheduled_rates: 0, urgency_surcharges: 0, historical_entries: 0, multiple_rate_types: 0 },
+    } : reads(path));
+    mount(); await screen.findByText("Entrance");
+    fireEvent.click(screen.getByRole("button", { name: "Compare current rates" }));
+    await screen.findByText("No items for these filters");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(api.mock.calls.every(([, init]) => !init?.method)).toBe(true);
+    auth.mockReturnValue({ role: "INSTALLER" });
+    fireEvent(window, new CustomEvent("dimax-auth-changed"));
+    await screen.findByText("Price access is unavailable");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByText("No items for these filters")).not.toBeInTheDocument();
+  });
+  it("offers inventory when there are no price-list versions", async () => {
+    api.mockImplementation(async (path: string) => {
+      if (path.startsWith(`${PRICE_API}?`)) return { items: [], total: 0, latest_version: 0 };
+      if (path.startsWith(`${PRICE_API}/reconciliation?`)) throw { status: 403 };
+      return reads(path);
+    });
+    mount(); await screen.findByText("No price-list versions yet");
+    fireEvent.click(screen.getByRole("button", { name: "Compare current rates" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Price access is unavailable");
+    expect(api).toHaveBeenCalledWith(expect.stringContaining(`${PRICE_API}/reconciliation?`), expect.objectContaining({ signal: expect.anything() }));
+  });
 });

@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, ChevronLeft, ChevronRight, FileCheck2, Link2, Plus, RefreshCw } from "lucide-react";
+import { Ban, ChevronLeft, ChevronRight, FileCheck2, GitCompareArrows, Link2, Plus, RefreshCw } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { Button } from "@/components/ui/button";
 import { PriceListEditor } from "@/components/prices/PriceListEditor";
 import { PriceActionDialog, type PriceAction } from "@/components/prices/PriceActionDialog";
+import { PriceReconciliationDialog } from "@/components/prices/PriceReconciliationDialog";
+import { reconciliationCopy } from "@/components/prices/reconciliation-copy";
 import { priceCopy, type PriceCopy } from "@/components/prices/copy";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
@@ -41,6 +43,7 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [editor, setEditor] = useState<{ base?: PriceDetail; latest: number } | null>(null);
   const [action, setAction] = useState<PriceAction | null>(null);
+  const [reconciliation, setReconciliation] = useState<{ list?: PriceDetail } | null>(null);
   const [historyOffset, setHistoryOffset] = useState(0);
   const [now, setNow] = useState(Date.now);
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(timer); }, []);
@@ -68,6 +71,7 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
   return <div dir={dir} className="min-w-0 space-y-5 p-4 sm:p-6">
     <DimaxPageHeader eyebrow={t.scope} title={t.title} badge={!writable ? t.readonly : undefined} actions={<>
       <Button size="icon" variant="outline" title={t.refresh} aria-label={t.refresh} onClick={refresh} disabled={lists.isFetching}><RefreshCw className={cn("size-4", lists.isFetching && "animate-spin motion-reduce:animate-none")} /></Button>
+      <Button variant="outline" onClick={() => setReconciliation({ list: row })} disabled={!fresh || (!!selectedId && !row)}><GitCompareArrows className="me-2 size-4" />{reconciliationCopy[locale].open}</Button>
       {writable && <Button onClick={() => setEditor({ base: row, latest })} disabled={!fresh || (!!selectedId && !row)}><Plus className="me-2 size-4" />{t.newVersion}</Button>}
     </>} />
     <p className="border-s-4 border-status-warning-border bg-status-warning-bg px-3 py-2 text-sm text-status-warning-fg">{t.notice}</p>
@@ -132,6 +136,7 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
       setEditor(null); setOffset(0); setSelected(saved.id); setHistoryOffset(0); refresh();
     }} />}
     {action && <PriceActionDialog action={action} onClose={() => setAction(null)} onChanged={refresh} />}
+    {reconciliation && <PriceReconciliationDialog list={reconciliation.list} onClose={() => setReconciliation(null)} />}
   </div>;
 }
 
