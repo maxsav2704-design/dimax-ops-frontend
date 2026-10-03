@@ -193,6 +193,7 @@ describe("factory price management", () => {
     auth.mockReturnValue({ role: "ADMIN", admin_scope: "FINANCE", can_view_rates: true });
     api.mockImplementation(async (path: string) => path.includes("/reconciliation?") ? {
       price_list_id: draft.id, version: 1, currency: "ILS", generated_at: "2026-10-03T09:00:00Z", items: [], total: 0,
+      application_check: { status: "BLOCKED", affects_earnings: false, confirmed_at: null, blockers: [{ code: "NOT_CONFIRMED", count: 1 }], review: [] },
       summary: { total_sources: 0, review_sources: 0, missing_proposed: 0, pending_addon_facts: 0,
         door_snapshots: 0, door_surcharges: 0, catalog_changes: 0, scheduled_rates: 0, urgency_surcharges: 0, historical_entries: 0, multiple_rate_types: 0 },
     } : reads(path));

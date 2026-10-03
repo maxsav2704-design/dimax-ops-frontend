@@ -54,6 +54,8 @@ function fixture() {
           (!url.searchParams.get("kind") || row.kind === url.searchParams.get("kind")));
         const offset = Number(url.searchParams.get("offset") || 0), limit = Number(url.searchParams.get("limit") || 20);
         const response: ReconciliationPage = { price_list_id: empty ? null : list.id, version: empty ? null : 1, currency: "ILS", generated_at: "2026-10-03T09:00:00Z",
+          application_check: empty ? null : { status: "BLOCKED", affects_earnings: false, confirmed_at: null,
+            blockers: [{ code: "NOT_CONFIRMED", count: 1 }, { code: "CATALOG_CHANGED", count: 1 }], review: [{ code: "UNACCRUED_WORK", count: 1 }] },
           total: filtered.length, items: filtered.slice(offset, offset + limit), summary: {
             total_sources: sources.length, review_sources: count((row) => row.review_required),
             matching: count((row) => row.status === "MATCH"), different: count((row) => row.status === "DIFFERENT"),
@@ -85,6 +87,7 @@ for (const [locale, open, filter, addon, only, refresh, close] of [
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText("A-101", { exact: true })).toBeVisible();
     await expect(dialog.getByRole("table")).toBeVisible();
+    await expect(dialog.getByRole("region", { name: locale === "en" ? "Check before applying prices" : locale === "ru" ? "Проверка перед применением цен" : "בדיקה לפני החלת מחירים" })).toBeVisible();
     expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBeTruthy();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     const next = dialog.getByRole("button", { name: locale === "en" ? "Next page" : locale === "ru" ? "Следующая страница" : "עמוד הבא", exact: true });
@@ -96,6 +99,10 @@ for (const [locale, open, filter, addon, only, refresh, close] of [
     await dialog.getByRole("checkbox", { name: only }).uncheck();
     await expect.poll(() => sample.requests.at(-1)).toContain("issues_only=false&kind=ADDON");
     await page.screenshot({ path: info.outputPath(`reconciliation-${locale}.png`), fullPage: true });
+    await dialog.getByRole("table").scrollIntoViewIfNeeded();
+    await expect(dialog.getByRole("table")).toBeInViewport();
+    await expect(dialog.getByRole("button", { name: close, exact: true }).first()).toBeInViewport();
+    await page.screenshot({ path: info.outputPath(`reconciliation-rows-${locale}.png`), fullPage: true });
     sample.setFailure(true);
     await dialog.getByRole("button", { name: refresh, exact: true }).click();
     await expect(dialog.getByRole("alert")).toBeVisible();

@@ -24,6 +24,14 @@ export type DraftInput = {
 export type CatalogWork = Omit<PriceLine, "installer_price">;
 export type ReconciliationSource = "INSTALLER_RATE" | "SCHEDULED_RATE" | "DOOR" | "ADDON_PLAN" | "ADDON_DEFAULT" | "ADDON_FACT" | "CATALOG";
 export type ReconciliationStatus = "MATCH" | "DIFFERENT" | "MISSING_PROPOSED" | "MISSING_LEGACY" | "UNAVAILABLE" | "UNIT_CHANGED";
+export type PriceApplicationIssueCode = "NOT_CONFIRMED" | "CONFIRMATION_MISSING" | "CONFIRMATION_MISMATCH" | "SUPERSEDED_CONFIRMED" |
+  "NO_ITEMS" | "MISSING_DOOR_PRICES" | "MISSING_ADDON_PRICES" | "UNAVAILABLE_WORK" | "CATALOG_CHANGED" | "INSTALLER_SURCHARGES" |
+  "LEGACY_DIFFERENCES" | "DOOR_SNAPSHOTS" | "SCHEDULED_RATES" | "UNACCRUED_WORK" | "URGENCY_CHARGES";
+export type PriceApplicationCheck = {
+  status: "BLOCKED" | "REVIEW_REQUIRED" | "VERIFIED"; affects_earnings: false; confirmed_at: string | null;
+  blockers: Array<{ code: PriceApplicationIssueCode; count: number }>;
+  review: Array<{ code: PriceApplicationIssueCode; count: number }>;
+};
 export type ReconciliationLine = {
   kind: "DOOR" | "ADDON"; target_id: string; name: string; unit: string;
   proposed_name: string | null; proposed_unit: string | null;
@@ -36,6 +44,7 @@ export type ReconciliationLine = {
 };
 export type ReconciliationPage = {
   price_list_id: string | null; version: number | null; currency: "ILS"; generated_at: string;
+  application_check: PriceApplicationCheck | null;
   summary: {
     total_sources: number; review_sources: number; matching: number; different: number;
     missing_proposed: number; missing_legacy: number; unavailable: number; unit_changed: number;

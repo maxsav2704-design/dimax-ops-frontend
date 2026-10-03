@@ -15,6 +15,8 @@ const line: ReconciliationLine = { kind: "DOOR", target_id: "type-1", name: "Ent
   legacy_price: "125.00", proposed_price: "250.00", delta: "125.00", legacy_variants: 2, uses_snapshot: true, uses_surcharge: true,
   catalog_changed: false, source_available: true, review_required: true, status: "DIFFERENT" };
 const report: ReconciliationPage = { price_list_id: list.id, version: 3, currency: "ILS", generated_at: "2026-10-03T09:00:00Z", items: [line], total: 25,
+  application_check: { status: "BLOCKED", affects_earnings: false, confirmed_at: null,
+    blockers: [{ code: "NOT_CONFIRMED", count: 1 }], review: [{ code: "UNACCRUED_WORK", count: 3 }] },
   summary: { total_sources: 30, review_sources: 25, matching: 5, different: 10, missing_proposed: 5, missing_legacy: 3, unavailable: 2,
     unit_changed: 5, scheduled_rates: 2, door_snapshots: 2, door_surcharges: 1, catalog_changes: 5,
     urgency_surcharges: 1, historical_entries: 50, pending_addon_facts: 3, multiple_rate_types: 2 } };
@@ -37,8 +39,20 @@ describe("factory rate reconciliation", () => {
     expect(screen.getByText("Saved additional work without accrual requires a separate pricing decision.")).toBeInTheDocument();
     expect(screen.getByText("Work types with different existing prices: 2")).toBeInTheDocument();
     expect(screen.getByText("Different existing prices: 2")).toBeInTheDocument();
+    expect(screen.getByText("Factory has not confirmed this version: 1")).toBeInTheDocument();
+    expect(screen.getByText("Prices are not active in earnings. This check does not activate them.")).toBeInTheDocument();
     expect(api.mock.calls.every(([, options]) => !options.method && options.signal)).toBe(true);
     expect(screen.queryByRole("button", { name: /activate|approve|save/i })).not.toBeInTheDocument();
+  });
+  it("distinguishes verified data from active earnings and fails closed without a check", async () => {
+    api.mockResolvedValue({ ...report, application_check: { status: "VERIFIED", affects_earnings: false, confirmed_at: report.generated_at, blockers: [], review: [] } });
+    mount(); await screen.findByText("Factory decision and price coverage verified");
+    expect(screen.getByText("Prices are not active in earnings. This check does not activate them.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /activate|apply prices/i })).not.toBeInTheDocument();
+    api.mockResolvedValue({ ...report, application_check: null });
+    fireEvent.click(screen.getByRole("button", { name: "Refresh reconciliation" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Application check is unavailable");
+    expect(screen.queryByText("Factory decision and price coverage verified")).not.toBeInTheDocument();
   });
   it("keeps a matching rate flagged when other existing prices differ", async () => {
     api.mockResolvedValue({ ...report, total: 1, items: [{ ...line, source_type: "INSTALLER_RATE", status: "MATCH",
@@ -96,7 +110,7 @@ describe("factory rate reconciliation", () => {
     expect(screen.getByText("Require review").nextElementSibling).toHaveTextContent("25");
   });
   it("loads company inventory without creating a draft", async () => {
-    api.mockResolvedValue({ ...report, price_list_id: null, version: null, items: [], total: 0 });
+    api.mockResolvedValue({ ...report, price_list_id: null, version: null, application_check: null, items: [], total: 0 });
     mount(true); await screen.findByText("No items for these filters");
     expect(screen.getByRole("heading")).toHaveTextContent("Current company prices");
     expect(api).toHaveBeenCalledWith(`${PRICE_API}/reconciliation?limit=20&offset=0&issues_only=true`, expect.objectContaining({ signal: expect.anything() }));

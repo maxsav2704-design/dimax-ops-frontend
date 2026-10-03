@@ -57,6 +57,18 @@ export function PriceReconciliationDialog({ list, onClose }: { list?: PriceSumma
         {query.isError && <p role="alert" className="text-sm text-status-problem-fg">{status === 403 ? t.denied : status === 404 ? t.unavailableVersion : t.error}</p>}
         {data && summary && <>
           <div className="flex flex-wrap justify-between gap-2 text-xs text-text-secondary"><p>{t.companyTotals}</p><p>{t.checked}: {date(data.generated_at)}</p></div>
+          {list && <section aria-label={t.checkTitle} className="space-y-2 border-s-4 border-border ps-3 text-sm">
+            <h3 className="font-semibold">{t.checkTitle}</h3>
+            {data.application_check ? <>
+              <p className={data.application_check.status === "VERIFIED" ? "text-status-ok-fg" : "text-status-warning-fg"}>
+                {data.application_check.status === "BLOCKED" ? t.checkBlocked : data.application_check.status === "REVIEW_REQUIRED" ? t.checkReview : t.checkVerified}
+              </p>
+              {[...data.application_check.blockers, ...data.application_check.review].length > 0 && <ul className="space-y-1 text-xs text-text-secondary">
+                {[...data.application_check.blockers, ...data.application_check.review].map((issue) => <li key={issue.code}>{t[`CHECK_${issue.code}`]}: {issue.count}</li>)}
+              </ul>}
+              <p className="text-xs text-text-secondary">{t.checkNotApplied}</p>
+            </> : <p role="alert" className="text-status-warning-fg">{t.checkUnavailable}</p>}
+          </section>}
           <dl className="grid grid-cols-2 gap-3 border-y border-border py-3 sm:grid-cols-4">
             {[[t.sources, summary.total_sources], [t.review, summary.review_sources], [list ? t.missing : t.MISSING_PROPOSED, summary.missing_proposed], [t.pending, summary.pending_addon_facts]].map(([label, value]) =>
               <div key={label} className="min-w-0"><dt className="text-xs text-text-secondary">{label}</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{value}</dd></div>)}
