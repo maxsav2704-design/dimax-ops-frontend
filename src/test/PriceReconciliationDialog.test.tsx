@@ -69,7 +69,7 @@ describe("factory rate reconciliation", () => {
     await waitFor(() => expect(api).toHaveBeenCalledWith(expect.stringContaining("offset=0&issues_only=true&kind=ADDON"), expect.anything()));
     fireEvent.click(screen.getByRole("checkbox", { name: "Only items requiring review" }));
     await waitFor(() => expect(api).toHaveBeenCalledWith(expect.stringContaining("offset=0&issues_only=false&kind=ADDON"), expect.anything()));
-    fireEvent.click(screen.getAllByRole("button", { name: "Close", exact: true })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Close" })[0]);
     expect(close).toHaveBeenCalledOnce();
   });
   it("does not invent a monetary delta when the unit changed or a price is missing", async () => {

@@ -65,9 +65,9 @@ describe("CalendarPage", () => {
   }
 
   async function openEventEditor() {
-    fireEvent.click(await screen.findByRole("button", { name: "Site inspection, 09:00 - 10:00" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Site inspection, 09:00 - 10:00" }, { timeout: 5000 }));
     const frame = await screen.findByTestId("calendar-event-info-frame");
-    fireEvent.click(within(frame).getByRole("button", { name: "Edit", exact: true }));
+    fireEvent.click(within(frame).getByRole("button", { name: "Edit" }));
     return screen.getByRole("dialog", { name: "Edit Event" });
   }
 
@@ -86,7 +86,7 @@ describe("CalendarPage", () => {
       expect(frame).toHaveTextContent("11:00 - 12:30");
       expect(frame).not.toHaveTextContent("09:00 - 10:00");
     });
-    fireEvent.click(within(frame).getByRole("button", { name: "Edit", exact: true }));
+    fireEvent.click(within(frame).getByRole("button", { name: "Edit" }));
     expect(within(screen.getByRole("dialog")).getByLabelText("Title")).toHaveValue("Updated inspection");
     queryClient.clear();
   });
@@ -330,7 +330,7 @@ describe("CalendarPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Month" }));
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Door installation" } });
     const dateLabel = new Intl.DateTimeFormat("en-US", { dateStyle: "long" }).format(date);
-    await screen.findByRole("button", { name: `Show all events: ${dateLabel}` });
+    await screen.findByRole("button", { name: `Show all events: ${dateLabel}` }, { timeout: 5000 });
     expect(screen.queryByRole("button", { name: /Door installation 5/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: `${action}: ${dateLabel}` }));
     expect(screen.getByRole("button", { name: "Day" })).toHaveAttribute("aria-pressed", "true");

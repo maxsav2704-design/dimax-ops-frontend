@@ -100,7 +100,7 @@ describe("factory price management", () => {
     expect(JSON.stringify(client.getQueryCache().getAll())).not.toContain(secret);
     expect(JSON.stringify(window.localStorage)).not.toContain(secret);
     expect(JSON.stringify(window.sessionStorage)).not.toContain(secret);
-    fireEvent.click(screen.getAllByRole("button", { name: "Close", exact: true })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Close" })[0]);
     expect(screen.queryByLabelText("Personal confirmation link")).not.toBeInTheDocument();
     expect(api.mock.calls.some(([path]) => path.includes("/public/price-approvals/confirm"))).toBe(false);
   });
@@ -182,7 +182,7 @@ describe("factory price management", () => {
   it("cancels only the selected draft with an explicit reason", async () => {
     api.mockImplementation(async (path: string, init?: RequestInit) => path.endsWith("/cancel") && init?.method === "POST" ?
       { ...draft, status: "CANCELLED", cancellation_reason: "Withdrawn offer" } : reads(path));
-    mount(); fireEvent.click(await screen.findByRole("button", { name: "Cancel draft", exact: true }));
+    mount(); fireEvent.click(await screen.findByRole("button", { name: "Cancel draft" }));
     const form = within(screen.getByRole("dialog"));
     expect(form.getByRole("button", { name: "Confirm action" })).toBeDisabled();
     fireEvent.change(form.getByLabelText("Cancellation reason"), { target: { value: "Withdrawn offer" } });
