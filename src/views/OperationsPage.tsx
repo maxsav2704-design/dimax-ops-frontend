@@ -7,6 +7,7 @@ import {
   Activity,
   Bell,
   ClipboardList,
+  Eye,
   FileSpreadsheet,
   Mail,
   MessageCircle,
@@ -22,6 +23,7 @@ import {
 import { usePathname, useSearchParams } from "next/navigation";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PriceConflictReviewDialog } from "@/components/operations/PriceConflictReviewDialog";
 import {
   KpiCard as DimaxKpiCard,
   MetricRow,
@@ -38,7 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
+import { canAccessAdminModule, canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
 import {
   readableApiError,
@@ -630,7 +632,12 @@ function syncProblemInstallerLabel(problem: SyncProblemItem): string {
   );
 }
 
+function isPriceConflict(problem: SyncProblemItem): boolean {
+  return [problem.problem_code, problem.conflict_code, problem.error].includes("CONFLICT_FACTORY_PRICE");
+}
+
 function syncProblemResetPath(problem: SyncProblemItem): string | null {
+  if (isPriceConflict(problem)) return null;
   if (problem.user_id) {
     return `/api/v1/admin/sync/states/${encodeURIComponent(problem.user_id)}/reset`;
   }
@@ -671,6 +678,7 @@ type SyncProblemStatusFilter =
   | "all"
   | "failed"
   | "conflict"
+  | "price_conflict"
   | "pending"
   | "auth_required";
 
@@ -1030,6 +1038,8 @@ export default function OperationsPage() {
   const searchParams = useSearchParams();
   const session = useAuthSession();
   const canRunPrivilegedActions = canRunPrivilegedAdminActions(session);
+  const canReviewPrices = canAccessAdminModule(session, "price-lists");
+  const [priceReview, setPriceReview] = useState<{ source: "sync_event" | "sync_queue"; id: string } | null>(null);
   const [busyAction, setBusyAction] = useState("");
   const [onlyActionable, setOnlyActionable] = useState(
     searchParams?.get("actionable") === "1",
@@ -1214,7 +1224,8 @@ export default function OperationsPage() {
           installerKey === syncProblemInstallerFilter;
         const statusMatches =
           syncProblemStatusFilter === "all" ||
-          syncProblemStatusBucket(problem) === syncProblemStatusFilter;
+          (syncProblemStatusFilter === "price_conflict" ? isPriceConflict(problem)
+            : syncProblemStatusBucket(problem) === syncProblemStatusFilter);
         return installerMatches && statusMatches;
       }),
     [syncProblemInstallerFilter, syncProblemStatusFilter, syncProblems],
@@ -3735,12 +3746,13 @@ export default function OperationsPage() {
                                 "all",
                                 "failed",
                                 "conflict",
+                                "price_conflict",
                                 "pending",
                                 "auth_required",
                               ] as SyncProblemStatusFilter[]
                             ).map((status) => (
                               <option key={status} value={status}>
-                                {syncProblemStatusLabel(status)}
+                                {status === "price_conflict" ? copy("Price conflicts", "Конфликты цены", "התנגשויות מחיר") : syncProblemStatusLabel(status)}
                               </option>
                             ))}
                           </select>
@@ -3775,7 +3787,7 @@ export default function OperationsPage() {
                           {visibleSyncProblems.map((problem) => {
                             const resetTarget = syncProblemResetTarget(problem);
                             const problemTitle =
-                              problem.problem_title ||
+                              (isPriceConflict(problem) ? copy("Price conflict", "Конфликт цены", "התנגשות מחיר") : problem.problem_title) ||
                               (problem.conflict_code
                                 ? readableConflictCode(
                                     problem.conflict_code,
@@ -3815,6 +3827,12 @@ export default function OperationsPage() {
                                           problem.created_at,
                                       )}
                                     </span>
+                                    {isPriceConflict(problem) && canReviewPrices && (problem.source === "sync_event" || problem.source === "sync_queue") ? (
+                                      <button type="button" onClick={() => setPriceReview({ source: problem.source as "sync_event" | "sync_queue", id: problem.id })}
+                                        className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-text transition-colors hover:bg-surface-sunken">
+                                        <Eye className="h-3.5 w-3.5" />{copy("Review price", "Разобрать цену", "בדיקת מחיר")}
+                                      </button>
+                                    ) : null}
                                     {resetTarget ? (
                                       <button
                                         type="button"
@@ -3852,14 +3870,14 @@ export default function OperationsPage() {
                                 ) : null}
                                 {problem.operator_action ? (
                                   <div className="mt-2 rounded-md border border-status-warning-border bg-status-warning-bg px-2.5 py-2 text-[12px] text-status-warning-fg">
-                                    {problem.operator_action}
+                                    {isPriceConflict(problem) ? copy("Review the original work and execution-time price. Cold resync does not resolve a price conflict.", "Проверьте исходную работу и цену на момент выполнения. Сброс синхронизации не разрешает конфликт цены.", "בדקו את העבודה המקורית ואת המחיר במועד הביצוע. איפוס סנכרון אינו פותר התנגשות מחיר.") : problem.operator_action}
                                   </div>
                                 ) : null}
                                 {problem.manual_review_required ? (
                                   <div className="mt-1 text-[11px] font-medium text-status-warning-fg">
                                     {copy("Manual review required", "Требуется ручная проверка", "נדרשת סקירה ידנית")}
                                     {problem.retry_allowed === false
-                                      ? " | no blind retry"
+                                      ? copy(" | no blind retry", " | без повтора вслепую", " | ללא ניסיון חוזר אוטומטי")
                                       : ""}
                                   </div>
                                 ) : null}
@@ -4039,6 +4057,8 @@ export default function OperationsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {priceReview && canReviewPrices ? <PriceConflictReviewDialog key={`${priceReview.source}:${priceReview.id}`}
+        source={priceReview.source} itemId={priceReview.id} onClose={() => setPriceReview(null)} /> : null}
     </DashboardLayout>
   );
 }

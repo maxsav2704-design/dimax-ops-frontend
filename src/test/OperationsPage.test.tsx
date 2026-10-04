@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -147,6 +147,44 @@ describe("OperationsPage", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it("filters price conflicts from both queues and offers review instead of cold resync", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/sync/health/summary") return {
+        max_cursor: 0, counts: { ok: 0, warn: 0, danger: 1, total: 1, dead: 0,
+          never_seen: 0, danger_pct: 100, problem_total: 2 }, alerts_sent: 0, top_laggers: [], top_offline: [],
+      };
+      if (path.startsWith("/api/v1/admin/sync/problems?")) return {
+        total: 2, items: ["sync_event", "sync_queue"].map((source) => ({
+          source, id: source, status: source === "sync_event" ? "FAILED" : "CONFLICT",
+          installer_id: "installer", installer_name: "Price Installer", user_id: "user",
+          problem_code: "CONFLICT_FACTORY_PRICE", error: "CONFLICT_FACTORY_PRICE",
+          operator_action: "Review price", retry_allowed: false, manual_review_required: true,
+          payload: {}, created_at: "2026-10-03T09:00:00Z",
+        })),
+      };
+      if (path.startsWith("/api/v1/admin/sync/price-conflicts/")) return {
+        id: "sync_event", project_name: "Price review project", installer_name: "Price Installer",
+        work_label: "QA-101", performed_at: null, received_at: "2026-10-03T09:00:00Z",
+        quantity: "1", seen_price_list_id: null, seen_version: null, seen_version_status: "MISSING",
+        analysis_code: "MISSING_EXECUTION_TIME", preview_amount: null, applicable_quote: null,
+      };
+      throw new Error(`Unused fixture: ${path}`);
+    });
+    renderSubject();
+    const buttons = await screen.findAllByRole("button", { name: "Review price" });
+    expect(buttons).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Cold resync" })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Sync problem status"), { target: { value: "price_conflict" } });
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith("/api/v1/admin/sync/problems?limit=25&status=price_conflict"));
+    expect(screen.getAllByRole("button", { name: "Review price" })).toHaveLength(2);
+    fireEvent.click(screen.getAllByRole("button", { name: "Review price" })[0]);
+    const dialog = await screen.findByRole("dialog", { name: "Price conflict review" });
+    expect(await within(dialog).findByText("Price review project")).toBeInTheDocument();
+    expect(apiFetchMock.mock.calls.every((call) => !call[1]?.method || call[1].method === "GET")).toBe(true);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close review" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("renders operational queue health data", async () => {

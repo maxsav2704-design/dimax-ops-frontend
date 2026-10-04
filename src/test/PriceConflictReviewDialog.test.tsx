@@ -1,0 +1,128 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PriceConflictReviewDialog } from "@/components/operations/PriceConflictReviewDialog";
+
+const mocks = vi.hoisted(() => ({ api: vi.fn(), locale: "en", allowed: true }));
+vi.mock("@/lib/api", () => ({ apiFetch: mocks.api }));
+vi.mock("@/lib/i18n", () => ({ useI18n: () => ({ locale: mocks.locale }) }));
+vi.mock("@/hooks/use-auth-session", () => ({ useAuthSession: () => ({
+  role: "ADMIN", admin_scope: "OWNER", can_view_rates: mocks.allowed,
+}) }));
+
+const review = {
+  id: "price-command", project_name: "QA project", installer_name: "Test Installer",
+  work_label: "QA-101", performed_at: "2026-10-02T08:00:00Z", received_at: "2026-10-03T09:00:00Z",
+  quantity: "1.50", seen_price_list_id: "original-price-list", seen_version: 1,
+  seen_version_status: "AVAILABLE", analysis_code: "VERSION_MISMATCH", preview_amount: "18.00",
+  applicable_quote: { version: 2, rate: "12.00", unit: "pcs", currency: "ILS",
+    effective_from: "2026-10-01T07:00:00Z", selection: "AT_EXECUTION" },
+};
+
+function subject() {
+  const onClose = vi.fn();
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const wrapper = ({ children }: { children: React.ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return { ...render(<PriceConflictReviewDialog source="sync_queue" itemId="price-command" onClose={onClose} />, { wrapper }), onClose };
+}
+
+beforeEach(() => { mocks.api.mockReset(); mocks.api.mockResolvedValue(review); mocks.locale = "en"; mocks.allowed = true; });
+
+describe("read-only price conflict review", () => {
+  it("shows the original version and execution quote, without an editing or retry command", async () => {
+    const { onClose } = subject();
+    expect(await screen.findByText("QA-101")).toBeInTheDocument();
+    expect(screen.getByText("v1")).toBeInTheDocument();
+    expect(screen.getByText("v2")).toBeInTheDocument();
+    expect(screen.getByText("18.00 ILS")).toBeInTheDocument();
+    expect(screen.getByText("Calculation for review, not accrued")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+    expect(mocks.api).toHaveBeenCalledExactlyOnceWith("/api/v1/admin/sync/price-conflicts/sync_queue/price-command", { signal: expect.any(AbortSignal) });
+    fireEvent.click(screen.getByText("Original identifiers"));
+    expect(screen.getByText("original-price-list")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close review" }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("does not request prices without rate permission", () => {
+    mocks.allowed = false;
+    subject();
+    expect(screen.getByRole("alert")).toHaveTextContent("Rate access is required.");
+    expect(mocks.api).not.toHaveBeenCalled();
+  });
+
+  it("removes already loaded prices after permission loss", async () => {
+    const view = subject();
+    await screen.findByText("18.00 ILS");
+    mocks.allowed = false;
+    view.rerender(<PriceConflictReviewDialog source="sync_queue" itemId="price-command" onClose={view.onClose} />);
+    expect(screen.queryByText("18.00 ILS")).not.toBeInTheDocument();
+  });
+
+  it("hides evidence and closes on a session change", async () => {
+    const view = subject();
+    await screen.findByText("18.00 ILS");
+    fireEvent(window, new CustomEvent("dimax-auth-changed"));
+    expect(view.onClose).toHaveBeenCalledOnce();
+    expect(screen.queryByText("18.00 ILS")).not.toBeInTheDocument();
+  });
+
+  it("aborts an unfinished request when the review unmounts", () => {
+    let signal: AbortSignal | undefined;
+    mocks.api.mockImplementationOnce((_path, init) => { signal = init.signal; return new Promise(() => {}); });
+    const view = subject();
+    expect(signal?.aborted).toBe(false);
+    view.unmount();
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it("shows loading, then a retryable GET error without stale prices", async () => {
+    let reject!: (error: Error) => void;
+    mocks.api.mockImplementationOnce(() => new Promise((_, fail) => { reject = fail; }));
+    subject();
+    expect(screen.getByRole("status")).toHaveTextContent("Checking price history");
+    reject(new Error("Review unavailable"));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText("18.00 ILS")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Check again" }));
+    await screen.findByText("18.00 ILS");
+    expect(mocks.api.mock.calls.every((call) => !call[1]?.method || call[1].method === "GET")).toBe(true);
+  });
+
+  it("does not substitute receipt time or zero money for missing execution evidence", async () => {
+    mocks.api.mockResolvedValue({ ...review, performed_at: null, applicable_quote: null,
+      preview_amount: null, analysis_code: "MISSING_EXECUTION_TIME" });
+    subject();
+    expect(await screen.findByText("Execution time is missing. Receipt time cannot replace it.")).toBeInTheDocument();
+    expect(screen.getByText("Not recorded")).toBeInTheDocument();
+    expect(screen.queryByText("Calculation for review, not accrued")).not.toBeInTheDocument();
+  });
+
+  it("labels the first-confirmed legacy exception", async () => {
+    mocks.api.mockResolvedValue({ ...review, seen_version: null, seen_price_list_id: null, seen_version_status: "MISSING",
+      analysis_code: "NO_VERSION", applicable_quote: { ...review.applicable_quote, selection: "FIRST_CONFIRMED_LEGACY" } });
+    subject();
+    expect(await screen.findByText("Legacy work: first factory-confirmed price list.")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["ru", "Разбор конфликта цены", "Расчёт для проверки, не начисление", "ltr"],
+    ["he", "בדיקת התנגשות מחיר", "חישוב לבדיקה, לא זיכוי בשכר", "rtl"],
+  ])("localizes the review in %s", async (locale, title, calculation, dir) => {
+    mocks.locale = locale;
+    subject();
+    expect(await screen.findByText(calculation)).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: title })).toHaveAttribute("dir", dir);
+    expect(screen.queryByText("Calculation for review, not accrued")).not.toBeInTheDocument();
+  });
+
+  it("fetches new evidence when selecting another record", async () => {
+    const view = subject();
+    await screen.findByText("18.00 ILS");
+    mocks.api.mockImplementationOnce(() => new Promise(() => {}));
+    view.rerender(<PriceConflictReviewDialog source="sync_event" itemId="other" onClose={view.onClose} />);
+    expect(screen.queryByText("18.00 ILS")).not.toBeInTheDocument();
+    await waitFor(() => expect(mocks.api).toHaveBeenLastCalledWith("/api/v1/admin/sync/price-conflicts/sync_event/other", { signal: expect.any(AbortSignal) }));
+  });
+});
