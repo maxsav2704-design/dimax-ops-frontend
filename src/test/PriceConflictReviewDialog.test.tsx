@@ -1,13 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PriceConflictReviewDialog } from "@/components/operations/PriceConflictReviewDialog";
 
-const mocks = vi.hoisted(() => ({ api: vi.fn(), locale: "en", allowed: true }));
+const mocks = vi.hoisted(() => ({ api: vi.fn(), locale: "en", allowed: true, scope: "OWNER" }));
 vi.mock("@/lib/api", () => ({ apiFetch: mocks.api }));
 vi.mock("@/lib/i18n", () => ({ useI18n: () => ({ locale: mocks.locale }) }));
 vi.mock("@/hooks/use-auth-session", () => ({ useAuthSession: () => ({
-  role: "ADMIN", admin_scope: "OWNER", can_view_rates: mocks.allowed,
+  role: "ADMIN", admin_scope: mocks.scope, can_view_rates: mocks.allowed,
 }) }));
 
 const review = {
@@ -17,6 +17,7 @@ const review = {
   seen_version_status: "AVAILABLE", analysis_code: "VERSION_MISMATCH", preview_amount: "18.00",
   applicable_quote: { version: 2, rate: "12.00", unit: "pcs", currency: "ILS",
     effective_from: "2026-10-01T07:00:00Z", selection: "AT_EXECUTION" },
+  resolution_available: false, review_token: null,
 };
 
 function subject() {
@@ -26,7 +27,11 @@ function subject() {
   return { ...render(<PriceConflictReviewDialog source="sync_queue" itemId="price-command" onClose={onClose} />, { wrapper }), onClose };
 }
 
-beforeEach(() => { mocks.api.mockReset(); mocks.api.mockResolvedValue(review); mocks.locale = "en"; mocks.allowed = true; });
+beforeEach(() => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+  mocks.api.mockReset(); mocks.api.mockResolvedValue(review); mocks.locale = "en"; mocks.allowed = true; mocks.scope = "OWNER";
+});
+afterEach(() => vi.unstubAllGlobals());
 
 describe("read-only price conflict review", () => {
   it("shows the original version and execution quote, without an editing or retry command", async () => {
@@ -124,5 +129,72 @@ describe("read-only price conflict review", () => {
     view.rerender(<PriceConflictReviewDialog source="sync_event" itemId="other" onClose={view.onClose} />);
     expect(screen.queryByText("18.00 ILS")).not.toBeInTheDocument();
     await waitFor(() => expect(mocks.api).toHaveBeenLastCalledWith("/api/v1/admin/sync/price-conflicts/sync_event/other", { signal: expect.any(AbortSignal) }));
+  });
+});
+
+describe("authorized execution-price decision", () => {
+  const resolvable = { ...review, resolution_available: true, review_token: "a".repeat(64) };
+  const result = { id: "decision-1", completed_work_id: "work-1", amount: "18.00", resolved_at: "2026-10-04T09:00:00Z" };
+  const fillDecision = () => {
+    fireEvent.change(screen.getByLabelText("Decision reason"), { target: { value: "Checked the executed work and factory terms" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+  };
+
+  it("requires an explicit reason and confirmation, submits no rate, and displays actual accrual", async () => {
+    mocks.api.mockImplementation((path) => Promise.resolve(path.endsWith("/resolve") ? result : resolvable));
+    subject();
+    const button = await screen.findByRole("button", { name: "Record work: 18.00 ILS" });
+    expect(button).toBeDisabled();
+    fillDecision();
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    await screen.findByText("Work recorded");
+    expect(screen.getByText("Accrued: 18.00 ILS")).toBeInTheDocument();
+    expect(screen.queryByText("Calculation for review, not accrued")).not.toBeInTheDocument();
+    const sent = mocks.api.mock.calls.find((call) => call[1]?.method === "POST");
+    expect(sent?.[0]).toBe("/api/v1/admin/sync/price-conflicts/sync_queue/price-command/resolve");
+    expect(JSON.parse(sent?.[1].body)).toEqual({ request_id: expect.any(String), review_token: "a".repeat(64),
+      reason: "Checked the executed work and factory terms" });
+  });
+
+  it("retries an uncertain outcome with the same idempotency key and prevents duplicate pending clicks", async () => {
+    let reject!: (error: Error) => void;
+    mocks.api.mockResolvedValueOnce(resolvable).mockImplementationOnce(() => new Promise((_, fail) => { reject = fail; })).mockResolvedValueOnce(result);
+    subject();
+    await screen.findByLabelText("Decision reason");
+    fillDecision();
+    fireEvent.click(screen.getByRole("button", { name: "Record work: 18.00 ILS" }));
+    expect(await screen.findByRole("button", { name: "Recording..." })).toBeDisabled();
+    await waitFor(() => expect(reject).toBeTypeOf("function"));
+    reject(new Error("Connection lost"));
+    await screen.findByRole("alert");
+    expect(screen.getByText("The result is not confirmed. Do not create duplicate work.")).toBeInTheDocument();
+    expect(screen.queryByText("Original work retained. No earnings have been changed.")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Decision reason")).toHaveValue("Checked the executed work and factory terms");
+    fireEvent.click(screen.getByRole("button", { name: "Record work: 18.00 ILS" }));
+    await screen.findByText("Work recorded");
+    const requests = mocks.api.mock.calls.filter((call) => call[1]?.method === "POST");
+    expect(requests).toHaveLength(2);
+    expect(requests[0][1].body).toBe(requests[1][1].body);
+  });
+
+  it("does not allow a finance reader to apply the decision", async () => {
+    mocks.scope = "FINANCE";
+    mocks.api.mockResolvedValue(resolvable);
+    subject();
+    await screen.findByText("18.00 ILS");
+    expect(screen.queryByLabelText("Decision reason")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["ru", "Причина решения", "Учесть работу: 18.00 ILS"],
+    ["he", "נימוק להחלטה", "רישום עבודה: 18.00 ILS"],
+  ])("localizes the decision in %s", async (locale, reasonLabel, action) => {
+    mocks.locale = locale;
+    mocks.api.mockResolvedValue(resolvable);
+    subject();
+    expect(await screen.findByLabelText(reasonLabel)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: action })).toBeDisabled();
+    expect(screen.queryByText("Accept execution-time price")).not.toBeInTheDocument();
   });
 });

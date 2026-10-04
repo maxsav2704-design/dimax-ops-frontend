@@ -1,10 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { RefreshCcw, ShieldAlert } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { CheckCircle2, RefreshCcw, ShieldAlert } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { canAccessAdminModule } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
@@ -26,6 +28,7 @@ const explanations = {
   INVALID_QUANTITY: ["The recorded quantity cannot be used for a calculation.", "Записанное количество нельзя использовать для расчёта.", "לא ניתן לחשב לפי הכמות שנרשמה."],
   UNSUPPORTED_WORK: ["This command needs a separate technical review.", "Эта команда требует отдельной технической проверки.", "פקודה זו דורשת בדיקה טכנית נפרדת."],
   CATALOG_UNIT_CHANGED: ["The catalog unit differs from the confirmed price unit.", "Единица в справочнике отличается от единицы подтверждённой цены.", "יחידת הקטלוג שונה מיחידת המחיר המאושר."],
+  ORIGINAL_PRICE_UNAVAILABLE: ["The original version has no matching work and unit. Quantity needs separate review.", "В исходной версии нет соответствующей работы с той же единицей. Количество требует отдельной проверки.", "בגרסה המקורית אין עבודה תואמת באותה יחידה. הכמות דורשת בדיקה נפרדת."],
 } as const;
 
 type Review = {
@@ -41,6 +44,8 @@ type Review = {
   seen_version_status: "MISSING" | "INVALID" | "UNAVAILABLE" | "AVAILABLE";
   analysis_code: keyof typeof explanations;
   preview_amount: string | null;
+  resolution_available: boolean;
+  review_token: string | null;
   applicable_quote: null | {
     version: number;
     rate: string;
@@ -58,8 +63,13 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
 }) {
   const { locale } = useI18n();
   const session = useAuthSession();
+  const queryClient = useQueryClient();
+  const [reason, setReason] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const attempt = useRef<{ request_id: string; review_token: string; reason: string } | null>(null);
   const [sessionChanged, setSessionChanged] = useState(false);
   const allowed = !sessionChanged && canAccessAdminModule(session, "price-lists");
+  const canResolve = allowed && (session?.admin_scope === "OWNER" || session?.admin_scope === "OPERATIONS");
   useEffect(() => onAuthChanged(() => {
     setSessionChanged(true);
     onClose();
@@ -73,10 +83,33 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
     retry: false,
     gcTime: 0,
     staleTime: 0,
+    refetchOnWindowFocus: false,
+  });
+  const resolution = useMutation({
+    mutationFn: (body: { request_id: string; review_token: string; reason: string }) => apiFetch<{
+      id: string; completed_work_id: string; amount: string; resolved_at: string;
+    }>(`/api/v1/admin/sync/price-conflicts/${source}/${encodeURIComponent(itemId)}/resolve`, {
+      method: "POST", body: JSON.stringify(body),
+    }),
+    retry: false,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["operations-sync-problems"] });
+      void queryClient.invalidateQueries({ queryKey: ["operations-sync-health"] });
+      void queryClient.invalidateQueries({ queryKey: ["earnings-ledger"] });
+    },
   });
   // Do not display a previous response after permission loss or a failed recheck.
   const review = allowed && !query.isError ? query.data : undefined;
   const quote = review?.applicable_quote;
+  const submit = () => {
+    if (!canResolve || !review?.resolution_available || !review.review_token || !confirmed
+      || reason.trim().length < 10 || query.isFetching || resolution.isPending || resolution.isSuccess) return;
+    // Keep the same key after an uncertain network outcome so retry cannot accrue twice.
+    if (!attempt.current || attempt.current.review_token !== review.review_token || attempt.current.reason !== reason.trim()) {
+      attempt.current = { request_id: crypto.randomUUID(), review_token: review.review_token, reason: reason.trim() };
+    }
+    resolution.mutate(attempt.current);
+  };
   const date = (value: string | null) => value
     ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "long" }).format(new Date(value))
     : copy("Not recorded", "Не записано", "לא נרשם");
@@ -92,9 +125,24 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
         closeLabel={copy("Close", "Закрыть", "סגירה")}>
         <DialogHeader className="pe-8 text-start">
           <DialogTitle>{copy("Price conflict review", "Разбор конфликта цены", "בדיקת התנגשות מחיר")}</DialogTitle>
-          <DialogDescription>{copy("Original work retained. No earnings have been changed.", "Исходная работа сохранена. Начисления не изменены.", "העבודה המקורית נשמרה. לא שונו סכומי השכר.")}</DialogDescription>
+          <DialogDescription>{resolution.isSuccess
+            ? copy("The decision and original work are retained in the audit log.", "Решение и исходная работа сохранены в журнале действий.", "ההחלטה והעבודה המקורית נשמרו ביומן הביקורת.")
+            : resolution.isPending
+              ? copy("Checking and recording the decision.", "Проверяем и сохраняем решение.", "בודק ושומר את ההחלטה.")
+            : resolution.isError
+              ? copy("The result is not confirmed. Do not create duplicate work.", "Результат не подтверждён. Не создавайте повторную работу.", "התוצאה טרם אושרה. אין ליצור עבודה כפולה.")
+            : copy("Original work retained. No earnings have been changed.", "Исходная работа сохранена. Начисления не изменены.", "העבודה המקורית נשמרה. לא שונו סכומי השכר.")}</DialogDescription>
         </DialogHeader>
-        {!allowed ? <p role="alert">{copy("Rate access is required.", "Нужен доступ к расценкам.", "נדרשת הרשאה לצפייה במחירים.")}</p> : query.isPending ? (
+        {!allowed ? <p role="alert">{copy("Rate access is required.", "Нужен доступ к расценкам.", "נדרשת הרשאה לצפייה במחירים.")}</p> : resolution.isSuccess ? (
+          <div role="status" className="space-y-3 py-4">
+            <CheckCircle2 className="h-6 w-6 text-status-ok-fg" />
+            <h3 className="text-base font-semibold">{copy("Work recorded", "Работа учтена", "העבודה נרשמה")}</h3>
+            <p className="text-sm">{copy("Accrued: ", "Начислено: ", "נזקף לשכר: ")}{resolution.data.amount} ILS</p>
+            <p className="text-xs text-text-secondary">{copy("The updated mobile app will receive acknowledgement on its next sync.",
+              "Обновлённое мобильное приложение получит подтверждение при следующей синхронизации.", "האפליקציה המעודכנת תקבל אישור בסנכרון הבא.")}</p>
+            <p className="break-all text-xs text-text-secondary">{copy("Decision: ", "Решение: ", "החלטה: ")}{resolution.data.id}</p>
+          </div>
+        ) : query.isPending ? (
           <p role="status" className="text-sm text-text-secondary">{copy("Checking price history...", "Проверка истории цен...", "בודק היסטוריית מחירים...")}</p>
         ) : query.isError ? (
           <div role="alert" className="space-y-3 text-sm text-status-problem-fg">
@@ -144,6 +192,37 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
                 {field(copy("Price list in command", "Прайс в команде", "מחירון בפקודה"), review.seen_price_list_id)}
               </dl>
             </details>
+            {canResolve && review.resolution_available && review.review_token && quote && (
+              <form className="space-y-3 border-t border-border pt-3" onSubmit={(event) => { event.preventDefault(); submit(); }}>
+                <h3 className="text-sm font-semibold">{copy("Accept execution-time price", "Принять цену на момент выполнения", "אישור המחיר במועד הביצוע")}</h3>
+                <label className="block space-y-1 text-sm" htmlFor="price-decision-reason">
+                  <span>{copy("Decision reason", "Причина решения", "נימוק להחלטה")}</span>
+                  <Textarea id="price-decision-reason" value={reason} onChange={(event) => setReason(event.target.value)}
+                    minLength={10} maxLength={500} required disabled={resolution.isPending} />
+                </label>
+                <label className="flex items-start gap-2 text-sm" htmlFor="price-decision-confirm">
+                  <Checkbox id="price-decision-confirm" checked={confirmed} disabled={resolution.isPending}
+                    onCheckedChange={(value) => setConfirmed(value === true)} className="mt-0.5" />
+                  <span>{copy("I checked the installer, work, quantity and execution time.",
+                    "Я проверил монтажника, работу, количество и время выполнения.", "בדקתי את המתקין, העבודה, הכמות ומועד הביצוע.")}</span>
+                </label>
+                {resolution.isError && <div className="space-y-2">
+                  <p role="alert" className="text-sm text-status-problem-fg">{(resolution.error as { status?: number }).status === 409
+                    ? copy("Work or price conditions changed. Check again before applying a decision.",
+                      "Условия работы или цены изменились. Повторите проверку перед решением.", "תנאי העבודה או המחיר השתנו. יש לבדוק שוב לפני אישור ההחלטה.")
+                    : readableApiError(resolution.error, locale, copy("The decision was not confirmed. Retry with the same details or check the queue.",
+                      "Решение не подтверждено. Повторите с теми же данными или проверьте очередь.", "ההחלטה לא אושרה. נסו שוב עם אותם פרטים או בדקו את התור."))}</p>
+                  <Button type="button" variant="outline" disabled={query.isFetching} onClick={() => {
+                    setConfirmed(false); resolution.reset(); attempt.current = null; void query.refetch();
+                  }}><RefreshCcw className="me-2 h-4 w-4" />{copy("Check again", "Проверить снова", "בדיקה חוזרת")}</Button>
+                </div>}
+                <Button type="submit" disabled={!confirmed || reason.trim().length < 10 || query.isFetching || resolution.isPending}>
+                  <CheckCircle2 className="me-2 h-4 w-4" />{resolution.isPending
+                    ? copy("Recording...", "Сохраняем...", "שומר...")
+                    : copy("Record work: ", "Учесть работу: ", "רישום עבודה: ") + `${review.preview_amount} ILS`}
+                </Button>
+              </form>
+            )}
           </>
         ) : null}
         <div className="flex justify-end"><Button variant="outline" onClick={onClose}>{copy("Close review", "Закрыть проверку", "סגירת הבדיקה")}</Button></div>

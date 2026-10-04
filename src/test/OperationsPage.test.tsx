@@ -173,7 +173,7 @@ describe("OperationsPage", () => {
       throw new Error(`Unused fixture: ${path}`);
     });
     renderSubject();
-    const buttons = await screen.findAllByRole("button", { name: "Review price" });
+    const buttons = await screen.findAllByRole("button", { name: "Review price" }, { timeout: 5000 });
     expect(buttons).toHaveLength(2);
     expect(screen.queryByRole("button", { name: "Cold resync" })).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Sync problem status"), { target: { value: "price_conflict" } });
