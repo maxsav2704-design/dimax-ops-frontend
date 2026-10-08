@@ -2,6 +2,13 @@ import { apiFetch } from "@/lib/api";
 
 export const PRICE_API = "/api/v1/admin/price-lists";
 export const PRICE_PAGE_SIZE = 20;
+export type CompanyPricingState = {
+  mode: "LEGACY" | "FACTORY";
+  active_price: null | {
+    price_list_id: string; version: number; currency: "ILS"; effective_from: string;
+    items: Array<{ kind: "DOOR" | "ADDON"; target_id: string; unit: string; rate: string }>;
+  };
+};
 export type PriceLine = { kind: "DOOR" | "ADDON"; target_id: string; name: string; unit: string; installer_price: string };
 export type PriceSummary = {
   id: string; version: number; status: "DRAFT" | "CONFIRMED" | "CANCELLED"; currency: "ILS";

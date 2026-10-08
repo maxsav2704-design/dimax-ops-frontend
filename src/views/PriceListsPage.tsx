@@ -12,6 +12,8 @@ import { PriceReconciliationDialog } from "@/components/prices/PriceReconciliati
 import { reconciliationCopy } from "@/components/prices/reconciliation-copy";
 import { priceCopy, type PriceCopy } from "@/components/prices/copy";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { useCompanyPricingState } from "@/hooks/use-company-pricing-state";
+import { CompanyPriceStatus } from "@/components/prices/CompanyPriceStatus";
 import { apiFetch } from "@/lib/api";
 import { canAccessAdminModule, canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { onAuthChanged } from "@/lib/auth-session";
@@ -39,6 +41,7 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
   const { locale, dir } = useI18n();
   const t = priceCopy[locale];
   const client = useQueryClient();
+  const pricing = useCompanyPricingState();
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [editor, setEditor] = useState<{ base?: PriceDetail; latest: number } | null>(null);
@@ -48,7 +51,7 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(timer); }, []);
   const lists = useQuery({ queryKey: ["price-lists", offset], queryFn: ({ signal }) => apiFetch<PricePage>(`${PRICE_API}?limit=${PRICE_PAGE_SIZE}&offset=${offset}`, { signal }) });
-  const selectedId = selected ?? lists.data?.items[0]?.id;
+  const selectedId = selected ?? (offset === 0 ? pricing.state?.active_price?.price_list_id : undefined) ?? lists.data?.items[0]?.id;
   const detail = useQuery({ queryKey: ["price-detail", selectedId], enabled: !!selectedId, queryFn: ({ signal }) => apiFetch<PriceDetail>(`${PRICE_API}/${selectedId}`, { signal }) });
   const history = useQuery({ queryKey: ["price-history", selectedId, historyOffset], enabled: !!selectedId,
     queryFn: ({ signal }) => apiFetch<InvitationPage>(`${PRICE_API}/${selectedId}/approvals?limit=${PRICE_PAGE_SIZE}&offset=${historyOffset}`, { signal }),
@@ -74,7 +77,7 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
       <Button variant="outline" onClick={() => setReconciliation({ list: row })} disabled={!fresh || (!!selectedId && !row)}><GitCompareArrows className="me-2 size-4" />{reconciliationCopy[locale].open}</Button>
       {writable && <Button onClick={() => setEditor({ base: row, latest })} disabled={!fresh || (!!selectedId && !row)}><Plus className="me-2 size-4" />{t.newVersion}</Button>}
     </>} />
-    <p className="border-s-4 border-status-warning-border bg-status-warning-bg px-3 py-2 text-sm text-status-warning-fg">{t.notice}</p>
+    <CompanyPriceStatus {...pricing} onOpen={(id) => { setSelected(id); setHistoryOffset(0); }} />
     {lists.isPending && <p role="status" className="text-sm">{t.loading}</p>}
     {problem && <div role="alert" className="text-sm text-status-problem-fg">{t.error}</div>}
     {lists.data && !lists.isError && <div className="grid min-w-0 gap-6 xl:grid-cols-[15rem_minmax(0,1fr)]">
@@ -94,7 +97,11 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
         {selectedId && detail.isPending && <p role="status">{t.loading}</p>}
         {row && !detail.isError && <>
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-            <div className="flex flex-wrap items-center gap-3"><h2 className="text-lg font-semibold">{t.version} {row.version}</h2><Badge status={row.status} t={t} /></div>
+            <div className="flex flex-wrap items-center gap-3"><h2 className="text-lg font-semibold">{t.version} {row.version}</h2><Badge status={row.status} t={t} />
+              {pricing.state && <span className="text-xs text-text-secondary">{pricing.state.active_price?.price_list_id === row.id
+                ? locale === "ru" ? "Действующая версия" : locale === "he" ? "הגרסה בתוקף" : "Currently effective"
+                : locale === "ru" ? "Не действует сейчас" : locale === "he" ? "אינה בתוקף כעת" : "Not currently effective"}</span>}
+            </div>
             {writable && row.status === "DRAFT" && <div className="flex flex-wrap gap-2">
               {row.version === latest && <Button variant="outline" onClick={() => setAction({ kind: "invite", list: row })} disabled={!fresh}><Link2 className="me-2 size-4" />{t.invite}</Button>}
               <Button variant="outline" onClick={() => setAction({ kind: "cancel", list: row })} disabled={!fresh}><Ban className="me-2 size-4" />{t.cancel}</Button>

@@ -20,6 +20,7 @@ const invitation = {
   created_at: "2026-10-02T09:00:00Z", expires_at: "2099-10-02T09:00:00Z", revoked_at: null, revocation_reason: null, confirmed_at: null, confirmed_name: null,
 };
 function reads(path: string) {
+  if (path === `${PRICE_API}/state`) return { mode: "LEGACY", active_price: null };
   if (path.startsWith(`${PRICE_API}?`)) return { items: [draft], total: 1, latest_version: 1 };
   if (path === `${PRICE_API}/list-1`) return draft;
   if (path.includes("/approvals?")) return { items: [], total: 0 };
@@ -64,6 +65,28 @@ describe("factory price management", () => {
     expect(screen.queryByRole("button", { name: "New version" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create factory link" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Confirm prices" })).not.toBeInTheDocument();
+  });
+  it("distinguishes the effective version from a newer confirmed list", async () => {
+    const newer = { ...draft, id: "list-2", version: 2, status: "CONFIRMED", items: [{ ...draft.items[0], name: "Later price" }] };
+    api.mockImplementation(async (path: string) => {
+      if (path === `${PRICE_API}/state`) return { mode: "FACTORY", active_price: {
+        price_list_id: draft.id, version: 1, currency: "ILS", effective_from: "2026-10-04T08:00:00Z", items: [],
+      } };
+      if (path.startsWith(`${PRICE_API}?`)) return { items: [newer, { ...draft, status: "CONFIRMED" }], total: 2, latest_version: 2 };
+      if (path === `${PRICE_API}/list-1`) return { ...draft, status: "CONFIRMED" };
+      if (path === `${PRICE_API}/list-2`) return newer;
+      return reads(path);
+    });
+    mount(); await screen.findByText("Active factory price list v1");
+    await screen.findByText("Entrance");
+    fireEvent.click(screen.getByRole("button", { name: /Version 2/ }));
+    await screen.findByText("Later price");
+    expect(screen.getByText("Not currently effective")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open active version" }));
+    await screen.findByText("Entrance");
+    expect(screen.getByText("Currently effective")).toBeInTheDocument();
+    expect(screen.queryByText("Later price")).not.toBeInTheDocument();
+    expect(screen.queryByText(/not yet applied to work/)).not.toBeInTheDocument();
   });
   it("retries an ambiguous draft save using exactly the same request ID and payload", async () => {
     let writes = 0;

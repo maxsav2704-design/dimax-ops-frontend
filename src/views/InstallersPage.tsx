@@ -20,6 +20,8 @@ import {
   WidgetCard,
 } from "@/components/dimax";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { useCompanyPricingState } from "@/hooks/use-company-pricing-state";
+import { CompanyPriceStatus } from "@/components/prices/CompanyPriceStatus";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import {
@@ -373,8 +375,10 @@ export default function InstallersPage() {
   const session = useAuthSession();
   const canManageInstallers = canManageUsers(session);
   const canViewInstallerRates = canViewRates(session);
+  const pricing = useCompanyPricingState(isEditOpen && !!editingInstaller && canViewInstallerRates);
+  const factoryPrices = pricing.state?.mode === "FACTORY";
   const canManageRates =
-    canViewInstallerRates && canRunPrivilegedAdminActions(session);
+    canViewInstallerRates && canRunPrivilegedAdminActions(session) && pricing.legacyWritable;
   const canOpenInstallerDetails =
     canManageInstallers || canViewInstallerRates;
   const privilegedActionHint = canManageInstallers
@@ -382,14 +386,21 @@ export default function InstallersPage() {
     : "Your access level is read-only in installers";
   const rateActionHint = canManageRates
     ? undefined
+    : !pricing.legacyWritable && canViewInstallerRates
+      ? copy("Individual rates require verified legacy pricing.", "Для изменения персональных ставок нужно проверить режим цен.", "שינוי תעריפים אישיים מחייב אימות מצב המחירים.")
     : canViewInstallerRates
       ? "Rate changes are read-only for your scope"
       : "Rate access is restricted for your scope";
-  const runRateWrite = <T,>(action: () => Promise<T>): Promise<T> => {
+  const runRateWrite = async <T,>(action: () => Promise<T>): Promise<T> => {
     if (!canManageRates) {
-      return Promise.reject(new Error("Installer rate write access is required."));
+      throw new Error("Installer rate writes require verified legacy pricing and permission.");
     }
-    return action();
+    try {
+      return await action();
+    } catch (error) {
+      void queryClient.invalidateQueries({ queryKey: ["company-pricing-state"] });
+      throw error;
+    }
   };
   const deepLinkInstallerId = (searchParams?.get("installer_id") || "").trim();
 
@@ -1159,12 +1170,8 @@ export default function InstallersPage() {
 
             {canViewInstallerRates ? (
               <WidgetCard
-                title={copy("Installer Rates", "Расценки монтажника", "תעריפי מתקין")}
-                headerMeta={copy(
-                  "Keep rate rows aligned with current door-type pricing.",
-                  "Поддерживайте расценки в соответствии с актуальными типами дверей.",
-                  "שמרו על התאמת התעריפים לסוגי הדלתות העדכניים.",
-                )}
+                title={factoryPrices ? copy("Historical individual rates", "История персональных ставок", "היסטוריית תעריפים אישיים")
+                  : copy("Installer Rates", "Расценки монтажника", "תעריפי מתקין")}
                 actionSlot={
                   <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2 text-end text-[12px] text-text-secondary">
                     {rates.length} {copy("rows", "строк", "שורות")}
@@ -1173,7 +1180,8 @@ export default function InstallersPage() {
                 className="mt-5"
               >
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_140px_130px]">
+                  <CompanyPriceStatus {...pricing} onOpen={() => router.push("/price-lists")} />
+                  {!factoryPrices && <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_140px_130px]">
                     <select
                       value={newRateDoorTypeId}
                       disabled={!canManageRates}
@@ -1206,7 +1214,7 @@ export default function InstallersPage() {
                     >
                       {copy("Add Rate", "Добавить ставку", "הוסף תעריף")}
                     </button>
-                  </div>
+                  </div>}
 
                   <div className="space-y-2">
                     {ratesQuery.isLoading && (
@@ -1231,7 +1239,7 @@ export default function InstallersPage() {
                               ? `${doorType.code} - ${doorType.name}`
                               : rate.door_type_id}
                           </div>
-                          <input
+                          {factoryPrices ? <span className="text-sm tabular-nums">{rate.price} ILS</span> : <input
                             value={rateDrafts[rate.id] ?? String(rate.price)}
                             disabled={!canManageRates}
                             onChange={(e) =>
@@ -1241,8 +1249,8 @@ export default function InstallersPage() {
                               }))
                             }
                             className="control-input h-9 w-full px-2.5 tabular-nums"
-                          />
-                          <button
+                          />}
+                          {!factoryPrices && <button
                             onClick={() => updateRateMutation.mutate(rate.id)}
                             disabled={
                               !canManageRates || updateRateMutation.isPending
@@ -1251,8 +1259,8 @@ export default function InstallersPage() {
                             className="dmx-secondary-action h-9 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {copy("Save", "Сохранить", "שמור")}
-                          </button>
-                          <button
+                          </button>}
+                          {!factoryPrices && <button
                             onClick={() => deleteRateMutation.mutate(rate.id)}
                             disabled={
                               !canManageRates || deleteRateMutation.isPending
@@ -1261,7 +1269,7 @@ export default function InstallersPage() {
                             className="dmx-secondary-action h-9 text-status-problem-fg hover:border-status-problem-border disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {copy("Delete", "Удалить", "מחק")}
-                          </button>
+                          </button>}
                         </div>
                       );
                     })}

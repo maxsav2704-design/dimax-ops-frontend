@@ -5,6 +5,16 @@ import { readableApiError, readableConflictCode } from "@/lib/api-error-display"
 
 describe("api-error-display", () => {
   it.each([
+    ["en", "Factory pricing is now active."],
+    ["ru", "Включён единый прайс завода."],
+    ["he", "מחירון המפעל הופעל."],
+  ] as const)("explains a concurrent factory cutover in %s", (locale, message) => {
+    const error = new ApiError(409, "Individual rates are historical", {
+      error: { code: "CONFLICT", meta: { reason: "FACTORY_PRICES_ACTIVE" } },
+    });
+    expect(readableApiError(error, locale, "fallback")).toContain(message);
+  });
+  it.each([
     ["en", "Could not reach the server. Check your connection and try again.", "Could not verify your session. Please try again shortly."],
     ["ru", "Нет связи с сервером. Проверьте соединение и повторите попытку.", "Не удалось проверить сессию. Повторите попытку через некоторое время."],
     ["he", "לא ניתן להתחבר לשרת. יש לבדוק את החיבור ולנסות שוב.", "לא ניתן לאמת את ההתחברות. יש לנסות שוב בעוד זמן קצר."],

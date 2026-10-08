@@ -9,6 +9,11 @@ type LocalizedTriple = {
 };
 
 const ERROR_COPY: Record<string, LocalizedTriple> = {
+  FACTORY_PRICES_ACTIVE: {
+    en: "Factory pricing is now active. Individual rates are historical; request a new factory-confirmed version to change prices.",
+    ru: "Включён единый прайс завода. Персональные ставки сохранены как история; для изменения цены нужна новая версия с подтверждением завода.",
+    he: "מחירון המפעל הופעל. התעריפים האישיים נשמרים כהיסטוריה; שינוי מחיר מחייב גרסה חדשה באישור המפעל.",
+  },
   NETWORK_UNAVAILABLE: {
     en: "Could not reach the server. Check your connection and try again.",
     ru: "Нет связи с сервером. Проверьте соединение и повторите попытку.",
@@ -81,6 +86,9 @@ export function readableApiError(
   fallback: string
 ): string {
   if (isApiErrorLike(error)) {
+    if (error.code === "CONFLICT" && error.meta?.reason === "FACTORY_PRICES_ACTIVE") {
+      return pickLocale(ERROR_COPY.FACTORY_PRICES_ACTIVE, locale);
+    }
     if (error.code && ERROR_COPY[error.code]) {
       return pickLocale(ERROR_COPY[error.code], locale);
     }
