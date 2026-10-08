@@ -26,6 +26,8 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
+import { ProjectMarginBasis, ProjectMarginNotice } from "@/components/prices/ProjectMarginNotice";
+import { projectMarginDataRisk, type ProjectMarginCoverage } from "@/lib/project-margin";
 import { Button } from "@/components/ui/button";
 import { apiDownload, apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
@@ -914,7 +916,7 @@ type ProjectRiskDrilldownResponse = {
   risky_orders: ProjectRiskOrderItem[];
 };
 
-type ProjectMarginItem = {
+type ProjectMarginItem = ProjectMarginCoverage & {
   project_id: string;
   project_name: string;
   project_status: string;
@@ -924,14 +926,16 @@ type ProjectMarginItem = {
   open_issues: number;
   revenue_total: number;
   payroll_total: number;
-  profit_total: number;
-  margin_pct: number;
+  profit_total: number | null;
+  margin_pct: number | null;
   missing_rates_installed_doors: number;
   missing_addon_plans_facts: number;
   last_installed_at: string | null;
 };
 
 type ProjectsMarginResponse = {
+  pricing_mode?: "LEGACY" | "FACTORY";
+  incomplete_projects?: number;
   total: number;
   limit: number;
   offset: number;
@@ -982,13 +986,14 @@ type IssuesAddonsImpactResponse = {
 };
 
 type RiskConcentrationSummary = {
+  incomplete_projects?: number;
   open_issue_profit_at_risk: number;
   blocked_issue_profit_at_risk: number;
   delayed_profit_total: number;
   risky_projects: number;
   risky_orders: number;
   risky_installers: number;
-  worst_project_profit_total: number;
+  worst_project_profit_total: number | null;
   worst_order_profit_total: number;
   worst_installer_profit_total: number;
 };
@@ -5949,6 +5954,10 @@ export default function ReportsPage() {
               {tt("reports.projectMarginExecutiveSubtitle")}
             </div>
           </div>
+          <ProjectMarginBasis
+            mode={topProjectsMarginQuery.data?.pricing_mode ?? riskProjectsMarginQuery.data?.pricing_mode}
+            incomplete={topProjectsMarginQuery.data?.incomplete_projects ?? riskProjectsMarginQuery.data?.incomplete_projects}
+          />
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 p-4">
             <div className="overflow-hidden rounded-lg border border-border">
@@ -5982,6 +5991,7 @@ export default function ReportsPage() {
                           <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
                             {item.project_name}
                           </div>
+                          <ProjectMarginNotice data={item} />
                           <div className="mt-1 text-[11px] leading-4 text-text-secondary">
                             {tt("reports.statusIssues")
                               .replace("{status}", item.project_status)
@@ -6054,6 +6064,7 @@ export default function ReportsPage() {
                               <div className="font-medium text-text">
                                 {item.project_name}
                               </div>
+                              <ProjectMarginNotice data={item} />
                               <div className="text-[11px] text-text-secondary">
                                 {tt("reports.statusIssues")
                                   .replace("{status}", item.project_status)
@@ -6112,6 +6123,7 @@ export default function ReportsPage() {
                           <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
                             {item.project_name}
                           </div>
+                          <ProjectMarginNotice data={item} />
                           <div className="mt-1 text-[11px] leading-4 text-text-secondary">
                             {tt("reports.completionIssues")
                               .replace(
@@ -6146,8 +6158,7 @@ export default function ReportsPage() {
                                 )}
                               </div>
                               <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
-                                {item.missing_rates_installed_doors +
-                                  item.missing_addon_plans_facts}
+                                {projectMarginDataRisk(item)}
                               </div>
                             </div>
                           </div>
@@ -6192,6 +6203,7 @@ export default function ReportsPage() {
                               <div className="font-medium text-text">
                                 {item.project_name}
                               </div>
+                              <ProjectMarginNotice data={item} />
                               <div className="text-[11px] text-text-secondary">
                                 {tt("reports.completionIssues")
                                   .replace(
@@ -6211,8 +6223,7 @@ export default function ReportsPage() {
                               {formatPercent(item.margin_pct)}
                             </td>
                             <td className="px-3 py-2 text-end">
-                              {item.missing_rates_installed_doors +
-                                item.missing_addon_plans_facts}
+                              {projectMarginDataRisk(item)}
                             </td>
                           </tr>
                         ))
@@ -6347,6 +6358,10 @@ export default function ReportsPage() {
                   <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
                     {copy("Projects at Risk", "Проекты под угрозой", "פרויקטים בסיכון")}
                   </div>
+                  <ProjectMarginBasis
+                    mode={riskConcentration?.projects?.[0]?.pricing_mode}
+                    incomplete={riskConcentration?.summary?.incomplete_projects}
+                  />
                   <div className="divide-y divide-border-subtle md:hidden">
                     {(riskConcentration?.projects || []).length === 0 ? (
                       <div className="px-3.5 py-3 text-[12px] text-text-secondary">
@@ -6361,6 +6376,7 @@ export default function ReportsPage() {
                           <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
                             {item.project_name}
                           </div>
+                          <ProjectMarginNotice data={item} />
                           <div className="mt-1 text-[11px] text-text-secondary">
                             {copy("Completion", "Завершение", "השלמה")} {formatPercent(item.completion_pct)}
                           </div>
@@ -6431,6 +6447,7 @@ export default function ReportsPage() {
                               <div className="font-medium text-text">
                                 {item.project_name}
                               </div>
+                              <ProjectMarginNotice data={item} />
                               <div className="text-[11px] text-text-secondary">
                                 {copy("Completion", "Завершение", "השלמה")} {formatPercent(item.completion_pct)}
                               </div>

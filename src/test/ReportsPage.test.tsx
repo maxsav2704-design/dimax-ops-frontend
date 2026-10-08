@@ -189,6 +189,30 @@ describe("ReportsPage", () => {
     client.clear();
   });
 
+  it("keeps unknown project margins blank and counts unrecorded addon work", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/projects-margin")) return {
+        pricing_mode: "FACTORY", total: 7, incomplete_projects: 7, items: [{
+          project_id: "incomplete-project", project_name: "Unrecorded adjustment", project_status: "OK",
+          completion_pct: 100, open_issues: 0, profit_total: null, margin_pct: null,
+          pricing_mode: "FACTORY", unrecorded_completed_works: 1,
+          missing_rates_installed_doors: 0, missing_addon_plans_facts: 0,
+        }],
+      };
+      throw new Error("Unrelated report unavailable in this focused fixture");
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ReportsPage /></QueryClientProvider>);
+    await screen.findByText(/Projects with incomplete financial data: 7/, {}, { timeout: 5000 });
+    const section = within(document.getElementById("reports-project-margin-executive")!);
+    expect(section.getAllByText(/Works without earnings: 1/)).toHaveLength(4);
+    const rows = section.getAllByRole("row").filter((row) => row.textContent?.includes("Unrecorded adjustment"));
+    expect(rows).toHaveLength(2);
+    for (const row of rows) expect(within(row).getAllByText("-")).toHaveLength(2);
+    expect(within(rows[1]).getByText("1")).toBeInTheDocument();
+    client.clear();
+  });
+
   it("loads reports dashboard sections", async () => {
     apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
       const url = String(path);
