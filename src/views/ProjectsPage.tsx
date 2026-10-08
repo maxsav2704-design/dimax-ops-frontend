@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
 import { DataStateNotice } from "@/components/DataStateNotice";
 import { useReferenceList } from "@/hooks/use-reference-list";
 import { useCompanyPricingState } from "@/hooks/use-company-pricing-state";
@@ -459,7 +460,7 @@ type ProjectDoorsLayoutResponse = {
   buckets: LayoutBucket[];
 };
 
-type ProjectPlanFactResponse = {
+type ProjectPlanFactResponse = ProjectPricingCoverage & {
   project_id: string;
   total_doors: number;
   installed_doors: number;
@@ -469,12 +470,12 @@ type ProjectPlanFactResponse = {
   planned_revenue_total: string | number;
   actual_revenue_total: string | number;
   revenue_gap_total: string | number;
-  planned_payroll_total: string | number;
+  planned_payroll_total: string | number | null;
   actual_payroll_total: string | number;
-  payroll_gap_total: string | number;
-  planned_profit_total: string | number;
-  actual_profit_total: string | number;
-  profit_gap_total: string | number;
+  payroll_gap_total: string | number | null;
+  planned_profit_total: string | number | null;
+  actual_profit_total: string | number | null;
+  profit_gap_total: string | number | null;
   planned_addons_qty: string | number;
   actual_addons_qty: string | number;
   urgency_surcharges_count: number;
@@ -491,7 +492,7 @@ type ProjectRiskDriverItem = {
   code: string;
   label: string;
   severity: string;
-  value: string | number;
+  value: string | number | null;
 };
 
 type ProjectRiskReasonItem = {
@@ -499,7 +500,7 @@ type ProjectRiskReasonItem = {
   reason_name: string;
   doors: number;
   revenue_delayed_total: string | number;
-  profit_delayed_total: string | number;
+  profit_delayed_total: string | number | null;
 };
 
 type ProjectRiskOrderItem = {
@@ -511,11 +512,11 @@ type ProjectRiskOrderItem = {
   planned_revenue_total: string | number;
   actual_revenue_total: string | number;
   revenue_gap_total: string | number;
-  actual_profit_total: string | number;
+  actual_profit_total: string | number | null;
   completion_pct: number;
 };
 
-type ProjectRiskDrilldownSummary = {
+type ProjectRiskDrilldownSummary = ProjectPricingCoverage & {
   total_doors: number;
   installed_doors: number;
   not_installed_doors: number;
@@ -525,15 +526,15 @@ type ProjectRiskDrilldownSummary = {
   planned_revenue_total: string | number;
   actual_revenue_total: string | number;
   revenue_gap_total: string | number;
-  planned_profit_total: string | number;
-  actual_profit_total: string | number;
-  profit_gap_total: string | number;
-  actual_margin_pct: number;
+  planned_profit_total: string | number | null;
+  actual_profit_total: string | number | null;
+  profit_gap_total: string | number | null;
+  actual_margin_pct: number | null;
   delayed_revenue_total: string | number;
-  delayed_profit_total: string | number;
-  blocked_issue_profit_at_risk: string | number;
+  delayed_profit_total: string | number | null;
+  blocked_issue_profit_at_risk: string | number | null;
   addon_revenue_total: string | number;
-  addon_profit_total: string | number;
+  addon_profit_total: string | number | null;
   urgency_surcharges_count: number;
   urgency_order_surcharges_count: number;
   urgency_client_total: string | number;
@@ -7813,6 +7814,7 @@ export default function ProjectsPage() {
                         </div>
                       ) : projectPlanFact && projectRisk ? (
                         <div className="space-y-4">
+                          <ProjectPricingNotice data={projectPlanFact} />
                           <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-2 xl:grid-cols-6">
                             <DimaxKpiCard
                               className="min-h-[176px]"

@@ -145,6 +145,50 @@ describe("ReportsPage", () => {
     client.clear();
   });
 
+  it("keeps incomplete financial totals distinct from zero earnings", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [{ id: "project-1", name: "Tower" }] };
+      if (path.includes("/project-plan-fact/")) return {
+        project_id: "project-1", pricing_mode: "FACTORY", price_list_version: 2,
+        planned_revenue_total: 500, actual_revenue_total: 0, revenue_gap_total: 500,
+        planned_payroll_total: null, actual_payroll_total: 0, payroll_gap_total: null,
+        planned_profit_total: null, actual_profit_total: null, profit_gap_total: null,
+        missing_planned_rates_addons: 1, unrecorded_completed_works: 1,
+      };
+      if (path.includes("/addons/plan") || path.includes("/urgency-surcharges")) return { items: [] };
+      throw new Error("Unrelated report unavailable in this focused fixture");
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ReportsPage /></QueryClientProvider>);
+    await waitFor(() => expect(screen.getByText(/Plan: confirmed factory price list v2/)).toBeInTheDocument(), { timeout: 5000 });
+    const section = within(document.getElementById("reports-project-plan-fact")!);
+    const payrollRows = section.getAllByText("Payroll").map((label) => label.closest("tr")).filter(Boolean);
+    expect(payrollRows).toHaveLength(1);
+    expect(within(payrollRows[0]!).getAllByText("-")).toHaveLength(2);
+    expect(within(payrollRows[0]!).getByText("0.00")).toBeInTheDocument();
+    expect(section.getByText(/Actual profit is incomplete/)).toBeInTheDocument();
+    client.clear();
+  });
+
+  it("keeps historical urgency out of the confirmed addon payroll plan", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [{ id: "project-1", name: "Tower" }] };
+      if (path.includes("/project-plan-fact/")) return { project_id: "project-1", pricing_mode: "FACTORY", price_list_version: 1 };
+      if (path.includes("/addons/plan")) return { items: [{ addon_type_id: "addon-1", addon_name: "Adjustment",
+        qty_planned: "3", client_price: "20", installer_price: "9" }] };
+      if (path.includes("/urgency-surcharges")) return { items: [{ id: "old-1", scope: "PROJECT", reason: "Old urgency",
+        installer_amount: "80", client_amount: "100" }] };
+      throw new Error("Unrelated report unavailable in this focused fixture");
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ReportsPage /></QueryClientProvider>);
+    const label = await screen.findByText("Additional work payroll plan", {}, { timeout: 5000 });
+    await waitFor(() => expect(within(label.parentElement!).getByText("27.00")).toBeInTheDocument(), { timeout: 5000 });
+    expect(within(label.parentElement!).queryByText("107.00")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Old urgency").length).toBeGreaterThan(0);
+    client.clear();
+  });
+
   it("loads reports dashboard sections", async () => {
     apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
       const url = String(path);

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
 import { Button } from "@/components/ui/button";
 import { apiDownload, apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
@@ -797,7 +798,7 @@ type OrderNumbersKpiResponse = {
   items: OrderNumberKpiItem[];
 };
 
-type ProjectPlanFactResponse = {
+type ProjectPlanFactResponse = ProjectPricingCoverage & {
   project_id: string;
   total_doors: number;
   installed_doors: number;
@@ -807,12 +808,12 @@ type ProjectPlanFactResponse = {
   planned_revenue_total: number;
   actual_revenue_total: number;
   revenue_gap_total: number;
-  planned_payroll_total: number;
+  planned_payroll_total: number | null;
   actual_payroll_total: number;
-  payroll_gap_total: number;
-  planned_profit_total: number;
-  actual_profit_total: number;
-  profit_gap_total: number;
+  payroll_gap_total: number | null;
+  planned_profit_total: number | null;
+  actual_profit_total: number | null;
+  profit_gap_total: number | null;
   planned_addons_qty: number;
   actual_addons_qty: number;
   urgency_surcharges_count: number;
@@ -850,7 +851,7 @@ type ProjectRiskDriverItem = {
   code: string;
   label: string;
   severity: string;
-  value: number;
+  value: number | null;
 };
 
 type ProjectRiskReasonItem = {
@@ -858,7 +859,7 @@ type ProjectRiskReasonItem = {
   reason_name: string;
   doors: number;
   revenue_delayed_total: number;
-  profit_delayed_total: number;
+  profit_delayed_total: number | null;
 };
 
 type ProjectRiskOrderItem = {
@@ -870,11 +871,11 @@ type ProjectRiskOrderItem = {
   planned_revenue_total: number;
   actual_revenue_total: number;
   revenue_gap_total: number;
-  actual_profit_total: number;
+  actual_profit_total: number | null;
   completion_pct: number;
 };
 
-type ProjectRiskDrilldownSummary = {
+type ProjectRiskDrilldownSummary = ProjectPricingCoverage & {
   total_doors: number;
   installed_doors: number;
   not_installed_doors: number;
@@ -884,15 +885,15 @@ type ProjectRiskDrilldownSummary = {
   planned_revenue_total: number;
   actual_revenue_total: number;
   revenue_gap_total: number;
-  planned_profit_total: number;
-  actual_profit_total: number;
-  profit_gap_total: number;
-  actual_margin_pct: number;
+  planned_profit_total: number | null;
+  actual_profit_total: number | null;
+  profit_gap_total: number | null;
+  actual_margin_pct: number | null;
   delayed_revenue_total: number;
-  delayed_profit_total: number;
-  blocked_issue_profit_at_risk: number;
+  delayed_profit_total: number | null;
+  blocked_issue_profit_at_risk: number | null;
   addon_revenue_total: number;
-  addon_profit_total: number;
+  addon_profit_total: number | null;
   urgency_surcharges_count: number;
   urgency_order_surcharges_count: number;
   urgency_client_total: number;
@@ -1328,6 +1329,7 @@ function buildOperationsHref(params: {
 }
 
 function formatAmount(value: number | null | undefined): string {
+  if (value === null) return "-";
   return formatLocalizedNumber(value ?? 0, undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -1335,6 +1337,7 @@ function formatAmount(value: number | null | undefined): string {
 }
 
 function formatPercent(value: number | null | undefined): string {
+  if (value === null) return "-";
   return formatLocalizedPercent(value ?? 0);
 }
 
@@ -2529,7 +2532,7 @@ export default function ReportsPage() {
           const qty = Number(item.qty_planned) || 0;
           const clientPrice = Number(item.client_price) || 0;
           const installerPrice = Number(item.installer_price) || 0;
-          if (item.installer_price == null) acc.missingPrice = true;
+          if (qty > 0 && item.installer_price == null) acc.missingPrice = true;
           acc.rows += 1;
           acc.qty += qty;
           acc.client += qty * clientPrice;
@@ -2591,9 +2594,9 @@ export default function ReportsPage() {
         projectAddonPlanTotals.client + projectUrgencyContractTotals.client,
       installer:
         projectAddonPlanTotals.installer +
-        projectUrgencyContractTotals.installer,
+        (projectPlanFact?.pricing_mode === "FACTORY" ? 0 : projectUrgencyContractTotals.installer),
     }),
-    [projectAddonPlanTotals, projectUrgencyContractTotals],
+    [projectAddonPlanTotals, projectUrgencyContractTotals, projectPlanFact?.pricing_mode],
   );
   const issuesImpactSummaryRows = [
     {
@@ -4913,6 +4916,7 @@ export default function ReportsPage() {
             !projectPlanFactQuery.isError &&
             projectPlanFact && (
               <div className="p-4 space-y-4">
+                <ProjectPricingNotice data={projectPlanFact} />
                 <div className="rounded-lg border border-border bg-surface-subtle p-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div className="max-w-3xl">
@@ -4952,9 +4956,9 @@ export default function ReportsPage() {
                     <div className="rounded-lg border border-border bg-surface p-3">
                       <div className="text-[11px] uppercase text-text-secondary">
                         {copy(
-                          "Installer uplift",
-                          "Надбавка монтажника",
-                          "תוספת מתקין",
+                          projectPlanFact.pricing_mode === "FACTORY" ? "Additional work payroll plan" : "Installer uplift",
+                          projectPlanFact.pricing_mode === "FACTORY" ? "План начислений за допработы" : "Надбавка монтажника",
+                          projectPlanFact.pricing_mode === "FACTORY" ? "תכנון שכר לעבודות נוספות" : "תוספת מתקין",
                         )}
                       </div>
                       <div className="mt-1 text-lg font-semibold tabular-nums text-text">
@@ -5613,6 +5617,7 @@ export default function ReportsPage() {
             !projectRiskDrilldownQuery.isError &&
             projectRiskDrilldown && (
               <div className="p-4 space-y-4">
+                <ProjectPricingNotice data={projectRiskDrilldown.summary} />
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div className="rounded-lg border border-border bg-surface p-3">
                     <div className="text-[11px] uppercase text-text-secondary">
