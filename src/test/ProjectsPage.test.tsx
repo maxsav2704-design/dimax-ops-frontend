@@ -19,6 +19,8 @@ const { pushMock, searchParamsMock } = vi.hoisted(() => ({
 const { authSessionMock } = vi.hoisted(() => ({
   authSessionMock: vi.fn(),
 }));
+const { pricingMock, pricingRefreshMock } = vi.hoisted(() => ({ pricingMock: vi.fn(), pricingRefreshMock: vi.fn() }));
+vi.mock("@/hooks/use-company-pricing-state", () => ({ useCompanyPricingState: pricingMock }));
 
 vi.mock("@/components/DashboardLayout", () => ({
   DashboardLayout: ({ children }: { children: ReactNode }) => (
@@ -74,6 +76,10 @@ describe("ProjectsPage", () => {
     pushMock.mockReset();
     searchParamsMock.mockReset();
     authSessionMock.mockReset();
+    pricingRefreshMock.mockReset();
+    pricingMock.mockReset();
+    pricingMock.mockReturnValue({ state: { mode: "LEGACY", active_price: null }, loading: false, error: false,
+      legacyWritable: true, refresh: pricingRefreshMock });
     searchParamsMock.mockReturnValue(new URLSearchParams(""));
     authSessionMock.mockReturnValue({
       role: "ADMIN",
@@ -90,6 +96,95 @@ describe("ProjectsPage", () => {
     else Reflect.deleteProperty(window, "localStorage");
     document.documentElement.lang = "en";
     document.documentElement.dir = "ltr";
+  });
+
+  function addonProjectFixture() {
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path === "/api/v1/admin/projects") return { items: [{ id: "project-1", name: "Tower", status: "ACTIVE" }] };
+      if (path === "/api/v1/admin/projects/project-1") return { id: "project-1", name: "Tower", issues_open: [] };
+      if (path.includes("/addons/types")) return { items: [{ id: "addon-1", name: "Adjustment", unit: "pcs" }] };
+      if (path.includes("/doors/layout")) return { project_id: "project-1", total_doors: 0, buckets: [] };
+      if (path.includes("/addons/plan") && !init?.method) return { items: [
+        { id: "plan-1", addon_type_id: "addon-1", addon_name: "Adjustment", qty_planned: "2", client_price: "20", installer_price: "999" },
+      ] };
+      return { items: [], total: 0 };
+    });
+  }
+
+  function factoryMode(priced = true) {
+    return { state: { mode: "FACTORY", active_price: { price_list_id: "price-v1", version: 1, currency: "ILS",
+      effective_from: "2026-10-01T00:00:00Z", items: priced ? [{ kind: "ADDON", target_id: "addon-1", rate: "9", unit: "pcs" }] : [] } },
+      loading: false, error: false, legacyWritable: false, refresh: pricingRefreshMock };
+  }
+
+  it.each([true, false])("factory add-on planning omits manual price and keeps urgency read-only (priced=%s)", async (priced) => {
+    addonProjectFixture();
+    pricingMock.mockReturnValue(factoryMode(priced));
+    render(<ProjectsPage />);
+    const add = await screen.findByRole("button", { name: "Add additional work" });
+    await waitFor(() => expect(add).toBeEnabled());
+    expect(screen.getByRole("button", { name: "Add urgency surcharge" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Open active version" }));
+    expect(pushMock).toHaveBeenCalledWith("/price-lists");
+    fireEvent.click(add);
+    const dialog = within(screen.getByRole("dialog", { name: "Add additional work" }));
+    fireEvent.change(dialog.getByLabelText("Add-on type"), { target: { value: "addon-1" } });
+    expect(dialog.queryByRole("textbox", { name: "Installer price" })).not.toBeInTheDocument();
+    expect(dialog.getByLabelText("Installer price")).toHaveTextContent(priced ? "9" : "No confirmed price");
+    fireEvent.change(dialog.getByLabelText("Qty planned"), { target: { value: "1.5" } });
+    fireEvent.change(dialog.getByLabelText("Client price"), { target: { value: "20" } });
+    fireEvent.click(dialog.getByRole("button", { name: "Save additional work" }));
+    await screen.findByText("Adjustment was added to the project plan.");
+    const request = apiFetchMock.mock.calls.find(([path, init]) => path.includes("/addons/plan") && init?.method === "POST");
+    expect(JSON.parse(String(request?.[1].body))).toEqual({ addon_type_id: "addon-1", qty_planned: "1.5", client_price: "20", notes: null });
+  });
+
+  it.each(["loading", "error"])("locks add-on writers when pricing is %s", async (status) => {
+    addonProjectFixture();
+    pricingMock.mockReturnValue({ state: undefined, loading: status === "loading", error: status === "error",
+      legacyWritable: false, refresh: pricingRefreshMock });
+    render(<ProjectsPage />);
+    expect(await screen.findByRole("button", { name: "Add additional work" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add urgency surcharge" })).toBeDisabled();
+    if (status === "error") {
+      fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+      expect(pricingRefreshMock).toHaveBeenCalledOnce();
+    }
+    expect(apiFetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  });
+
+  it("keeps the last verified addon price visible during background refresh while locking writes", async () => {
+    addonProjectFixture();
+    pricingMock.mockReturnValue({ ...factoryMode(), loading: true });
+    render(<ProjectsPage />);
+    expect(await screen.findByRole("button", { name: "Add additional work" })).toBeDisabled();
+    await waitFor(() => expect(screen.getAllByText("Adjustment").length).toBeGreaterThan(0));
+    expect(screen.queryByText("No confirmed price")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add urgency surcharge" })).toBeDisabled();
+  });
+
+  it("refreshes factory mode after a stale manual addon write without retrying it", async () => {
+    addonProjectFixture();
+    const read = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path.includes("/addons/plan") && init?.method === "POST") throw new ApiError(409, "Stale rate", {
+        error: { code: "CONFLICT", meta: { reason: "FACTORY_ADDON_PRICE_REQUIRED" } },
+      });
+      return read(path, init);
+    });
+    pricingRefreshMock.mockImplementation(() => pricingMock.mockReturnValue(factoryMode()));
+    render(<ProjectsPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Add additional work" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Add additional work" }));
+    fireEvent.change(dialog.getByLabelText("Add-on type"), { target: { value: "addon-1" } });
+    fireEvent.change(dialog.getByLabelText("Qty planned"), { target: { value: "1" } });
+    fireEvent.change(dialog.getByLabelText("Client price"), { target: { value: "20" } });
+    fireEvent.change(dialog.getByLabelText("Installer price"), { target: { value: "99" } });
+    fireEvent.click(dialog.getByRole("button", { name: "Save additional work" }));
+    await waitFor(() => expect(pricingRefreshMock).toHaveBeenCalledOnce());
+    expect(dialog.queryByRole("textbox", { name: "Installer price" })).not.toBeInTheDocument();
+    expect(dialog.getByLabelText("Qty planned")).toHaveValue("1");
+    expect(apiFetchMock.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
   });
 
   it("button audit: reports project validation and request errors inside the editor", async () => {

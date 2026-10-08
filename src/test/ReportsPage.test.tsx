@@ -129,6 +129,22 @@ describe("ReportsPage", () => {
     vi.restoreAllMocks();
   });
 
+  it("does not present an unconfirmed addon rate or its payroll total as zero", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [{ id: "project-1", name: "Tower" }] };
+      if (path.includes("/project-plan-fact/")) return { project_id: "project-1" };
+      if (path.includes("/addons/plan")) return { items: [{ addon_type_id: "addon-1", addon_name: "Unpriced work",
+        qty_planned: "2", client_price: "20", installer_price: null }] };
+      if (path.includes("/urgency-surcharges")) return { items: [] };
+      throw new Error("Unrelated report unavailable in this focused fixture");
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ReportsPage /></QueryClientProvider>);
+    await waitFor(() => expect(screen.getAllByText("No confirmed price")).toHaveLength(4), { timeout: 5000 });
+    expect(screen.getAllByText("Unpriced work")).toHaveLength(2);
+    client.clear();
+  });
+
   it("loads reports dashboard sections", async () => {
     apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
       const url = String(path);

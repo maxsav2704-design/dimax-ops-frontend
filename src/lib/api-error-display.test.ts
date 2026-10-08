@@ -5,6 +5,17 @@ import { readableApiError, readableConflictCode } from "@/lib/api-error-display"
 
 describe("api-error-display", () => {
   it.each([
+    ["en", "FACTORY_ADDON_PRICE_REQUIRED", "confirmed factory price list"],
+    ["ru", "FACTORY_ADDON_PRICE_REQUIRED", "подтверждённого прайса завода"],
+    ["he", "FACTORY_ADDON_PRICE_REQUIRED", "מחירון המפעל המאושר"],
+    ["en", "FACTORY_URGENCY_REQUIRES_ADDON", "Manual surcharges are locked"],
+    ["ru", "FACTORY_URGENCY_REQUIRES_ADDON", "Ручные надбавки заблокированы"],
+    ["he", "FACTORY_URGENCY_REQUIRES_ADDON", "תוספות ידניות חסומות"],
+  ] as const)("localizes %s %s", (locale, reason, expected) => {
+    const error = new ApiError(409, "Internal pricing boundary", { error: { code: "CONFLICT", meta: { reason } } });
+    expect(readableApiError(error, locale, "fallback")).toContain(expected);
+  });
+  it.each([
     ["en", "Factory pricing is now active."],
     ["ru", "Включён единый прайс завода."],
     ["he", "מחירון המפעל הופעל."],

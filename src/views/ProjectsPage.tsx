@@ -23,6 +23,8 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DataStateNotice } from "@/components/DataStateNotice";
 import { useReferenceList } from "@/hooks/use-reference-list";
+import { useCompanyPricingState } from "@/hooks/use-company-pricing-state";
+import { CompanyPriceStatus } from "@/components/prices/CompanyPriceStatus";
 import { DoorMatrixTile } from "@/components/projects/DoorMatrixTile";
 import {
   Breadcrumbs,
@@ -358,7 +360,7 @@ type ProjectAddonPlanItem = {
   addon_name?: string | null;
   qty_planned: string | number;
   client_price: string | number;
-  installer_price: string | number;
+  installer_price: string | number | null;
   notes?: string | null;
 };
 
@@ -1570,6 +1572,16 @@ export default function ProjectsPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null,
   );
+  const pricing = useCompanyPricingState(canViewProjectRates && Boolean(selectedProjectId));
+  const factoryPricing = pricing.state?.mode === "FACTORY";
+  const pricingKnown = Boolean(pricing.state) && !pricing.error;
+  const pricingReady = pricingKnown && !pricing.loading;
+  const missingAddonPrice = copy("No confirmed price", "Нет подтверждённой цены", "אין מחיר מאושר");
+  const factoryAddonRates = useMemo(() => new Map(
+    (pricing.state?.active_price?.items ?? []).filter((item) => item.kind === "ADDON").map((item) => [item.target_id, item.rate]),
+  ), [pricing.state]);
+  const addonPlanRate = (item: ProjectAddonPlanItem) => !pricingKnown ? null
+    : factoryPricing ? factoryAddonRates.get(item.addon_type_id) ?? null : item.installer_price;
   const [projectDetails, setProjectDetails] =
     useState<ProjectDetailsResponse | null>(null);
   const [layout, setLayout] = useState<ProjectDoorsLayoutResponse | null>(null);
@@ -1908,16 +1920,18 @@ export default function ProjectsPage() {
       (acc, item) => {
         const qty = Number(item.qty_planned) || 0;
         const client = Number(item.client_price) || 0;
-        const installer = Number(item.installer_price) || 0;
+        const price = !pricingKnown ? null : factoryPricing ? factoryAddonRates.get(item.addon_type_id) ?? null : item.installer_price;
+        const installer = Number(price) || 0;
+        if (price === null) acc.missingPrice = true;
         acc.rows += 1;
         acc.qty += qty;
         acc.client += qty * client;
         acc.installer += qty * installer;
         return acc;
       },
-      { rows: 0, qty: 0, client: 0, installer: 0 },
+      { rows: 0, qty: 0, client: 0, installer: 0, missingPrice: false },
     );
-  }, [projectAddonPlan]);
+  }, [projectAddonPlan, pricingKnown, factoryPricing, factoryAddonRates]);
   const urgencyTotals = useMemo(() => {
     return urgencySurcharges.reduce(
       (acc, item) => {
@@ -4361,7 +4375,7 @@ export default function ProjectsPage() {
   };
 
   const openAdditionalWorkDialog = () => {
-    if (!canManageProjects) return;
+    if (!canManageProjects || !pricingReady) return;
     if (!canViewProjectRates) {
       setError(commercialAccessRestrictedDetail);
       return;
@@ -4374,7 +4388,7 @@ export default function ProjectsPage() {
   };
 
   const handleAdditionalWorkSubmit = async () => {
-    if (!canManageProjects) return;
+    if (!canManageProjects || !pricingReady) return;
     if (!selectedProjectId) {
       return;
     }
@@ -4389,7 +4403,7 @@ export default function ProjectsPage() {
       !additionalWorkForm.addon_type_id ||
       !additionalWorkForm.qty_planned.trim() ||
       !additionalWorkForm.client_price.trim() ||
-      !additionalWorkForm.installer_price.trim()
+      (!factoryPricing && !additionalWorkForm.installer_price.trim())
     ) {
       setError(
         copy(
@@ -4405,8 +4419,7 @@ export default function ProjectsPage() {
       qtyPlanned <= 0 ||
       !Number.isFinite(clientPrice) ||
       clientPrice <= 0 ||
-      !Number.isFinite(installerPrice) ||
-      installerPrice <= 0
+      (!factoryPricing && (!Number.isFinite(installerPrice) || installerPrice <= 0))
     ) {
       setError(
         copy(
@@ -4429,7 +4442,7 @@ export default function ProjectsPage() {
             addon_type_id: additionalWorkForm.addon_type_id,
             qty_planned: additionalWorkForm.qty_planned.trim(),
             client_price: additionalWorkForm.client_price.trim(),
-            installer_price: additionalWorkForm.installer_price.trim(),
+            ...(!factoryPricing ? { installer_price: additionalWorkForm.installer_price.trim() } : {}),
             notes: additionalWorkForm.notes.trim() || null,
           }),
         },
@@ -4468,13 +4481,14 @@ export default function ProjectsPage() {
           ),
         ),
       );
+      pricing.refresh();
     } finally {
       setAdditionalWorkSubmitting(false);
     }
   };
 
   const openUrgencyDialog = () => {
-    if (!canManageProjects) return;
+    if (!canManageProjects || !pricing.legacyWritable) return;
     if (!canViewProjectRates) {
       setError(commercialAccessRestrictedDetail);
       return;
@@ -4487,7 +4501,7 @@ export default function ProjectsPage() {
   };
 
   const handleUrgencySubmit = async () => {
-    if (!canManageProjects) return;
+    if (!canManageProjects || !pricing.legacyWritable) return;
     if (!selectedProjectId) {
       return;
     }
@@ -4605,6 +4619,7 @@ export default function ProjectsPage() {
           ),
         ),
       );
+      pricing.refresh();
     } finally {
       setUrgencySubmitting(false);
     }
@@ -7186,6 +7201,7 @@ export default function ProjectsPage() {
                       )}
                     >
                       <div className="space-y-4">
+                      <CompanyPriceStatus {...pricing} onOpen={() => router.push("/price-lists")} />
                       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div className="max-w-2xl">
                           <h3 className="text-[15px] font-semibold leading-tight text-text">
@@ -7197,9 +7213,9 @@ export default function ProjectsPage() {
                           </h3>
                           <p className="mt-2 text-[12px] leading-6 text-text-secondary">
                             {copy(
-                              "Keep one simple project plan: what add-on is expected, how many units, and both client/install prices.",
-                              "Держите простой план по проекту: какой доп нужен, сколько единиц и обе цены — клиентская и монтажная.",
-                              "שמור על תוכנית פרויקט פשוטה אחת: איזה תוספת צפויה, כמה יחידות, וגם מחירי לקוח/התקנה.",
+                              "Plan the work, quantity and client price. Installer prices follow the current company pricing mode.",
+                              "Укажите работу, объём и цену клиента. Цена монтажника определяется действующим режимом цен компании.",
+                              "תכננו עבודה, כמות ומחיר לקוח. מחירי המתקין נקבעים לפי מצב התמחור של החברה.",
                             )}
                           </p>
                         </div>
@@ -7210,6 +7226,7 @@ export default function ProjectsPage() {
                             className="gap-2"
                             disabled={
                               !canManageProjects ||
+                              !pricingReady ||
                               !addonTypesReference.ready || activeAddonTypes.length === 0
                             }
                           >
@@ -7273,7 +7290,7 @@ export default function ProjectsPage() {
                             "Сумма монтажника",
                             'סה"כ מתקין',
                           )}
-                          value={formatMoney(addonPlanTotals.installer)}
+                          value={addonPlanTotals.missingPrice ? missingAddonPrice : formatMoney(addonPlanTotals.installer)}
                           barColor="orange"
                         />
                       </div>
@@ -7355,9 +7372,7 @@ export default function ProjectsPage() {
                                       {copy("Installer", "Монтажник", "מתקין")}
                                     </div>
                                     <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
-                                      {formatMoney(
-                                        Number(item.installer_price) || 0,
-                                      )}
+                                      {addonPlanRate(item) == null ? missingAddonPrice : formatMoney(Number(addonPlanRate(item)))}
                                     </div>
                                   </div>
                                 </div>
@@ -7463,9 +7478,7 @@ export default function ProjectsPage() {
                                       )}
                                     </td>
                                     <td className="px-3 py-2.5 text-end tabular-nums">
-                                      {formatMoney(
-                                        Number(item.installer_price) || 0,
-                                      )}
+                                      {addonPlanRate(item) == null ? missingAddonPrice : formatMoney(Number(addonPlanRate(item)))}
                                     </td>
                                     <td className="px-3 py-2.5 text-text-secondary">
                                       {item.notes || "-"}
@@ -7498,16 +7511,16 @@ export default function ProjectsPage() {
                         <div className="max-w-2xl">
                           <h3 className="text-[15px] font-semibold leading-tight text-text">
                             {copy(
-                              "Track approved urgency uplift without mixing it into the door list.",
-                              "Фиксируйте утверждённую срочную надбавку отдельно, не смешивая её со списком дверей.",
-                              "עקוב אחרי תוספת דחיפות מאושרת בלי לערבב אותה ברשימת הדלתות.",
+                              "Historical manual surcharges",
+                              "История ручных надбавок",
+                              "היסטוריית תוספות ידניות",
                             )}
                           </h3>
                           <p className="mt-2 text-[12px] leading-6 text-text-secondary">
                             {copy(
-                              "Use project-level or order-level surcharge rows so finance and operations see the same uplift logic.",
-                              "Используйте строки надбавок на уровне проекта или уровня заказа, чтобы финансы и операции видели одну и ту же логику повышения.",
-                              "השתמש בשורות היטלים ברמת הפרויקט או ברמת ההזמנה כדי שהכספים והתפעול יראו את אותו היגיון העלאה.",
+                              "With factory pricing, urgency work requires an additional-work type and a confirmed price. Historical surcharge rows are not confirmed earnings.",
+                              "При заводском прайсе срочная работа оформляется как допработа с подтверждённой ценой. Исторические надбавки не являются подтверждёнными начислениями.",
+                              "בתמחור מפעל, עבודה דחופה מחייבת סוג עבודה נוספת ומחיר מאושר. תוספות היסטוריות אינן שכר מאושר.",
                             )}
                           </p>
                         </div>
@@ -7515,7 +7528,7 @@ export default function ProjectsPage() {
                           <Button
                             type="button"
                             onClick={openUrgencyDialog}
-                            disabled={!canManageProjects}
+                            disabled={!canManageProjects || !pricing.legacyWritable}
                             className="gap-2"
                           >
                             <Plus className="h-4 w-4" />
@@ -13069,7 +13082,7 @@ export default function ProjectsPage() {
             </Button>
             <Button
               onClick={() => void handleUrgencySubmit()}
-              disabled={urgencySubmitting}
+              disabled={urgencySubmitting || !pricing.legacyWritable}
             >
               {urgencySubmitting
                 ? copy("Saving...", "Сохраняем...", "שומר...")
@@ -13167,7 +13180,10 @@ export default function ProjectsPage() {
               <Label htmlFor="additional-work-installer-price">
                 {copy("Installer price", "Цена монтажника", "מחיר מתקין")}
               </Label>
-              <Input
+              {factoryPricing ? <output id="additional-work-installer-price" className="block min-h-10 py-2 text-sm font-medium" aria-live="polite">
+                {factoryAddonRates.has(additionalWorkForm.addon_type_id)
+                  ? formatMoney(Number(factoryAddonRates.get(additionalWorkForm.addon_type_id))) : missingAddonPrice}
+              </output> : <Input
                 id="additional-work-installer-price"
                 value={additionalWorkForm.installer_price}
                 onChange={(event) =>
@@ -13177,7 +13193,8 @@ export default function ProjectsPage() {
                   }))
                 }
                 placeholder="0"
-              />
+                disabled={!pricingReady}
+              />}
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="additional-work-notes">
@@ -13225,7 +13242,7 @@ export default function ProjectsPage() {
             </Button>
             <Button
               onClick={() => void handleAdditionalWorkSubmit()}
-              disabled={additionalWorkSubmitting}
+              disabled={additionalWorkSubmitting || !pricingReady}
             >
               {additionalWorkSubmitting
                 ? copy("Saving...", "Сохраняем...", "שומר...")

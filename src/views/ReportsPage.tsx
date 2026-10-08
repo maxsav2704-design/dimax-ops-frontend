@@ -831,7 +831,7 @@ type ProjectAddonPlanItem = {
   addon_name?: string | null;
   qty_planned: string | number;
   client_price: string | number;
-  installer_price: string | number;
+  installer_price: string | number | null;
   notes?: string | null;
 };
 
@@ -2529,13 +2529,14 @@ export default function ReportsPage() {
           const qty = Number(item.qty_planned) || 0;
           const clientPrice = Number(item.client_price) || 0;
           const installerPrice = Number(item.installer_price) || 0;
+          if (item.installer_price == null) acc.missingPrice = true;
           acc.rows += 1;
           acc.qty += qty;
           acc.client += qty * clientPrice;
           acc.installer += qty * installerPrice;
           return acc;
         },
-        { rows: 0, qty: 0, client: 0, installer: 0 },
+        { rows: 0, qty: 0, client: 0, installer: 0, missingPrice: false },
       ),
     [projectAddonPlan],
   );
@@ -4957,7 +4958,7 @@ export default function ReportsPage() {
                         )}
                       </div>
                       <div className="mt-1 text-lg font-semibold tabular-nums text-text">
-                        {formatAmount(projectCommercialAdjustments.installer)}
+                        {projectAddonPlanTotals.missingPrice ? copy("No confirmed price", "Нет подтверждённой цены", "אין מחיר מאושר") : formatAmount(projectCommercialAdjustments.installer)}
                       </div>
                     </div>
                     <div className="rounded-lg border border-border bg-surface p-3">
@@ -5215,7 +5216,7 @@ export default function ReportsPage() {
                           )}
                         </div>
                         <div className="mt-1 text-lg font-semibold tabular-nums text-text">
-                          {formatAmount(projectAddonPlanTotals.installer)}
+                          {projectAddonPlanTotals.missingPrice ? copy("No confirmed price", "Нет подтверждённой цены", "אין מחיר מאושר") : formatAmount(projectAddonPlanTotals.installer)}
                         </div>
                       </div>
                     </div>
@@ -5265,9 +5266,7 @@ export default function ReportsPage() {
                                   {copy("Installer", "Монтажник", "מתקין")}
                                 </div>
                                 <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
-                                  {formatAmount(
-                                    Number(item.installer_price) || 0,
-                                  )}
+                                  {item.installer_price == null ? copy("No confirmed price", "Нет подтверждённой цены", "אין מחיר מאושר") : formatAmount(Number(item.installer_price))}
                                 </div>
                               </div>
                             </div>
@@ -5338,9 +5337,7 @@ export default function ReportsPage() {
                                   {formatAmount(Number(item.client_price) || 0)}
                                 </td>
                                 <td className="px-3 py-2.5 text-end tabular-nums">
-                                  {formatAmount(
-                                    Number(item.installer_price) || 0,
-                                  )}
+                                  {item.installer_price == null ? copy("No confirmed price", "Нет подтверждённой цены", "אין מחיר מאושר") : formatAmount(Number(item.installer_price))}
                                 </td>
                               </tr>
                             ))

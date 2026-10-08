@@ -14,9 +14,9 @@ export function CompanyPriceStatus({ state, loading, error, refresh, onOpen }: {
   return <section aria-label={copy("Current pricing", "Действующие цены", "מחירים בתוקף")}
     className="min-w-0 space-y-2 border-s-2 border-accent ps-3 text-sm">
     {error ? <div role="alert" className="space-y-2 text-status-problem-fg">
-      <p>{copy("Pricing could not be verified. Individual rate changes are locked.",
-        "Не удалось проверить режим цен. Изменение персональных ставок заблокировано.",
-        "לא ניתן לאמת את מצב המחירים. שינוי תעריפים אישיים חסום.")}</p>
+      <p>{copy("Pricing could not be verified. Price changes are locked.",
+        "Не удалось проверить режим цен. Изменение цен заблокировано.",
+        "לא ניתן לאמת את מצב המחירים. שינוי מחירים חסום.")}</p>
       <Button variant="outline" size="sm" onClick={refresh} disabled={loading}><RefreshCw className="me-2 size-4" />
         {copy("Retry", "Повторить", "ניסיון חוזר")}</Button>
     </div> : active ? <>

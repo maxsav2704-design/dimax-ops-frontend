@@ -96,7 +96,7 @@ describe("individual rate cutover", () => {
       return reads(path);
     });
     fireEvent(window, new CustomEvent("dimax-auth-changed"));
-    await screen.findByText("Pricing could not be verified. Individual rate changes are locked.");
+    await screen.findByText("Pricing could not be verified. Price changes are locked.");
     expect(screen.queryByText("Active factory price list v1")).not.toBeInTheDocument();
     expect(JSON.stringify(client.getQueriesData({ queryKey: ["company-pricing-state"] }))).not.toContain("list-1");
   });

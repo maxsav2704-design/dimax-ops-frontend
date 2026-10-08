@@ -9,6 +9,16 @@ type LocalizedTriple = {
 };
 
 const ERROR_COPY: Record<string, LocalizedTriple> = {
+  FACTORY_ADDON_PRICE_REQUIRED: {
+    en: "The installer price comes from the confirmed factory price list. Reload pricing and save the work scope without a manual rate.",
+    ru: "Цена монтажника берётся из подтверждённого прайса завода. Обновите цены и сохраните объём работ без ручной ставки.",
+    he: "מחיר המתקין נקבע לפי מחירון המפעל המאושר. רעננו את המחירים ושמרו את היקף העבודה ללא תעריף ידני.",
+  },
+  FACTORY_URGENCY_REQUIRES_ADDON: {
+    en: "Manual surcharges are locked. Record urgency work as additional work with a factory-confirmed price.",
+    ru: "Ручные надбавки заблокированы. Оформите срочную работу как допработу с подтверждённой заводом ценой.",
+    he: "תוספות ידניות חסומות. יש לרשום עבודה דחופה כעבודה נוספת עם מחיר שאושר במפעל.",
+  },
   FACTORY_PRICES_ACTIVE: {
     en: "Factory pricing is now active. Individual rates are historical; request a new factory-confirmed version to change prices.",
     ru: "Включён единый прайс завода. Персональные ставки сохранены как история; для изменения цены нужна новая версия с подтверждением завода.",
@@ -86,8 +96,9 @@ export function readableApiError(
   fallback: string
 ): string {
   if (isApiErrorLike(error)) {
-    if (error.code === "CONFLICT" && error.meta?.reason === "FACTORY_PRICES_ACTIVE") {
-      return pickLocale(ERROR_COPY.FACTORY_PRICES_ACTIVE, locale);
+    if (error.code === "CONFLICT" && typeof error.meta?.reason === "string"
+        && ["FACTORY_PRICES_ACTIVE", "FACTORY_ADDON_PRICE_REQUIRED", "FACTORY_URGENCY_REQUIRES_ADDON"].includes(error.meta.reason)) {
+      return pickLocale(ERROR_COPY[error.meta.reason], locale);
     }
     if (error.code && ERROR_COPY[error.code]) {
       return pickLocale(ERROR_COPY[error.code], locale);
