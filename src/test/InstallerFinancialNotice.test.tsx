@@ -34,6 +34,23 @@ describe("installer financial coverage", () => {
     expect(installerFinancialDataRisk({ ...data, pricing_mode: "LEGACY" })).toBe(2);
   });
 
+  it("counts legacy door-only gaps without requiring addon fields", () => {
+    expect(installerFinancialDataRisk({ pricing_mode: "LEGACY", missing_rates_installed_doors: 2 })).toBe(2);
+    expect(installerFinancialDataRisk({ missing_rates_installed_doors: 0 })).toBe(0);
+  });
+
+  it.each([
+    ["en", "Door installations only", "including later cancellations", "not a payroll movement statement", "saved client price"],
+    ["ru", "Только монтаж дверей", "при более поздней отмене", "не ведомость движений начислений", "сохранённую цену клиента"],
+    ["he", "התקנות דלתות בלבד", "גם אם בוטלו מאוחר יותר", "אינו דוח תנועות שכר", "מחיר הלקוח השמור"],
+  ])("explains period KPI accounting in %s", (language, scope, cancellation, statement, revenue) => {
+    locale.value = language;
+    render(<InstallerFinancialBasis period data={{ pricing_mode: "FACTORY", incomplete_items: 2, unassigned_completed_works: 1 }} />);
+    for (const text of [scope, cancellation, statement, revenue]) {
+      expect(screen.getByRole("status")).toHaveTextContent(text);
+    }
+  });
+
   it.each([
     ["en", "Strong", "Watch", "Risk"],
     ["ru", "Высокий результат", "Требует внимания", "Риск"],

@@ -162,6 +162,37 @@ describe("ReportsPage", () => {
     client.clear();
   });
 
+  it.each([0, 20])("shows period KPI gaps and stops pagination at the exact total: %s", async (count) => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [] };
+      if (path.includes("/installers-kpi?")) return {
+        period_from: null, period_to: null, pricing_mode: "FACTORY",
+        total: count, incomplete_items: count, unassigned_completed_works: 3,
+        items: Array.from({ length: count }, (_, index) => ({
+          installer_id: `kpi-${index}`, installer_name: `KPI performer ${index}`,
+          pricing_mode: "FACTORY", installed_doors: 1, payroll_total: 250, revenue_total: 500,
+          profit_total: null, unrecorded_completed_works: 1, missing_client_prices: 1, missing_rates_installed_doors: 1,
+        })),
+      };
+      throw new Error("Unrelated report unavailable in this focused fixture");
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ReportsPage /></QueryClientProvider>);
+    const section = within(document.getElementById("reports-order-numbers-kpi")!);
+    await waitFor(() => expect(section.getByRole("status")).toHaveTextContent("Unrecorded works without an installer: 3"), { timeout: 5000 });
+    expect(section.getByRole("status")).toHaveTextContent("Door installations only");
+    expect(section.getByRole("button", { name: "Next" })).toBeDisabled();
+    if (count) {
+      expect(section.getAllByText(/Works without earnings: 1/)).toHaveLength(count * 2);
+      expect(section.getAllByText("-")).toHaveLength(count * 2);
+      expect(section.getAllByText("250.00")).toHaveLength(count * 2);
+      expect(section.getAllByText("2", { exact: true })).toHaveLength(count * 2);
+    } else {
+      expect(section.getByText("No installers KPI rows.")).toBeInTheDocument();
+    }
+    client.clear();
+  });
+
   it("does not present an unconfirmed addon rate or its payroll total as zero", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
       if (path === "/api/v1/admin/projects") return { items: [{ id: "project-1", name: "Tower" }] };

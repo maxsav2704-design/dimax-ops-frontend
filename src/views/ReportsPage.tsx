@@ -674,17 +674,18 @@ type ProjectOption = {
   name: string;
 };
 
-type InstallerKpiItem = {
+type InstallerKpiItem = InstallerFinancialCoverage & {
   installer_id: string;
   installer_name: string;
   installed_doors: number;
   payroll_total: number;
   revenue_total: number;
-  profit_total: number;
+  profit_total: number | null;
   missing_rates_installed_doors: number;
 };
 
-type InstallersKpiResponse = {
+type InstallersKpiResponse = InstallerMatrixCoverage & {
+  total?: number;
   period_from: string | null;
   period_to: string | null;
   items: InstallerKpiItem[];
@@ -2708,7 +2709,9 @@ export default function ReportsPage() {
   const issueAuditCanNext =
     issueAuditOffset + AUDIT_PREVIEW_LIMIT < (issueAuditSummary?.total || 0);
   const installersKpiCanPrev = installersKpiOffset > 0;
-  const installersKpiCanNext = installersKpiItems.length >= KPI_PAGE_SIZE;
+  const installersKpiCanNext = installersKpiQuery.data?.total !== undefined
+    ? installersKpiOffset + installersKpiItems.length < installersKpiQuery.data.total
+    : installersKpiItems.length >= KPI_PAGE_SIZE;
   const orderNumbersKpiCanPrev = orderNumbersKpiOffset > 0;
   const orderNumbersKpiCanNext =
     orderNumbersKpiOffset + KPI_PAGE_SIZE <
@@ -7306,7 +7309,8 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <div className="hidden md:grid grid-cols-[1fr_120px_120px_120px_120px_110px] gap-3 px-4 py-3 border-b border-border text-[11px] uppercase text-text-secondary">
+          {!installersKpiQuery.isError && <InstallerFinancialBasis data={installersKpiQuery.data} period />}
+          <div className="hidden md:grid grid-cols-[minmax(0,1fr)_repeat(5,minmax(0,100px))] gap-3 px-4 py-3 border-b border-border text-[11px] uppercase text-text-secondary">
             <span>{copy("Installer", "Монтажник", "מתקין")}</span>
             <span className="text-end">
               {copy("Installed", "Смонтировано", "הותקן")}
@@ -7319,7 +7323,7 @@ export default function ReportsPage() {
               {copy("Profit", "Прибыль", "רווח")}
             </span>
             <span className="text-end">
-              {copy("Missing Rates", "Нет ставок", "חסרים תעריפים")}
+              {copy("Data gaps", "Пробелы данных", "נתונים חסרים")}
             </span>
           </div>
 
@@ -7359,6 +7363,7 @@ export default function ReportsPage() {
                   <div className="text-[13px] font-semibold leading-5 text-text">
                     {item.installer_name}
                   </div>
+                  <InstallerFinancialNotice data={item} />
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
                       <div className="text-[10px] uppercase text-text-secondary">
@@ -7394,17 +7399,18 @@ export default function ReportsPage() {
                     </div>
                     <div className="col-span-2 rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
                       <div className="text-[10px] uppercase text-text-secondary">
-                        {copy("Missing Rates", "Нет ставок", "חסרים תעריפים")}
+                        {copy("Data gaps", "Пробелы данных", "נתונים חסרים")}
                       </div>
                       <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
-                        {formatCount(item.missing_rates_installed_doors)}
+                        {formatCount(installerFinancialDataRisk(item))}
                       </div>
                     </div>
                   </div>
                 </article>
-                <div className="hidden md:grid grid-cols-[1fr_120px_120px_120px_120px_110px] gap-3 px-4 py-3 text-[13px] items-center">
-                  <div className="font-medium text-text">
+                <div className="hidden md:grid grid-cols-[minmax(0,1fr)_repeat(5,minmax(0,100px))] gap-3 px-4 py-3 text-[13px] items-center break-words">
+                  <div className="min-w-0 font-medium text-text">
                     {item.installer_name}
+                    <InstallerFinancialNotice data={item} />
                   </div>
                   <div className="text-end">
                     {formatCount(item.installed_doors)}
@@ -7419,7 +7425,7 @@ export default function ReportsPage() {
                     {formatAmount(item.profit_total)}
                   </div>
                   <div className="text-end">
-                    {formatCount(item.missing_rates_installed_doors)}
+                    {formatCount(installerFinancialDataRisk(item))}
                   </div>
                 </div>
               </div>
