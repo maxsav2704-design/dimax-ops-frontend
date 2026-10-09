@@ -28,6 +28,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
 import { ProjectMarginBasis, ProjectMarginNotice } from "@/components/prices/ProjectMarginNotice";
 import { InstallerFinancialBasis, InstallerFinancialNotice, InstallerFinancialBand } from "@/components/prices/InstallerFinancialNotice";
+import { OrderFinancialBasis, type OrderFinancialCoverage } from "@/components/prices/OrderFinancialBasis";
 import { installerFinancialDataRisk, type InstallerFinancialCoverage, type InstallerMatrixCoverage } from "@/lib/installer-financials";
 import { projectMarginDataRisk, type ProjectMarginCoverage } from "@/lib/project-margin";
 import { Button } from "@/components/ui/button";
@@ -784,7 +785,8 @@ type InstallerKpiDetailsResponse = InstallerFinancialCoverage & {
   order_rows_total?: number | null;
 };
 
-type OrderNumberKpiItem = {
+type OrderNumberKpiItem = InstallerFinancialCoverage & {
+  recorded_installations?: number | null;
   order_number: string;
   total_doors: number;
   installed_doors: number;
@@ -793,12 +795,12 @@ type OrderNumberKpiItem = {
   planned_revenue_total: number;
   installed_revenue_total: number;
   payroll_total: number;
-  profit_total: number;
+  profit_total: number | null;
   missing_rates_installed_doors: number;
   completion_pct: number;
 };
 
-type OrderNumbersKpiResponse = {
+type OrderNumbersKpiResponse = OrderFinancialCoverage & {
   total: number;
   limit: number;
   offset: number;
@@ -991,6 +993,9 @@ type IssuesAddonsImpactResponse = {
 };
 
 type RiskConcentrationSummary = {
+  order_pricing_mode?: "LEGACY" | "FACTORY";
+  incomplete_orders?: number;
+  order_rows_total?: number;
   installer_pricing_mode?: "LEGACY" | "FACTORY";
   incomplete_installers?: number;
   unassigned_completed_works?: number;
@@ -1002,7 +1007,7 @@ type RiskConcentrationSummary = {
   risky_orders: number;
   risky_installers: number;
   worst_project_profit_total: number | null;
-  worst_order_profit_total: number;
+  worst_order_profit_total: number | null;
   worst_installer_profit_total: number | null;
 };
 
@@ -6315,7 +6320,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="rounded-lg border border-border bg-surface p-3">
                   <div className="text-[11px] uppercase text-text-secondary">
-                    {tt("reports.riskyProjectsOrders")}
+                    {copy("Projects / orders shown", "Объекты / заказы в выборке", "פרויקטים / הזמנות מוצגים")}
                   </div>
                   <div className="mt-2 text-[22px] font-semibold text-text">
                     {riskConcentration?.summary?.risky_projects ?? 0} /{" "}
@@ -6338,7 +6343,7 @@ export default function ReportsPage() {
                     {riskConcentration?.summary?.risky_installers ?? 0}
                   </div>
                   <div className="mt-1 text-[12px] text-text-secondary">
-                    {copy("Highest-risk order", "Заказ с наибольшим риском", "הזמנה בסיכון הגבוה ביותר")}{" "}
+                    {copy("Lowest known order profit", "Минимальная известная прибыль заказа", "הרווח הידוע הנמוך ביותר להזמנה")}{" "}
                     {formatAmount(
                       riskConcentration?.summary?.worst_order_profit_total,
                     )}
@@ -6476,12 +6481,17 @@ export default function ReportsPage() {
 
                 <div className="rounded-lg border border-border bg-surface overflow-hidden">
                   <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
-                    {copy("Orders at Risk", "Заказы под угрозой", "הזמנות בסיכון")}
+                    {copy("Orders by lowest known profit", "Заказы по минимальной известной прибыли", "הזמנות לפי הרווח הידוע הנמוך ביותר")}
                   </div>
+                  <OrderFinancialBasis data={{
+                    pricing_mode: riskConcentration?.summary?.order_pricing_mode,
+                    incomplete_orders: riskConcentration?.summary?.incomplete_orders,
+                    total: riskConcentration?.summary?.order_rows_total,
+                  }} shown={riskConcentration?.orders?.length ?? 0} />
                   <div className="divide-y divide-border-subtle md:hidden">
                     {(riskConcentration?.orders || []).length === 0 ? (
                       <div className="px-3.5 py-3 text-[12px] text-text-secondary">
-                        {copy("No risky orders.", "Нет заказов с риском.", "אין הזמנות בסיכון.")}
+                        {copy("No order financial rows.", "Нет финансовых данных по заказам.", "אין נתונים כספיים להזמנות.")}
                       </div>
                     ) : (
                       (riskConcentration?.orders || []).map((item) => (
@@ -6497,6 +6507,7 @@ export default function ReportsPage() {
                               {formatPercent(item.completion_pct)}
                             </div>
                           </div>
+                          <InstallerFinancialNotice data={item} />
                           <div className="mt-3 grid grid-cols-2 gap-2">
                             <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
                               <div className="text-[10px] uppercase text-text-secondary">
@@ -6543,7 +6554,7 @@ export default function ReportsPage() {
                             className="px-3 py-3 text-text-secondary"
                             colSpan={4}
                           >
-                            {copy("No risky orders.", "Нет заказов с риском.", "אין הזמנות בסיכון.")}
+                            {copy("No order financial rows.", "Нет финансовых данных по заказам.", "אין נתונים כספיים להזמנות.")}
                           </td>
                         </tr>
                       ) : (
@@ -6554,6 +6565,7 @@ export default function ReportsPage() {
                           >
                             <td className="px-3 py-2.5 font-medium text-text">
                               {item.order_number}
+                              <InstallerFinancialNotice data={item} />
                             </td>
                             <td className="px-3 py-2 text-end">
                               {formatAmount(item.profit_total)}
@@ -7918,7 +7930,7 @@ export default function ReportsPage() {
             )}
         </div>
 
-        <div className={reportsPanelClass("overflow-hidden")}>
+        <div id="reports-orders" className={reportsPanelClass("overflow-hidden")}>
           <div className="px-4 py-3 border-b border-border bg-surface-subtle flex flex-col items-stretch gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <div className="text-[11px] uppercase text-text-secondary">
@@ -8012,7 +8024,8 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <div className="hidden xl:grid grid-cols-[1fr_80px_90px_90px_80px_120px_120px_120px_110px] gap-3 px-4 py-3 border-b border-border text-[11px] uppercase text-text-secondary">
+          {!orderNumbersKpiQuery.isError && <OrderFinancialBasis data={orderNumbersKpiQuery.data} />}
+          <div className="hidden xl:grid grid-cols-[minmax(0,1fr)_80px_90px_90px_80px_120px_120px_120px_110px] gap-3 px-4 py-3 border-b border-border text-[11px] uppercase text-text-secondary">
             <span>{copy("Order", "Заказ", "הזמנה")}</span>
             <span className="text-end">{copy("Total", "Всего", 'סה"כ')}</span>
             <span className="text-end">
@@ -8074,9 +8087,14 @@ export default function ReportsPage() {
             !orderNumbersKpiQuery.isError &&
             orderNumbersKpiItems.map((item) => (
               <div key={item.order_number} className="border-t border-border">
+                <div className="px-4"><InstallerFinancialNotice data={item} /></div>
+                {item.pricing_mode === "FACTORY" && <div className="px-4 pt-2 text-xs text-text-secondary">
+                  {copy("Recorded installations", "Учтённые установки", "התקנות רשומות")}: {item.recorded_installations ?? "-"}.
+                  {" "}{copy("Recorded revenue", "Учтённая выручка", "הכנסה רשומה")}: {formatAmount(item.installed_revenue_total)}.
+                </div>}
                 <article className="px-4 py-3 xl:hidden">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
+                    <div className="min-w-0 break-words text-[13px] font-semibold leading-5 text-text">
                       {item.order_number}
                     </div>
                     <div className="shrink-0 rounded-full bg-surface-subtle px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
@@ -8142,8 +8160,8 @@ export default function ReportsPage() {
                     </div>
                   </div>
                 </article>
-                <div className="hidden xl:grid grid-cols-[1fr_80px_90px_90px_80px_120px_120px_120px_110px] gap-3 px-4 py-3 text-[13px] items-center">
-                  <div className="font-medium text-text">
+                <div className="hidden xl:grid grid-cols-[minmax(0,1fr)_80px_90px_90px_80px_120px_120px_120px_110px] gap-3 px-4 py-3 text-[13px] items-center">
+                  <div className="min-w-0 break-words font-medium text-text">
                     {item.order_number}
                   </div>
                   <div className="text-end">{item.total_doors}</div>

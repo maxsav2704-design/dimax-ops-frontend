@@ -141,6 +141,83 @@ describe("ReportsPage", () => {
     vi.restoreAllMocks();
   });
 
+  it.each([false, true])("shows order coverage and unknown profit, including an empty page: %s", async (empty) => {
+    const row = { order_number: "ORDER-GAP", pricing_mode: "FACTORY", total_doors: 1,
+      installed_doors: 1, not_installed_doors: 0, open_issues: 0, completion_pct: 100,
+      planned_revenue_total: 500, installed_revenue_total: 0, payroll_total: 0, profit_total: null,
+      recorded_installations: 0, unrecorded_completed_works: 1, missing_client_prices: 0,
+      missing_rates_installed_doors: 1 };
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [] };
+      if (path.includes("/order-numbers-kpi?")) return { pricing_mode: "FACTORY", total: 9,
+        incomplete_orders: 3, items: empty ? [] : [row] };
+      if (path.includes("/risk-concentration?")) return {
+        generated_at: "2026-10-09T12:00:00Z", projects: [], installers: [], orders: empty ? [] : [row],
+        summary: { order_pricing_mode: "FACTORY", incomplete_orders: 3, order_rows_total: 9,
+          risky_projects: 0, risky_orders: empty ? 0 : 1, risky_installers: 0,
+          open_issue_profit_at_risk: 0, blocked_issue_profit_at_risk: 0, delayed_profit_total: 0,
+          worst_project_profit_total: 0, worst_order_profit_total: null, worst_installer_profit_total: 0 },
+      };
+      throw new Error("Unrelated report unavailable");
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ReportsPage /></QueryClientProvider>);
+    const section = within(document.getElementById("reports-orders")!);
+    await waitFor(() => expect(section.getByRole("status")).toHaveTextContent("Orders with incomplete finances: 3"), { timeout: 5000 });
+    expect(section.getByRole("status")).toHaveTextContent("outside this page");
+    expect(section.getByRole("button", { name: "Next" })).toBeDisabled();
+    expect(screen.getByText(`Orders shown: ${empty ? 0 : 1} / 9.`)).toBeInTheDocument();
+    expect(screen.getByText(/Lowest known order profit/)).toHaveTextContent("-");
+    if (empty) expect(section.getByText("No order KPI rows.")).toBeInTheDocument();
+    else {
+      expect(section.getByText(/Works without earnings: 1/)).toBeInTheDocument();
+      expect(section.getByText(/Recorded installations: 0/)).toHaveTextContent("Recorded revenue: 0.00");
+      expect(section.getAllByText("-")).toHaveLength(2);
+    }
+    client.clear();
+  });
+
+  it("keeps order pagination, filters and export scoped to the chosen rows", async () => {
+    for (const key of ["createObjectURL", "revokeObjectURL"] as const) {
+      if (!(key in URL)) Object.defineProperty(URL, key, { writable: true, configurable: true, value: vi.fn() });
+    }
+    const createUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:order-report");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const queries: URLSearchParams[] = [];
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [{ id: "site-1", name: "Order site" }] };
+      if (path.includes("/order-numbers-kpi?")) {
+        const params = new URL(path, "http://localhost").searchParams;
+        queries.push(params);
+        return { pricing_mode: "FACTORY", incomplete_orders: 2, total: 21, items: [] };
+      }
+      throw new Error("Unrelated report unavailable");
+    });
+    const download = vi.spyOn(globalThis, "fetch").mockResolvedValue(createDownloadResponse("order_number\nORDER-1", "text/csv"));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ReportsPage /></QueryClientProvider>);
+    const section = within(document.getElementById("reports-orders")!);
+    await waitFor(() => expect(section.getByRole("button", { name: "Next" })).toBeEnabled(), { timeout: 5000 });
+    fireEvent.click(section.getByRole("button", { name: "Next" }));
+    await waitFor(() => expect(queries.at(-1)?.get("offset")).toBe("20"), { timeout: 5000 });
+    expect(section.getByRole("button", { name: "Next" })).toBeDisabled();
+    fireEvent.change(section.getByLabelText("Order Project Filter"), { target: { value: "site-1" } });
+    fireEvent.change(section.getByPlaceholderText("Search order…"), { target: { value: "A_%/1" } });
+    await waitFor(() => expect(queries.at(-1)?.get("q")).toBe("A_%/1"), { timeout: 5000 });
+    expect(queries.at(-1)?.get("project_id")).toBe("site-1");
+    expect(queries.at(-1)?.get("offset")).toBe("0");
+    fireEvent.click(section.getByRole("button", { name: "Export Orders CSV" }));
+    await waitFor(() => expect(download).toHaveBeenCalled(), { timeout: 5000 });
+    const params = new URL(String(download.mock.calls.at(-1)![0]), "http://localhost").searchParams;
+    expect(params.get("project_id")).toBe("site-1");
+    expect(params.get("q")).toBe("A_%/1");
+    expect(params.get("offset")).toBe("0");
+    await screen.findByText("Order numbers export is ready.", {}, { timeout: 5000 });
+    expect(createUrl).toHaveBeenCalled();
+    client.clear();
+  });
+
   it("loads all installer directory pages and offers addon-only performers outside period KPI", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
       if (path === "/api/v1/admin/projects") return { items: [] };
