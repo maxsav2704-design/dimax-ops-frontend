@@ -29,6 +29,7 @@ import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/
 import { ProjectMarginBasis, ProjectMarginNotice } from "@/components/prices/ProjectMarginNotice";
 import { InstallerFinancialBasis, InstallerFinancialNotice, InstallerFinancialBand } from "@/components/prices/InstallerFinancialNotice";
 import { OrderFinancialBasis, type OrderFinancialCoverage } from "@/components/prices/OrderFinancialBasis";
+import { IssueExposureBasis, UnpricedExposureNotice, type IssueExposureCoverage } from "@/components/prices/IssueExposureBasis";
 import { installerFinancialDataRisk, type InstallerFinancialCoverage, type InstallerMatrixCoverage } from "@/lib/installer-financials";
 import { projectMarginDataRisk, type ProjectMarginCoverage } from "@/lib/project-margin";
 import { Button } from "@/components/ui/button";
@@ -949,39 +950,40 @@ type ProjectsMarginResponse = {
   items: ProjectMarginItem[];
 };
 
-type IssuesAddonsImpactSummary = {
+type IssuesAddonsImpactSummary = IssueExposureCoverage & {
   open_issues: number;
   blocked_open_issues: number;
   not_installed_doors: number;
   open_issue_revenue_at_risk: number;
-  open_issue_payroll_at_risk: number;
-  open_issue_profit_at_risk: number;
-  blocked_issue_profit_at_risk: number;
+  open_issue_payroll_at_risk: number | null;
+  open_issue_profit_at_risk: number | null;
+  blocked_issue_profit_at_risk: number | null;
   delayed_revenue_total: number;
-  delayed_payroll_total: number;
-  delayed_profit_total: number;
+  delayed_payroll_total: number | null;
+  delayed_profit_total: number | null;
   addon_revenue_total: number;
   addon_payroll_total: number;
-  addon_profit_total: number;
+  addon_profit_total: number | null;
   missing_addon_plans_facts: number;
 };
 
 type IssuesAddonsImpactReasonItem = {
+  unpriced_doors?: number;
   reason_id: string | null;
   reason_name: string;
   doors: number;
   revenue_delayed_total: number;
-  payroll_delayed_total: number;
-  profit_delayed_total: number;
+  payroll_delayed_total: number | null;
+  profit_delayed_total: number | null;
 };
 
-type IssuesAddonsImpactAddonItem = {
+type IssuesAddonsImpactAddonItem = InstallerFinancialCoverage & {
   addon_type_id: string | null;
   addon_name: string;
   qty_done: number;
   revenue_total: number;
   payroll_total: number;
-  profit_total: number;
+  profit_total: number | null;
   missing_plan_facts: number;
 };
 
@@ -992,7 +994,7 @@ type IssuesAddonsImpactResponse = {
   addon_impact: IssuesAddonsImpactAddonItem[];
 };
 
-type RiskConcentrationSummary = {
+type RiskConcentrationSummary = IssueExposureCoverage & {
   order_pricing_mode?: "LEGACY" | "FACTORY";
   incomplete_orders?: number;
   order_rows_total?: number;
@@ -1000,9 +1002,9 @@ type RiskConcentrationSummary = {
   incomplete_installers?: number;
   unassigned_completed_works?: number;
   incomplete_projects?: number;
-  open_issue_profit_at_risk: number;
-  blocked_issue_profit_at_risk: number;
-  delayed_profit_total: number;
+  open_issue_profit_at_risk: number | null;
+  blocked_issue_profit_at_risk: number | null;
+  delayed_profit_total: number | null;
   risky_projects: number;
   risky_orders: number;
   risky_installers: number;
@@ -3196,9 +3198,8 @@ export default function ReportsPage() {
     issuesAddonsImpact?.generated_at ||
     riskConcentration?.generated_at ||
     null;
-  const marginLeakageValue =
-    toReportNumber(issuesAddonsImpact?.summary?.open_issue_profit_at_risk) +
-    toReportNumber(issuesAddonsImpact?.summary?.delayed_profit_total);
+  const exposureProfit = issuesAddonsImpactQuery.isError ? null : issuesAddonsImpact?.summary?.exposure_profit_total;
+  const marginLeakageValue = exposureProfit == null ? null : toReportNumber(exposureProfit);
   const installerDoorTotal = installersKpiItems.reduce(
     (sum, item) => sum + item.installed_doors,
     0,
@@ -3210,22 +3211,19 @@ export default function ReportsPage() {
   const topInstaller = installersKpiItems[0]?.installer_name || "n/a";
   const reportsInsights: ReportsInsight[] = [
     {
-      eyebrow: "Margin leakage watch",
-      title: "Add-ons and delayed work need commercial review",
+      eyebrow: copy("Door financial exposure", "Финансовый риск по дверям", "חשיפה כספית לפי דלתות"),
+      title: copy("Open issues and delayed doors", "Открытые проблемы и задержки монтажа", "תקלות פתוחות ודלתות מעוכבות"),
       value: canExportFinancialReports
         ? `${formatAmount(marginLeakageValue)} NIS`
-        : "Restricted",
+        : copy("Restricted", "Нет доступа", "אין הרשאה"),
       delta: canExportFinancialReports
-        ? `${formatCount(issuesAddonsImpact?.summary?.missing_addon_plans_facts)} missing plan links`
-        : "finance access required",
-      detail:
-        canExportFinancialReports && issuesAddonsImpact?.top_reasons?.[0]
-          ? `Top reason: ${issuesAddonsImpact.top_reasons[0].reason_name}.`
-          : "Uses existing add-on impact and issue exposure reports.",
-      cta: "Review commercial reports",
+        ? `${copy("Unique doors", "Уникальные двери", "דלתות ייחודיות")}: ${formatCount(issuesAddonsImpact?.summary?.exposure_doors)}`
+        : copy("Finance access required", "Нужен доступ к финансам", "נדרשת הרשאה לכספים"),
+      detail: copy("Forecast only; each door is counted once.", "Оценка риска: каждая дверь учтена один раз.", "הערכת סיכון בלבד; כל דלת נספרת פעם אחת."),
+      cta: copy("Review risks and add-ons", "Открыть риски и допработы", "לסיכונים ותוספות"),
       onClick: () => scrollToReport("reports-issues-addons-impact"),
-      tone: marginLeakageValue > 0 ? "red" : "green",
-      variant: marginLeakageValue > 0 ? "line-down" : "line-up",
+      tone: marginLeakageValue == null ? "orange" : marginLeakageValue !== 0 ? "red" : "green",
+      variant: marginLeakageValue == null ? "bars" : marginLeakageValue !== 0 ? "line-down" : "line-up",
     },
     {
       eyebrow: "Risk concentration watch",
@@ -3235,7 +3233,7 @@ export default function ReportsPage() {
         : "Restricted",
       delta: canExportFinancialReports
         ? `${formatAmount(
-            toReportNumber(riskConcentration?.summary?.open_issue_profit_at_risk),
+            riskConcentration?.summary?.open_issue_profit_at_risk,
           )} NIS at risk`
         : "finance access required",
       detail:
@@ -4521,6 +4519,9 @@ export default function ReportsPage() {
             </div>
           ) : (
             <>
+              <IssueExposureBasis data={issuesAddonsImpact?.summary}
+                reasonsShown={issuesAddonsImpact?.top_reasons?.length ?? 0}
+                addonsShown={issuesAddonsImpact?.addon_impact?.length ?? 0} />
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
                   <div className="text-[11px] uppercase text-text-secondary">
@@ -4577,7 +4578,7 @@ export default function ReportsPage() {
                   <div className="text-[11px] uppercase text-text-secondary">
                     {tt("reports.addonUplift")}
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-status-ok-fg">
+                  <div className={`mt-1 text-lg font-semibold ${issuesAddonsImpact?.summary?.addon_profit_total == null ? "text-text-secondary" : issuesAddonsImpact.summary.addon_profit_total < 0 ? "text-status-problem-fg" : "text-status-ok-fg"}`}>
                     {formatAmount(
                       issuesAddonsImpact?.summary?.addon_profit_total,
                     )}
@@ -4678,6 +4679,7 @@ export default function ReportsPage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
                               {item.reason_name}
+                              <UnpricedExposureNotice count={item.unpriced_doors} />
                             </div>
                             <div className="shrink-0 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
                               {copy("Doors", "Двери", "דלתות")}: {item.doors}
@@ -4740,6 +4742,7 @@ export default function ReportsPage() {
                           >
                             <td className="px-3 py-2.5 font-medium text-text">
                               {item.reason_name}
+                              <UnpricedExposureNotice count={item.unpriced_doors} />
                             </td>
                             <td className="px-3 py-2 text-end">{item.doors}</td>
                             <td className="px-3 py-2 text-end">
@@ -4773,6 +4776,7 @@ export default function ReportsPage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 text-[13px] font-semibold leading-5 text-text">
                               {item.addon_name}
+                              <InstallerFinancialNotice data={item} />
                             </div>
                             <div className="shrink-0 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
                               {copy("Qty", "Кол-во", "כמות")}:{" "}
@@ -4836,6 +4840,7 @@ export default function ReportsPage() {
                           >
                             <td className="px-3 py-2.5 font-medium text-text">
                               {item.addon_name}
+                              <InstallerFinancialNotice data={item} />
                             </td>
                             <td className="px-3 py-2 text-end">
                               {formatAmount(item.qty_done)}
@@ -6280,6 +6285,7 @@ export default function ReportsPage() {
             </div>
           ) : (
             <div className="p-4 space-y-4">
+              <IssueExposureBasis data={riskConcentration?.summary} />
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="rounded-lg border border-border bg-surface p-3">
                   <div className="text-[11px] uppercase text-text-secondary">

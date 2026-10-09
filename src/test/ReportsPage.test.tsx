@@ -141,6 +141,44 @@ describe("ReportsPage", () => {
     vi.restoreAllMocks();
   });
 
+  it.each([null, "123.45", "0.00"])("uses unique exposure without inventing a total: %s", async (exposure) => {
+    const summary = { pricing_mode: "FACTORY", price_list_version: 3, exposure_doors: 2, exposure_profit_total: exposure,
+      unpriced_exposure_doors: exposure == null ? 1 : 0, unpriced_open_issue_doors: 1,
+      unpriced_blocked_issue_doors: 0, unpriced_delayed_doors: 1,
+      open_issues: 1, blocked_open_issues: 0, not_installed_doors: 2,
+      open_issue_revenue_at_risk: 500, open_issue_payroll_at_risk: null, open_issue_profit_at_risk: 200,
+      blocked_issue_profit_at_risk: 0, delayed_revenue_total: 600, delayed_payroll_total: null, delayed_profit_total: 300,
+      addon_revenue_total: 0, addon_payroll_total: 13.5, addon_profit_total: null, missing_addon_plans_facts: 1,
+      addon_unrecorded_completed_works: 1, addon_missing_client_prices: 1,
+      reason_rows_total: 9, addon_rows_total: 7, incomplete_addon_rows: 2 };
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [] };
+      if (path.includes("/issues-addons-impact")) return { summary, generated_at: "2026-10-09T12:00:00Z",
+        top_reasons: [{ reason_id: "r1", reason_name: "Unpriced reason", doors: 2, revenue_delayed_total: 600,
+          payroll_delayed_total: null, profit_delayed_total: null, unpriced_doors: 1 }],
+        addon_impact: [{ addon_type_id: "a1", addon_name: "Recorded adjustment", pricing_mode: "FACTORY", qty_done: 1.5,
+          revenue_total: 0, payroll_total: 13.5, profit_total: null, missing_plan_facts: 1,
+          unrecorded_completed_works: 1, missing_client_prices: 1 }],
+      };
+      throw new Error("Unrelated report unavailable");
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ReportsPage /></QueryClientProvider>);
+    const section = within(document.getElementById("reports-issues-addons-impact")!);
+    await waitFor(() => expect(section.getByRole("status")).toHaveTextContent("active confirmed price list: 3"), { timeout: 5000 });
+    expect(section.getByRole("status")).toHaveTextContent("Reasons shown: 1 / 9");
+    expect(section.getByRole("status")).toHaveTextContent("Add-on types shown: 1 / 7");
+    expect(section.getAllByText(/Works without earnings: 1/)).toHaveLength(2);
+    for (const label of ["Unpriced reason", "Recorded adjustment"]) {
+      const row = section.getAllByText(label).map((element) => element.closest("tr")).find(Boolean)!;
+      expect(within(row).getByText("-")).toBeInTheDocument();
+    }
+    const card = screen.getByRole("button", { name: /Door financial exposure/ });
+    expect(within(card).getByText(`${exposure ?? "-"} NIS`)).toBeInTheDocument();
+    expect(within(card).queryByText("500.00 NIS")).not.toBeInTheDocument();
+    client.clear();
+  });
+
   it.each([false, true])("shows order coverage and unknown profit, including an empty page: %s", async (empty) => {
     const row = { order_number: "ORDER-GAP", pricing_mode: "FACTORY", total_doors: 1,
       installed_doors: 1, not_installed_doors: 0, open_issues: 0, completion_pct: 100,
@@ -1251,7 +1289,7 @@ describe("ReportsPage", () => {
     expect(screen.getByText("Report library")).toBeInTheDocument();
     expect(screen.getByText("Saved views")).toBeInTheDocument();
     expect(screen.getByText("Scheduled exports")).toBeInTheDocument();
-    expect(screen.getByText("Margin leakage watch")).toBeInTheDocument();
+    expect(screen.getByText("Door financial exposure")).toBeInTheDocument();
     expect(screen.getByText("Risk concentration watch")).toBeInTheDocument();
     expect(screen.getByText("Installer KPI trend")).toBeInTheDocument();
     expect(screen.getByText("Failed Outbox Queue")).toBeInTheDocument();
