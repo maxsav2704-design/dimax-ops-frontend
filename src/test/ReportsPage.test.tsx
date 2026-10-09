@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -104,6 +104,18 @@ function mockReportRetryAudits(url: string) {
   };
 }
 
+function installerDetailFixture(id: string) {
+  return {
+    installer_id: id, installer_name: `Performer ${id}`, pricing_mode: "FACTORY",
+    installed_doors: 0, active_projects: 1, order_numbers: 0, open_issues: 0,
+    addons_done_qty: 1.5, addon_revenue_total: 30, addon_payroll_total: 13.5, addon_profit_total: 16.5,
+    revenue_total: 30, payroll_total: 13.5, profit_total: 16.5,
+    missing_rates_installed_doors: 0, missing_addon_plans_facts: 0, missing_client_prices: 0,
+    unrecorded_completed_works: 0, last_installed_at: null,
+    top_projects: [], order_breakdown: [], project_rows_total: 0, order_rows_total: 0,
+  };
+}
+
 describe("ReportsPage", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -127,6 +139,102 @@ describe("ReportsPage", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("loads all installer directory pages and offers addon-only performers outside period KPI", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [] };
+      if (path.includes("/installers-kpi?")) return { items: [], total: 0 };
+      if (path.includes("/installers?")) return path.endsWith("offset=0")
+        ? Array.from({ length: 200 }, (_, i) => ({ id: `worker-${i}`, full_name: `Performer worker-${i}` }))
+        : [{ id: "addon-only", full_name: "Performer addon-only" }];
+      if (path.includes("/installers-kpi/")) return installerDetailFixture(path.split("/").at(-1)!);
+      throw new Error("Unrelated report unavailable");
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ReportsPage /></QueryClientProvider>);
+    const section = within(document.getElementById("reports-installer-details")!);
+    await section.findByRole("option", { name: "Performer addon-only" }, { timeout: 5000 });
+    expect(section.getAllByRole("option")).toHaveLength(202);
+    fireEvent.change(section.getByRole("combobox"), { target: { value: "addon-only" } });
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/reports/installers-kpi/addon-only", expect.anything()), { timeout: 5000 });
+    await section.findByText("Earned: 13.50", {}, { timeout: 5000 });
+    expect(section.getByRole("combobox")).toHaveValue("addon-only");
+    expect(pushMock).toHaveBeenCalledWith("/reports?installer_id=addon-only#reports-installer-details");
+    expect(section.getByText(/All recorded work, independent of the period filter/)).toBeInTheDocument();
+    act(() => {
+      client.setQueriesData({ queryKey: ["reports-installers-kpi"] }, {
+        items: [installerDetailFixture("new-period-performer")], total: 1,
+      });
+    });
+    expect(section.getByRole("combobox")).toHaveValue("addon-only");
+    expect(apiFetchMock.mock.calls.some(([path]) => String(path).endsWith("/installers-kpi/new-period-performer"))).toBe(false);
+    client.clear();
+  });
+
+  it("loads a scoped historical performer directly and allows explicit selection of another", async () => {
+    window.history.replaceState({}, "", "/reports?installer_id=historical&project_id=site-1");
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [] };
+      if (path.includes("/installers-kpi?")) return { items: [], total: 0 };
+      if (path.includes("/installers?")) return [{ id: "another", full_name: "Performer another" }];
+      if (path.includes("/installers-kpi/")) return installerDetailFixture(path.split("/").at(-1)!);
+      throw new Error("Unrelated report unavailable");
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ReportsPage /></QueryClientProvider>);
+    const section = within(document.getElementById("reports-installer-details")!);
+    await section.findByText("Earned: 13.50", {}, { timeout: 5000 });
+    expect(section.getByRole("combobox")).toHaveValue("historical");
+    fireEvent.change(section.getByRole("combobox"), { target: { value: "another" } });
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith(
+      "/api/v1/admin/reports/installers-kpi/another", expect.anything()), { timeout: 5000 });
+    expect(section.getByRole("combobox")).toHaveValue("another");
+    expect(pushMock).toHaveBeenCalledWith("/reports?installer_id=another&project_id=site-1#reports-installer-details");
+    client.clear();
+  });
+
+  it("discloses incomplete detail amounts and limited project/order breakdowns", async () => {
+    window.history.replaceState({}, "", "/reports?installer_id=incomplete");
+    const row = { pricing_mode: "FACTORY", installed_doors: 1, open_issues: 0,
+      revenue_total: 500, payroll_total: 250, profit_total: null, last_installed_at: null,
+      missing_rates_installed_doors: 1, unrecorded_completed_works: 1, missing_client_prices: 0 };
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [] };
+      if (path.includes("/installers?")) return [];
+      if (path.endsWith("/installers-kpi/incomplete")) return {
+        ...installerDetailFixture("incomplete"), ...row, project_rows_total: 7, order_rows_total: 9,
+        top_projects: [{ ...row, project_id: null, project_name: null }],
+        order_breakdown: [{ ...row, order_number: "ORDER-1" }],
+      };
+      throw new Error("Unrelated report unavailable");
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ReportsPage /></QueryClientProvider>);
+    const section = within(document.getElementById("reports-installer-details")!);
+    await section.findByText(/Project rows shown: 1 \/ 7/, {}, { timeout: 5000 });
+    expect(section.getByText(/Order rows shown: 1 \/ 9/)).toBeInTheDocument();
+    expect(section.getAllByText("Project unavailable")).toHaveLength(2);
+    expect(section.getAllByText("Earned: 250.00")).toHaveLength(4);
+    expect(section.getAllByText(/Works without earnings: 1/)).toHaveLength(5);
+    for (const tr of section.getAllByRole("row").filter((row) => row.querySelector("td"))) {
+      expect(within(tr).getByText("-")).toBeInTheDocument();
+    }
+    client.clear();
+  });
+
+  it("does not request the installer financial directory without rates access", async () => {
+    authSessionMock.mockReturnValue({ role: "ADMIN", admin_scope: "DISPATCHER", can_view_rates: false });
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [] };
+      throw new Error("Unrelated report unavailable");
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ReportsPage /></QueryClientProvider>);
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalled());
+    expect(apiFetchMock.mock.calls.some(([path]) => /\/installers\?|\/installers-kpi\//.test(String(path)))).toBe(false);
+    client.clear();
   });
 
   it.each([false, true])("shows installer ledger coverage even when the matrix is empty: %s", async (empty) => {

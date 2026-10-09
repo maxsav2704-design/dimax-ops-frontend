@@ -742,26 +742,26 @@ type InstallerProjectProfitabilityResponse = InstallerMatrixCoverage & {
   items: InstallerProjectProfitabilityItem[];
 };
 
-type InstallerKpiProjectItem = {
-  project_id: string;
-  project_name: string;
+type InstallerKpiProjectItem = InstallerFinancialCoverage & {
+  project_id: string | null;
+  project_name: string | null;
   installed_doors: number;
   open_issues: number;
   revenue_total: number;
   payroll_total: number;
-  profit_total: number;
+  profit_total: number | null;
   last_installed_at: string | null;
 };
 
-type InstallerKpiOrderItem = {
+type InstallerKpiOrderItem = InstallerFinancialCoverage & {
   order_number: string;
   installed_doors: number;
   revenue_total: number;
   payroll_total: number;
-  profit_total: number;
+  profit_total: number | null;
 };
 
-type InstallerKpiDetailsResponse = {
+type InstallerKpiDetailsResponse = InstallerFinancialCoverage & {
   installer_id: string;
   installer_name: string;
   installed_doors: number;
@@ -771,15 +771,17 @@ type InstallerKpiDetailsResponse = {
   addons_done_qty: number;
   addon_revenue_total: number;
   addon_payroll_total: number;
-  addon_profit_total: number;
+  addon_profit_total: number | null;
   revenue_total: number;
   payroll_total: number;
-  profit_total: number;
+  profit_total: number | null;
   missing_rates_installed_doors: number;
   missing_addon_plans_facts: number;
   last_installed_at: string | null;
   top_projects: InstallerKpiProjectItem[];
   order_breakdown: InstallerKpiOrderItem[];
+  project_rows_total?: number | null;
+  order_rows_total?: number | null;
 };
 
 type OrderNumberKpiItem = {
@@ -1953,7 +1955,6 @@ export default function ReportsPage() {
     searchParams?.get("webhook_provider")?.trim().toLowerCase() || null;
   const appliedOpsPresetRef = useRef<ReportsOpsPreset | null>(null);
   const appliedProjectScopeRef = useRef<string | null>(null);
-  const appliedInstallerScopeRef = useRef<string | null>(null);
   const issueAuditIssueIdTrimmed = issueAuditIssueId.trim();
   const issueAuditIssueIdNormalized = isUuid(issueAuditIssueIdTrimmed)
     ? issueAuditIssueIdTrimmed
@@ -2206,13 +2207,42 @@ export default function ReportsPage() {
     refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
 
+  const installerDirectoryQuery = useQuery({
+    queryKey: ["reports-installer-directory"],
+    queryFn: async ({ signal }) => {
+      const items = new Map<string, string>();
+      for (let offset = 0; ; offset += 200) {
+        const page = await reportApiFetch<{ id: string; full_name: string }[]>(
+          `/api/v1/admin/installers?limit=200&offset=${offset}`, signal,
+        );
+        if (!Array.isArray(page) || page.some((item) => !item?.id || typeof item.full_name !== "string")) {
+          throw new Error(copy("Invalid installer directory response", "Некорректный справочник монтажников", "רשימת מתקינים לא תקינה"));
+        }
+        const previousSize = items.size;
+        for (const item of page) items.set(item.id, item.full_name);
+        if (page.length < 200) break;
+        if (items.size === previousSize) {
+          throw new Error(copy("Installer directory pagination did not advance", "Не удалось загрузить следующую страницу монтажников", "לא ניתן לטעון את עמוד המתקינים הבא"));
+        }
+      }
+      return Array.from(items, ([installer_id, installer_name]) => ({ installer_id, installer_name }));
+    },
+    enabled: canExportFinancialReports,
+    refetchInterval: STANDARD_REPORT_REFRESH_MS,
+  });
+
   const installerDetailsQuery = useQuery({
     queryKey: ["reports-installer-kpi-details", installerDetailsId],
-    queryFn: ({ signal }) =>
-      reportApiFetch<InstallerKpiDetailsResponse>(
-        `/api/v1/admin/reports/installers-kpi/${installerDetailsId}`,
+    queryFn: async ({ signal }) => {
+      const data = await reportApiFetch<InstallerKpiDetailsResponse>(
+        `/api/v1/admin/reports/installers-kpi/${encodeURIComponent(installerDetailsId)}`,
         signal,
-      ),
+      );
+      if (data.installer_id !== installerDetailsId || !Array.isArray(data.top_projects) || !Array.isArray(data.order_breakdown)) {
+        throw new Error(copy("Invalid installer report response", "Некорректный ответ отчёта монтажника", "תשובה לא תקינה לדוח המתקין"));
+      }
+      return data;
+    },
     enabled: canExportFinancialReports && Boolean(installerDetailsId),
     refetchInterval: STANDARD_REPORT_REFRESH_MS,
   });
@@ -2670,16 +2700,17 @@ export default function ReportsPage() {
     () => installersKpiQuery.data?.items || [],
     [installersKpiQuery.data?.items],
   );
-  const scopedInstallerInKpi = scopedInstallerId
-    ? installersKpiItems.some((item) => item.installer_id === scopedInstallerId)
-    : false;
   const scopedInstallerMissing = Boolean(
-    scopedInstallerId &&
-      installersKpiQuery.isFetched &&
-      !installersKpiQuery.isLoading &&
-      !scopedInstallerInKpi,
+    scopedInstallerId && installerDetailsId === scopedInstallerId && installerDetailsQuery.isError,
   );
   const installerDetails = installerDetailsQuery.data;
+  const installerDetailOptions = useMemo(() => {
+    const options = new Map<string, string>();
+    for (const item of installersKpiItems) options.set(item.installer_id, item.installer_name);
+    for (const item of installerDirectoryQuery.data ?? []) options.set(item.installer_id, item.installer_name);
+    if (installerDetails) options.set(installerDetails.installer_id, installerDetails.installer_name);
+    return Array.from(options, ([installer_id, installer_name]) => ({ installer_id, installer_name }));
+  }, [installersKpiItems, installerDirectoryQuery.data, installerDetails]);
   const orderNumbersKpiItems = orderNumbersKpiQuery.data?.items || [];
   const topFailingProjects = operationsCenter?.top_failing_projects || [];
   const slaMetrics = operationsSla?.metrics || [];
@@ -2858,7 +2889,8 @@ export default function ReportsPage() {
         topProjectsMarginQuery.refetch(),
         riskProjectsMarginQuery.refetch(),
         installersKpiQuery.refetch(),
-        installerDetailsQuery.refetch(),
+        installerDirectoryQuery.refetch(),
+        ...(installerDetailsId ? [installerDetailsQuery.refetch()] : []),
         orderNumbersKpiQuery.refetch(),
       );
     }
@@ -2955,35 +2987,19 @@ export default function ReportsPage() {
   ]);
 
   useEffect(() => {
-    if (installersKpiItems.length === 0) {
-      if (installerDetailsId) {
-        setInstallerDetailsId("");
-      }
-      return;
-    }
     if (scopedInstallerId) {
-      if (!scopedInstallerInKpi) {
-        if (installerDetailsId) {
-          setInstallerDetailsId("");
-        }
-        return;
-      }
-      if (installerDetailsId !== scopedInstallerId) {
-        setInstallerDetailsId(scopedInstallerId);
-      }
-      return;
+      setInstallerDetailsId(scopedInstallerId);
     }
-    const exists = installersKpiItems.some(
-      (item) => item.installer_id === installerDetailsId,
-    );
-    if (!exists) {
-      setInstallerDetailsId(installersKpiItems[0].installer_id);
+  }, [scopedInstallerId]);
+
+  useEffect(() => {
+    if (!scopedInstallerId && !installerDetailsId && installerDetailOptions.length) {
+      setInstallerDetailsId(installerDetailOptions[0].installer_id);
     }
   }, [
-    installersKpiItems,
+    installerDetailOptions,
     installerDetailsId,
     scopedInstallerId,
-    scopedInstallerInKpi,
   ]);
 
   const exportErrorMessage =
@@ -3090,27 +3106,6 @@ export default function ReportsPage() {
     scopedProjectId,
     scopedProjectInOptions,
   ]);
-
-  useEffect(() => {
-    if (!scopedInstallerId) {
-      appliedInstallerScopeRef.current = null;
-      return;
-    }
-    if (
-      installersKpiItems.length === 0 ||
-      appliedInstallerScopeRef.current === scopedInstallerId
-    ) {
-      return;
-    }
-    const exists = installersKpiItems.some(
-      (item) => item.installer_id === scopedInstallerId,
-    );
-    if (!exists) {
-      return;
-    }
-    appliedInstallerScopeRef.current = scopedInstallerId;
-    setInstallerDetailsId(scopedInstallerId);
-  }, [installersKpiItems, scopedInstallerId]);
 
   function applyPreset(preset: ReportsPreset): void {
     setSlaHistoryDays(preset.slaHistoryDays);
@@ -7458,8 +7453,8 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className={reportsPanelClass("overflow-hidden")}>
-          <div className="px-4 py-3 border-b border-border bg-surface-subtle flex items-center justify-between gap-3">
+        <div id="reports-installer-details" className={reportsPanelClass("overflow-hidden")}>
+          <div className="px-4 py-3 border-b border-border bg-surface-subtle flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase text-text-secondary">
                 {tt("reports.installerDrilldownTitle")}
@@ -7478,12 +7473,19 @@ export default function ReportsPage() {
                 "Фильтр деталей KPI монтажника",
                 "מסנן פרטי KPI למתקין",
               )}
-              value={installerDetailsId}
-              onChange={(e) => setInstallerDetailsId(e.target.value)}
-              className="h-9 rounded-md border border-border bg-surface px-2 text-[13px]"
+              value={scopedInstallerMissing ? "" : installerDetailsId}
+              onChange={(e) => {
+                const id = e.target.value;
+                if (!id) return;
+                setInstallerDetailsId(id);
+                const params = new URLSearchParams(searchParams?.toString());
+                params.set("installer_id", id);
+                router.push(`/reports?${params.toString()}#reports-installer-details`);
+              }}
+              className="h-9 max-w-full rounded-md border border-border bg-surface px-2 text-[13px]"
             >
-              <option value="">
-                {installersKpiQuery.isLoading
+              <option value="" disabled>
+                {installerDirectoryQuery.isLoading
                   ? copy(
                       "Loading installers…",
                       "Загружаем монтажников…",
@@ -7495,7 +7497,10 @@ export default function ReportsPage() {
                       "בחר מתקין",
                     )}
               </option>
-              {installersKpiItems.map((item) => (
+              {installerDetailsId && !scopedInstallerMissing && !installerDetailOptions.some((item) => item.installer_id === installerDetailsId) && (
+                <option value={installerDetailsId}>{installerDetailsId}</option>
+              )}
+              {installerDetailOptions.map((item) => (
                 <option key={item.installer_id} value={item.installer_id}>
                   {item.installer_name}
                 </option>
@@ -7503,7 +7508,12 @@ export default function ReportsPage() {
             </select>
           </div>
 
-          {installersKpiQuery.isLoading && installersKpiItems.length === 0 && (
+          {installerDirectoryQuery.isError && <div role="status" className="px-4 py-2 text-xs text-status-warning-fg">
+            {copy("The installer directory could not be loaded. The available report entries are shown.",
+              "Не удалось загрузить справочник монтажников. Показаны доступные записи отчёта.",
+              "לא ניתן לטעון את רשימת המתקינים. מוצגות הרשומות הזמינות מהדוח.")}
+          </div>}
+          {installerDirectoryQuery.isLoading && installerDetailOptions.length === 0 && !installerDetailsId && (
             <div className="px-4 py-6 text-[13px] text-text-secondary">
               {copy(
                 "Loading installer drill-down…",
@@ -7512,7 +7522,7 @@ export default function ReportsPage() {
               )}
             </div>
           )}
-          {!installersKpiQuery.isLoading && installersKpiItems.length === 0 && (
+          {!installerDirectoryQuery.isLoading && installerDetailOptions.length === 0 && !installerDetailsId && (
             <div className="px-4 py-6 text-[13px] text-text-secondary">
               {copy(
                 "No installers available for drill-down.",
@@ -7542,6 +7552,13 @@ export default function ReportsPage() {
             !installerDetailsQuery.isError &&
             installerDetails && (
               <div className="p-4 space-y-4">
+                <InstallerFinancialBasis data={installerDetails} />
+                <InstallerFinancialNotice data={installerDetails} />
+                {installerDetails.pricing_mode === "FACTORY" && <p className="text-xs text-text-secondary">
+                  {copy("All recorded work, independent of the period filter. Order numbers use current door records; add-ons are not included in the order breakdown.",
+                    "Все учтённые работы, независимо от фильтра периода. Номера заказов взяты из текущих данных дверей; допработы не входят в разбивку по заказам.",
+                    "כל העבודות הרשומות, ללא תלות במסנן התקופה. מספרי ההזמנות נלקחים מרישומי הדלתות הנוכחיים; תוספות אינן נכללות בפירוט ההזמנות.")}
+                </p>}
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
@@ -7609,11 +7626,11 @@ export default function ReportsPage() {
                   </div>
                   <div className="rounded-lg border border-border bg-surface p-3">
                     <div className="text-[11px] uppercase text-text-secondary">
-                      {tt("reports.openIssuesMissingRates")}
+                      {copy("Open issues / data gaps", "Открытые проблемы / неполные данные", "תקלות פתוחות / נתונים חסרים")}
                     </div>
                     <div className="mt-2 text-[18px] font-semibold text-text">
                       {installerDetails.open_issues} /{" "}
-                      {installerDetails.missing_rates_installed_doors}
+                      {installerFinancialDataRisk(installerDetails)}
                     </div>
                     <div className="mt-1 text-[12px] text-text-secondary">
                       {tt("reports.lastInstall")}{" "}
@@ -7630,6 +7647,9 @@ export default function ReportsPage() {
                       {copy("Qty", "Кол-во", "כמות")} {formatAmount(installerDetails.addons_done_qty)}
                     </div>
                     <div className="mt-1 text-[12px] text-text-secondary">
+                      {copy("Earned", "Начислено", "שכר שנצבר")}: {formatAmount(installerDetails.addon_payroll_total)}
+                    </div>
+                    <div className="mt-1 text-[12px] text-text-secondary">
                       {tt("reports.addonsProfitMissingPlans")
                         .replace(
                           "{profit}",
@@ -7643,6 +7663,10 @@ export default function ReportsPage() {
                   </div>
                 </div>
 
+                {installerDetails.pricing_mode === "FACTORY" && <p className="text-xs text-text-secondary">
+                  {copy("Project rows shown", "Показано строк объектов", "שורות פרויקטים מוצגות")}: {installerDetails.top_projects.length} / {installerDetails.project_rows_total}.
+                  {" "}{copy("Order rows shown", "Показано строк заказов", "שורות הזמנות מוצגות")}: {installerDetails.order_breakdown.length} / {installerDetails.order_rows_total}.
+                </p>}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                   <div className="overflow-hidden rounded-lg border border-border">
                     <div className="divide-y divide-border-subtle md:hidden">
@@ -7657,11 +7681,15 @@ export default function ReportsPage() {
                       ) : (
                         installerDetails.top_projects.map((item) => (
                           <article
-                            key={`mobile-${item.project_id}`}
+                            key={`mobile-${item.project_id ?? "unavailable"}`}
                             className="px-3.5 py-3"
                           >
                             <div className="text-[13px] font-semibold leading-5 text-text">
-                              {item.project_name}
+                              {item.project_name ?? copy("Project unavailable", "Объект недоступен", "הפרויקט אינו זמין")}
+                            </div>
+                            <InstallerFinancialNotice data={item} />
+                            <div className="mt-1 text-xs tabular-nums text-text-secondary">
+                              {copy("Earned", "Начислено", "שכר שנצבר")}: {formatAmount(item.payroll_total)}
                             </div>
                             <div className="mt-1 text-[11px] leading-4 text-text-secondary">
                               {item.last_installed_at
@@ -7736,12 +7764,16 @@ export default function ReportsPage() {
                         ) : (
                           installerDetails.top_projects.map((item) => (
                             <tr
-                              key={item.project_id}
+                              key={item.project_id ?? "unavailable"}
                               className="border-t border-border"
                             >
                               <td className="px-3 py-2.5">
                                 <div className="font-medium text-text">
-                                  {item.project_name}
+                                  {item.project_name ?? copy("Project unavailable", "Объект недоступен", "הפרויקט אינו זמין")}
+                                </div>
+                                <InstallerFinancialNotice data={item} />
+                                <div className="text-xs tabular-nums text-text-secondary">
+                                  {copy("Earned", "Начислено", "שכר שנצבר")}: {formatAmount(item.payroll_total)}
                                 </div>
                                 <div className="text-[11px] text-text-secondary">
                                   {item.last_installed_at
@@ -7787,6 +7819,10 @@ export default function ReportsPage() {
                           >
                             <div className="text-[13px] font-semibold leading-5 text-text">
                               {item.order_number}
+                            </div>
+                            <InstallerFinancialNotice data={item} />
+                            <div className="mt-1 text-xs tabular-nums text-text-secondary">
+                              {copy("Earned", "Начислено", "שכר שנצבר")}: {formatAmount(item.payroll_total)}
                             </div>
                             <div className="mt-3 grid grid-cols-3 gap-2">
                               <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
@@ -7857,6 +7893,10 @@ export default function ReportsPage() {
                             >
                               <td className="px-3 py-2.5 font-medium text-text">
                                 {item.order_number}
+                                <InstallerFinancialNotice data={item} />
+                                <div className="text-xs tabular-nums text-text-secondary">
+                                  {copy("Earned", "Начислено", "שכר שנצבר")}: {formatAmount(item.payroll_total)}
+                                </div>
                               </td>
                               <td className="px-3 py-2 text-end">
                                 {item.installed_doors}
