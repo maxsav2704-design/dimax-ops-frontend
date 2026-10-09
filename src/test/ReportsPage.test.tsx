@@ -129,6 +129,39 @@ describe("ReportsPage", () => {
     vi.restoreAllMocks();
   });
 
+  it.each([false, true])("shows installer ledger coverage even when the matrix is empty: %s", async (empty) => {
+    const item = { installer_id: "installer-1", installer_name: "Recorded installer", project_id: null, project_name: null,
+      pricing_mode: "FACTORY", performance_band: "INCOMPLETE", installed_doors: 1, active_projects: 1, open_issues: 0,
+      addons_done_qty: 0, revenue_total: 500, payroll_total: 250, profit_total: null, margin_pct: null, avg_profit_per_door: null,
+      unrecorded_completed_works: 1, missing_client_prices: 1, missing_rates_installed_doors: 1, missing_addon_plans_facts: 1 };
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [] };
+      if (path.includes("/installers-profitability-matrix") || path.includes("/installer-project-profitability")) return {
+        pricing_mode: "FACTORY", incomplete_items: empty ? 0 : 7, unassigned_completed_works: 3,
+        total: empty ? 0 : 7, items: empty ? [] : [item],
+      };
+      throw new Error("Unrelated report unavailable in this focused fixture");
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ReportsPage /></QueryClientProvider>);
+    await waitFor(() => expect(screen.getAllByText(/Unrecorded works without an installer: 3/)).toHaveLength(2), { timeout: 5000 });
+    for (const id of ["reports-installer-cross-view", "reports-installers-kpi"]) {
+      const section = within(document.getElementById(id)!);
+      expect(section.getByRole("status")).toHaveTextContent("recorded performer");
+      if (!empty) {
+        expect(section.getByRole("status")).toHaveTextContent("Incomplete financial rows: 7");
+        expect(section.getAllByText("Incomplete", { exact: true })).toHaveLength(2);
+        expect(section.getAllByText(/Works without earnings: 1/)).toHaveLength(2);
+        const row = section.getAllByText("Recorded installer").map((e) => e.closest("tr")).find(Boolean)!;
+        expect(within(row).getAllByText("-")).toHaveLength(3);
+        expect(within(row).getByText("250.00")).toBeInTheDocument();
+        expect(within(row).getByText("2")).toBeInTheDocument();
+      }
+    }
+    if (!empty) expect(screen.getAllByText("Project unavailable")).toHaveLength(2);
+    client.clear();
+  });
+
   it("does not present an unconfirmed addon rate or its payroll total as zero", async () => {
     apiFetchMock.mockImplementation(async (path: string) => {
       if (path === "/api/v1/admin/projects") return { items: [{ id: "project-1", name: "Tower" }] };
@@ -1191,9 +1224,9 @@ describe("ReportsPage", () => {
     expect(screen.getAllByText("BZ-400").length).toBeGreaterThan(0);
     expect(screen.getAllByText("RC-100").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Installer Beta").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("STRONG").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("RISK").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("WATCH").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Strong").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Risk").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Watch").length).toBeGreaterThan(0);
   }, 45000);
 
   it("shows readable success notice after executive export", async () => {

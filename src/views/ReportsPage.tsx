@@ -27,6 +27,8 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
 import { ProjectMarginBasis, ProjectMarginNotice } from "@/components/prices/ProjectMarginNotice";
+import { InstallerFinancialBasis, InstallerFinancialNotice, InstallerFinancialBand } from "@/components/prices/InstallerFinancialNotice";
+import { installerFinancialDataRisk, type InstallerFinancialCoverage, type InstallerMatrixCoverage } from "@/lib/installer-financials";
 import { projectMarginDataRisk, type ProjectMarginCoverage } from "@/lib/project-margin";
 import { Button } from "@/components/ui/button";
 import { apiDownload, apiFetch } from "@/lib/api";
@@ -688,7 +690,7 @@ type InstallersKpiResponse = {
   items: InstallerKpiItem[];
 };
 
-type InstallerProfitabilityMatrixItem = {
+type InstallerProfitabilityMatrixItem = InstallerFinancialCoverage & {
   installer_id: string;
   installer_name: string;
   performance_band: string;
@@ -698,41 +700,41 @@ type InstallerProfitabilityMatrixItem = {
   addons_done_qty: number;
   revenue_total: number;
   payroll_total: number;
-  profit_total: number;
-  margin_pct: number;
-  avg_profit_per_door: number;
+  profit_total: number | null;
+  margin_pct: number | null;
+  avg_profit_per_door: number | null;
   missing_rates_installed_doors: number;
   missing_addon_plans_facts: number;
   last_installed_at: string | null;
 };
 
-type InstallerProfitabilityMatrixResponse = {
+type InstallerProfitabilityMatrixResponse = InstallerMatrixCoverage & {
   total: number;
   limit: number;
   offset: number;
   items: InstallerProfitabilityMatrixItem[];
 };
 
-type InstallerProjectProfitabilityItem = {
+type InstallerProjectProfitabilityItem = InstallerFinancialCoverage & {
   installer_id: string;
   installer_name: string;
-  project_id: string;
-  project_name: string;
+  project_id: string | null;
+  project_name: string | null;
   performance_band: string;
   installed_doors: number;
   open_issues: number;
   addons_done_qty: number;
   revenue_total: number;
   payroll_total: number;
-  profit_total: number;
-  margin_pct: number;
-  avg_profit_per_door: number;
+  profit_total: number | null;
+  margin_pct: number | null;
+  avg_profit_per_door: number | null;
   missing_rates_installed_doors: number;
   missing_addon_plans_facts: number;
   last_installed_at: string | null;
 };
 
-type InstallerProjectProfitabilityResponse = {
+type InstallerProjectProfitabilityResponse = InstallerMatrixCoverage & {
   total: number;
   limit: number;
   offset: number;
@@ -986,6 +988,9 @@ type IssuesAddonsImpactResponse = {
 };
 
 type RiskConcentrationSummary = {
+  installer_pricing_mode?: "LEGACY" | "FACTORY";
+  incomplete_installers?: number;
+  unassigned_completed_works?: number;
   incomplete_projects?: number;
   open_issue_profit_at_risk: number;
   blocked_issue_profit_at_risk: number;
@@ -995,7 +1000,7 @@ type RiskConcentrationSummary = {
   risky_installers: number;
   worst_project_profit_total: number | null;
   worst_order_profit_total: number;
-  worst_installer_profit_total: number;
+  worst_installer_profit_total: number | null;
 };
 
 type RiskConcentrationResponse = {
@@ -1251,6 +1256,9 @@ const SLA_STATUS_CLASS: Record<string, string> = {
 };
 
 function installerPerformanceBandClass(band: string): string {
+  if (band === "INCOMPLETE") {
+    return "text-text-secondary bg-surface-subtle border-border";
+  }
   if (band === "STRONG") {
     return "text-status-ok-fg bg-status-ok-bg border-status-ok-border";
   }
@@ -6567,12 +6575,17 @@ export default function ReportsPage() {
 
                 <div className="rounded-lg border border-border bg-surface overflow-hidden">
                   <div className="border-b border-border px-3 py-2 text-[11px] uppercase text-text-secondary">
-                    {copy("Installers at Risk", "монтажники в опасности", "מתקינים בסיכון")}
+                    {copy("Installer financial risk", "Финансовые риски монтажников", "סיכון כספי לפי מתקין")}
                   </div>
+                  <InstallerFinancialBasis data={{
+                    pricing_mode: riskConcentration?.summary?.installer_pricing_mode,
+                    incomplete_items: riskConcentration?.summary?.incomplete_installers,
+                    unassigned_completed_works: riskConcentration?.summary?.unassigned_completed_works,
+                  }} />
                   <div className="divide-y divide-border-subtle md:hidden">
                     {(riskConcentration?.installers || []).length === 0 ? (
                       <div className="px-3.5 py-3 text-[12px] text-text-secondary">
-                        {copy("No risky installers.", "Никаких рискованных монтажников.", "אין מתקינים מסוכנים.")}
+                        {copy("No installer financial rows.", "Нет финансовых данных по монтажникам.", "אין נתונים כספיים למתקינים.")}
                       </div>
                     ) : (
                       (riskConcentration?.installers || []).map((item) => (
@@ -6591,15 +6604,16 @@ export default function ReportsPage() {
                             </div>
                             <span
                               className={cn(
-                                "shrink-0 rounded border px-2 py-0.5 text-[11px] font-semibold",
+                                "max-w-[50%] shrink-0 break-words rounded border px-2 py-0.5 text-[11px] font-semibold",
                                 installerPerformanceBandClass(
                                   item.performance_band,
                                 ),
                               )}
                             >
-                              {item.performance_band}
+                              <InstallerFinancialBand band={item.performance_band} />
                             </span>
                           </div>
+                          <InstallerFinancialNotice data={item} />
                           <div className="mt-3 grid grid-cols-2 gap-2">
                             <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
                               <div className="text-[10px] uppercase text-text-secondary">
@@ -6646,7 +6660,7 @@ export default function ReportsPage() {
                             className="px-3 py-3 text-text-secondary"
                             colSpan={4}
                           >
-                            {copy("No risky installers.", "Никаких рискованных монтажников.", "אין מתקינים מסוכנים.")}
+                            {copy("No installer financial rows.", "Нет финансовых данных по монтажникам.", "אין נתונים כספיים למתקינים.")}
                           </td>
                         </tr>
                       ) : (
@@ -6666,6 +6680,7 @@ export default function ReportsPage() {
                                 <div className="text-[11px] text-text-secondary">
                                   {copy("Issues", "Проблемы", "תקלות")} {item.open_issues}
                                 </div>
+                                <InstallerFinancialNotice data={item} />
                               </td>
                               <td className="px-3 py-2.5">
                                 <span
@@ -6674,7 +6689,7 @@ export default function ReportsPage() {
                                     bandClass,
                                   )}
                                 >
-                                  {item.performance_band}
+                                  <InstallerFinancialBand band={item.performance_band} />
                                 </span>
                               </td>
                               <td className="px-3 py-2 text-end">
@@ -6742,6 +6757,7 @@ export default function ReportsPage() {
             </div>
           </div>
 
+          {!installerProfitabilityMatrixQuery.isError && <InstallerFinancialBasis data={installerProfitabilityMatrixQuery.data} />}
           {installerProfitabilityMatrixQuery.isLoading ? (
             <div className="px-4 py-6 text-[13px] text-text-secondary">
               {tt("reports.loadingInstallerProfitability")}
@@ -6789,13 +6805,14 @@ export default function ReportsPage() {
                       </div>
                       <span
                         className={cn(
-                          "shrink-0 rounded border px-2 py-0.5 text-[11px] font-semibold",
+                          "max-w-[50%] shrink-0 break-words rounded border px-2 py-0.5 text-[11px] font-semibold",
                           installerPerformanceBandClass(item.performance_band),
                         )}
                       >
-                        {item.performance_band}
+                        <InstallerFinancialBand band={item.performance_band} />
                       </span>
                     </div>
+                    <InstallerFinancialNotice data={item} />
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
                         <div className="text-[10px] uppercase text-text-secondary">
@@ -6811,6 +6828,14 @@ export default function ReportsPage() {
                         </div>
                         <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
                           {formatAmount(item.revenue_total)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Earned", "Начислено", "שכר שנצבר")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {formatAmount(item.payroll_total)}
                         </div>
                       </div>
                       <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
@@ -6842,8 +6867,7 @@ export default function ReportsPage() {
                           {copy("Data Risk", "Риск данных", "סיכון נתונים")}
                         </div>
                         <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
-                          {item.missing_rates_installed_doors +
-                            item.missing_addon_plans_facts}
+                          {installerFinancialDataRisk(item)}
                         </div>
                       </div>
                     </div>
@@ -6865,6 +6889,9 @@ export default function ReportsPage() {
                       </th>
                       <th className="text-end px-3 py-2 font-medium">
                         {copy("Revenue", "Выручка", "הכנסה")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Earned", "Начислено", "שכר שנצבר")}
                       </th>
                       <th className="text-end px-3 py-2 font-medium">
                         {copy("Profit", "Прибыль", "רווח")}
@@ -6908,6 +6935,7 @@ export default function ReportsPage() {
                                   formatAmount(item.addons_done_qty),
                                 )}
                             </div>
+                            <InstallerFinancialNotice data={item} />
                           </td>
                           <td className="px-3 py-2.5">
                             <span
@@ -6916,7 +6944,7 @@ export default function ReportsPage() {
                                 bandClass,
                               )}
                             >
-                              {item.performance_band}
+                              <InstallerFinancialBand band={item.performance_band} />
                             </span>
                           </td>
                           <td className="px-3 py-2 text-end">
@@ -6924,6 +6952,9 @@ export default function ReportsPage() {
                           </td>
                           <td className="px-3 py-2 text-end">
                             {formatAmount(item.revenue_total)}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {formatAmount(item.payroll_total)}
                           </td>
                           <td className="px-3 py-2 text-end">
                             {formatAmount(item.profit_total)}
@@ -6938,8 +6969,7 @@ export default function ReportsPage() {
                             {item.open_issues}
                           </td>
                           <td className="px-3 py-2 text-end">
-                            {item.missing_rates_installed_doors +
-                              item.missing_addon_plans_facts}
+                            {installerFinancialDataRisk(item)}
                           </td>
                         </tr>
                       );
@@ -6998,6 +7028,7 @@ export default function ReportsPage() {
             </div>
           </div>
 
+          {!installerProjectProfitabilityQuery.isError && <InstallerFinancialBasis data={installerProjectProfitabilityQuery.data} />}
           {installerProjectProfitabilityQuery.isLoading ? (
             <div className="px-4 py-6 text-[13px] text-text-secondary">
               {tt("reports.loadingInstallerCrossView")}
@@ -7042,18 +7073,19 @@ export default function ReportsPage() {
                           {item.installer_name}
                         </div>
                         <div className="mt-1 text-[11px] leading-4 text-text-secondary">
-                          {item.project_name}
+                          {item.project_name ?? copy("Project unavailable", "Объект недоступен", "הפרויקט אינו זמין")}
                         </div>
                       </div>
                       <span
                         className={cn(
-                          "shrink-0 rounded border px-2 py-0.5 text-[11px] font-semibold",
+                          "max-w-[50%] shrink-0 break-words rounded border px-2 py-0.5 text-[11px] font-semibold",
                           installerPerformanceBandClass(item.performance_band),
                         )}
                       >
-                        {item.performance_band}
+                        <InstallerFinancialBand band={item.performance_band} />
                       </span>
                     </div>
+                    <InstallerFinancialNotice data={item} />
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
                         <div className="text-[10px] uppercase text-text-secondary">
@@ -7069,6 +7101,14 @@ export default function ReportsPage() {
                         </div>
                         <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
                           {formatAmount(item.revenue_total)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
+                        <div className="text-[10px] uppercase text-text-secondary">
+                          {copy("Earned", "Начислено", "שכר שנצבר")}
+                        </div>
+                        <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
+                          {formatAmount(item.payroll_total)}
                         </div>
                       </div>
                       <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
@@ -7100,8 +7140,7 @@ export default function ReportsPage() {
                           {copy("Data Risk", "Риск данных", "סיכון נתונים")}
                         </div>
                         <div className="mt-1 text-[13px] font-medium tabular-nums text-text">
-                          {item.missing_rates_installed_doors +
-                            item.missing_addon_plans_facts}
+                          {installerFinancialDataRisk(item)}
                         </div>
                       </div>
                     </div>
@@ -7127,6 +7166,9 @@ export default function ReportsPage() {
                       </th>
                       <th className="text-end px-3 py-2 font-medium">
                         {copy("Revenue", "Выручка", "הכנסה")}
+                      </th>
+                      <th className="text-end px-3 py-2 font-medium">
+                        {copy("Earned", "Начислено", "שכר שנצבר")}
                       </th>
                       <th className="text-end px-3 py-2 font-medium">
                         {copy("Profit", "Прибыль", "רווח")}
@@ -7160,8 +7202,9 @@ export default function ReportsPage() {
                               {item.installer_name}
                             </div>
                             <div className="text-[11px] text-text-secondary">
-                              {item.project_name}
+                              {item.project_name ?? copy("Project unavailable", "Объект недоступен", "הפרויקט אינו זמין")}
                             </div>
+                            <InstallerFinancialNotice data={item} />
                           </td>
                           <td className="px-3 py-2.5">
                             <span
@@ -7170,7 +7213,7 @@ export default function ReportsPage() {
                                 bandClass,
                               )}
                             >
-                              {item.performance_band}
+                              <InstallerFinancialBand band={item.performance_band} />
                             </span>
                           </td>
                           <td className="px-3 py-2 text-end">
@@ -7178,6 +7221,9 @@ export default function ReportsPage() {
                           </td>
                           <td className="px-3 py-2 text-end">
                             {formatAmount(item.revenue_total)}
+                          </td>
+                          <td className="px-3 py-2 text-end">
+                            {formatAmount(item.payroll_total)}
                           </td>
                           <td className="px-3 py-2 text-end">
                             {formatAmount(item.profit_total)}
@@ -7192,8 +7238,7 @@ export default function ReportsPage() {
                             {item.open_issues}
                           </td>
                           <td className="px-3 py-2 text-end">
-                            {item.missing_rates_installed_doors +
-                              item.missing_addon_plans_facts}
+                            {installerFinancialDataRisk(item)}
                           </td>
                         </tr>
                       );
