@@ -23,7 +23,7 @@ export type Invitation = {
   confirmed_at: string | null; confirmed_name: string | null;
 };
 export type InvitationPage = { items: Invitation[]; total: number };
-export type IssuedInvitation = { invitation: Invitation; confirmation_url: string };
+export type IssuedInvitation = { invitation: Invitation; confirmation_url: string; email_outbox_id?: string | null };
 export type DraftInput = {
   request_id: string; expected_latest_version: number; reason: string; agreement_reference: string;
   items: Pick<PriceLine, "kind" | "target_id" | "installer_price">[];

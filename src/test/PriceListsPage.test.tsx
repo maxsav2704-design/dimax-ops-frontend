@@ -41,7 +41,7 @@ async function inviteForm() {
   fireEvent.change(form.getByLabelText("Factory"), { target: { value: "QA Factory" } });
   fireEvent.change(form.getByLabelText("Representative"), { target: { value: "Representative" } });
   fireEvent.change(form.getByLabelText("Representative email"), { target: { value: "rep@example.test" } });
-  fireEvent.click(form.getByRole("checkbox"));
+  fireEvent.click(form.getByRole("checkbox", { name: /The contact is correct/ }));
   return form;
 }
 
@@ -126,6 +126,19 @@ describe("factory price management", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Close" })[0]);
     expect(screen.queryByLabelText("Personal confirmation link")).not.toBeInTheDocument();
     expect(api.mock.calls.some(([path]) => path.includes("/public/price-approvals/confirm"))).toBe(false);
+  });
+  it("queues email only by explicit choice and does not claim delivery", async () => {
+    api.mockImplementation(async (path: string, init?: RequestInit) => path.endsWith("/approvals") && init?.method === "POST" ?
+      { invitation, confirmation_url: `https://dimax.example/price-approval#${"A".repeat(43)}`, email_outbox_id: "queued-email" } : reads(path));
+    mount(); const form = await inviteForm();
+    const send = form.getByRole("checkbox", { name: "Email this invitation to the representative" });
+    expect(send).not.toBeChecked();
+    fireEvent.click(send);
+    fireEvent.click(form.getByRole("button", { name: "Create link" }));
+    expect(await screen.findByText("Invitation queued for email")).toBeInTheDocument();
+    expect(screen.getByText(/Queued, not yet delivered/)).toBeInTheDocument();
+    const call = api.mock.calls.find(([path, init]) => path.endsWith("/approvals") && init?.method === "POST")!;
+    expect(JSON.parse(call[1].body).send_email).toBe(true);
   });
   it("does not silently reissue an invitation after a lost response", async () => {
     api.mockImplementation(async (path: string, init?: RequestInit) => {
