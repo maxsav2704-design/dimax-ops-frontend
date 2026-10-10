@@ -31,6 +31,8 @@ describe("PriceApprovalPage", () => {
     expect(button).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Your full name"), { target: { value: "Representative" } });
     fireEvent.click(screen.getByRole("checkbox"));
+    expect(button).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Code from email"), { target: { value: "123456" } });
     fireEvent.click(button);
     expect(await screen.findByText("Factory confirmation recorded")).toBeInTheDocument();
     const [url, options] = fetchMock.mock.calls[1];
@@ -38,7 +40,7 @@ describe("PriceApprovalPage", () => {
     expect(options.credentials).toBe("omit");
     expect(options.referrerPolicy).toBe("no-referrer");
     expect(JSON.parse(options.body)).toEqual({ token, expected_version: 2, snapshot_hash: draft.snapshot_hash,
-      signer_name: "Representative", accepted: true });
+      signer_name: "Representative", accepted: true, verification_code: "123456" });
     expect(options.headers.Authorization).toBeUndefined();
     expect(window.localStorage.getItem("factory-token")).toBeNull();
   });
@@ -76,6 +78,7 @@ describe("PriceApprovalPage", () => {
     await screen.findByText("Entrance door");
     fireEvent.change(screen.getByLabelText("Your full name"), { target: { value: "Representative" } });
     fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.change(screen.getByLabelText("Code from email"), { target: { value: "123456" } });
     fireEvent.click(screen.getByRole("button", { name: "Confirm prices" }));
     const check = await screen.findByRole("button", { name: "Check result" });
     expect(screen.getByRole("button", { name: "Confirm prices" })).toBeDisabled();
@@ -83,5 +86,43 @@ describe("PriceApprovalPage", () => {
     expect(await screen.findByText("Factory confirmation recorded")).toBeInTheDocument();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(fetchMock.mock.calls.filter(([url]) => url.endsWith("/confirm"))).toHaveLength(1);
+  });
+
+  it("queues a code only on request and does not claim delivery or confirmation", async () => {
+    fetchMock.mockResolvedValueOnce(reply(draft)).mockResolvedValueOnce(reply({ status: "QUEUED",
+      expires_at: new Date(Date.now() + 600000).toISOString(), resend_after: new Date(Date.now() + 60000).toISOString() }));
+    render(<PriceApprovalPage />);
+    await screen.findByText("Entrance door");
+    fireEvent.click(screen.getByRole("button", { name: "Email verification code" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Code email queued");
+    expect(screen.getByRole("button", { name: "Send a new code" })).toBeDisabled();
+    expect(fetchMock.mock.calls[1][0]).toContain("/request-code");
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ token });
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/confirm"))).toBe(false);
+  });
+
+  it("keeps the form usable after an incorrect code", async () => {
+    fetchMock.mockResolvedValueOnce(reply(draft)).mockResolvedValueOnce(reply({}, 403))
+      .mockResolvedValueOnce(reply({ ...draft, status: "CONFIRMED", confirmed_name: "Representative", confirmed_at: "2026-10-10T12:00:00Z" }));
+    render(<PriceApprovalPage />);
+    await screen.findByText("Entrance door");
+    fireEvent.change(screen.getByLabelText("Your full name"), { target: { value: "Representative" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.change(screen.getByLabelText("Code from email"), { target: { value: "000000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm prices" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("incorrect or expired");
+    fireEvent.change(screen.getByLabelText("Code from email"), { target: { value: "123456" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm prices" }));
+    expect(await screen.findByText("Factory confirmation recorded")).toBeInTheDocument();
+  });
+
+  it.each([422, 429, 500])("handles code delivery errors without an automatic retry: %s", async (status) => {
+    fetchMock.mockResolvedValueOnce(reply(draft)).mockResolvedValueOnce(reply({}, status));
+    render(<PriceApprovalPage />);
+    await screen.findByText("Entrance door");
+    fireEvent.click(screen.getByRole("button", { name: "Email verification code" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(status === 429 ? "wait a minute" : "Verification email is unavailable");
+    expect(screen.getByRole("button", { name: "Email verification code" })).toBeEnabled();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

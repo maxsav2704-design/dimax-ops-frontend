@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, DoorClosed, FileCheck2, Loader2, RefreshCw, ShieldCheck, Wrench } from "lucide-react";
+import { CheckCircle2, DoorClosed, FileCheck2, Loader2, Mail, RefreshCw, ShieldCheck, Wrench } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ type Approval = {
   snapshot_hash: string; expires_at: string; status: "PENDING" | "CONFIRMED";
   confirmed_at: string | null; confirmed_name: string | null; affects_earnings: false;
 };
+type CodeRequest = { status: "QUEUED"; expires_at: string; resend_after: string };
 
 const copy = {
   en: {
@@ -28,6 +29,11 @@ const copy = {
     retry: "Check again", result: "Check result", loading: "Loading price list", busy: "Please wait before trying again.",
     network: "The server could not be reached. Try again.", uncertain: "The result could not be verified. Check it before submitting again.",
     pcs: "pcs", hour: "hour", loadingConfirm: "Recording confirmation", door: "Installation", addon: "Additional work",
+    sendCode: "Email verification code", resendCode: "Send a new code", code: "Code from email",
+    codeHint: "The code goes to the representative's email specified in the invitation. Do not share it.",
+    codeQueued: "Code email queued", codeExpiry: "Code valid until", codeError: "The code is missing, incorrect or expired. After five incorrect attempts, request a new invitation from the administrator.",
+    codeUnavailable: "Verification email is unavailable. Contact the administrator.",
+    codeBusy: "Please wait a minute before requesting another code. If the limit has been reached, request a new invitation.",
   },
   ru: {
     title: "Согласование прайса", version: "Версия", factory: "Завод", recipient: "Представитель",
@@ -39,6 +45,11 @@ const copy = {
     retry: "Проверить снова", result: "Проверить результат", loading: "Загрузка прайса", busy: "Подождите немного перед повторной попыткой.",
     network: "Не удалось связаться с сервером. Попробуйте снова.", uncertain: "Результат не удалось проверить. Проверьте его перед повторным подтверждением.",
     pcs: "шт.", hour: "час", loadingConfirm: "Сохранение подтверждения", door: "Монтаж", addon: "Допработа",
+    sendCode: "Получить код на почту", resendCode: "Отправить новый код", code: "Код из письма",
+    codeHint: "Код поступит на почту представителя, указанную в приглашении. Никому его не передавайте.",
+    codeQueued: "Письмо с кодом в очереди отправки", codeExpiry: "Код действует до", codeError: "Код отсутствует, неверен или просрочен. После пяти неверных попыток запросите новое приглашение у администратора.",
+    codeUnavailable: "Отправка кода недоступна. Обратитесь к администратору.",
+    codeBusy: "Подождите минуту перед повторной отправкой. Если лимит исчерпан, запросите новое приглашение.",
   },
   he: {
     title: "אישור מחירון", version: "גרסה", factory: "מפעל", recipient: "נציג",
@@ -50,6 +61,11 @@ const copy = {
     retry: "בדיקה חוזרת", result: "בדיקת התוצאה", loading: "טעינת מחירון", busy: "יש להמתין מעט לפני ניסיון נוסף.",
     network: "לא ניתן להתחבר לשרת. יש לנסות שוב.", uncertain: "לא ניתן לאמת את התוצאה. יש לבדוק אותה לפני אישור נוסף.",
     pcs: "יח׳", hour: "שעה", loadingConfirm: "שמירת האישור", door: "התקנה", addon: "עבודה נוספת",
+    sendCode: "שליחת קוד בדוא״ל", resendCode: "שליחת קוד חדש", code: "הקוד מהדוא״ל",
+    codeHint: "הקוד יישלח לכתובת הדוא״ל של הנציג שצוינה בהזמנה. אין לשתף אותו.",
+    codeQueued: "הודעת הקוד ממתינה לשליחה", codeExpiry: "הקוד בתוקף עד", codeError: "הקוד חסר, שגוי או שפג תוקפו. לאחר חמישה ניסיונות שגויים יש לבקש הזמנה חדשה מהמנהל.",
+    codeUnavailable: "שליחת הקוד אינה זמינה. יש לפנות למנהל.",
+    codeBusy: "יש להמתין דקה לפני שליחה נוספת. אם הגעת למגבלה, יש לבקש הזמנה חדשה.",
   },
 };
 
@@ -57,7 +73,7 @@ class ApprovalError extends Error {
   constructor(readonly status: number) { super("Price approval request failed"); }
 }
 
-async function request(action: "preview" | "confirm", body: object, signal?: AbortSignal): Promise<Approval> {
+async function request<T = Approval>(action: "preview" | "confirm" | "request-code", body: object, signal?: AbortSignal): Promise<T> {
   const controller = new AbortController();
   const abort = () => controller.abort();
   if (signal?.aborted) abort();
@@ -70,7 +86,7 @@ async function request(action: "preview" | "confirm", body: object, signal?: Abo
       body: JSON.stringify(body), signal: controller.signal,
     });
     if (!response.ok) throw new ApprovalError(response.status);
-    return await response.json() as Approval;
+    return await response.json() as T;
   } finally {
     window.clearTimeout(timeout);
     signal?.removeEventListener("abort", abort);
@@ -88,6 +104,11 @@ export default function PriceApprovalPage() {
   const [error, setError] = useState<"unavailable" | "changed" | "network" | "busy" | "uncertain" | null>(null);
   const [name, setName] = useState("");
   const [accepted, setAccepted] = useState(false);
+  const [code, setCode] = useState("");
+  const [codeRequest, setCodeRequest] = useState<CodeRequest | null>(null);
+  const [codeError, setCodeError] = useState<"codeError" | "codeUnavailable" | "codeBusy" | "network" | null>(null);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [clock, setClock] = useState(Date.now());
   const [retry, setRetry] = useState(0);
   const submitLock = useRef(false);
   const generation = useRef(0);
@@ -99,7 +120,7 @@ export default function PriceApprovalPage() {
       const raw = window.location.hash.slice(1);
       setToken(/^[A-Za-z0-9_-]{43}$/.test(raw) ? raw : "");
       window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
-      setData(null); setName(""); setAccepted(false);
+      setData(null); setName(""); setAccepted(false); setCode(""); setCodeRequest(null); setCodeError(null);
       setRetry((value) => value + 1);
     };
     if (!initialRead.current) { initialRead.current = true; read(); }
@@ -132,21 +153,50 @@ export default function PriceApprovalPage() {
     return () => { controller.abort(); advanceGeneration(); };
   }, [token, retry, classify, advanceGeneration]);
 
+  useEffect(() => {
+    if (!codeRequest) return;
+    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [codeRequest]);
+
+  async function sendCode() {
+    if (!token || !data || data.status !== "PENDING" || submitLock.current) return;
+    submitLock.current = true; setSendingCode(true); setCodeError(null);
+    const current = generation.current;
+    try {
+      const result = await request<CodeRequest>("request-code", { token });
+      if (current === generation.current) {
+        setCodeRequest(result); setCode(""); setClock(Date.now());
+      }
+    } catch (reason) {
+      if (current === generation.current) {
+        if (reason instanceof ApprovalError && [404, 409].includes(reason.status)) setError(classify(reason));
+        else setCodeError(reason instanceof ApprovalError
+          ? reason.status === 429 ? "codeBusy" : "codeUnavailable" : "network");
+      }
+    } finally {
+      submitLock.current = false; setSendingCode(false);
+    }
+  }
+
   async function confirm(event: React.FormEvent) {
     event.preventDefault();
-    if (!data || !token || !accepted || name.trim().length < 2 || submitLock.current || error) return;
+    if (!data || !token || !accepted || name.trim().length < 2 || !/^[0-9]{6}$/.test(code) || submitLock.current || error) return;
     submitLock.current = true; setSubmitting(true); setError(null);
     const current = generation.current;
     try {
       const result = await request("confirm", {
         token, expected_version: data.version, snapshot_hash: data.snapshot_hash,
-        signer_name: name.trim(), accepted: true,
+        signer_name: name.trim(), accepted: true, verification_code: code,
       });
       if (current === generation.current) setData(result);
     } catch (reason) {
       if (current === generation.current) {
-        const kind = classify(reason);
-        setError(kind === "network" ? "uncertain" : kind);
+        if (reason instanceof ApprovalError && reason.status === 403) setCodeError("codeError");
+        else {
+          const kind = classify(reason);
+          setError(kind === "network" ? "uncertain" : kind);
+        }
       }
     } finally {
       submitLock.current = false; setSubmitting(false);
@@ -209,13 +259,32 @@ export default function PriceApprovalPage() {
             </div>
           </section> : <form onSubmit={confirm} className="space-y-4 border-t border-border pt-5">
             <p className="text-xs text-text-secondary">{t.expiry}: {date(data.expires_at)}</p>
+            <div className="max-w-xl space-y-3 border-b border-border pb-4">
+              <p id="factory-code-hint" className="text-sm text-text-secondary">{t.codeHint}</p>
+              <Button type="button" variant="outline" onClick={() => void sendCode()}
+                disabled={submitting || sendingCode || !!error || (!!codeRequest && clock < Date.parse(codeRequest.resend_after))}
+                className="h-auto min-h-11 max-w-full whitespace-normal rounded-md">
+                {sendingCode ? <Loader2 className="me-2 size-4 shrink-0 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                  : <Mail className="me-2 size-4 shrink-0" aria-hidden="true" />}
+                {codeRequest ? t.resendCode : t.sendCode}
+              </Button>
+              {codeRequest && <p role="status" className="text-xs text-text-secondary">{t.codeQueued}. {t.codeExpiry}: {date(codeRequest.expires_at)}</p>}
+              <div className="max-w-xs space-y-2">
+                <label htmlFor="factory-code" className="text-sm font-medium">{t.code}</label>
+                <Input id="factory-code" dir="ltr" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}"
+                  maxLength={6} value={code} required aria-describedby="factory-code-hint" aria-invalid={codeError === "codeError"}
+                  onChange={(event) => { setCode(event.target.value.replace(/[^0-9]/g, "").slice(0, 6)); setCodeError(null); }}
+                  disabled={submitting || sendingCode} />
+              </div>
+              {codeError && <p role="alert" className="text-sm text-destructive">{t[codeError]}</p>}
+            </div>
             <div className="max-w-md space-y-2"><label htmlFor="factory-signer" className="text-sm font-medium">{t.fullName}</label>
               <Input id="factory-signer" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} maxLength={160} required disabled={submitting} />
             </div>
             <label className="flex items-start gap-3 text-sm leading-6">
               <input type="checkbox" className="mt-1 size-4 shrink-0 accent-[#191919]" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} disabled={submitting} />{t.consent}
             </label>
-            <Button type="submit" disabled={!accepted || name.trim().length < 2 || submitting || !!error} className="h-auto min-h-11 max-w-full whitespace-normal rounded-md px-5 py-3">
+            <Button type="submit" disabled={!accepted || name.trim().length < 2 || !/^[0-9]{6}$/.test(code) || submitting || sendingCode || !!error} className="h-auto min-h-11 max-w-full whitespace-normal rounded-md px-5 py-3">
               {submitting ? <Loader2 className="me-2 size-4 shrink-0 animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <ShieldCheck className="me-2 size-4 shrink-0" aria-hidden="true" />}
               {submitting ? t.loadingConfirm : t.confirm}
             </Button>

@@ -30,9 +30,12 @@ for (const [locale, width, title, button, confirmation] of [
       if (request.url().endsWith("/confirm")) {
         confirmations++;
         expect(body).toEqual({ token, expected_version: 3, snapshot_hash: payload.snapshot_hash,
-          signer_name: "QA Representative", accepted: true });
+          signer_name: "QA Representative", accepted: true, verification_code: "123456" });
         await route.fulfill({ headers, json: { ...payload, status: "CONFIRMED", confirmed_name: body.signer_name,
           confirmed_at: "2026-10-02T12:00:00Z" } });
+      } else if (request.url().endsWith("/request-code")) {
+        await route.fulfill({ headers, json: { status: "QUEUED", expires_at: new Date(Date.now() + 600000).toISOString(),
+          resend_after: new Date(Date.now() + 60000).toISOString() } });
       } else { await route.fulfill({ headers, json: payload }); }
     });
     await page.goto(`/price-approval#${token}`);
@@ -46,6 +49,10 @@ for (const [locale, width, title, button, confirmation] of [
     await page.screenshot({ path: testInfo.outputPath(`price-${locale}.png`), fullPage: true });
     await page.locator("#factory-signer").fill("QA Representative");
     await page.getByRole("checkbox").check();
+    await expect(page.getByRole("button", { name: button, exact: true })).toBeDisabled();
+    await page.getByRole("button", { name: /Email verification code|Получить код на почту|שליחת קוד בדוא/ }).click();
+    await expect(page.getByRole("status")).toBeVisible();
+    await page.locator("#factory-code").fill("123456");
     await page.getByRole("button", { name: button, exact: true }).click();
     await expect(page.getByRole("heading", { name: confirmation, exact: true })).toBeVisible();
     expect(confirmations).toBe(1);

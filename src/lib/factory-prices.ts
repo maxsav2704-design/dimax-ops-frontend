@@ -21,6 +21,7 @@ export type Invitation = {
   id: string; price_list_id: string; factory_name: string; recipient_name: string; recipient_email: string;
   created_at: string; expires_at: string; revoked_at: string | null; revocation_reason: string | null;
   confirmed_at: string | null; confirmed_name: string | null;
+  mailbox_verified_at?: string | null;
 };
 export type InvitationPage = { items: Invitation[]; total: number };
 export type IssuedInvitation = { invitation: Invitation; confirmation_url: string; email_outbox_id?: string | null };

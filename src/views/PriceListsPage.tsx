@@ -130,6 +130,7 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
                 <div className="min-w-0 space-y-2"><Badge status={invitationStatus(item, row, latest, now)} t={t} />
                   <p className="break-words text-xs text-text-secondary">{t.created}: {date(item.created_at)}<br />{t.expires}: {date(item.expires_at)}</p>
                   {(item.confirmed_name || item.revocation_reason) && <p className="break-words text-xs">{t.record}: {item.confirmed_name || item.revocation_reason}<br />{date(item.confirmed_at || item.revoked_at)}</p>}
+                  {item.confirmed_at && <p className="break-words text-xs text-text-secondary">{item.mailbox_verified_at ? t.mailboxVerified : t.mailboxLegacy}</p>}
                 </div>
                 {writable && !item.revoked_at && !item.confirmed_at && row.status === "DRAFT" && <Button variant="outline" size="icon" aria-label={`${t.revoke}: ${item.recipient_name}`} title={t.revoke} onClick={() => setAction({ kind: "revoke", list: row, invitation: item })}><Ban className="size-4" /></Button>}
               </div>)}
