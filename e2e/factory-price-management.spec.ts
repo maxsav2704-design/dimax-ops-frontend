@@ -22,6 +22,7 @@ function scenario() {
       const reply = (json: unknown, status = 200) => route.fulfill({ status, headers, json });
       if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers });
       if (path.endsWith("/auth/me")) return reply({ id: "qa-owner", company_id: "qa-company", role: "ADMIN", admin_scope: scope, can_view_rates: true });
+      if (path.endsWith("/price-lists/state")) return reply({ mode: "LEGACY", active_price: null });
       if (path.endsWith("/door-types")) return reply([{ id: "door-1", name: lists[0].items[0].name }]);
       if (path.endsWith("/addons/types")) return reply({ items: [{ id: "addon-1", name: "Adjustment", unit: "hour", is_active: true }] });
       if (path === "/api/v1/admin/price-lists" && request.method() === "POST") {
@@ -56,9 +57,12 @@ function scenario() {
       }
       if (path.includes("/public/price-approvals/")) {
         const row = lists[0], invitation = invitations[0];
+        if (path.endsWith("/request-code")) return reply({ status: "QUEUED",
+          expires_at: new Date(Date.now() + 600000).toISOString(), resend_after: new Date(Date.now() + 60000).toISOString() });
         if (path.endsWith("/confirm")) {
           const body = request.postDataJSON();
           expect(body.expected_version).toBe(row.version); expect(body.accepted).toBe(true);
+          expect(body.verification_code).toBe("123456");
           row.status = "CONFIRMED"; invitation.confirmed_name = body.signer_name; invitation.confirmed_at = "2026-10-02T12:00:00Z";
         }
         return reply({ company_name: "DIMAX QA", ...invitation, ...row, snapshot_hash: "f".repeat(64),
@@ -93,7 +97,7 @@ test("admin draft, revoke, reissue and factory decision", async ({ page, browser
     await dialog.getByLabel("Factory", { exact: true }).fill("QA Factory");
     await dialog.getByLabel("Representative", { exact: true }).fill("QA Representative");
     await dialog.getByLabel("Representative email", { exact: true }).fill("factory@example.test");
-    await dialog.getByRole("checkbox").check();
+    await dialog.getByRole("checkbox", { name: /The contact is correct/ }).check();
     await dialog.getByRole("button", { name: "Create link", exact: true }).click();
     await expect(dialog.getByText("Link created, not sent")).toBeVisible();
     link = await dialog.getByLabel("Personal confirmation link").inputValue();
@@ -115,6 +119,9 @@ test("admin draft, revoke, reissue and factory decision", async ({ page, browser
     await factoryPage.goto(link);
     await factoryPage.getByLabel("Your full name").fill("QA Representative");
     await factoryPage.getByRole("checkbox").check();
+    await factoryPage.getByRole("button", { name: "Email verification code", exact: true }).click();
+    await expect(factoryPage.getByRole("status")).toBeVisible();
+    await factoryPage.locator("#factory-code").fill("123456");
     await factoryPage.getByRole("button", { name: "Confirm prices", exact: true }).click();
     await expect(factoryPage.getByText("Factory confirmation recorded")).toBeVisible();
   } finally { await factoryContext.close(); }

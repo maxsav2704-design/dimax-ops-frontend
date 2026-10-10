@@ -66,6 +66,17 @@ describe("factory price management", () => {
     expect(screen.queryByRole("button", { name: "Create factory link" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Confirm prices" })).not.toBeInTheDocument();
   });
+  it.each(["FINANCE", "OWNER"])("limits activation of confirmed lists for %s", async (scope) => {
+    auth.mockReturnValue({ role: "ADMIN", admin_scope: scope, can_view_rates: true });
+    api.mockImplementation(async (path: string) => {
+      if (path.startsWith(`${PRICE_API}?`)) return { items: [{ ...draft, status: "CONFIRMED" }], total: 1, latest_version: 1 };
+      if (path === `${PRICE_API}/list-1`) return { ...draft, status: "CONFIRMED" };
+      return reads(path);
+    });
+    mount(); await screen.findByText("Entrance");
+    if (scope === "OWNER") await waitFor(() => expect(screen.getByRole("button", { name: "Apply confirmed prices" })).toBeEnabled());
+    else expect(screen.queryByRole("button", { name: "Apply confirmed prices" })).not.toBeInTheDocument();
+  });
   it("distinguishes the effective version from a newer confirmed list", async () => {
     const newer = { ...draft, id: "list-2", version: 2, status: "CONFIRMED", items: [{ ...draft.items[0], name: "Later price" }] };
     api.mockImplementation(async (path: string) => {

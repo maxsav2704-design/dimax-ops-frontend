@@ -9,6 +9,9 @@ export type CompanyPricingState = {
     items: Array<{ kind: "DOOR" | "ADDON"; target_id: string; unit: string; rate: string }>;
   };
 };
+export type EffectivePriceVersion = {
+  id: string; price_list_id: string; approval_id: string; effective_from: string; created_by: string; reason: string;
+};
 export type PriceLine = { kind: "DOOR" | "ADDON"; target_id: string; name: string; unit: string; installer_price: string };
 export type PriceSummary = {
   id: string; version: number; status: "DRAFT" | "CONFIRMED" | "CANCELLED"; currency: "ILS";
@@ -32,7 +35,7 @@ export type DraftInput = {
 export type CatalogWork = Omit<PriceLine, "installer_price">;
 export type ReconciliationSource = "INSTALLER_RATE" | "SCHEDULED_RATE" | "DOOR" | "ADDON_PLAN" | "ADDON_DEFAULT" | "ADDON_FACT" | "CATALOG";
 export type ReconciliationStatus = "MATCH" | "DIFFERENT" | "MISSING_PROPOSED" | "MISSING_LEGACY" | "UNAVAILABLE" | "UNIT_CHANGED";
-export type PriceApplicationIssueCode = "NOT_CONFIRMED" | "CONFIRMATION_MISSING" | "CONFIRMATION_MISMATCH" | "SUPERSEDED_CONFIRMED" |
+export type PriceApplicationIssueCode = "NOT_CONFIRMED" | "CONFIRMATION_MISSING" | "CONFIRMATION_MISMATCH" | "MAILBOX_NOT_VERIFIED" | "SUPERSEDED_CONFIRMED" |
   "NO_ITEMS" | "MISSING_DOOR_PRICES" | "MISSING_ADDON_PRICES" | "UNAVAILABLE_WORK" | "CATALOG_CHANGED" | "INSTALLER_SURCHARGES" |
   "LEGACY_DIFFERENCES" | "DOOR_SNAPSHOTS" | "SCHEDULED_RATES" | "UNACCRUED_WORK" | "URGENCY_CHARGES";
 export type PriceApplicationCheck = {

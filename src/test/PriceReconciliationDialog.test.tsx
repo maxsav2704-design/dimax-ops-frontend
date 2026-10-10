@@ -40,14 +40,14 @@ describe("factory rate reconciliation", () => {
     expect(screen.getByText("Work types with different existing prices: 2")).toBeInTheDocument();
     expect(screen.getByText("Different existing prices: 2")).toBeInTheDocument();
     expect(screen.getByText("Factory has not confirmed this version: 1")).toBeInTheDocument();
-    expect(screen.getByText("Prices are not active in earnings. This check does not activate them.")).toBeInTheDocument();
+    expect(screen.getByText("This check does not activate prices or change recorded earnings.")).toBeInTheDocument();
     expect(api.mock.calls.every(([, options]) => !options.method && options.signal)).toBe(true);
     expect(screen.queryByRole("button", { name: /activate|approve|save/i })).not.toBeInTheDocument();
   });
   it("distinguishes verified data from active earnings and fails closed without a check", async () => {
     api.mockResolvedValue({ ...report, application_check: { status: "VERIFIED", affects_earnings: false, confirmed_at: report.generated_at, blockers: [], review: [] } });
     mount(); await screen.findByText("Factory decision and price coverage verified");
-    expect(screen.getByText("Prices are not active in earnings. This check does not activate them.")).toBeInTheDocument();
+    expect(screen.getByText("This check does not activate prices or change recorded earnings.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /activate|apply prices/i })).not.toBeInTheDocument();
     api.mockResolvedValue({ ...report, application_check: null });
     fireEvent.click(screen.getByRole("button", { name: "Refresh reconciliation" }));

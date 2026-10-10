@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, ChevronLeft, ChevronRight, FileCheck2, GitCompareArrows, Link2, Plus, RefreshCw } from "lucide-react";
+import { Ban, CheckCheck, ChevronLeft, ChevronRight, FileCheck2, GitCompareArrows, Link2, Plus, RefreshCw } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { Button } from "@/components/ui/button";
 import { PriceListEditor } from "@/components/prices/PriceListEditor";
 import { PriceActionDialog, type PriceAction } from "@/components/prices/PriceActionDialog";
 import { PriceReconciliationDialog } from "@/components/prices/PriceReconciliationDialog";
+import { PriceActivationDialog } from "@/components/prices/PriceActivationDialog";
+import { activationCopy } from "@/components/prices/activation-copy";
 import { reconciliationCopy } from "@/components/prices/reconciliation-copy";
 import { priceCopy, type PriceCopy } from "@/components/prices/copy";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -46,6 +48,7 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [editor, setEditor] = useState<{ base?: PriceDetail; latest: number } | null>(null);
   const [action, setAction] = useState<PriceAction | null>(null);
+  const [activation, setActivation] = useState<PriceDetail | null>(null);
   const [reconciliation, setReconciliation] = useState<{ list?: PriceDetail } | null>(null);
   const [historyOffset, setHistoryOffset] = useState(0);
   const [now, setNow] = useState(Date.now);
@@ -106,6 +109,11 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
               {row.version === latest && <Button variant="outline" onClick={() => setAction({ kind: "invite", list: row })} disabled={!fresh}><Link2 className="me-2 size-4" />{t.invite}</Button>}
               <Button variant="outline" onClick={() => setAction({ kind: "cancel", list: row })} disabled={!fresh}><Ban className="me-2 size-4" />{t.cancel}</Button>
             </div>}
+            {writable && row.status === "CONFIRMED" && pricing.state &&
+              (!pricing.state.active_price || pricing.state.active_price.version < row.version) &&
+              <Button disabled={!fresh || pricing.loading || pricing.error} onClick={() => setActivation(row)} className="h-auto min-h-10 max-w-full whitespace-normal">
+                <CheckCheck className="me-2 size-4 shrink-0" />{activationCopy[locale].open}
+              </Button>}
           </div>
           <dl className="grid min-w-0 gap-4 text-sm sm:grid-cols-2">
             {[[t.reason, row.reason], [t.agreement, row.agreement_reference], [t.created, date(row.created_at)], ...(row.cancellation_reason ? [[t.cancelReason, row.cancellation_reason]] : [])].map(([label, value]) =>
@@ -144,6 +152,7 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
       setEditor(null); setOffset(0); setSelected(saved.id); setHistoryOffset(0); refresh();
     }} />}
     {action && <PriceActionDialog action={action} onClose={() => setAction(null)} onChanged={refresh} />}
+    {activation && <PriceActivationDialog list={activation} onClose={() => { setActivation(null); refresh(); }} onChanged={refresh} />}
     {reconciliation && <PriceReconciliationDialog list={reconciliation.list} onClose={() => setReconciliation(null)} />}
   </div>;
 }
