@@ -36,3 +36,18 @@ jobs:
 
       - name: Run frontend quality gate
         run: npm run quality-gate
+
+      - name: Install browser for offline-work review acceptance
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify execution-time review in EN RU HE
+        run: npx playwright test e2e/execution-time-correction.spec.ts --workers=1
+
+      - name: Retain compact review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: execution-time-review-screenshots
+          path: test-results
+          retention-days: 3
+          if-no-files-found: ignore

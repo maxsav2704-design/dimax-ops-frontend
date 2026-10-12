@@ -33,6 +33,116 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
+describe("execution time correction", () => {
+  const retained = { ...review, performed_at: null, analysis_code: "MISSING_EXECUTION_TIME",
+    applicable_quote: null, preview_amount: null, time_correction_available: true };
+  const correction = { performed_at: "2026-10-02T08:00:00.000Z", evidence_reference: "Site record QA-2026 confirmed by supervisor" };
+  const checked = { ...review, performed_at: null, analysis_code: "EXECUTION_TIME_CORRECTION",
+    resolution_available: true, time_correction_available: true, requires_execution_evidence: true,
+    execution_correction: correction, review_token: "c".repeat(64) };
+  function fillCorrection() {
+    fireEvent.change(screen.getByLabelText("Date and time"), { target: { value: "2026-10-02T11:00" } });
+    fireEvent.change(screen.getByLabelText("UTC offset at execution"), { target: { value: "+03:00" } });
+    fireEvent.change(screen.getByLabelText("Evidence reference"), { target: { value: correction.evidence_reference } });
+  }
+  function setupApi() {
+    mocks.api.mockImplementation((path) => Promise.resolve(path.endsWith("/execution-review") ? checked
+      : path.endsWith("/resolve") ? { id: "correction-decision", amount: "18.00" } : retained));
+  }
+
+  it("requires an explicit date, offset and evidence, then a separate accrual confirmation", async () => {
+    setupApi(); subject();
+    const check = await screen.findByRole("button", { name: "Check corrected date" });
+    expect(check).toBeDisabled();
+    expect(screen.getByLabelText("Date and time")).toHaveValue("");
+    expect(screen.getByLabelText("UTC offset at execution")).toHaveValue("");
+    expect(screen.queryByLabelText("Decision reason")).not.toBeInTheDocument();
+    fillCorrection();
+    fireEvent.click(check);
+    const accrue = await screen.findByRole("button", { name: "Record work: 18.00 ILS" });
+    expect(accrue).toBeDisabled();
+    expect(screen.getByText("Not recorded")).toBeInTheDocument();
+    expect(screen.getByText("Execution time for this decision")).toBeInTheDocument();
+    const previewRequest = mocks.api.mock.calls.find(([path]) => path.endsWith("/execution-review"));
+    expect(JSON.parse(previewRequest?.[1].body)).toEqual(correction);
+    expect(mocks.api.mock.calls.some(([path]) => path.endsWith("/resolve"))).toBe(false);
+    fireEvent.change(screen.getByLabelText("Decision reason"), { target: { value: "Verified independent execution and assignment records" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(accrue);
+    await screen.findByText("Work recorded");
+    const decision = mocks.api.mock.calls.find(([path]) => path.endsWith("/resolve"));
+    expect(JSON.parse(decision?.[1].body)).toEqual({ request_id: expect.any(String), review_token: checked.review_token,
+      reason: "Verified independent execution and assignment records", confirm_execution_evidence: true,
+      execution_correction: correction });
+  });
+
+  it.each(["Date and time", "UTC offset at execution", "Evidence reference"])("invalidates the calculation when %s changes", async (label) => {
+    setupApi(); subject();
+    await screen.findByLabelText("Date and time"); fillCorrection();
+    fireEvent.click(screen.getByRole("button", { name: "Check corrected date" }));
+    await screen.findByLabelText("Decision reason");
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.change(screen.getByLabelText(label), { target: { value: label === "Date and time" ? "2026-10-02T10:00"
+      : label === "UTC offset at execution" ? "+02:00" : "Another independent site record" } });
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByText("18.00 ILS")).not.toBeInTheDocument();
+    expect(mocks.api.mock.calls.some(([path]) => path.endsWith("/resolve"))).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Check corrected date" }));
+    expect(await screen.findByRole("checkbox")).not.toBeChecked();
+  });
+
+  it("does not retain stale prices after a failed correction check", async () => {
+    setupApi(); subject();
+    await screen.findByLabelText("Date and time"); fillCorrection();
+    fireEvent.click(screen.getByRole("button", { name: "Check corrected date" }));
+    await screen.findByText("18.00 ILS");
+    mocks.api.mockRejectedValueOnce(new Error("Evidence changed"));
+    fireEvent.click(screen.getByRole("button", { name: "Check corrected date" }));
+    await screen.findByRole("alert");
+    expect(screen.queryByText("18.00 ILS")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Decision reason")).not.toBeInTheDocument();
+  });
+
+  it("never offers a payout when the corrected date still has no factory price", async () => {
+    mocks.api.mockImplementation((path) => Promise.resolve(path.endsWith("/execution-review")
+      ? { ...retained, execution_correction: correction, analysis_code: "MISSING_FACTORY_PRICE" } : retained));
+    subject(); await screen.findByLabelText("Date and time"); fillCorrection();
+    fireEvent.click(screen.getByRole("button", { name: "Check corrected date" }));
+    await screen.findByText("The applicable version has no price for this work.");
+    expect(screen.queryByLabelText("Decision reason")).not.toBeInTheDocument();
+    expect(screen.queryByText("18.00 ILS")).not.toBeInTheDocument();
+  });
+
+  it("does not expose correction controls to finance readers", async () => {
+    mocks.scope = "FINANCE"; mocks.api.mockResolvedValue(retained); subject();
+    await screen.findByText("Execution time is missing. Receipt time cannot replace it.");
+    expect(screen.queryByLabelText("Date and time")).not.toBeInTheDocument();
+    expect(mocks.api).toHaveBeenCalledOnce();
+  });
+
+  it("clears the corrected date and evidence on another record", async () => {
+    setupApi(); const view = subject();
+    await screen.findByLabelText("Date and time"); fillCorrection();
+    fireEvent.click(screen.getByRole("button", { name: "Check corrected date" }));
+    await screen.findByText("18.00 ILS");
+    view.rerender(<PriceConflictReviewDialog source="sync_event" itemId="another-command" onClose={view.onClose} />);
+    expect(await screen.findByLabelText("Date and time")).toHaveValue("");
+    expect(screen.getByLabelText("Evidence reference")).toHaveValue("");
+    expect(screen.queryByText("18.00 ILS")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["ru", "Дата и время", "Смещение UTC на дату работы", "Проверить исправленную дату"],
+    ["he", "תאריך ושעה", "הפרש UTC במועד הביצוע", "בדיקת המועד המתוקן"],
+  ])("localizes correction controls in %s", async (locale, dateLabel, offsetLabel, action) => {
+    mocks.locale = locale; mocks.api.mockResolvedValue(retained); subject();
+    expect(await screen.findByLabelText(dateLabel)).toHaveValue("");
+    expect(screen.getByLabelText(offsetLabel)).toHaveValue("");
+    expect(screen.getByRole("button", { name: action })).toBeDisabled();
+    expect(screen.queryByText("Verified execution time")).not.toBeInTheDocument();
+  });
+});
+
 describe("read-only price conflict review", () => {
   it("shows the original version and execution quote, without an editing or retry command", async () => {
     const { onClose } = subject();
