@@ -61,6 +61,8 @@ for (const t of languages) {
     expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(900);
     if (t.locale === "he") await expect(dialog).toHaveAttribute("dir", "rtl");
     await page.screenshot({ path: testInfo.outputPath(`missing-price-${t.locale}.png`) });
+    await dialog.getByRole("button", { name: t.close, exact: true }).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath(`missing-price-${t.locale}-details.png`) });
     await dialog.getByRole("button", { name: t.close, exact: true }).click();
     await expect(dialog).toBeHidden();
     expect(writes).toEqual([]);
