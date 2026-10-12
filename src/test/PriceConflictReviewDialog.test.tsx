@@ -56,6 +56,7 @@ describe("execution time correction", () => {
     expect(check).toBeDisabled();
     expect(screen.getByLabelText("Date and time")).toHaveValue("");
     expect(screen.getByLabelText("UTC offset at execution")).toHaveValue("");
+    expect(screen.getByRole("combobox")).toHaveAccessibleName("UTC offset at execution");
     expect(screen.queryByLabelText("Decision reason")).not.toBeInTheDocument();
     fillCorrection();
     fireEvent.click(check);

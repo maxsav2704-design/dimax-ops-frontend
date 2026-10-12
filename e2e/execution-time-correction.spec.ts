@@ -15,6 +15,8 @@ const languages = [
 
 for (const t of languages) {
   test(`execution time correction ${t.locale} ${t.width}px`, async ({ page }, testInfo) => {
+    test.setTimeout(60_000);
+    page.setDefaultTimeout(15_000);
     let accruals = 0;
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));

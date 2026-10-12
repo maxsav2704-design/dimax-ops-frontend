@@ -250,15 +250,15 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
                     <Input id="execution-time" type="datetime-local" step="60" value={executionTime} required dir="ltr"
                       disabled={resolution.isPending} onChange={(event) => { setExecutionTime(event.target.value); invalidateCorrection(); }} />
                   </label>
-                  <label className="space-y-1 text-sm" htmlFor="execution-offset">
-                    <span>{copy("UTC offset at execution", "Смещение UTC на дату работы", "הפרש UTC במועד הביצוע")}</span>
+                  <div className="space-y-1 text-sm">
+                    <label htmlFor="execution-offset">{copy("UTC offset at execution", "Смещение UTC на дату работы", "הפרש UTC במועד הביצוע")}</label>
                     <select id="execution-offset" value={utcOffset} required dir="ltr" disabled={resolution.isPending}
                       className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       onChange={(event) => { setUtcOffset(event.target.value); invalidateCorrection(); }}>
                       <option value="">{copy("Select offset", "Выберите смещение", "בחירת הפרש")}</option>
                       {utcOffsets.map((offset) => <option key={offset} value={offset}>UTC{offset}</option>)}
                     </select>
-                  </label>
+                  </div>
                 </div>
                 <label className="block space-y-1 text-sm" htmlFor="execution-evidence">
                   <span>{copy("Evidence reference", "Подтверждающий документ / запись", "אסמכתא לראיות")}</span>
