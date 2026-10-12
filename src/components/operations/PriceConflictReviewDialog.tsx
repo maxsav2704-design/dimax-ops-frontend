@@ -68,6 +68,15 @@ type Review = {
   time_correction_available?: boolean;
   execution_correction?: ExecutionCorrection | null;
   review_token: string | null;
+  missing_price?: null | {
+    price_list_id: string;
+    version: number;
+    kind: "DOOR" | "ADDON";
+    target_id: string;
+    performed_at: string;
+    effective_from: string;
+    selection: "AT_EXECUTION" | "FIRST_CONFIRMED_LEGACY";
+  };
   applicable_quote: null | {
     version: number;
     rate: string;
@@ -162,6 +171,7 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
   };
   const proposedTime = correctionTime(executionTime, utcOffset);
   const quote = review?.applicable_quote;
+  const missingPrice = review?.analysis_code === "MISSING_FACTORY_PRICE" ? review.missing_price : null;
   const submit = () => {
     if (!canResolve || !review?.resolution_available || !review.review_token || !confirmed
       || reason.trim().length < 10 || query.isFetching || (correction && correctionQuery.isFetching)
@@ -231,8 +241,29 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
               {field(copy("Version in original command", "Версия в исходной команде", "גרסה בפקודה המקורית"),
                 review.seen_version != null ? `v${review.seen_version}` : review.seen_version_status === "MISSING"
                   ? copy("Not recorded", "Не записана", "לא נרשמה") : copy("Unverified", "Не проверена", "לא אומתה"))}
-              {field(copy("Confirmed version at execution", "Подтверждённая версия на дату работы", "גרסה מאושרת במועד הביצוע"), quote ? `v${quote.version}` : null)}
+              {field(copy("Applicable confirmed version", "Применимый подтверждённый прайс", "המחירון המאושר המתאים"),
+                quote ? `v${quote.version}` : missingPrice ? `v${missingPrice.version}` : null)}
             </dl>
+            {review.analysis_code === "MISSING_FACTORY_PRICE" && (
+              <section className="space-y-2 border-t border-border pt-3" aria-labelledby="missing-factory-price-title">
+                <h3 id="missing-factory-price-title" className="text-sm font-semibold">{copy(
+                  "Separate factory approval required", "Нужно отдельное подтверждение завода", "נדרש אישור נפרד מהמפעל")}</h3>
+                <p className="text-sm leading-5">{copy(
+                  "Work is retained without earnings. A later price list does not price this work retroactively; a factory decision for this specific work is required.",
+                  "Работа сохранена без начисления. Более поздний прайс не задаёт ей цену задним числом: нужно решение завода именно по этой работе.",
+                  "העבודה נשמרה ללא זקיפת שכר. מחירון מאוחר יותר אינו קובע לה מחיר בדיעבד; נדרשת החלטת מפעל לעבודה המסוימת הזאת.")}</p>
+                {missingPrice && <dl className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+                  {field(copy("Price selection", "Основание выбора прайса", "בסיס בחירת המחירון"), missingPrice.selection === "FIRST_CONFIRMED_LEGACY"
+                    ? copy("First factory-confirmed list (legacy work)", "Первый подтверждённый прайс (старая очередь)", "המחירון המאושר הראשון (תור ישן)")
+                    : copy("Price list effective at execution", "Прайс, действовавший при выполнении", "המחירון שהיה בתוקף בעת הביצוע"))}
+                  {field(copy("Date used for price selection", "Дата для выбора прайса", "המועד ששימש לבחירת המחירון"), date(missingPrice.performed_at))}
+                </dl>}
+                <p className="text-xs leading-5 text-text-secondary">{copy(
+                  "No approval request has been sent from this review. The separate approval process is not available here yet. Keep the original queue entry.",
+                  "Из этого окна запрос не отправлялся. Отдельное согласование пока недоступно. Сохраните исходную запись в очереди.",
+                  "לא נשלחה בקשת אישור מחלון זה. תהליך האישור הנפרד עדיין אינו זמין כאן. יש לשמור את הרשומה המקורית בתור.")}</p>
+              </section>
+            )}
             {canResolve && query.data?.time_correction_available && (
               <form className="space-y-3 border-t border-border pt-3" onSubmit={(event) => {
                 event.preventDefault();
@@ -300,6 +331,10 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
               <dl className="min-w-0">
                 {field(copy("Command", "Команда", "פקודה"), review.id)}
                 {field(copy("Price list in command", "Прайс в команде", "מחירון בפקודה"), review.seen_price_list_id)}
+                {missingPrice && <>
+                  {field(copy("Price list missing the rate", "Прайс без нужной ставки", "המחירון שחסר בו התעריף"), missingPrice.price_list_id)}
+                  {field(copy("Work type ID", "ID типа работы", "מזהה סוג העבודה"), missingPrice.target_id)}
+                </>}
               </dl>
             </details>
             {canResolve && review.resolution_available && review.review_token && quote && (

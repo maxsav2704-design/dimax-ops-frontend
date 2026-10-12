@@ -33,6 +33,59 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
+describe("work missing a factory rate", () => {
+  const missing = { ...review, analysis_code: "MISSING_FACTORY_PRICE", applicable_quote: null, preview_amount: null,
+    missing_price: { price_list_id: "first-confirmed-list", version: 3, kind: "ADDON", target_id: "unpriced-work-type",
+      performed_at: "2026-10-02T08:00:00Z", effective_from: "2026-10-01T07:00:00Z", selection: "AT_EXECUTION" } };
+
+  it.each([
+    ["en", "Separate factory approval required", "Price list effective at execution"],
+    ["ru", "Нужно отдельное подтверждение завода", "Прайс, действовавший при выполнении"],
+    ["he", "נדרש אישור נפרד מהמפעל", "המחירון שהיה בתוקף בעת הביצוע"],
+  ])("shows the verified missing-rate version without offering accrual in %s", async (locale, heading, selection) => {
+    mocks.locale = locale; mocks.api.mockResolvedValue(missing); subject();
+    expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
+    expect(screen.getByText("v3")).toBeInTheDocument();
+    expect(screen.getByText(selection)).toBeInTheDocument();
+    expect(screen.getByText("first-confirmed-list")).toBeInTheDocument();
+    expect(screen.getByText("unpriced-work-type")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByText(/18.00/)).not.toBeInTheDocument();
+    expect(mocks.api).toHaveBeenCalledOnce();
+    expect(mocks.api.mock.calls[0][1]?.method).toBeUndefined();
+  });
+
+  it("distinguishes the first-confirmed legacy basis from a later active list", async () => {
+    mocks.api.mockResolvedValue({ ...missing, missing_price: { ...missing.missing_price, selection: "FIRST_CONFIRMED_LEGACY" } });
+    subject();
+    await screen.findByText("First factory-confirmed list (legacy work)");
+    expect(screen.getByText(/No approval request has been sent/)).toBeInTheDocument();
+    expect(screen.getByText(/A later price list does not price this work retroactively/)).toBeInTheDocument();
+  });
+
+  it("remains compatible with older servers returning no missing-rate context", async () => {
+    mocks.api.mockResolvedValue({ ...missing, missing_price: undefined }); subject();
+    await screen.findByRole("heading", { name: "Separate factory approval required" });
+    expect(screen.queryByText("v3")).not.toBeInTheDocument();
+    expect(screen.queryByText("Price list missing the rate")).not.toBeInTheDocument();
+  });
+
+  it("hides loaded missing-rate evidence when permissions are lost", async () => {
+    mocks.api.mockResolvedValue(missing); const view = subject();
+    await screen.findByText("v3"); mocks.allowed = false;
+    view.rerender(<PriceConflictReviewDialog source="sync_queue" itemId="price-command" onClose={view.onClose} />);
+    expect(screen.queryByText("v3")).not.toBeInTheDocument();
+    expect(screen.queryByText("first-confirmed-list")).not.toBeInTheDocument();
+  });
+
+  it("does not mislabel invalid factory authority as a missing rate", async () => {
+    mocks.api.mockResolvedValue({ ...missing, analysis_code: "INVALID_FACTORY_EVIDENCE", missing_price: null }); subject();
+    await screen.findByText("Factory approval or the price timeline could not be verified.");
+    expect(screen.queryByRole("heading", { name: "Separate factory approval required" })).not.toBeInTheDocument();
+  });
+});
+
 describe("execution time correction", () => {
   const retained = { ...review, performed_at: null, analysis_code: "MISSING_EXECUTION_TIME",
     applicable_quote: null, preview_amount: null, time_correction_available: true };
