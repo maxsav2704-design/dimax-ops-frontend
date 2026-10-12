@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkPriceProposalForm } from "@/components/operations/WorkPriceProposalForm";
 
 const mocks = vi.hoisted(() => ({ api: vi.fn(), locale: "en" }));
@@ -28,9 +28,12 @@ async function fill() {
 }
 
 beforeEach(() => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   mocks.locale = "en"; mocks.api.mockReset();
   mocks.api.mockImplementation((url) => Promise.resolve(url.endsWith("/review") ? prepared : result));
 });
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("retained work price proposal", () => {
   it("does not call the API until explicitly opened", () => {
