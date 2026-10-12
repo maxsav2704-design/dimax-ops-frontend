@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { WorkPriceProposalForm } from "@/components/operations/WorkPriceProposalForm";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { canAccessAdminModule } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
@@ -259,9 +260,12 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
                   {field(copy("Date used for price selection", "Дата для выбора прайса", "המועד ששימש לבחירת המחירון"), date(missingPrice.performed_at))}
                 </dl>}
                 <p className="text-xs leading-5 text-text-secondary">{copy(
-                  "No approval request has been sent from this review. The separate approval process is not available here yet. Keep the original queue entry.",
-                  "Из этого окна запрос не отправлялся. Отдельное согласование пока недоступно. Сохраните исходную запись в очереди.",
-                  "לא נשלחה בקשת אישור מחלון זה. תהליך האישור הנפרד עדיין אינו זמין כאן. יש לשמור את הרשומה המקורית בתור.")}</p>
+                  "No approval request has been sent from this review. A saved price proposal is not factory confirmation. Keep the original queue entry.",
+                  "Из этого окна запрос не отправлялся. Сохранённое предложение цены не является подтверждением завода. Сохраните исходную запись в очереди.",
+                  "לא נשלחה בקשת אישור מחלון זה. הצעת מחיר שמורה אינה אישור מפעל. יש לשמור את הרשומה המקורית בתור.")}</p>
+                {canResolve && missingPrice && <WorkPriceProposalForm
+                  key={`${source}:${itemId}:${JSON.stringify(review.execution_correction ?? null)}`}
+                  source={source} itemId={itemId} correction={review.execution_correction} />}
               </section>
             )}
             {canResolve && query.data?.time_correction_available && (

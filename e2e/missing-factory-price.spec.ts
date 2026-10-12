@@ -2,18 +2,25 @@ import { expect, test } from "@playwright/test";
 
 const languages = [
   { locale: "en", width: 1280, open: "Review price", heading: "Separate factory approval required",
-    selection: "First factory-confirmed list (legacy work)", close: "Close review" },
+    selection: "First factory-confirmed list (legacy work)", close: "Close review", prepare: "Prepare a price proposal",
+    rate: "Proposed rate (ILS / pcs)", reason: "Reason", agreement: "Factory request / agreement reference",
+    evidence: "Execution and assignment evidence", save: "Save proposal, without accrual", saved: "Proposal saved, not factory-approved" },
   { locale: "ru", width: 390, open: "Разобрать цену", heading: "Нужно отдельное подтверждение завода",
-    selection: "Первый подтверждённый прайс (старая очередь)", close: "Закрыть проверку" },
+    selection: "Первый подтверждённый прайс (старая очередь)", close: "Закрыть проверку", prepare: "Подготовить предложение цены",
+    rate: "Предлагаемая ставка (ILS / pcs)", reason: "Причина", agreement: "Запрос / договорённость с заводом",
+    evidence: "Подтверждение выполнения и назначения", save: "Сохранить предложение без начисления", saved: "Предложение сохранено, заводом не подтверждено" },
   { locale: "he", width: 390, open: "בדיקת מחיר", heading: "נדרש אישור נפרד מהמפעל",
-    selection: "המחירון המאושר הראשון (תור ישן)", close: "סגירת הבדיקה" },
+    selection: "המחירון המאושר הראשון (תור ישן)", close: "סגירת הבדיקה", prepare: "הכנת הצעת מחיר",
+    rate: "תעריף מוצע (ILS / pcs)", reason: "נימוק", agreement: "אסמכתא לבקשה / להסכמה עם המפעל",
+    evidence: "ראיות לביצוע ולשיוך המתקין", save: "שמירת הצעה ללא זקיפת שכר", saved: "ההצעה נשמרה, טרם אושרה במפעל" },
 ];
 
 for (const t of languages) {
-  test(`missing factory rate stays read-only ${t.locale} ${t.width}px`, async ({ page }, testInfo) => {
+  test(`missing rate proposal never accrues ${t.locale} ${t.width}px`, async ({ page }, testInfo) => {
     test.setTimeout(60_000);
     page.setDefaultTimeout(15_000);
     const errors: string[] = [], writes: string[] = [];
+    let savedBody: Record<string, unknown> | undefined;
     page.on("pageerror", (error) => errors.push(error.message));
     await page.setViewportSize({ width: t.width, height: 900 });
     await page.addInitScript((locale) => localStorage.setItem("dimax_locale", locale), t.locale);
@@ -25,6 +32,13 @@ for (const t of languages) {
       if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers });
       if (request.method() !== "GET") writes.push(path);
       const reply = (json: unknown) => route.fulfill({ headers, json });
+      if (path.endsWith("/work-price-proposals/review")) return reply({ review_token: "a".repeat(64), latest: null,
+        scope: { project_name: "QA project", installer_name: "QA Installer", work_label: "Door adjustment",
+          quantity: "1.50", unit: "pcs", missing_price: { performed_at: "2026-10-01T08:00:00Z" } } });
+      if (path.endsWith("/work-price-proposals")) {
+        savedBody = request.postDataJSON();
+        return reply({ id: "qa-proposal", version: 1, rate: "9.01", amount: "13.52", created_at: "2026-10-12T09:00:00Z" });
+      }
       if (path.endsWith("/auth/me")) return reply({ id: "qa-owner", company_id: "qa-company", role: "ADMIN", admin_scope: "OWNER", can_view_rates: true });
       if (path.endsWith("/sync/health/summary")) return reply({ max_cursor: 0,
         counts: { ok: 0, warn: 0, danger: 1, total: 1, dead: 0, never_seen: 0, danger_pct: 100, problem_total: 1 },
@@ -52,7 +66,7 @@ for (const t of languages) {
     await expect(dialog.getByText(t.selection, { exact: true })).toBeVisible();
     await expect(dialog.getByRole("checkbox")).toHaveCount(0);
     await expect(dialog.getByRole("textbox")).toHaveCount(0);
-    await expect(dialog.getByRole("button")).toHaveCount(2); // Only the two close controls.
+    await expect(dialog.getByRole("button")).toHaveCount(3); // Close controls and explicit proposal preparation.
     expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
     const bounds = await dialog.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
@@ -63,9 +77,25 @@ for (const t of languages) {
     await page.screenshot({ path: testInfo.outputPath(`missing-price-${t.locale}.png`) });
     await dialog.getByRole("button", { name: t.close, exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: testInfo.outputPath(`missing-price-${t.locale}-details.png`) });
+    expect(writes).toEqual([]);
+    await dialog.getByRole("button", { name: t.prepare, exact: true }).click();
+    await dialog.getByLabel(t.rate, { exact: true }).fill("9,01");
+    await dialog.getByLabel(t.reason, { exact: true }).fill("Missing historical factory price");
+    await dialog.getByLabel(t.agreement, { exact: true }).fill("Factory request QA-2026");
+    await dialog.getByLabel(t.evidence, { exact: true }).fill("Independent site record QA-100");
+    await dialog.getByRole("checkbox").check();
+    await expect(dialog.getByText("1.50 × 9.01 = 13.52 ILS", { exact: true })).toBeVisible();
+    expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`work-proposal-${t.locale}-form.png`) });
+    await dialog.getByRole("button", { name: t.save, exact: true }).click();
+    await expect(dialog.getByText(t.saved, { exact: false })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(`work-proposal-${t.locale}-saved.png`) });
+    expect(savedBody).toMatchObject({ rate: "9.01", confirm_execution_evidence: true });
+    expect(savedBody).not.toHaveProperty("amount");
+    expect(writes).toEqual(["/api/v1/admin/sync/price-conflicts/sync_queue/qa-unpriced/work-price-proposals/review",
+      "/api/v1/admin/sync/price-conflicts/sync_queue/qa-unpriced/work-price-proposals"]);
     await dialog.getByRole("button", { name: t.close, exact: true }).click();
     await expect(dialog).toBeHidden();
-    expect(writes).toEqual([]);
     expect(errors).toEqual([]);
   });
 }
