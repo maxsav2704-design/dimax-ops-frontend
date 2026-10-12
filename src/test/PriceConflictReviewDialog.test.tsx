@@ -186,6 +186,43 @@ describe("authorized execution-price decision", () => {
     expect(screen.queryByLabelText("Decision reason")).not.toBeInTheDocument();
   });
 
+  it("clears confirmation when another command is selected", async () => {
+    mocks.api.mockResolvedValue(resolvable);
+    const view = subject();
+    await screen.findByLabelText("Decision reason");
+    fillDecision();
+    expect(screen.getByRole("checkbox")).toBeChecked();
+    mocks.api.mockResolvedValue({ ...resolvable, id: "other", review_token: "b".repeat(64),
+      analysis_code: "HISTORICAL_PRICE_REVIEW", requires_execution_evidence: true });
+    view.rerender(<PriceConflictReviewDialog source="sync_event" itemId="other" onClose={view.onClose} />);
+    await screen.findByText("Work arrived after a price change. Verify execution evidence before using the old price.");
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Record work: 18.00 ILS" })).toBeDisabled();
+  });
+
+  it.each([
+    ["en", "Decision reason", "Record work: 18.00 ILS", "independent of the device clock"],
+    ["ru", "Причина решения", "Учесть работу: 18.00 ILS", "независимому от часов телефона"],
+    ["he", "נימוק להחלטה", "רישום עבודה: 18.00 ILS", "שאינן שעון המכשיר"],
+  ])("requires independent execution evidence for a historical price in %s", async (locale, label, action, evidence) => {
+    mocks.locale = locale;
+    mocks.api.mockImplementation((path) => Promise.resolve(path.endsWith("/resolve") ? result : {
+      ...resolvable, analysis_code: "HISTORICAL_PRICE_REVIEW", requires_execution_evidence: true,
+    }));
+    subject();
+    const button = await screen.findByRole("button", { name: action });
+    expect(button).toBeDisabled();
+    expect(screen.getByRole("checkbox")).toHaveAccessibleName(new RegExp(evidence));
+    fireEvent.change(screen.getByLabelText(label), { target: { value: "Verified against the site work record" } });
+    expect(button).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(button);
+    await waitFor(() => expect(mocks.api.mock.calls.some((call) => call[1]?.method === "POST")).toBe(true));
+    const sent = mocks.api.mock.calls.find((call) => call[1]?.method === "POST");
+    expect(JSON.parse(sent?.[1].body)).toMatchObject({ confirm_execution_evidence: true,
+      reason: "Verified against the site work record", review_token: resolvable.review_token });
+  });
+
   it.each([
     ["ru", "Причина решения", "Учесть работу: 18.00 ILS"],
     ["he", "נימוק להחלטה", "רישום עבודה: 18.00 ILS"],

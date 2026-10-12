@@ -15,6 +15,9 @@ import { readableApiError } from "@/lib/api-error-display";
 import { useI18n } from "@/lib/i18n";
 
 const explanations = {
+  ASSIGNMENT_EVIDENCE_REQUIRED: ["The server cannot verify assignment at the reported execution time.", "Сервер не может подтвердить назначение монтажника на указанную дату работы.", "השרת אינו יכול לאמת את שיוך המתקין במועד הביצוע המדווח."],
+  HISTORICAL_PRICE_REVIEW: ["Work arrived after a price change. Verify execution evidence before using the old price.", "Работа получена после смены прайса. Для прежней цены нужно проверить подтверждение даты выполнения.", "העבודה התקבלה לאחר שינוי מחירון. יש לאמת את מועד הביצוע לפני שימוש במחיר הקודם."],
+  LEGACY_EXECUTION_REVIEW: ["The device reports work before factory pricing began. Verify it before applying the first confirmed price list.", "Телефон указал работу до включения заводского прайса. Проверьте её перед применением первого подтверждённого прайса.", "המכשיר מדווח על עבודה לפני הפעלת מחירון המפעל. יש לאמת אותה לפני החלת המחירון המאושר הראשון."],
   VERSION_MISMATCH: ["The recorded version differs from the execution-time price.", "Версия в команде отличается от цены на момент выполнения.", "הגרסה שנרשמה שונה מהמחיר במועד הביצוע."],
   VERSION_MATCH: ["The versions match now. Other work conditions still need review.", "Сейчас версии совпадают. Остальные условия работы ещё нужно проверить.", "הגרסאות תואמות כעת. עדיין נדרשת בדיקת יתר תנאי העבודה."],
   NO_VERSION: ["The original command has no price version.", "В исходной команде нет версии прайса.", "בפקודה המקורית אין גרסת מחירון."],
@@ -45,6 +48,7 @@ type Review = {
   analysis_code: keyof typeof explanations;
   preview_amount: string | null;
   resolution_available: boolean;
+  requires_execution_evidence?: boolean;
   review_token: string | null;
   applicable_quote: null | {
     version: number;
@@ -54,6 +58,13 @@ type Review = {
     effective_from: string;
     selection: "AT_EXECUTION" | "FIRST_CONFIRMED_LEGACY";
   };
+};
+
+type ResolutionRequest = {
+  request_id: string;
+  review_token: string;
+  reason: string;
+  confirm_execution_evidence?: boolean;
 };
 
 export function PriceConflictReviewDialog({ source, itemId, onClose }: {
@@ -66,7 +77,7 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
   const [confirmed, setConfirmed] = useState(false);
-  const attempt = useRef<{ request_id: string; review_token: string; reason: string } | null>(null);
+  const attempt = useRef<ResolutionRequest | null>(null);
   const [sessionChanged, setSessionChanged] = useState(false);
   const allowed = !sessionChanged && canAccessAdminModule(session, "price-lists");
   const canResolve = allowed && (session?.admin_scope === "OWNER" || session?.admin_scope === "OPERATIONS");
@@ -85,8 +96,12 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
     staleTime: 0,
     refetchOnWindowFocus: false,
   });
+  useEffect(() => {
+    setConfirmed(false);
+    attempt.current = null;
+  }, [source, itemId, query.data?.review_token]);
   const resolution = useMutation({
-    mutationFn: (body: { request_id: string; review_token: string; reason: string }) => apiFetch<{
+    mutationFn: (body: ResolutionRequest) => apiFetch<{
       id: string; completed_work_id: string; amount: string; resolved_at: string;
     }>(`/api/v1/admin/sync/price-conflicts/${source}/${encodeURIComponent(itemId)}/resolve`, {
       method: "POST", body: JSON.stringify(body),
@@ -106,7 +121,8 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
       || reason.trim().length < 10 || query.isFetching || resolution.isPending || resolution.isSuccess) return;
     // Keep the same key after an uncertain network outcome so retry cannot accrue twice.
     if (!attempt.current || attempt.current.review_token !== review.review_token || attempt.current.reason !== reason.trim()) {
-      attempt.current = { request_id: crypto.randomUUID(), review_token: review.review_token, reason: reason.trim() };
+      attempt.current = { request_id: crypto.randomUUID(), review_token: review.review_token, reason: reason.trim(),
+        ...(review.requires_execution_evidence ? { confirm_execution_evidence: true } : {}) };
     }
     resolution.mutate(attempt.current);
   };
@@ -203,7 +219,10 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
                 <label className="flex items-start gap-2 text-sm" htmlFor="price-decision-confirm">
                   <Checkbox id="price-decision-confirm" checked={confirmed} disabled={resolution.isPending}
                     onCheckedChange={(value) => setConfirmed(value === true)} className="mt-0.5" />
-                  <span>{copy("I checked the installer, work, quantity and execution time.",
+                  <span>{review.requires_execution_evidence ? copy(
+                    "I verified execution time and installer assignment using evidence independent of the device clock, and described it in the reason.",
+                    "Я проверил дату работы и назначение монтажника по подтверждению, независимому от часов телефона, и описал его в причине решения.",
+                    "אימתתי את מועד הביצוע ואת שיוך המתקין לפי ראיות שאינן שעון המכשיר, ותיארתי אותן בנימוק.") : copy("I checked the installer, work, quantity and execution time.",
                     "Я проверил монтажника, работу, количество и время выполнения.", "בדקתי את המתקין, העבודה, הכמות ומועד הביצוע.")}</span>
                 </label>
                 {resolution.isError && <div className="space-y-2">
