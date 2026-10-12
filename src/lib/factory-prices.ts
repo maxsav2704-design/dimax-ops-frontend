@@ -2,6 +2,10 @@ import { apiFetch } from "@/lib/api";
 
 export const PRICE_API = "/api/v1/admin/price-lists";
 export const PRICE_PAGE_SIZE = 20;
+export type FactoryContact = {
+  id: string; factory_name: string; recipient_name: string; recipient_email: string;
+  authority_reference: string; approved_by: string; created_at: string;
+};
 export type CompanyPricingState = {
   mode: "LEGACY" | "FACTORY";
   active_price: null | {

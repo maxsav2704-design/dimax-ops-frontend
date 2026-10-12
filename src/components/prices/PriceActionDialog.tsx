@@ -7,21 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n";
-import { PRICE_API, isUncertainPriceWrite, priceErrorStatus, priceRequest, type Invitation, type IssuedInvitation, type PriceDetail } from "@/lib/factory-prices";
+import { PRICE_API, isUncertainPriceWrite, priceErrorStatus, priceRequest, type FactoryContact, type Invitation, type IssuedInvitation, type PriceDetail } from "@/lib/factory-prices";
 import { priceCopy } from "./copy";
 
 export type PriceAction = { kind: "invite" | "cancel"; list: PriceDetail } | { kind: "revoke"; list: PriceDetail; invitation: Invitation };
 
-export function PriceActionDialog({ action, onClose, onChanged }: {
-  action: PriceAction; onClose: () => void; onChanged: () => void;
+export function PriceActionDialog({ action, contact, onClose, onChanged }: {
+  action: PriceAction; contact?: FactoryContact | null; onClose: () => void; onChanged: () => void;
 }) {
   const { locale, dir } = useI18n();
   const t = priceCopy[locale];
   const invite = action.kind === "invite";
   const title = invite ? t.invite : action.kind === "cancel" ? t.cancel : t.revoke;
-  const [factory, setFactory] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const factory = contact?.factory_name ?? "";
+  const name = contact?.recipient_name ?? "";
+  const email = contact?.recipient_email ?? "";
   const [hours, setHours] = useState("72");
   const [sendEmail, setSendEmail] = useState(false);
   const [emailQueued, setEmailQueued] = useState(false);
@@ -85,9 +85,9 @@ export function PriceActionDialog({ action, onClose, onChanged }: {
       </div> : <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         <fieldset disabled={busy || blocked} className="space-y-4">
           {invite ? <>
-            <label className="block space-y-1 text-sm">{t.factory}<Input aria-label={t.factory} value={factory} minLength={2} maxLength={160} required onChange={(e) => setFactory(e.target.value)} /></label>
-            <label className="block space-y-1 text-sm">{t.representative}<Input aria-label={t.representative} value={name} minLength={2} maxLength={160} required onChange={(e) => setName(e.target.value)} /></label>
-            <label className="block space-y-1 text-sm">{t.email}<Input aria-label={t.email} type="email" dir="ltr" value={email} maxLength={320} required onChange={(e) => setEmail(e.target.value)} /></label>
+            <label className="block space-y-1 text-sm">{t.factory}<Input aria-label={t.factory} value={factory} readOnly /></label>
+            <label className="block space-y-1 text-sm">{t.representative}<Input aria-label={t.representative} value={name} readOnly /></label>
+            <label className="block space-y-1 text-sm">{t.email}<Input aria-label={t.email} dir="ltr" value={email} readOnly /></label>
             <label className="block space-y-1 text-sm">{t.hours}<Input aria-label={t.hours} type="number" min={1} max={168} step={1} value={hours} required onChange={(e) => setHours(e.target.value)} /></label>
             <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={sendEmail} onChange={(event) => setSendEmail(event.target.checked)} className="mt-1 size-4 shrink-0" />{copy("Email this invitation to the representative", "Отправить приглашение на почту представителя", "שליחת ההזמנה בדוא״ל לנציג")}</label>
             <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-1 size-4 shrink-0" />{t.inviteConsent}</label>

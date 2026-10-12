@@ -26,6 +26,12 @@ artifacts/
 tsconfig.tsbuildinfo
 .env.e2e.local
 
+# Local credentials; only sanitized environment templates may be tracked.
+.env
+.env.*
+!.env*.example
+!.env*.sample
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

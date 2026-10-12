@@ -3,7 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { StrictMode, type ReactNode } from "react";
 import PriceListsPage from "@/views/PriceListsPage";
-import { PRICE_API } from "@/lib/factory-prices";
+import { FactoryContactPanel } from "@/components/prices/FactoryContactPanel";
+import { PRICE_API, type FactoryContact } from "@/lib/factory-prices";
 
 const { api, auth } = vi.hoisted(() => ({ api: vi.fn(), auth: vi.fn() }));
 vi.mock("@/lib/api", () => ({ apiFetch: api }));
@@ -20,6 +21,9 @@ const invitation = {
   created_at: "2026-10-02T09:00:00Z", expires_at: "2099-10-02T09:00:00Z", revoked_at: null, revocation_reason: null, confirmed_at: null, confirmed_name: null,
 };
 function reads(path: string) {
+  if (path === `${PRICE_API}/factory/contact`) return { id: "contact-1", factory_name: "QA Factory",
+    recipient_name: "Representative", recipient_email: "rep@example.test", authority_reference: "Agreement 42",
+    approved_by: "owner", created_at: "2026-10-02T08:00:00Z" };
   if (path === `${PRICE_API}/state`) return { mode: "LEGACY", active_price: null };
   if (path.startsWith(`${PRICE_API}?`)) return { items: [draft], total: 1, latest_version: 1 };
   if (path === `${PRICE_API}/list-1`) return draft;
@@ -38,9 +42,10 @@ async function inviteForm() {
   await waitFor(() => expect(screen.getByRole("button", { name: "Create factory link" })).toBeEnabled());
   fireEvent.click(screen.getByRole("button", { name: "Create factory link" }));
   const form = within(screen.getByRole("dialog"));
-  fireEvent.change(form.getByLabelText("Factory"), { target: { value: "QA Factory" } });
-  fireEvent.change(form.getByLabelText("Representative"), { target: { value: "Representative" } });
-  fireEvent.change(form.getByLabelText("Representative email"), { target: { value: "rep@example.test" } });
+  expect(form.getByLabelText("Factory")).toHaveAttribute("readonly");
+  expect(form.getByLabelText("Representative")).toHaveAttribute("readonly");
+  expect(form.getByLabelText("Representative email")).toHaveValue("rep@example.test");
+  expect(form.getByLabelText("Representative email")).toHaveAttribute("readonly");
   fireEvent.click(form.getByRole("checkbox", { name: /The contact is correct/ }));
   return form;
 }
@@ -49,6 +54,56 @@ describe("factory price management", () => {
   beforeEach(() => {
     auth.mockReturnValue({ role: "ADMIN", admin_scope: "OWNER", can_view_rates: true });
     api.mockReset(); api.mockImplementation(async (path: string) => reads(path));
+  });
+  it("lets operations invite but not replace the factory contact", async () => {
+    auth.mockReturnValue({ role: "ADMIN", admin_scope: "OPERATIONS", can_view_rates: true });
+    mount(); await inviteForm();
+    expect(screen.queryByRole("button", { name: "Approve contact" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Revoke contact" })).not.toBeInTheDocument();
+  });
+  it("requires an explicit reason before the owner revokes factory authority", async () => {
+    api.mockImplementation(async (path: string) => path.endsWith("/factory/contact/revoke") ? { ok: true } : reads(path));
+    mount(); await screen.findByText("Entrance");
+    fireEvent.click(screen.getByRole("button", { name: "Revoke contact" }));
+    const form = within(screen.getByRole("dialog"));
+    expect(form.getByRole("button", { name: "Confirm action" })).toBeDisabled();
+    fireEvent.change(form.getByLabelText("Revocation reason"), { target: { value: "Representative left factory" } });
+    fireEvent.click(form.getByRole("button", { name: "Confirm action" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    const write = api.mock.calls.find(([path]) => path.endsWith("/factory/contact/revoke"))!;
+    expect(JSON.parse(write[1].body)).toEqual({ expected_contact_id: "contact-1", reason: "Representative left factory" });
+  });
+  it("blocks invitations until the owner registers a contact", async () => {
+    api.mockImplementation(async (path: string) => path === `${PRICE_API}/factory/contact` ? null : reads(path));
+    mount(); await screen.findByText("Entrance");
+    expect(screen.getByRole("button", { name: "Create factory link" })).toBeDisabled();
+    expect(screen.getByText(/owner must approve a contact/)).toBeInTheDocument();
+  });
+  it("requires authority evidence and explicit owner consent when changing a contact", async () => {
+    mount(); await screen.findByText("Entrance");
+    fireEvent.click(screen.getByRole("button", { name: "Approve contact" }));
+    const form = within(screen.getByRole("dialog"));
+    expect(form.getByRole("button", { name: "Confirm action" })).toBeDisabled();
+    fireEvent.change(form.getByLabelText("Representative email"), { target: { value: "new@example.test" } });
+    fireEvent.change(form.getByLabelText("Authority reference"), { target: { value: "Verified agreement 43" } });
+    fireEvent.click(form.getByRole("checkbox", { name: /verified this representative/ }));
+    fireEvent.click(form.getByRole("button", { name: "Confirm action" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    const write = api.mock.calls.find(([path, init]) => path === `${PRICE_API}/factory/contact` && init?.method === "POST")!;
+    expect(JSON.parse(write[1].body)).toMatchObject({ expected_contact_id: "contact-1", recipient_email: "new@example.test", authority_reference: "Verified agreement 43" });
+  });
+  it("keeps the original contact revision when a background refresh changes the contact", async () => {
+    const contact = reads(`${PRICE_API}/factory/contact`) as FactoryContact;
+    const props = { owner: true, pending: false, error: false, onChanged: vi.fn() };
+    const view = render(<FactoryContactPanel {...props} contact={contact} />);
+    fireEvent.click(screen.getByRole("button", { name: "Approve contact" }));
+    view.rerender(<FactoryContactPanel {...props} contact={{ ...contact, id: "contact-new" }} />);
+    const form = within(screen.getByRole("dialog"));
+    fireEvent.click(form.getByRole("checkbox", { name: /verified this representative/ }));
+    fireEvent.click(form.getByRole("button", { name: "Confirm action" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    const write = api.mock.calls.find(([path, init]) => path === `${PRICE_API}/factory/contact` && init?.method === "POST")!;
+    expect(JSON.parse(write[1].body).expected_contact_id).toBe("contact-1");
   });
   it.each([
     { role: "INSTALLER", admin_scope: null, can_view_rates: false },

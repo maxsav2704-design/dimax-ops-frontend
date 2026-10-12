@@ -8,6 +8,7 @@ import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { Button } from "@/components/ui/button";
 import { PriceListEditor } from "@/components/prices/PriceListEditor";
 import { PriceActionDialog, type PriceAction } from "@/components/prices/PriceActionDialog";
+import { FactoryContactPanel } from "@/components/prices/FactoryContactPanel";
 import { PriceReconciliationDialog } from "@/components/prices/PriceReconciliationDialog";
 import { PriceActivationDialog } from "@/components/prices/PriceActivationDialog";
 import { activationCopy } from "@/components/prices/activation-copy";
@@ -22,7 +23,7 @@ import { onAuthChanged } from "@/lib/auth-session";
 import { useI18n } from "@/lib/i18n";
 import { formatLocaleDateTime, formatLocaleMoney } from "@/lib/formatting";
 import { cn } from "@/lib/utils";
-import { PRICE_API, PRICE_PAGE_SIZE, invitationStatus, type PriceDetail, type PricePage, type InvitationPage } from "@/lib/factory-prices";
+import { PRICE_API, PRICE_PAGE_SIZE, invitationStatus, type FactoryContact, type PriceDetail, type PricePage, type InvitationPage } from "@/lib/factory-prices";
 
 function Badge({ status, t }: { status: "DRAFT" | "CONFIRMED" | "CANCELLED" | "REVOKED" | "PENDING" | "EXPIRED" | "SUPERSEDED"; t: PriceCopy }) {
   return <span className={cn("inline-block max-w-full rounded-md border px-2 py-1 text-xs leading-4",
@@ -39,15 +40,16 @@ function Pager({ offset, total, onChange, t }: { offset: number; total: number; 
   </div>;
 }
 
-function PriceWorkspace({ writable }: { writable: boolean }) {
+function PriceWorkspace({ writable, owner }: { writable: boolean; owner: boolean }) {
   const { locale, dir } = useI18n();
   const t = priceCopy[locale];
   const client = useQueryClient();
   const pricing = useCompanyPricingState();
+  const contact = useQuery({ queryKey: ["factory-contact"], queryFn: ({ signal }) => apiFetch<FactoryContact | null>(`${PRICE_API}/factory/contact`, { signal }) });
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [editor, setEditor] = useState<{ base?: PriceDetail; latest: number } | null>(null);
-  const [action, setAction] = useState<PriceAction | null>(null);
+  const [action, setAction] = useState<(PriceAction & { contact?: FactoryContact }) | null>(null);
   const [activation, setActivation] = useState<PriceDetail | null>(null);
   const [reconciliation, setReconciliation] = useState<{ list?: PriceDetail } | null>(null);
   const [historyOffset, setHistoryOffset] = useState(0);
@@ -81,6 +83,7 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
       {writable && <Button onClick={() => setEditor({ base: row, latest })} disabled={!fresh || (!!selectedId && !row)}><Plus className="me-2 size-4" />{t.newVersion}</Button>}
     </>} />
     <CompanyPriceStatus {...pricing} onOpen={(id) => { setSelected(id); setHistoryOffset(0); }} />
+    <FactoryContactPanel contact={contact.data} owner={owner} pending={contact.isPending} error={contact.isError} onChanged={refresh} />
     {lists.isPending && <p role="status" className="text-sm">{t.loading}</p>}
     {problem && <div role="alert" className="text-sm text-status-problem-fg">{t.error}</div>}
     {lists.data && !lists.isError && <div className="grid min-w-0 gap-6 xl:grid-cols-[15rem_minmax(0,1fr)]">
@@ -106,7 +109,7 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
                 : locale === "ru" ? "Не действует сейчас" : locale === "he" ? "אינה בתוקף כעת" : "Not currently effective"}</span>}
             </div>
             {writable && row.status === "DRAFT" && <div className="flex flex-wrap gap-2">
-              {row.version === latest && <Button variant="outline" onClick={() => setAction({ kind: "invite", list: row })} disabled={!fresh}><Link2 className="me-2 size-4" />{t.invite}</Button>}
+              {row.version === latest && <Button variant="outline" onClick={() => setAction({ kind: "invite", list: row, contact: contact.data ?? undefined })} disabled={!fresh || !contact.data || contact.isError || contact.isFetching}><Link2 className="me-2 size-4" />{t.invite}</Button>}
               <Button variant="outline" onClick={() => setAction({ kind: "cancel", list: row })} disabled={!fresh}><Ban className="me-2 size-4" />{t.cancel}</Button>
             </div>}
             {writable && row.status === "CONFIRMED" && pricing.state &&
@@ -151,17 +154,17 @@ function PriceWorkspace({ writable }: { writable: boolean }) {
     {editor && <PriceListEditor {...editor} onClose={() => { setEditor(null); refresh(); }} onSaved={(saved) => {
       setEditor(null); setOffset(0); setSelected(saved.id); setHistoryOffset(0); refresh();
     }} />}
-    {action && <PriceActionDialog action={action} onClose={() => setAction(null)} onChanged={refresh} />}
+    {action && <PriceActionDialog action={action} contact={action.contact} onClose={() => setAction(null)} onChanged={refresh} />}
     {activation && <PriceActivationDialog list={activation} onClose={() => { setActivation(null); refresh(); }} onChanged={refresh} />}
     {reconciliation && <PriceReconciliationDialog list={reconciliation.list} onClose={() => setReconciliation(null)} />}
   </div>;
 }
 
-function PriceSession({ writable }: { writable: boolean }) {
+function PriceSession({ writable, owner }: { writable: boolean; owner: boolean }) {
   // Financial responses live only for this mounted authenticated workspace.
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } }));
   useEffect(() => () => { client.clear(); }, [client]);
-  return <QueryClientProvider client={client}><PriceWorkspace writable={writable} /></QueryClientProvider>;
+  return <QueryClientProvider client={client}><PriceWorkspace writable={writable} owner={owner} /></QueryClientProvider>;
 }
 
 export default function PriceListsPage() {
@@ -170,7 +173,7 @@ export default function PriceListsPage() {
   const [epoch, setEpoch] = useState(0);
   useEffect(() => onAuthChanged(() => setEpoch((value) => value + 1)), []);
   return <DashboardLayout>{canAccessAdminModule(session, "price-lists") ?
-    <PriceSession key={epoch} writable={canRunPrivilegedAdminActions(session)} /> :
+    <PriceSession key={epoch} writable={canRunPrivilegedAdminActions(session)} owner={session?.admin_scope === "OWNER"} /> :
     <p role="status" className="p-6 text-sm">{priceCopy[locale].denied}</p>}
   </DashboardLayout>;
 }

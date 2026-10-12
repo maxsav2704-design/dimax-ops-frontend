@@ -23,6 +23,9 @@ function scenario() {
       if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers });
       if (path.endsWith("/auth/me")) return reply({ id: "qa-owner", company_id: "qa-company", role: "ADMIN", admin_scope: scope, can_view_rates: true });
       if (path.endsWith("/price-lists/state")) return reply({ mode: "LEGACY", active_price: null });
+      if (path.endsWith("/price-lists/factory/contact")) return reply({ id: "contact-1", factory_name: "QA Factory",
+        recipient_name: "QA Representative", recipient_email: "factory@example.test", authority_reference: "QA owner verification",
+        approved_by: "qa-owner", created_at: "2026-10-02T08:00:00Z" });
       if (path.endsWith("/door-types")) return reply([{ id: "door-1", name: lists[0].items[0].name }]);
       if (path.endsWith("/addons/types")) return reply({ items: [{ id: "addon-1", name: "Adjustment", unit: "hour", is_active: true }] });
       if (path === "/api/v1/admin/price-lists" && request.method() === "POST") {
@@ -94,9 +97,10 @@ test("admin draft, revoke, reissue and factory decision", async ({ page, browser
   for (let attempt = 0; attempt < 2; attempt++) {
     await page.getByRole("button", { name: "Create factory link", exact: true }).click();
     dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Factory", { exact: true }).fill("QA Factory");
-    await dialog.getByLabel("Representative", { exact: true }).fill("QA Representative");
-    await dialog.getByLabel("Representative email", { exact: true }).fill("factory@example.test");
+    await expect(dialog.getByLabel("Factory", { exact: true })).toHaveValue("QA Factory");
+    await expect(dialog.getByLabel("Representative", { exact: true })).toHaveValue("QA Representative");
+    await expect(dialog.getByLabel("Representative email", { exact: true })).toHaveValue("factory@example.test");
+    await expect(dialog.getByLabel("Representative email", { exact: true })).toHaveAttribute("readonly", "");
     await dialog.getByRole("checkbox", { name: /The contact is correct/ }).check();
     await dialog.getByRole("button", { name: "Create link", exact: true }).click();
     await expect(dialog.getByText("Link created, not sent")).toBeVisible();
