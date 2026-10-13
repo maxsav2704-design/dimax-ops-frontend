@@ -66,6 +66,7 @@ type EarningsLedgerItem = {
   installer_id: string;
   installer_name: string | null;
   can_correct: boolean;
+  work_price?: { id: string; approval_id: string; reason: string; accrued_at: string } | null;
 };
 
 type EarningsLedgerResponse = {
@@ -976,6 +977,12 @@ export default function EarningsLedgerPage() {
                       </div>
                     </div>
 
+                    {item.work_price && <details className="mt-3 text-xs leading-5">
+                      <summary className="cursor-pointer font-medium">{copy("Separate factory approval", "Отдельное подтверждение завода", "אישור נפרד מהמפעל")}</summary>
+                      <p className="break-words">{item.work_price.reason}</p>
+                      <p>{formatCompactDateTime(item.work_price.accrued_at)}</p>
+                      <p className="break-all" dir="ltr">{item.work_price.approval_id}</p>
+                    </details>}
                     {reference || item.reason ? (
                       <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-[12px] leading-5 text-text-secondary">
                         {reference ? (
@@ -1112,6 +1119,12 @@ export default function EarningsLedgerPage() {
                             {item.reason}
                           </div>
                         ) : null}
+                        {item.work_price && <details className="mt-1 max-w-[360px] text-xs leading-5">
+                          <summary className="cursor-pointer font-medium">{copy("Separate factory approval", "Отдельное подтверждение завода", "אישור נפרד מהמפעל")}</summary>
+                          <p className="break-words">{item.work_price.reason}</p>
+                          <p>{formatCompactDateTime(item.work_price.accrued_at)}</p>
+                          <p className="break-all" dir="ltr">{item.work_price.approval_id}</p>
+                        </details>}
                       </TableCell>
                       <TableCell className="text-end tabular-nums">
                         {formatMoney(item.quantity)}

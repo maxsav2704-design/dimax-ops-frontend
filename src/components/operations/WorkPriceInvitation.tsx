@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { useI18n } from "@/lib/i18n";
+import { WorkPriceAccrual } from "@/components/operations/WorkPriceAccrual";
 
 type Contact = { id: string; factory_name: string; recipient_name: string; recipient_email: string };
 type Invitation = { id: string; recipient_name: string; recipient_email: string; expires_at: string;
@@ -46,21 +47,22 @@ export function WorkPriceInvitation({ proposalId, proposalHash }: { proposalId: 
   </Button>;
   return <section className="space-y-3 border-t border-border pt-3 text-sm" aria-label={c("Factory invitation", "Приглашение заводу", "הזמנה למפעל")}>
     <h4 className="font-semibold">{c("Factory confirmation", "Согласование с заводом", "אישור המפעל")}</h4>
-    <p className="text-xs leading-5 text-text-secondary">{c("Confirmation is separate from accrual. No earnings or price-list changes are made here.",
-      "Подтверждение отдельно от начисления. Заработок и общий прайс здесь не меняются.", "האישור נפרד מזקיפת שכר. השכר והמחירון הכללי אינם משתנים כאן.")}</p>
+    <p className="text-xs leading-5 text-text-secondary">{c("Factory confirmation does not accrue earnings. Accrual requires a separate administrator decision.",
+      "Подтверждение завода не начисляет заработок. Для начисления нужно отдельное решение администратора.", "אישור המפעל אינו זוקף שכר. זקיפת שכר דורשת החלטה נפרדת של מנהל.")}</p>
     {busy && <p role="status">{c("Please wait...", "Подождите...", "נא להמתין...")}</p>}
     {contact.data && <p className="break-words">{contact.data.factory_name} · {contact.data.recipient_name}<br />
       <bdi>{contact.data.recipient_email}</bdi></p>}
     {contact.isSuccess && !contact.data && <p role="alert">{c("The owner must approve a factory contact in Price lists first.",
       "Сначала OWNER должен утвердить контакт завода в разделе прайсов.", "תחילה על הבעלים לאשר איש קשר של המפעל במחירונים.")}</p>}
     {latest && <div role="status" className="space-y-1 border-s-2 border-border ps-3">
-      <p className="font-medium">{confirmed ? c("Factory confirmed; not accrued", "Завод подтвердил; не начислено", "אושר במפעל; טרם נזקף לשכר")
+      <p className="font-medium">{confirmed ? c("Factory confirmed", "Завод подтвердил", "אושר במפעל")
         : latest.revoked_at ? c("Invitation revoked", "Приглашение отозвано", "ההזמנה בוטלה")
         : pending ? c("Invitation created; check delivery in Operations", "Приглашение создано; доставка в разделе операций", "ההזמנה נוצרה; מצב המשלוח במסך התפעול")
         : c("Invitation expired", "Срок приглашения истёк", "תוקף ההזמנה פג")}</p>
       <p className="break-words">{latest.recipient_name} · <bdi>{latest.recipient_email}</bdi></p>
       <p>{confirmed ? `${latest.confirmed_name} · ${date(latest.confirmed_at!)}` : date(latest.expires_at)}</p>
     </div>}
+    {confirmed && latest && <WorkPriceAccrual key={latest.id} approvalId={latest.id} />}
     {!confirmed && <>
       <label className="flex flex-wrap items-center gap-2">{c("Link lifetime", "Срок ссылки", "תוקף הקישור")}
         <select aria-label={c("Link lifetime", "Срок ссылки", "תוקף הקישור")} className="rounded-md border border-border bg-surface px-2 py-2"

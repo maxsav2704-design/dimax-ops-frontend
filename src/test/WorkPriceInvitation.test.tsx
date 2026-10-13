@@ -60,11 +60,12 @@ describe("factory invitation for one work", () => {
     fireEvent.click(screen.getByRole("checkbox")); fireEvent.click(screen.getByRole("button", { name: "Check status" }));
     expect(screen.getByRole("checkbox")).not.toBeChecked();
   });
-  it("shows a recorded decision without offering resend, revoke or accrual", async () => {
+  it("shows a recorded decision with separate accrual review but no resend or revoke", async () => {
     mocks.api.mockImplementation((url) => Promise.resolve(url.endsWith("/contact") ? contact : { total: 1,
       items: [{ ...invitation, confirmed_at: "2026-10-13T10:00:00Z", confirmed_name: "Factory QA" }] }));
     subject(); fireEvent.click(screen.getByRole("button", { name: "Factory confirmation" }));
-    await screen.findByText("Factory confirmed; not accrued");
+    await screen.findByText("Factory confirmed");
+    expect(screen.getByRole("button", { name: "Review accrual" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Send invitation by email" })).not.toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });

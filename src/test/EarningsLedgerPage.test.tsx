@@ -186,6 +186,7 @@ describe("EarningsLedgerPage", () => {
               addon_fact_id: "addon-fact-1",
               addon_type_id: "addon-type-1",
               addon_type_name: "Frame foam",
+              work_price: { id: "one-work-decision", approval_id: "factory-work-approval", reason: "Factory adjustment agreement", accrued_at: "2026-05-07T10:05:00Z" },
               addon_comment: "Installer added offline",
               installer_id: "installer-1",
               installer_name: "Installer Alpha",
@@ -219,6 +220,8 @@ describe("EarningsLedgerPage", () => {
     expect((await screen.findAllByText("Ashdod Tower")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("A-101").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Frame foam").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Separate factory approval").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Factory adjustment agreement").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Installer added offline").length).toBeGreaterThan(0);
     expect(screen.getAllByText("REVERSAL").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Admin rollback").length).toBeGreaterThan(0);

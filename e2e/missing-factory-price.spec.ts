@@ -19,12 +19,13 @@ const languages = [
 ];
 
 for (const t of languages) {
-  test(`missing rate proposal never accrues ${t.locale} ${t.width}px`, async ({ page }, testInfo) => {
+  test(`missing rate requires factory approval and separate accrual ${t.locale} ${t.width}px`, async ({ page }, testInfo) => {
     test.setTimeout(60_000);
     page.setDefaultTimeout(15_000);
     const errors: string[] = [], writes: string[] = [];
     let savedBody: Record<string, unknown> | undefined;
     let invitation: Record<string, unknown> | null = null;
+    let accrued = false;
     page.on("pageerror", (error) => errors.push(error.message));
     await page.setViewportSize({ width: t.width, height: 900 });
     await page.addInitScript((locale) => localStorage.setItem("dimax_locale", locale), t.locale);
@@ -36,6 +37,19 @@ for (const t of languages) {
       if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers });
       if (request.method() !== "GET") writes.push(path);
       const reply = (json: unknown) => route.fulfill({ headers, json });
+      if (path.endsWith("/work-price-approvals/qa-invite/accrual")) {
+        const receipt = { id: "qa-decision", completed_work_id: "qa-work", amount: "13.52", accrued_at: "2026-10-14T08:00:00Z", reason: "Independent factory decision checked" };
+        if (request.method() === "POST") {
+          expect(request.postDataJSON()).toMatchObject({ approval_hash: "b".repeat(64), confirm_accrual: true, reason: receipt.reason });
+          expect(request.postDataJSON()).not.toHaveProperty("rate");
+          expect(request.postDataJSON()).not.toHaveProperty("amount");
+          accrued = true; return reply(receipt);
+        }
+        return reply({ approval_hash: "b".repeat(64), reference: "QA-101 / floor 2", rate: "9.01", amount: "13.52", currency: "ILS",
+          confirmed_name: "QA Representative", confirmed_at: "2026-10-13T10:00:00Z", accrual: accrued ? receipt : null,
+          scope: { project_name: "QA project", installer_name: "QA Installer", work_label: "Door adjustment", quantity: "1.50", unit: "pcs",
+            missing_price: { performed_at: "2026-10-01T08:00:00Z" } } });
+      }
       if (path.endsWith("/factory/contact")) return reply({ id: "approved-contact", factory_name: "QA Factory",
         recipient_name: "QA Representative", recipient_email: "factory@example.org" });
       if (path.endsWith("/invitations/qa-invite/revoke")) { invitation = { ...invitation, revoked_at: "2026-10-13T10:00:00Z" }; return reply(invitation); }
@@ -122,6 +136,22 @@ for (const t of languages) {
     await expect(dialog.getByText(t.revoked, { exact: true })).toBeVisible();
     expect(writes.slice(2)).toEqual(["/api/v1/admin/sync/work-price-proposals/qa-proposal/invitations",
       "/api/v1/admin/sync/work-price-proposals/qa-proposal/invitations/qa-invite/revoke"]);
+    invitation = { id: "qa-invite", recipient_name: "QA Representative", recipient_email: "factory@example.org",
+      expires_at: "2099-10-13T10:00:00Z", email_outbox_id: "qa-email", revoked_at: null,
+      confirmed_at: "2026-10-13T10:00:00Z", confirmed_name: "QA Representative" };
+    const label = (en: string, ru: string, he: string) => t.locale === "ru" ? ru : t.locale === "he" ? he : en;
+    await dialog.getByRole("button", { name: label("Check status", "Проверить статус", "בדיקת מצב"), exact: true }).click();
+    await dialog.getByRole("button", { name: label("Review accrual", "Проверить начисление", "בדיקת זקיפת שכר"), exact: true }).click();
+    const accrual = dialog.getByRole("region", { name: label("Accrual", "Начисление", "זקיפת שכר"), exact: true });
+    await accrual.getByLabel(label("Accrual reason", "Основание начисления", "נימוק לזקיפת השכר"), { exact: true }).fill("Independent factory decision checked");
+    await expect(accrual.getByRole("checkbox")).not.toBeChecked();
+    await accrual.getByRole("checkbox").check();
+    expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`work-accrual-${t.locale}.png`) });
+    await accrual.getByRole("button", { name: label("Confirm accrual", "Подтвердить начисление", "אישור זקיפת השכר"), exact: true }).click();
+    await expect(accrual.getByText(label("Accrual recorded", "Начисление записано", "זקיפת השכר נרשמה"), { exact: true })).toBeVisible();
+    await expect(accrual.getByRole("checkbox")).toHaveCount(0);
+    expect(writes.filter(path => path.endsWith("/accrual"))).toHaveLength(1);
     await dialog.getByRole("button", { name: t.close, exact: true }).click();
     await expect(dialog).toBeHidden();
     expect(errors).toEqual([]);
