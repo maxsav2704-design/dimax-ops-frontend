@@ -11,9 +11,10 @@ import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { useI18n } from "@/lib/i18n";
 import { proposalAmount, proposalRate } from "@/lib/work-price-proposal";
+import { WorkPriceInvitation } from "./WorkPriceInvitation";
 
 type Correction = { performed_at: string; evidence_reference: string };
-type Proposal = { id: string; version: number; rate: string; amount: string; created_at: string };
+type Proposal = { id: string; version: number; rate: string; amount: string; created_at: string; snapshot_hash?: string };
 type Preparation = {
   review_token: string;
   scope: { quantity: string; unit: string; work_label: string; project_name: string; installer_name: string;
@@ -62,9 +63,9 @@ export function WorkPriceProposalForm({ source, itemId, correction = null }: {
   return <section className="min-w-0 space-y-3 border-t border-border pt-3" aria-labelledby="work-price-proposal-title">
     <h3 id="work-price-proposal-title" className="text-sm font-semibold">{copy("Price for this work only", "Цена только за эту работу", "מחיר לעבודה הזאת בלבד")}</h3>
     <p className="text-xs leading-5 text-text-secondary">{copy(
-      "Preparation only. No factory request is sent and no earnings are recorded. The company price list stays unchanged.",
-      "Только подготовка. Запрос заводу не отправляется, начисления не создаются. Общий прайс не меняется.",
-      "הכנה בלבד. לא נשלחת בקשה למפעל ולא נזקף שכר. המחירון הכללי אינו משתנה.")}</p>
+      "Saving terms does not send a factory request or record earnings. Factory confirmation is separate. The company price list stays unchanged.",
+      "Сохранение условий не отправляет запрос и не создаёт начисление. Согласование с заводом выполняется отдельно. Общий прайс не меняется.",
+      "שמירת התנאים אינה שולחת בקשה למפעל ואינה זוקפת שכר. אישור המפעל נפרד. המחירון הכללי אינו משתנה.")}</p>
     {query.isFetching && <p role="status" className="text-sm">{copy("Checking the retained work...", "Проверяем сохранённую работу...", "בודק את העבודה שנשמרה...")}</p>}
     {query.isError && <div className="space-y-2">
       <p role="alert" className="text-sm text-status-problem-fg">{readableApiError(query.error, locale,
@@ -72,10 +73,11 @@ export function WorkPriceProposalForm({ source, itemId, correction = null }: {
       <Button type="button" variant="outline" onClick={recheck}><RefreshCcw className="me-2 h-4 w-4" />{copy("Check again", "Проверить снова", "בדיקה חוזרת")}</Button>
     </div>}
     {saved && <div role="status" className="space-y-1 border-s-2 border-status-warning-border ps-3 text-sm">
-      <p className="font-medium">{copy("Proposal saved, not factory-approved", "Предложение сохранено, заводом не подтверждено", "ההצעה נשמרה, טרם אושרה במפעל")} · v{saved.version}</p>
+      <p className="font-medium">{copy("Proposed terms saved", "Предложенные условия сохранены", "התנאים המוצעים נשמרו")} · v{saved.version}</p>
       <p dir="ltr">{saved.rate} ILS → {saved.amount} ILS</p>
       <p className="break-all text-xs text-text-secondary">{saved.id}</p>
     </div>}
+    {saved?.snapshot_hash && <WorkPriceInvitation key={saved.id} proposalId={saved.id} proposalHash={saved.snapshot_hash} />}
     {save.isSuccess ? <Button type="button" variant="outline" onClick={recheck}>
       <FilePlus2 className="me-2 h-4 w-4" />{copy("Prepare a new version", "Подготовить новую версию", "הכנת גרסה חדשה")}
     </Button> : prepared && <form className="min-w-0 space-y-3" onSubmit={(event) => {

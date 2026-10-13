@@ -44,7 +44,7 @@ describe("retained work price proposal", () => {
     subject(); await fill();
     expect(screen.getByText("1.50 × 9.01 = 13.52 ILS")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Save proposal, without accrual" }));
-    await screen.findByText(/Proposal saved, not factory-approved/);
+    await screen.findByText(/Proposed terms saved/);
     const body = JSON.parse(mocks.api.mock.calls.find(([url]) => url === path)![1].body);
     expect(body).toEqual({ request_id: expect.any(String), review_token: prepared.review_token, rate: "9.01",
       reason: "Missing historical factory rate", agreement_reference: "Factory agreement QA-100",
@@ -71,7 +71,7 @@ describe("retained work price proposal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save proposal, without accrual" }));
     await screen.findByRole("alert");
     fireEvent.click(screen.getByRole("button", { name: "Save proposal, without accrual" }));
-    await screen.findByText(/Proposal saved, not factory-approved/);
+    await screen.findByText(/Proposed terms saved/);
     const bodies = mocks.api.mock.calls.filter(([url]) => url === path).map(([, options]) => options.body);
     expect(bodies).toHaveLength(2); expect(bodies[0]).toBe(bodies[1]);
   });
@@ -90,7 +90,7 @@ describe("retained work price proposal", () => {
     const correction = { performed_at: "2026-10-01T08:00:00Z", evidence_reference: "Site log QA-100" };
     subject(correction); await fill();
     fireEvent.click(screen.getByRole("button", { name: "Save proposal, without accrual" }));
-    await screen.findByText(/Proposal saved, not factory-approved/);
+    await screen.findByText(/Proposed terms saved/);
     expect(JSON.parse(mocks.api.mock.calls[0][1].body)).toEqual({ execution_correction: correction });
     expect(JSON.parse(mocks.api.mock.calls[1][1].body).execution_correction).toEqual(correction);
   });

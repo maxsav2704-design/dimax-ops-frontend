@@ -20,6 +20,33 @@ describe("PriceApprovalPage", () => {
   });
   afterEach(() => { vi.unstubAllGlobals(); });
 
+  it("binds the separate work decision to its displayed identity, quantity and total", async () => {
+    const work = { proposal_id: "proposal", project_name: "Site QA", installer_name: "Installer QA", reference: "B-2-201",
+      performed_at: "2026-10-01T08:00:00Z", quantity: "1.50", amount: "13.52" };
+    fetchMock.mockResolvedValueOnce(reply({ ...draft, work })).mockResolvedValueOnce(reply({ ...draft, work,
+      status: "CONFIRMED", confirmed_name: "Factory QA", confirmed_at: "2026-10-13T10:00:00Z" }));
+    render(<PriceApprovalPage kind="work" />);
+    await screen.findByText("Site QA");
+    expect(screen.getByText("B-2-201")).toBeInTheDocument();
+    expect(screen.getByText("1.50")).toBeInTheDocument();
+    expect(fetchMock.mock.calls[0][0]).toContain("/price-approvals/work/preview");
+    fireEvent.change(screen.getByLabelText("Your full name"), { target: { value: "Factory QA" } });
+    fireEvent.change(screen.getByLabelText("Code from email"), { target: { value: "123456" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm this work and price" }));
+    await screen.findByText("Factory confirmation recorded");
+    expect(fetchMock.mock.calls[1][0]).toContain("/price-approvals/work/confirm");
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ token, expected_version: 2,
+      snapshot_hash: draft.snapshot_hash, signer_name: "Factory QA", accepted: true, verification_code: "123456" });
+  });
+
+  it("does not confirm a work response that lacks work identity", async () => {
+    fetchMock.mockResolvedValue(reply(draft));
+    render(<PriceApprovalPage kind="work" />);
+    await screen.findByRole("alert");
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
   it("previews without confirming, strips the secret and confirms exactly the displayed version", async () => {
     fetchMock.mockResolvedValueOnce(reply(draft)).mockResolvedValueOnce(reply({ ...draft, status: "CONFIRMED",
       confirmed_name: "Representative", confirmed_at: "2026-10-02T12:00:00Z" }));

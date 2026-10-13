@@ -60,7 +60,7 @@ describe("work missing a factory rate", () => {
     mocks.api.mockResolvedValue({ ...missing, missing_price: { ...missing.missing_price, selection: "FIRST_CONFIRMED_LEGACY" } });
     subject();
     await screen.findByText("First factory-confirmed list (legacy work)");
-    expect(screen.getByText(/No approval request has been sent/)).toBeInTheDocument();
+    expect(screen.getByText(/A saved proposal is not factory confirmation/)).toBeInTheDocument();
     expect(screen.getByText(/A later price list does not price this work retroactively/)).toBeInTheDocument();
   });
 

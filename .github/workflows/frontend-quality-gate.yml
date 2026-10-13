@@ -41,7 +41,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Verify retained-work reviews in EN RU HE
-        run: npx playwright test e2e/execution-time-correction.spec.ts e2e/missing-factory-price.spec.ts --workers=1
+        run: npx playwright test e2e/execution-time-correction.spec.ts e2e/missing-factory-price.spec.ts e2e/factory-price-approval.spec.ts e2e/work-price-approval.spec.ts --workers=1
 
       - name: Retain compact review screenshots
         if: always()

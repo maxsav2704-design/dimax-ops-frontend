@@ -15,6 +15,8 @@ type Approval = {
   items: Array<{ kind: "DOOR" | "ADDON"; name: string; unit: string; installer_price: string }>;
   snapshot_hash: string; expires_at: string; status: "PENDING" | "CONFIRMED";
   confirmed_at: string | null; confirmed_name: string | null; affects_earnings: false;
+  work?: { proposal_id: string; project_name: string; installer_name: string; reference: string;
+    performed_at: string; quantity: string; amount: string };
 };
 type CodeRequest = { status: "QUEUED"; expires_at: string; resend_after: string };
 
@@ -73,29 +75,47 @@ class ApprovalError extends Error {
   constructor(readonly status: number) { super("Price approval request failed"); }
 }
 
-async function request<T = Approval>(action: "preview" | "confirm" | "request-code", body: object, signal?: AbortSignal): Promise<T> {
+async function request<T = Approval>(action: "preview" | "confirm" | "request-code", body: object, signal?: AbortSignal, kind: "price-list" | "work" = "price-list"): Promise<T> {
   const controller = new AbortController();
   const abort = () => controller.abort();
   if (signal?.aborted) abort();
   signal?.addEventListener("abort", abort, { once: true });
   const timeout = window.setTimeout(abort, 30_000);
   try {
-    const response = await fetch(`${apiBaseUrl()}/api/v1/public/price-approvals/${action}`, {
+    const response = await fetch(`${apiBaseUrl()}/api/v1/public/price-approvals/${kind === "work" ? "work/" : ""}${action}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store",
       body: JSON.stringify(body), signal: controller.signal,
     });
     if (!response.ok) throw new ApprovalError(response.status);
-    return await response.json() as T;
+    const result = await response.json();
+    if (kind === "work" && action !== "request-code" && (!result.work || !result.work.proposal_id
+      || !result.work.project_name || !result.work.reference || !result.work.performed_at
+      || !result.work.quantity || !result.work.amount)) throw new ApprovalError(422);
+    return result as T;
   } finally {
     window.clearTimeout(timeout);
     signal?.removeEventListener("abort", abort);
   }
 }
 
-export default function PriceApprovalPage() {
+export default function PriceApprovalPage({ kind = "price-list" }: { kind?: "price-list" | "work" }) {
   const { locale, dir } = useI18n();
-  const t = copy[locale];
+  const workCopy = {
+    en: { title: "Price approval for one work", consent: "I represent the named factory and confirm this specific work, execution date, quantity, rate and total.",
+      recordOnly: "This approval applies only to this work. The company price list stays unchanged. Earnings require a separate administrator decision.",
+      confirm: "Confirm this work and price", loading: "Loading work proposal", project: "Project", installer: "Installer", reference: "Work reference",
+      performed: "Execution date", quantity: "Quantity", total: "Total for approval" },
+    ru: { title: "Согласование цены одной работы", consent: "Я представляю указанный завод и подтверждаю эту работу, дату выполнения, количество, ставку и итоговую сумму.",
+      recordOnly: "Подтверждение относится только к этой работе. Общий прайс не меняется. Для начисления необходимо отдельное решение администратора.",
+      confirm: "Подтвердить работу и цену", loading: "Загрузка предложения", project: "Объект", installer: "Монтажник", reference: "Идентификатор работы",
+      performed: "Дата выполнения", quantity: "Количество", total: "Сумма на согласование" },
+    he: { title: "אישור מחיר לעבודה אחת", consent: "אני מייצג את המפעל המצוין ומאשר את העבודה הזאת, מועד הביצוע, הכמות, התעריף והסכום הכולל.",
+      recordOnly: "האישור חל רק על עבודה זו. המחירון הכללי אינו משתנה. זקיפת שכר דורשת החלטה נפרדת של המנהל.",
+      confirm: "אישור העבודה והמחיר", loading: "טעינת הצעת העבודה", project: "פרויקט", installer: "מתקין", reference: "מזהה העבודה",
+      performed: "מועד הביצוע", quantity: "כמות", total: "סכום לאישור" },
+  }[locale];
+  const t = { ...copy[locale], ...(kind === "work" ? workCopy : {}) };
   const [token, setToken] = useState<string | null>(null);
   const initialRead = useRef(false);
   const [data, setData] = useState<Approval | null>(null);
@@ -143,7 +163,7 @@ export default function PriceApprovalPage() {
     const current = advanceGeneration();
     setLoading(true); setError(null); setData(null); setAccepted(false);
     if (!token) { setError("unavailable"); setLoading(false); return; }
-    void request("preview", { token }, controller.signal).then((result) => {
+    void request("preview", { token }, controller.signal, kind).then((result) => {
       if (current === generation.current && !controller.signal.aborted) setData(result);
     }).catch((reason) => {
       if (current === generation.current && !controller.signal.aborted) setError(classify(reason));
@@ -151,7 +171,7 @@ export default function PriceApprovalPage() {
       if (current === generation.current && !controller.signal.aborted) setLoading(false);
     });
     return () => { controller.abort(); advanceGeneration(); };
-  }, [token, retry, classify, advanceGeneration]);
+  }, [token, retry, classify, advanceGeneration, kind]);
 
   useEffect(() => {
     if (!codeRequest) return;
@@ -164,7 +184,7 @@ export default function PriceApprovalPage() {
     submitLock.current = true; setSendingCode(true); setCodeError(null);
     const current = generation.current;
     try {
-      const result = await request<CodeRequest>("request-code", { token });
+      const result = await request<CodeRequest>("request-code", { token }, undefined, kind);
       if (current === generation.current) {
         setCodeRequest(result); setCode(""); setClock(Date.now());
       }
@@ -188,7 +208,7 @@ export default function PriceApprovalPage() {
       const result = await request("confirm", {
         token, expected_version: data.version, snapshot_hash: data.snapshot_hash,
         signer_name: name.trim(), accepted: true, verification_code: code,
-      });
+      }, undefined, kind);
       if (current === generation.current) setData(result);
     } catch (reason) {
       if (current === generation.current) {
@@ -235,6 +255,13 @@ export default function PriceApprovalPage() {
             {[[t.factory, data.factory_name], [t.recipient, data.recipient_name], [t.agreement, data.agreement_reference], [t.reason, data.reason]].map(([label, value]) =>
               <div key={label} className="min-w-0"><dt className="text-text-secondary">{label}</dt><dd className="mt-1 break-words font-medium">{value}</dd></div>)}
           </dl>
+          {kind === "work" && data.work && <dl className="grid min-w-0 gap-4 border-b border-border pb-5 text-sm sm:grid-cols-2">
+            {[[workCopy.project, data.work.project_name], [workCopy.installer, data.work.installer_name],
+              [workCopy.reference, data.work.reference], [workCopy.performed, date(data.work.performed_at)],
+              [workCopy.quantity, data.work.quantity], [workCopy.total, formatLocaleMoney(data.work.amount, data.currency, locale, { minimumFractionDigits: 2 })],
+            ].map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-text-secondary">{label}</dt>
+              <dd className="mt-1 break-words font-medium">{value}</dd></div>)}
+          </dl>}
           <div className="overflow-hidden rounded-lg border border-border bg-surface">
             <table className="w-full table-fixed text-sm">
               <thead className="border-b border-border bg-surface-sunken text-text-secondary"><tr>

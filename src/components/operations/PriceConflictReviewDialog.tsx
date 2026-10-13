@@ -260,9 +260,9 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
                   {field(copy("Date used for price selection", "Дата для выбора прайса", "המועד ששימש לבחירת המחירון"), date(missingPrice.performed_at))}
                 </dl>}
                 <p className="text-xs leading-5 text-text-secondary">{copy(
-                  "No approval request has been sent from this review. A saved price proposal is not factory confirmation. Keep the original queue entry.",
-                  "Из этого окна запрос не отправлялся. Сохранённое предложение цены не является подтверждением завода. Сохраните исходную запись в очереди.",
-                  "לא נשלחה בקשת אישור מחלון זה. הצעת מחיר שמורה אינה אישור מפעל. יש לשמור את הרשומה המקורית בתור.")}</p>
+                  "A saved proposal is not factory confirmation. Check the separate invitation and factory decision below. Keep the original queue entry until accrual is authorized.",
+                  "Сохранённое предложение не является подтверждением завода. Приглашение и решение завода проверяются отдельно ниже. Запись остаётся в очереди до решения о начислении.",
+                  "הצעה שמורה אינה אישור מפעל. ההזמנה והחלטת המפעל נבדקות בנפרד בהמשך. הרשומה נשארת בתור עד לאישור זקיפת השכר.")}</p>
                 {canResolve && missingPrice && <WorkPriceProposalForm
                   key={`${source}:${itemId}:${JSON.stringify(review.execution_correction ?? null)}`}
                   source={source} itemId={itemId} correction={review.execution_correction} />}

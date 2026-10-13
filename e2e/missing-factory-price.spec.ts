@@ -4,15 +4,18 @@ const languages = [
   { locale: "en", width: 1280, open: "Review price", heading: "Separate factory approval required",
     selection: "First factory-confirmed list (legacy work)", close: "Close review", prepare: "Prepare a price proposal",
     rate: "Proposed rate (ILS / pcs)", reason: "Reason", agreement: "Factory request / agreement reference",
-    evidence: "Execution and assignment evidence", save: "Save proposal, without accrual", saved: "Proposal saved, not factory-approved" },
+    evidence: "Execution and assignment evidence", save: "Save proposal, without accrual", saved: "Proposed terms saved",
+    factory: "Factory confirmation", send: "Send invitation by email", reasonRevoke: "Reason for revocation", revoke: "Revoke invitation", revoked: "Invitation revoked" },
   { locale: "ru", width: 390, open: "Разобрать цену", heading: "Нужно отдельное подтверждение завода",
     selection: "Первый подтверждённый прайс (старая очередь)", close: "Закрыть проверку", prepare: "Подготовить предложение цены",
     rate: "Предлагаемая ставка (ILS / pcs)", reason: "Причина", agreement: "Запрос / договорённость с заводом",
-    evidence: "Подтверждение выполнения и назначения", save: "Сохранить предложение без начисления", saved: "Предложение сохранено, заводом не подтверждено" },
+    evidence: "Подтверждение выполнения и назначения", save: "Сохранить предложение без начисления", saved: "Предложенные условия сохранены",
+    factory: "Согласование с заводом", send: "Отправить приглашение на почту", reasonRevoke: "Причина отзыва", revoke: "Отозвать приглашение", revoked: "Приглашение отозвано" },
   { locale: "he", width: 390, open: "בדיקת מחיר", heading: "נדרש אישור נפרד מהמפעל",
     selection: "המחירון המאושר הראשון (תור ישן)", close: "סגירת הבדיקה", prepare: "הכנת הצעת מחיר",
     rate: "תעריף מוצע (ILS / pcs)", reason: "נימוק", agreement: "אסמכתא לבקשה / להסכמה עם המפעל",
-    evidence: "ראיות לביצוע ולשיוך המתקין", save: "שמירת הצעה ללא זקיפת שכר", saved: "ההצעה נשמרה, טרם אושרה במפעל" },
+    evidence: "ראיות לביצוע ולשיוך המתקין", save: "שמירת הצעה ללא זקיפת שכר", saved: "התנאים המוצעים נשמרו",
+    factory: "אישור המפעל", send: "שליחת הזמנה בדוא״ל", reasonRevoke: "סיבת הביטול", revoke: "ביטול הזמנה", revoked: "ההזמנה בוטלה" },
 ];
 
 for (const t of languages) {
@@ -21,6 +24,7 @@ for (const t of languages) {
     page.setDefaultTimeout(15_000);
     const errors: string[] = [], writes: string[] = [];
     let savedBody: Record<string, unknown> | undefined;
+    let invitation: Record<string, unknown> | null = null;
     page.on("pageerror", (error) => errors.push(error.message));
     await page.setViewportSize({ width: t.width, height: 900 });
     await page.addInitScript((locale) => localStorage.setItem("dimax_locale", locale), t.locale);
@@ -32,12 +36,24 @@ for (const t of languages) {
       if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers });
       if (request.method() !== "GET") writes.push(path);
       const reply = (json: unknown) => route.fulfill({ headers, json });
+      if (path.endsWith("/factory/contact")) return reply({ id: "approved-contact", factory_name: "QA Factory",
+        recipient_name: "QA Representative", recipient_email: "factory@example.org" });
+      if (path.endsWith("/invitations/qa-invite/revoke")) { invitation = { ...invitation, revoked_at: "2026-10-13T10:00:00Z" }; return reply(invitation); }
+      if (path.endsWith("/invitations")) {
+        if (request.method() === "POST") {
+          expect(request.postDataJSON()).toMatchObject({ factory_contact_id: "approved-contact", proposal_hash: "f".repeat(64), expires_in_hours: 72 });
+          invitation = { id: "qa-invite", recipient_name: "QA Representative", recipient_email: "factory@example.org",
+            expires_at: "2099-10-13T10:00:00Z", revoked_at: null, confirmed_at: null, confirmed_name: null, email_outbox_id: "qa-email" };
+          return reply(invitation);
+        }
+        return reply({ total: invitation ? 1 : 0, items: invitation ? [invitation] : [] });
+      }
       if (path.endsWith("/work-price-proposals/review")) return reply({ review_token: "a".repeat(64), latest: null,
         scope: { project_name: "QA project", installer_name: "QA Installer", work_label: "Door adjustment",
           quantity: "1.50", unit: "pcs", missing_price: { performed_at: "2026-10-01T08:00:00Z" } } });
       if (path.endsWith("/work-price-proposals")) {
         savedBody = request.postDataJSON();
-        return reply({ id: "qa-proposal", version: 1, rate: "9.01", amount: "13.52", created_at: "2026-10-12T09:00:00Z" });
+        return reply({ id: "qa-proposal", version: 1, rate: "9.01", amount: "13.52", created_at: "2026-10-12T09:00:00Z", snapshot_hash: "f".repeat(64) });
       }
       if (path.endsWith("/auth/me")) return reply({ id: "qa-owner", company_id: "qa-company", role: "ADMIN", admin_scope: "OWNER", can_view_rates: true });
       if (path.endsWith("/sync/health/summary")) return reply({ max_cursor: 0,
@@ -94,6 +110,18 @@ for (const t of languages) {
     expect(savedBody).not.toHaveProperty("amount");
     expect(writes).toEqual(["/api/v1/admin/sync/price-conflicts/sync_queue/qa-unpriced/work-price-proposals/review",
       "/api/v1/admin/sync/price-conflicts/sync_queue/qa-unpriced/work-price-proposals"]);
+    await dialog.getByRole("button", { name: t.factory, exact: true }).click();
+    await expect(dialog.getByText("factory@example.org", { exact: true })).toBeVisible();
+    await dialog.getByRole("checkbox").check();
+    await dialog.getByRole("button", { name: t.send, exact: true }).click();
+    await expect(dialog.getByRole("button", { name: t.revoke, exact: true })).toBeVisible();
+    expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`work-invitation-${t.locale}.png`) });
+    await dialog.getByLabel(t.reasonRevoke, { exact: true }).fill("Factory request withdrawn");
+    await dialog.getByRole("button", { name: t.revoke, exact: true }).click();
+    await expect(dialog.getByText(t.revoked, { exact: true })).toBeVisible();
+    expect(writes.slice(2)).toEqual(["/api/v1/admin/sync/work-price-proposals/qa-proposal/invitations",
+      "/api/v1/admin/sync/work-price-proposals/qa-proposal/invitations/qa-invite/revoke"]);
     await dialog.getByRole("button", { name: t.close, exact: true }).click();
     await expect(dialog).toBeHidden();
     expect(errors).toEqual([]);
