@@ -33,6 +33,7 @@ describe("separate factory work accrual", () => {
   it("requires a review, reason and unchecked consent; never submits a rate", async () => {
     subject(); expect(mocks.api).not.toHaveBeenCalled(); await open();
     expect(screen.getByText("1.50 × 9.01 = 13.52 ILS")).toBeInTheDocument();
+    expect(screen.getByText("1.50 pcs")).toBeInTheDocument();
     const save = screen.getByRole("button", { name: "Confirm accrual" });
     expect(save).toBeDisabled(); expect(screen.getByRole("checkbox")).not.toBeChecked();
     expect(screen.getAllByRole("textbox")).toHaveLength(1);

@@ -52,6 +52,7 @@ export function WorkPriceAccrual({ approvalId }: { approvalId: string }) {
         <dt>{c("Installer", "Монтажник", "מתקין")}</dt><dd>{data.scope.installer_name}</dd>
         <dt>{c("Work", "Работа", "עבודה")}</dt><dd>{data.scope.work_label}<br /><bdi>{data.reference}</bdi></dd>
         <dt>{c("Performed", "Выполнено", "בוצע")}</dt><dd>{date(data.scope.missing_price.performed_at)}</dd>
+        <dt>{c("Quantity", "Количество", "כמות")}</dt><dd><bdi>{data.scope.quantity} {data.scope.unit}</bdi></dd>
         <dt>{c("Factory decision", "Подтверждение завода", "אישור המפעל")}</dt><dd>{data.confirmed_name}<br />{date(data.confirmed_at)}</dd>
         <dt>{c("Calculation", "Расчёт", "חישוב")}</dt><dd className="font-semibold tabular-nums"><bdi>{data.scope.quantity} × {data.rate} = {data.amount} {data.currency}</bdi></dd>
       </dl>
