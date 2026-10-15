@@ -26,6 +26,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { PriceConflictReviewDialog } from "@/components/operations/PriceConflictReviewDialog";
 import {
+  InlineNotice,
   KpiCard as DimaxKpiCard,
   MetricRow,
   WidgetCard,
@@ -776,15 +777,6 @@ function extractBatchOutboxIds(result: OperationsBatchResult | null): string[] {
     .filter(
       (value, index, self) => Boolean(value) && self.indexOf(value) === index,
     );
-}
-
-function operationsNoticeClass(tone: "success" | "error"): string {
-  return cn(
-    "rounded-lg border px-4 py-3 text-[13px]",
-    tone === "success"
-      ? "border-status-ok-border bg-status-ok-bg text-status-ok-fg"
-      : "border-status-problem-border bg-status-problem-bg text-status-problem-fg",
-  );
 }
 
 function freshnessBadgeClass(state: string): string {
@@ -2749,19 +2741,11 @@ export default function OperationsPage() {
           </div>
         </section>
 
-        {hasError && (
-          <div className={operationsNoticeClass("error")}>
-            {loadErrorMessage}
-          </div>
-        )}
+        {hasError && <InlineNotice tone="error">{loadErrorMessage}</InlineNotice>}
         {actionFeedback && (
-          <div
-            className={operationsNoticeClass(
-              actionFeedback.tone === "success" ? "success" : "error",
-            )}
-          >
+          <InlineNotice tone={actionFeedback.tone === "success" ? "success" : "error"}>
             {actionFeedback.message}
-          </div>
+          </InlineNotice>
         )}
 
         <WidgetCard

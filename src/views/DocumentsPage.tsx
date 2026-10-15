@@ -3,9 +3,7 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertCircle,
   Archive,
-  CheckCheck,
   Download,
   FileText,
   Loader2,
@@ -18,6 +16,7 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import {
+  InlineNotice,
   KpiCard as DimaxKpiCard,
   WidgetCard,
 } from "@/components/dimax";
@@ -144,15 +143,6 @@ function filterButtonClass(active: boolean): string {
   return cn(active ? "dmx-primary-action h-9" : "dmx-secondary-action h-9");
 }
 
-function noticeClass(tone: "success" | "error"): string {
-  return cn(
-    "flex rounded-lg border px-4 py-3 text-[13px]",
-    tone === "success" &&
-      "items-center gap-2 border-status-ok-border bg-status-ok-bg text-status-ok-fg",
-    tone === "error" &&
-      "items-start gap-2 border-status-problem-border bg-status-problem-bg text-status-problem-fg",
-  );
-}
 
 function parseOverrides(value: string): Record<string, unknown> {
   const trimmed = value.trim();
@@ -637,18 +627,10 @@ export default function DocumentsPage() {
           />
         </div>
 
-        {message ? (
-          <div className={noticeClass("success")}>
-            <CheckCheck className="h-4 w-4 shrink-0" />
-            {message}
-          </div>
-        ) : null}
+        {message ? <InlineNotice tone="success">{message}</InlineNotice> : null}
 
         {errorMessage || loadError ? (
-          <div className={noticeClass("error")}>
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{errorMessage || loadError}</span>
-          </div>
+          <InlineNotice tone="error">{errorMessage || loadError}</InlineNotice>
         ) : null}
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">

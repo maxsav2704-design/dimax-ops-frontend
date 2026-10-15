@@ -2,10 +2,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, CheckCheck, Pencil, Plus, Search } from "lucide-react";
+import { Pencil, Plus, Search } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
-import { EmptyState, KpiCard as DimaxKpiCard, TableSkeleton } from "@/components/dimax";
+import { EmptyState, InlineNotice, KpiCard as DimaxKpiCard, TableSkeleton } from "@/components/dimax";
 import {
   Dialog,
   DialogContent,
@@ -78,15 +78,6 @@ function formatDateTime(value?: string): string {
     return value;
   }
   return date.toLocaleString();
-}
-function libraryNoticeClass(tone: "success" | "error"): string {
-  return cn(
-    "flex rounded-lg border px-4 py-3 text-[13px]",
-    tone === "success" &&
-      "items-center gap-2 border-status-ok-border bg-status-ok-bg text-status-ok-fg",
-    tone === "error" &&
-      "items-start gap-2 border-status-problem-border bg-status-problem-bg text-status-problem-fg",
-  );
 }
 function libraryStatusClass(status: LibraryStatus): string {
   return cn(
@@ -426,29 +417,20 @@ export default function LibraryPage() {
             </button>{" "}
           </div>{" "}
         </section>{" "}
-        {message && (
-          <div className={libraryNoticeClass("success")}>
-            {" "}
-            <CheckCheck className="h-4 w-4 shrink-0" /> {message}{" "}
-          </div>
-        )}{" "}
+        {message && <InlineNotice tone="success">{message}</InlineNotice>}{" "}
         {(listQuery.isError || errorMessage) && (
-          <div className={libraryNoticeClass("error")}>
-            {" "}
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{" "}
-            <span>
-              {errorMessage ||
-                readableApiError(
-                  listQuery.error,
-                  locale,
-                  locale === "ru"
-                    ? "Не удалось загрузить библиотеку."
-                    : locale === "he"
-                      ? "לא ניתן לטעון את הספרייה."
-                      : "Failed to load library.",
-                )}
-            </span>{" "}
-          </div>
+          <InlineNotice tone="error">
+            {errorMessage ||
+              readableApiError(
+                listQuery.error,
+                locale,
+                locale === "ru"
+                  ? "Не удалось загрузить библиотеку."
+                  : locale === "he"
+                    ? "לא ניתן לטעון את הספרייה."
+                    : "Failed to load library.",
+              )}
+          </InlineNotice>
         )}{" "}
         <section className="data-table-shell">
           {" "}
