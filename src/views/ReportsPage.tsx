@@ -2,11 +2,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  AlertCircle,
   AlertTriangle,
   BellRing,
   CalendarClock,
-  CheckCircle2,
   CheckCheck,
   FileText,
   FolderKanban,
@@ -26,7 +24,7 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
-import { COMPANY_CURRENCY } from "@/components/dimax";
+import { COMPANY_CURRENCY, InlineNotice } from "@/components/dimax";
 import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
 import { ProjectMarginBasis, ProjectMarginNotice } from "@/components/prices/ProjectMarginNotice";
 import { InstallerFinancialBasis, InstallerFinancialNotice, InstallerFinancialBand } from "@/components/prices/InstallerFinancialNotice";
@@ -3698,94 +3696,54 @@ export default function ReportsPage() {
         </section>
 
         {alertsQuery.isError && (
-          <div
-            className={cn(
-              reportsNoticeClass("error"),
-              "flex items-start gap-2",
-            )}
-          >
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>
-              {readError(alertsQuery.error, t("reports.failedAlerts"))}
-            </span>
-          </div>
+          <InlineNotice tone="error">
+            {readError(alertsQuery.error, t("reports.failedAlerts"))}
+          </InlineNotice>
         )}
-        {exportErrorMessage && (
-          <div
-            className={cn(
-              reportsNoticeClass("error"),
-              "flex items-start gap-2",
-            )}
-          >
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{exportErrorMessage}</span>
-          </div>
-        )}
-        {actionNotice && (
-          <div
-            className={cn(
-              reportsNoticeClass("success"),
-              "flex items-start gap-2",
-            )}
-          >
-            <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{actionNotice}</span>
-          </div>
-        )}
+        {exportErrorMessage && <InlineNotice tone="error">{exportErrorMessage}</InlineNotice>}
+        {actionNotice && <InlineNotice tone="success">{actionNotice}</InlineNotice>}
         {presetNotice && (
           <div className={reportsNoticeClass("muted")}>{presetNotice}</div>
         )}
         {scopedProjectMissing && (
-          <div
-            className={cn(
-              reportsNoticeClass("warning"),
-              "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
-            )}
+          <InlineNotice
+            tone="warning"
+            action={
+              <button
+                type="button"
+                onClick={() => router.push("/reports")}
+                className="dmx-secondary-action shrink-0"
+              >
+                {copy("Show full report", "Показать полный отчёт", "הצג דוח מלא")}
+              </button>
+            }
           >
-            <div className="flex min-w-0 items-start gap-2">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>
-                {copy(
-                  `Requested project ${scopedProjectId} is not available in the current reports scope. Project-specific reports were not switched to another project.`,
-                  `Объект ${scopedProjectId} недоступен в текущем контексте отчётов. Объектные отчёты не были переключены на другой проект.`,
-                  `הפרויקט ${scopedProjectId} אינו זמין בהקשר הדוחות הנוכחי. הדוחות לפי פרויקט לא הועברו לפרויקט אחר.`,
-                )}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => router.push("/reports")}
-              className="dmx-secondary-action shrink-0"
-            >
-              {copy("Show full report", "Показать полный отчёт", "הצג דוח מלא")}
-            </button>
-          </div>
+            {copy(
+              `Requested project ${scopedProjectId} is not available in the current reports scope. Project-specific reports were not switched to another project.`,
+              `Объект ${scopedProjectId} недоступен в текущем контексте отчётов. Объектные отчёты не были переключены на другой проект.`,
+              `הפרויקט ${scopedProjectId} אינו זמין בהקשר הדוחות הנוכחי. הדוחות לפי פרויקט לא הועברו לפרויקט אחר.`,
+            )}
+          </InlineNotice>
         )}
         {scopedInstallerMissing && (
-          <div
-            className={cn(
-              reportsNoticeClass("warning"),
-              "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
-            )}
+          <InlineNotice
+            tone="warning"
+            action={
+              <button
+                type="button"
+                onClick={() => router.push("/reports")}
+                className="dmx-secondary-action shrink-0"
+              >
+                {copy("Show full report", "Показать полный отчёт", "הצג דוח מלא")}
+              </button>
+            }
           >
-            <div className="flex min-w-0 items-start gap-2">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>
-                {copy(
-                  `Requested installer ${scopedInstallerId} is not available in the current reports scope. Installer-specific reports were not switched to another installer.`,
-                  `Монтажник ${scopedInstallerId} недоступен в текущем контексте отчётов. Отчёты по монтажнику не были переключены на другого монтажника.`,
-                  `המתקין ${scopedInstallerId} אינו זמין בהקשר הדוחות הנוכחי. הדוחות לפי מתקין לא הועברו למתקין אחר.`,
-                )}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => router.push("/reports")}
-              className="dmx-secondary-action shrink-0"
-            >
-              {copy("Show full report", "Показать полный отчёт", "הצג דוח מלא")}
-            </button>
-          </div>
+            {copy(
+              `Requested installer ${scopedInstallerId} is not available in the current reports scope. Installer-specific reports were not switched to another installer.`,
+              `Монтажник ${scopedInstallerId} недоступен в текущем контексте отчётов. Отчёты по монтажнику не были переключены на другого монтажника.`,
+              `המתקין ${scopedInstallerId} אינו זמין בהקשר הדוחות הנוכחי. הדוחות לפי מתקין לא הועברו למתקין אחר.`,
+            )}
+          </InlineNotice>
         )}
         {hasScopedContextOnly && (
           <div className={reportsNoticeClass("accent")}>
@@ -3861,15 +3819,7 @@ export default function ReportsPage() {
           </div>
         )}
         {!canRunPrivilegedActions && (
-          <div
-            className={cn(
-              reportsNoticeClass("warning"),
-              "flex items-start gap-2",
-            )}
-          >
-            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{t("reports.readOnlyNotice")}</span>
-          </div>
+          <InlineNotice tone="warning">{t("reports.readOnlyNotice")}</InlineNotice>
         )}
         {!canExportFinancialReports && (
           <div className="rounded-lg border border-border bg-surface-subtle px-4 py-3 text-[13px] text-text-secondary flex items-start gap-2">

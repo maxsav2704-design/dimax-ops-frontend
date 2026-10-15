@@ -15,6 +15,7 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
+import { InlineNotice } from "@/components/dimax";
 import { CalendarScheduleSurface } from "@/components/calendar/CalendarScheduleSurface";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -258,17 +259,6 @@ function makeDefaultForm(weekStartDate: Date): EventFormState {
   };
 }
 
-function calendarNoticeClass(tone: "success" | "error" | "warning"): string {
-  return cn(
-    "rounded-lg border px-4 py-3 text-[13px]",
-    tone === "success" &&
-      "border-status-ok-border bg-status-ok-bg text-status-ok-fg",
-    tone === "error" &&
-      "border-status-problem-border bg-status-problem-bg text-status-problem-fg",
-    tone === "warning" &&
-      "border-status-warning-border bg-status-warning-bg text-status-warning-fg",
-  );
-}
 
 function eventToForm(event: CalendarEvent): EventFormState {
   return {
@@ -950,25 +940,19 @@ export default function CalendarPage() {
             "לוח המתקינים, השיבוצים והתור ללא שיבוץ לפי תקופה.",
           )}
         />
-        {hasLoadError && (
-          <div className={calendarNoticeClass("error")}>{loadErrorMessage}</div>
-        )}
+        {hasLoadError && <InlineNotice tone="error">{loadErrorMessage}</InlineNotice>}
         {hasActionError && !isCreateOpen && !isEditOpen && (
-          <div className={calendarNoticeClass("error")}>
-            {actionErrorMessage}
-          </div>
+          <InlineNotice tone="error">{actionErrorMessage}</InlineNotice>
         )}
-        {actionNotice && (
-          <div className={calendarNoticeClass("success")}>{actionNotice}</div>
-        )}
+        {actionNotice && <InlineNotice tone="success">{actionNotice}</InlineNotice>}
         {!canManageCalendar && (
-          <div className={calendarNoticeClass("warning")}>
+          <InlineNotice tone="warning">
             {copy(
               "Your access level has read-only access to calendar planning.",
               "Ваш уровень доступа разрешает только просмотр планирования календаря.",
               "רמת הגישה שלך מאפשרת צפייה בלבד בתכנון היומן.",
             )}
-          </div>
+          </InlineNotice>
         )}
 
         {selectedLane ? (
@@ -1510,9 +1494,7 @@ export default function CalendarPage() {
             )}
 
             {hasActionError && (
-              <div role="alert" className={calendarNoticeClass("error")}>
-                {actionErrorMessage}
-              </div>
+              <InlineNotice tone="error">{actionErrorMessage}</InlineNotice>
             )}
             <div className="modal-footer">
               {isEditOpen && editingEvent ? (
