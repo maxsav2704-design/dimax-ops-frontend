@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
 import { ProjectMarginBasis, ProjectMarginNotice } from "@/components/prices/ProjectMarginNotice";
 import { InstallerFinancialBasis, InstallerFinancialNotice, InstallerFinancialBand } from "@/components/prices/InstallerFinancialNotice";
@@ -3397,34 +3398,21 @@ export default function ReportsPage() {
   return (
     <DashboardLayout>
       <div className="page-shell page-stack-tight motion-stagger">
-        <section
-          data-testid="reports-dashboard-v3"
-          className="overflow-hidden rounded-[14px] border border-border bg-surface-subtle shadow-sm"
-        >
-          <div className="flex items-center gap-3 border-b border-border px-3 py-2">
-            <div className="rounded-full bg-text px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">
-              DIMAX
-            </div>
-            <div className="min-w-0 flex-1 truncate text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary">
-              {copy("DIMAX GROUP · REPORTS", "DIMAX GROUP · ОТЧЕТЫ", "קבוצת דימקס · דוחות")}
-            </div>
-            <div className="rounded-full border border-status-warning-border bg-status-warning-bg px-2.5 py-1 text-[10.5px] font-medium text-status-warning-fg">
-              {copy("Unread", "Непрочитано", "לא נקראו")} {unreadBadge}
-            </div>
-          </div>
-
-          <div className="space-y-5 p-4 md:p-5">
-            <div className="truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-link">
-              {copy("Dashboard", "Главная", "ראשי")} <span className="mx-1 text-text-tertiary">#</span>
-              <span className="text-text">{copy("Reports cockpit", "Панель отчётов", "לוח דוחות")}</span>
-            </div>
-
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0">
-                <h1 className="text-[26px] font-semibold leading-tight text-text">
-                  {copy("Reports cockpit", "Панель отчётов", "לוח דוחות")}
-                </h1>
-                <p className="mt-1 max-w-4xl text-[12.5px] leading-5 text-text-secondary">
+        <section data-testid="reports-dashboard-v3" className="space-y-5">
+          <div className="space-y-5">
+            <DimaxPageHeader
+              breadcrumbs={[
+                { label: copy("Dashboard", "Главная", "ראשי"), href: "/" },
+                { label: copy("Reports cockpit", "Панель отчётов", "לוח דוחות") },
+              ]}
+              title={copy("Reports cockpit", "Панель отчётов", "לוח דוחות")}
+              status={
+                <span className="inline-flex items-center rounded-full border border-status-warning-border bg-status-warning-bg px-2.5 py-1 text-11 font-medium text-status-warning-fg">
+                  {copy("Unread", "Непрочитано", "לא נקראו")} {unreadBadge}
+                </span>
+              }
+              meta={
+                <span>
                   <b className="font-medium text-text">
                     {reportsLibraryCount}
                   </b>{" "}
@@ -3438,9 +3426,10 @@ export default function ReportsPage() {
                       ? formatDateTime(reportsLastRefresh)
                       : copy("not loaded", "не загружено", "לא נטען")}
                   </b>
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
+                </span>
+              }
+              actions={
+                <>
                 <button
                   type="button"
                   onClick={refetchAllReports}
@@ -3469,11 +3458,12 @@ export default function ReportsPage() {
                     className="dmx-primary-action"
                   >
                     <Wrench className="h-4 w-4" strokeWidth={1.8} />
-                    {copy("Open operations", "Открытие операций", "פעולות פתוחות")}
+                    {copy("Open operations", "Открыть операции", "פתיחת פעולות")}
                   </button>
                 ) : null}
-              </div>
-            </div>
+                </>
+              }
+            />
 
             <div>
               <div className="mb-3 flex items-center justify-between gap-3">
