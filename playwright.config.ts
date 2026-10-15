@@ -20,7 +20,8 @@ export default defineConfig({
     baseURL,
     headless: true,
     channel: browserChannel,
-    trace: "on-first-retry",
+    // retries is 0, so "on-first-retry" never recorded a trace; keep traces for failed runs.
+    trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off",
   },

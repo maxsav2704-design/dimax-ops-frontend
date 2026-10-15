@@ -8,6 +8,8 @@ export default tseslint.config(
   {
     ignores: [
       ".next/**",
+      // NEXT_DIST_DIR builds (.next-dev, .next-acceptance, ...) are output, not source.
+      ".next-*/**",
       "coverage/**",
       "dist/**",
       "node_modules/**",
