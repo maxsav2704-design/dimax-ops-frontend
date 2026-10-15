@@ -57,6 +57,8 @@
     --dmx-ring-danger: 0 0 0 3px rgba(231, 76, 60, 0.2);
     --dmx-ring-warning: 0 0 0 3px rgba(186, 117, 23, 0.2);
     --dmx-shadow-overlay: 0 16px 40px rgba(0, 0, 0, 0.1);
+    --dmx-shadow-card: 0 1px 2px rgba(17, 19, 24, 0.04), 0 4px 14px rgba(29, 38, 53, 0.04);
+    --dmx-ring-focus: 0 0 0 2px var(--dmx-bg-surface), 0 0 0 4px var(--dmx-link);
 
     --dmx-text-11: 0.6875rem;
     --dmx-text-12: 0.75rem;
@@ -196,6 +198,8 @@
     --dmx-ring-danger: 0 0 0 3px rgba(255, 137, 120, 0.28);
     --dmx-ring-warning: 0 0 0 3px rgba(255, 192, 107, 0.28);
     --dmx-shadow-overlay: 0 16px 40px rgba(0, 0, 0, 0.24);
+    --dmx-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.18);
+    --dmx-ring-focus: 0 0 0 2px var(--dmx-bg-surface), 0 0 0 4px var(--dmx-link);
 
     --background: 201 26% 8%;
     --foreground: 35 26% 92%;
@@ -255,11 +259,11 @@
     background: hsl(var(--accent) / 0.22);
   }
 
+  /* One visible focus treatment for every control: a 2 px surface gap plus a
+     2 px link-blue ring (>= 3:1 on both light and dark surfaces). */
   *:focus-visible {
     outline: none;
-    box-shadow:
-      0 0 0 1px hsl(var(--accent) / 0.22),
-      0 0 0 4px hsl(var(--accent) / 0.12);
+    box-shadow: var(--dmx-ring-focus);
   }
 
   *::-webkit-scrollbar {
@@ -290,7 +294,8 @@
   [data-display="true"] {
     font-family: "Rubik", "Noto Sans Hebrew", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     letter-spacing: 0;
-    line-height: 1.08;
+    /* 1.08 clipped Cyrillic and Hebrew ascenders on wrapped titles. */
+    line-height: 1.2;
   }
 
   main {
@@ -302,7 +307,7 @@
   @keyframes motion-page-enter {
     from {
       opacity: 0;
-      transform: translateY(14px);
+      transform: translateY(4px);
     }
     to {
       opacity: 1;
@@ -313,7 +318,7 @@
   @keyframes motion-hero-settle {
     from {
       opacity: 0;
-      transform: translateY(18px) scale(0.985);
+      transform: translateY(6px) scale(0.995);
     }
     to {
       opacity: 1;
@@ -646,27 +651,28 @@
   }
 
   @media (prefers-reduced-motion: no-preference) {
+    /* Daily-ops tool: entrances are a short settle, not a 0.5 s reveal. */
     .motion-page {
-      animation: motion-page-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation: motion-page-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     .page-hero {
-      animation: motion-hero-settle 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation: motion-hero-settle 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     .motion-stagger > * {
       opacity: 0;
-      animation: motion-page-enter 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      animation: motion-page-enter 240ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
     }
 
-    .motion-stagger > *:nth-child(1) { animation-delay: 40ms; }
-    .motion-stagger > *:nth-child(2) { animation-delay: 90ms; }
-    .motion-stagger > *:nth-child(3) { animation-delay: 140ms; }
-    .motion-stagger > *:nth-child(4) { animation-delay: 190ms; }
-    .motion-stagger > *:nth-child(5) { animation-delay: 240ms; }
-    .motion-stagger > *:nth-child(6) { animation-delay: 290ms; }
-    .motion-stagger > *:nth-child(7) { animation-delay: 340ms; }
-    .motion-stagger > *:nth-child(8) { animation-delay: 390ms; }
+    .motion-stagger > *:nth-child(1) { animation-delay: 0ms; }
+    .motion-stagger > *:nth-child(2) { animation-delay: 30ms; }
+    .motion-stagger > *:nth-child(3) { animation-delay: 60ms; }
+    .motion-stagger > *:nth-child(4) { animation-delay: 90ms; }
+    .motion-stagger > *:nth-child(5) { animation-delay: 120ms; }
+    .motion-stagger > *:nth-child(6) { animation-delay: 150ms; }
+    .motion-stagger > *:nth-child(7) { animation-delay: 180ms; }
+    .motion-stagger > *:nth-child(8) { animation-delay: 210ms; }
   }
 
   .page-hero::after {
@@ -1334,4 +1340,37 @@
       margin-block-start: auto;
     }
   }
+}
+
+/* Premium foundation (2026-10-15): one type scale, numeric style and table
+   density for every screen. Views migrate from text-[Npx] to these classes. */
+@layer components {
+  .type-display { @apply text-24 font-medium leading-tight text-text; }
+  .type-title { @apply text-22 font-medium leading-tight text-text; }
+  .type-section { @apply text-16 font-semibold leading-snug text-text; }
+  .type-body { @apply text-14 leading-6 text-text; }
+  .type-meta { @apply text-13 leading-5 text-text-secondary; }
+  .type-caption { @apply text-12 leading-5 text-text-secondary; }
+  .type-label { @apply text-11 font-medium uppercase leading-4 text-text-secondary; }
+  .type-eyebrow { @apply text-11 font-medium uppercase leading-4 text-text-secondary; }
+
+  /* Identifiers, dates, counts and money: mono, tabular, always LTR. */
+  .num {
+    @apply font-mono tabular-nums;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  .data-table { @apply w-full border-collapse text-13; }
+  .data-table thead th {
+    @apply bg-surface-subtle px-3 py-2 text-start text-11 font-medium uppercase leading-4 text-text-secondary;
+  }
+  .data-table tbody td { @apply border-t border-border px-3 py-2 align-middle text-text; }
+  .data-table tbody tr:hover { @apply bg-surface-subtle; }
+  .data-td-num {
+    @apply font-mono tabular-nums text-end;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+  .data-table-sticky thead th { @apply sticky top-0 z-sticky; }
 }

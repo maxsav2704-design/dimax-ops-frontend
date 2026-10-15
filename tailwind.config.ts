@@ -181,6 +181,9 @@ export default {
         pill: "var(--dmx-radius-pill)",
       },
       boxShadow: {
+        card: "var(--dmx-shadow-card)",
+        overlay: "var(--dmx-shadow-overlay)",
+        focus: "var(--dmx-ring-focus)",
         "ring-accent": "var(--dmx-ring-accent)",
         "ring-link": "var(--dmx-ring-link)",
         "ring-danger": "var(--dmx-ring-danger)",
