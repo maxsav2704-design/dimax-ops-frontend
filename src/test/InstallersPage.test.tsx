@@ -178,7 +178,8 @@ describe("InstallersPage", () => {
     expect(await screen.findByText("Edit Installer")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Installer Deep Link")).toBeInTheDocument();
     expect(screen.getByText("Focused installer installer-1")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Show all installers" }));
+    // The editor is a real modal dialog now: the page behind it is aria-hidden.
+    fireEvent.click(screen.getByRole("button", { name: "Show all installers", hidden: true }));
     expect(pushMock).toHaveBeenCalledWith("/installers");
   });
 
@@ -292,10 +293,12 @@ describe("InstallersPage", () => {
     );
 
     fireEvent.click(await screen.findByRole("button", { name: "Add Installer" }));
-    fireEvent.change(screen.getAllByRole("textbox")[1], {
+    const dialog = await screen.findByRole("dialog", { name: "Create Installer" });
+    fireEvent.change(screen.getByLabelText("Full name"), {
       target: { value: "New Installer" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(dialog).toBeInTheDocument();
 
     await waitFor(() => {
       expect(apiFetchMock).toHaveBeenCalledWith("/api/v1/admin/installers", {

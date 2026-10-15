@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -22,6 +22,7 @@ import {
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useCompanyPricingState } from "@/hooks/use-company-pricing-state";
 import { CompanyPriceStatus } from "@/components/prices/CompanyPriceStatus";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import {
@@ -259,13 +260,16 @@ function InstallerBaseForm({
 }) {
   const copy = (en: string, ru: string, he: string) =>
     locale === "ru" ? ru : locale === "he" ? he : en;
+  // Every control gets a programmatic label (screen readers, click-to-focus, tests).
+  const idBase = useId();
   void disabled;
   return (
     <>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="field-stack">
-          <label className="field-label">{copy("Full name", "Полное имя", "שם מלא")}</label>
+          <label htmlFor={`${idBase}-full_name`} className="field-label">{copy("Full name", "Полное имя", "שם מלא")}</label>
           <input
+            id={`${idBase}-full_name`}
             value={form.full_name}
             onChange={(e) => onChange({ ...form, full_name: e.target.value })}
             disabled={disabled}
@@ -273,8 +277,9 @@ function InstallerBaseForm({
           />
         </div>
         <div className="field-stack">
-          <label className="field-label">{copy("Status", "Статус", "סטטוס")}</label>
+          <label htmlFor={`${idBase}-status`} className="field-label">{copy("Status", "Статус", "סטטוס")}</label>
           <select
+            id={`${idBase}-status`}
             value={form.status}
             onChange={(e) => onChange({ ...form, status: e.target.value })}
             disabled={disabled}
@@ -286,8 +291,9 @@ function InstallerBaseForm({
           </select>
         </div>
         <div className="field-stack">
-          <label className="field-label">{copy("Phone", "Телефон", "טלפון")}</label>
+          <label htmlFor={`${idBase}-phone`} className="field-label">{copy("Phone", "Телефон", "טלפון")}</label>
           <input
+            id={`${idBase}-phone`}
             value={form.phone}
             onChange={(e) => onChange({ ...form, phone: e.target.value })}
             disabled={disabled}
@@ -295,8 +301,9 @@ function InstallerBaseForm({
           />
         </div>
         <div className="field-stack">
-          <label className="field-label">{copy("Email", "Эл. почта", "דוא״ל")}</label>
+          <label htmlFor={`${idBase}-email`} className="field-label">{copy("Email", "Эл. почта", "דוא״ל")}</label>
           <input
+            id={`${idBase}-email`}
             value={form.email}
             onChange={(e) => onChange({ ...form, email: e.target.value })}
             disabled={disabled}
@@ -304,8 +311,9 @@ function InstallerBaseForm({
           />
         </div>
         <div className="field-stack">
-          <label className="field-label">{copy("Address", "Адрес", "כתובת")}</label>
+          <label htmlFor={`${idBase}-address`} className="field-label">{copy("Address", "Адрес", "כתובת")}</label>
           <input
+            id={`${idBase}-address`}
             value={form.address}
             onChange={(e) => onChange({ ...form, address: e.target.value })}
             disabled={disabled}
@@ -313,8 +321,9 @@ function InstallerBaseForm({
           />
         </div>
         <div className="field-stack">
-          <label className="field-label">{copy("Passport ID", "Идентификатор паспорта", "מזהה דרכון")}</label>
+          <label htmlFor={`${idBase}-passport_id`} className="field-label">{copy("Passport ID", "Идентификатор паспорта", "מזהה דרכון")}</label>
           <input
+            id={`${idBase}-passport_id`}
             value={form.passport_id}
             onChange={(e) => onChange({ ...form, passport_id: e.target.value })}
             disabled={disabled}
@@ -324,8 +333,9 @@ function InstallerBaseForm({
       </div>
 
       <div className="field-stack mt-4">
-        <label className="field-label">{copy("Notes", "Примечания", "הערות")}</label>
+        <label htmlFor={`${idBase}-notes`} className="field-label">{copy("Notes", "Примечания", "הערות")}</label>
         <textarea
+          id={`${idBase}-notes`}
           rows={2}
           value={form.notes}
           onChange={(e) => onChange({ ...form, notes: e.target.value })}
@@ -1019,20 +1029,12 @@ export default function InstallersPage() {
         </div>
       </div>
 
-      {isCreateOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="modal-shell max-w-[760px]">
-            <div className="modal-header">
-              <h2 className="text-[16px] font-semibold">
-                {t("installers.createInstaller")}
-              </h2>
-              <button
-                onClick={() => setIsCreateOpen(false)}
-                className="dmx-secondary-action h-9"
-              >
-                {copy("Close", "Закрыть", "סגור")}
-              </button>
-            </div>
+      <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) setIsCreateOpen(false); }}>
+        <DialogContent className="max-w-[760px]" closeLabel={copy("Close", "Закрыть", "סגור")}>
+          <div>
+            <DialogHeader className="mb-5">
+              <DialogTitle>{t("installers.createInstaller")}</DialogTitle>
+            </DialogHeader>
 
             <InstallerBaseForm
               form={form}
@@ -1041,7 +1043,7 @@ export default function InstallersPage() {
               locale={locale}
             />
 
-            <div className="modal-footer">
+            <DialogFooter className="mt-5">
               <button
                 onClick={() => setIsCreateOpen(false)}
                 className="dmx-secondary-action h-10"
@@ -1060,28 +1062,25 @@ export default function InstallersPage() {
               >
                 {copy("Save", "Сохранить", "שמור")}
               </button>
-            </div>
+            </DialogFooter>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
-      {isEditOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="modal-shell max-h-[92vh] max-w-[980px] overflow-auto">
-            <div className="modal-header">
-              <h2 className="text-[16px] font-semibold">
-                {copy("Edit Installer", "Редактировать монтажника", "עריכת מתקין")}
-              </h2>
-              <button
-                onClick={() => {
-                  setIsEditOpen(false);
-                  setEditingInstaller(null);
-                }}
-                className="dmx-secondary-action h-9"
-              >
-                {copy("Close", "Закрыть", "סגור")}
-              </button>
-            </div>
+      <Dialog
+        open={isEditOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsEditOpen(false);
+            setEditingInstaller(null);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[92vh] max-w-[980px] overflow-auto" closeLabel={copy("Close", "Закрыть", "סגור")}>
+          <div>
+            <DialogHeader className="mb-5">
+              <DialogTitle>{copy("Edit Installer", "Редактировать монтажника", "עריכת מתקין")}</DialogTitle>
+            </DialogHeader>
 
             <InstallerBaseForm
               form={form}
@@ -1288,7 +1287,7 @@ export default function InstallersPage() {
               </WidgetCard>
             )}
 
-            <div className="modal-footer">
+            <DialogFooter className="mt-5">
               <button
                 onClick={() => {
                   setIsEditOpen(false);
@@ -1310,10 +1309,10 @@ export default function InstallersPage() {
               >
                 {copy("Save Installer", "Сохранить монтажника", "שמור מתקין")}
               </button>
-            </div>
+            </DialogFooter>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
