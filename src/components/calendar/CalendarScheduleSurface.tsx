@@ -117,27 +117,28 @@ const EVENT_TYPES: ScheduleEventType[] = [
   "inspection",
 ];
 
+// Event colours come from the --dmx-event-* tokens (light and dark sets in index.css).
 const EVENT_STYLE: Record<ScheduleEventType, string> = {
-  installation: "border-[#8fd5ad] bg-[#edf8f1] text-[#155c37]",
-  delivery: "border-[#e3c675] bg-[#fff8e8] text-[#72530a]",
-  meeting: "border-[#bcb1e2] bg-[#f2f0fa] text-[#4f3a85]",
-  consultation: "border-[#dfb5a7] bg-[#fff1ed] text-[#7f493a]",
-  inspection: "border-[#9dbfe9] bg-[#eef5ff] text-[#285b96]",
+  installation: "border-event-installation-border bg-event-installation-bg text-event-installation-fg",
+  delivery: "border-event-delivery-border bg-event-delivery-bg text-event-delivery-fg",
+  meeting: "border-event-meeting-border bg-event-meeting-bg text-event-meeting-fg",
+  consultation: "border-event-consultation-border bg-event-consultation-bg text-event-consultation-fg",
+  inspection: "border-event-inspection-border bg-event-inspection-bg text-event-inspection-fg",
 };
 
 const EVENT_DOT: Record<ScheduleEventType, string> = {
-  installation: "bg-[#9fd7b7]",
-  delivery: "bg-[#dec887]",
-  meeting: "bg-[#bdb5dc]",
-  consultation: "bg-[#debeb3]",
-  inspection: "bg-[#a8c6e9]",
+  installation: "bg-event-installation-dot",
+  delivery: "bg-event-delivery-dot",
+  meeting: "bg-event-meeting-dot",
+  consultation: "bg-event-consultation-dot",
+  inspection: "bg-event-inspection-dot",
 };
 
 const AVATAR_STYLE = [
-  "bg-[#7457c8] text-white",
-  "bg-[#3aa57c] text-white",
-  "bg-[#c17354] text-white",
-  "bg-[#c29a2f] text-white",
+  "bg-event-meeting-fg text-text-inverse",
+  "bg-event-installation-fg text-text-inverse",
+  "bg-event-consultation-fg text-text-inverse",
+  "bg-event-delivery-fg text-text-inverse",
 ];
 
 function startOfWeek(base: Date): Date {
@@ -244,7 +245,7 @@ function EventAvatars({
 
   if (people.length === 0) {
     return (
-      <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-[#d9dce2] text-[9px] font-semibold text-[#667085]">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-border-strong text-[9px] font-semibold text-text-secondary">
         --
       </span>
     );
@@ -382,8 +383,8 @@ export function CalendarScheduleSurface(props: Props) {
           "absolute z-10 overflow-hidden rounded-[7px] border-s-[3px] px-2.5 py-2 text-start shadow-[0_4px_14px_rgba(25,35,50,0.07)]",
           "motion-safe:transition-[box-shadow,transform] motion-safe:duration-150 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(25,35,50,0.12)]",
           EVENT_STYLE[event.event_type],
-          event.isAtRisk && "border-[#e89a96] bg-[#fff0ef] text-[#922f2a]",
-          selectedEventId === event.id && "ring-2 ring-[#17191f] ring-offset-1",
+          event.isAtRisk && "border-status-problem-border bg-status-problem-bg text-status-problem-fg",
+          selectedEventId === event.id && "ring-2 ring-text ring-offset-1",
         )}
         style={{
           top: `${layout.top + 4}px`,
@@ -410,26 +411,26 @@ export function CalendarScheduleSurface(props: Props) {
   };
 
   return (
-    <section className="dmx-calendar overflow-hidden rounded-lg border border-border bg-[#f6f7fa]">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e2e4e9] px-4 py-3">
+    <section className="dmx-calendar overflow-hidden rounded-lg border border-border bg-surface-subtle">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-          <h1 className="min-w-0 text-[22px] font-semibold capitalize text-[#101828]">
+          <h2 className="min-w-0 text-18 font-semibold capitalize text-text">
             {monthTitle}
-          </h1>
-          <CalendarDays aria-hidden="true" className="h-5 w-5 text-[#758096]" />
+          </h2>
+          <CalendarDays aria-hidden="true" className="h-5 w-5 text-text-secondary" />
           <button
             type="button"
             onClick={() => onMovePeriod(-1)}
             aria-label={copy("Previous period", "Предыдущий период", "התקופה הקודמת")}
             title={copy("Previous period", "Предыдущий период", "התקופה הקודמת")}
-            className="ms-1 flex h-9 w-9 items-center justify-center rounded-md text-[#758096] hover:bg-white hover:text-[#101828]"
+            className="ms-1 flex h-9 w-9 items-center justify-center rounded-md text-text-secondary hover:bg-surface hover:text-text"
           >
             <ChevronLeft aria-hidden="true" className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={onToday}
-            className="h-9 rounded-md px-2.5 text-[13px] font-semibold text-[#101828] hover:bg-white"
+            className="h-9 rounded-md px-2.5 text-[13px] font-semibold text-text hover:bg-surface"
           >
             {copy("Today", "Сегодня", "היום")}
           </button>
@@ -438,11 +439,11 @@ export function CalendarScheduleSurface(props: Props) {
             onClick={() => onMovePeriod(1)}
             aria-label={copy("Next period", "Следующий период", "התקופה הבאה")}
             title={copy("Next period", "Следующий период", "התקופה הבאה")}
-            className="flex h-9 w-9 items-center justify-center rounded-md text-[#758096] hover:bg-white hover:text-[#101828]"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-text-secondary hover:bg-surface hover:text-text"
           >
             <ChevronRight aria-hidden="true" className="h-4 w-4" />
           </button>
-          <span className="hidden text-[12px] font-medium tabular-nums text-[#758096] xl:inline">
+          <span className="hidden text-[12px] font-medium tabular-nums text-text-secondary xl:inline">
             {periodLabel}
           </span>
         </div>
@@ -458,7 +459,7 @@ export function CalendarScheduleSurface(props: Props) {
             <Plus aria-hidden="true" className="h-4 w-4" />
             {copy("Add Event", "Добавить событие", "הוסף אירוע")}
           </button>
-          <div className="inline-flex h-9 items-center rounded-md border border-[#dde1e8] bg-white p-0.5">
+          <div className="inline-flex h-9 items-center rounded-md border border-border bg-surface p-0.5">
             {(["day", "week", "month"] as CalendarViewMode[]).map((viewMode) => (
               <button
                 key={viewMode}
@@ -468,8 +469,8 @@ export function CalendarScheduleSurface(props: Props) {
                 className={cn(
                   "h-8 rounded-[5px] px-3 text-[11px] font-semibold transition-colors duration-150",
                   calendarView === viewMode
-                    ? "bg-[#17191f] text-white"
-                    : "text-[#667085] hover:bg-[#f3f4f7] hover:text-[#101828]",
+                    ? "bg-text text-white"
+                    : "text-text-secondary hover:bg-surface-sunken hover:text-text",
                 )}
               >
                 {viewMode === "day"
@@ -480,8 +481,8 @@ export function CalendarScheduleSurface(props: Props) {
               </button>
             ))}
           </div>
-          <label className="flex h-10 min-w-[120px] flex-1 items-center gap-2 rounded-lg border border-[#dde1e8] bg-white px-3 focus-within:border-[#aeb7c6] lg:w-[180px] lg:flex-none">
-            <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-[#758096]" />
+          <label className="flex h-10 min-w-[120px] flex-1 items-center gap-2 rounded-lg border border-border bg-surface px-3 focus-within:border-border-strong lg:w-[180px] lg:flex-none">
+            <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-text-secondary" />
             <span className="sr-only">{copy("Search schedule", "Поиск в календаре", "חיפוש ביומן")}</span>
             <input
               type="search"
@@ -490,7 +491,7 @@ export function CalendarScheduleSurface(props: Props) {
               value={searchQuery}
               onChange={(event) => onSearchChange(event.target.value)}
               placeholder={copy("Search…", "Поиск…", "חיפוש…")}
-              className="min-w-0 flex-1 bg-transparent text-[12px] text-[#101828] outline-none placeholder:text-[#98a2b3]"
+              className="min-w-0 flex-1 bg-transparent text-[12px] text-text outline-none placeholder:text-text-tertiary"
             />
           </label>
           <button
@@ -498,7 +499,7 @@ export function CalendarScheduleSurface(props: Props) {
             onClick={onExport}
             aria-label={copy("Export schedule", "Экспорт графика", "ייצוא לוח")}
             title={copy("Export schedule", "Экспорт графика", "ייצוא לוח")}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#dde1e8] bg-white text-[#667085] hover:border-[#b9c0cc] hover:text-[#101828]"
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-surface text-text-secondary hover:border-border-strong hover:text-text"
           >
             <Download aria-hidden="true" className="h-4 w-4" />
           </button>
@@ -507,7 +508,7 @@ export function CalendarScheduleSurface(props: Props) {
             onClick={onPrint}
             aria-label={copy("Print schedule", "Печать графика", "הדפס לוח")}
             title={copy("Print schedule", "Печать графика", "הדפס לוח")}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#dde1e8] bg-white text-[#667085] hover:border-[#b9c0cc] hover:text-[#101828]"
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-surface text-text-secondary hover:border-border-strong hover:text-text"
           >
             <Printer aria-hidden="true" className="h-4 w-4" />
           </button>
@@ -518,15 +519,15 @@ export function CalendarScheduleSurface(props: Props) {
             aria-label={copy("Calendar filters", "Фильтры календаря", "מסנני יומן")}
             title={copy("Calendar filters", "Фильтры календаря", "מסנני יומן")}
             className={cn(
-              "relative flex h-10 w-10 items-center justify-center rounded-lg border bg-white hover:border-[#b9c0cc]",
+              "relative flex h-10 w-10 items-center justify-center rounded-lg border bg-surface hover:border-border-strong",
               areFiltersOpen || activeFilterCount > 0
-                ? "border-[#d1ad42] text-[#8a6700]"
-                : "border-[#dde1e8] text-[#667085]",
+                ? "border-accent text-status-warning-fg"
+                : "border-border text-text-secondary",
             )}
           >
             <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
             {activeFilterCount > 0 ? (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#17191f] px-1 text-[9px] font-semibold text-white">
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-text px-1 text-[9px] font-semibold text-white">
                 {activeFilterCount}
               </span>
             ) : null}
@@ -535,14 +536,14 @@ export function CalendarScheduleSurface(props: Props) {
       </div>
 
       {areFiltersOpen ? (
-        <div className="grid gap-3 border-b border-[#e2e4e9] bg-white px-4 py-3 md:grid-cols-2">
-          <label className="space-y-1 text-[11px] font-semibold text-[#667085]">
+        <div className="grid gap-3 border-b border-border bg-surface px-4 py-3 md:grid-cols-2">
+          <label className="space-y-1 text-[11px] font-semibold text-text-secondary">
             <span>{copy("Installer", "Монтажник", "מתקין")}</span>
             <select
               aria-label={copy("Installer filter", "Фильтр монтажника", "מסנן מתקין")}
               value={installerFilter}
               onChange={(event) => onInstallerFilterChange(event.target.value)}
-              className="h-10 w-full rounded-lg border border-[#dde1e8] bg-white px-3 text-[12px] font-medium text-[#101828]"
+              className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-[12px] font-medium text-text"
             >
               <option value="all">{copy("All installers", "Все монтажники", "כל המתקינים")}</option>
               {installers.map((installer) => (
@@ -550,13 +551,13 @@ export function CalendarScheduleSurface(props: Props) {
               ))}
             </select>
           </label>
-          <label className="space-y-1 text-[11px] font-semibold text-[#667085]">
+          <label className="space-y-1 text-[11px] font-semibold text-text-secondary">
             <span>{copy("Project", "Проект", "פרויקט")}</span>
             <select
               aria-label={copy("Project filter", "Фильтр проекта", "מסנן פרויקט")}
               value={projectFilter}
               onChange={(event) => onProjectFilterChange(event.target.value)}
-              className="h-10 w-full rounded-lg border border-[#dde1e8] bg-white px-3 text-[12px] font-medium text-[#101828]"
+              className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-[12px] font-medium text-text"
             >
               <option value="all">{copy("All projects", "Все проекты", "כל הפרויקטים")}</option>
               {projects.map((project) => (
@@ -568,8 +569,8 @@ export function CalendarScheduleSurface(props: Props) {
       ) : null}
 
       <div className="dmx-calendar-layout">
-        <aside className="dmx-calendar-sidebar space-y-4 border-[#e2e4e9] bg-[#f3f4f7] p-3">
-          <div className="rounded-lg border border-[#e0e3e9] bg-white p-4 shadow-[0_4px_14px_rgba(29,38,53,0.04)]">
+        <aside className="dmx-calendar-sidebar space-y-4 border-border bg-surface-sunken p-3">
+          <div className="rounded-lg border border-border bg-surface p-4 shadow-[0_4px_14px_rgba(29,38,53,0.04)]">
             <div className="mb-4 flex items-center justify-between gap-2">
               <button
                 type="button"
@@ -584,11 +585,11 @@ export function CalendarScheduleSurface(props: Props) {
                 }
                 aria-label={copy("Previous month", "Предыдущий месяц", "החודש הקודם")}
                 title={copy("Previous month", "Предыдущий месяц", "החודש הקודם")}
-                className="flex h-8 w-8 items-center justify-center rounded-md text-[#758096] hover:bg-[#f3f4f7] hover:text-[#101828]"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-surface-sunken hover:text-text"
               >
                 <ChevronLeft aria-hidden="true" className="h-4 w-4" />
               </button>
-              <div className="text-[13px] font-semibold capitalize text-[#101828]">{monthTitle}</div>
+              <div className="text-[13px] font-semibold capitalize text-text">{monthTitle}</div>
               <button
                 type="button"
                 onClick={() =>
@@ -602,14 +603,14 @@ export function CalendarScheduleSurface(props: Props) {
                 }
                 aria-label={copy("Next month", "Следующий месяц", "החודש הבא")}
                 title={copy("Next month", "Следующий месяц", "החודש הבא")}
-                className="flex h-8 w-8 items-center justify-center rounded-md text-[#758096] hover:bg-[#f3f4f7] hover:text-[#101828]"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-surface-sunken hover:text-text"
               >
                 <ChevronRight aria-hidden="true" className="h-4 w-4" />
               </button>
             </div>
             <div className="grid grid-cols-7 gap-y-1 text-center">
               {miniWeekdays.map((weekday, index) => (
-                <div key={`${weekday}-${index}`} className="pb-1 text-[10px] font-medium text-[#758096]">
+                <div key={`${weekday}-${index}`} className="pb-1 text-[10px] font-medium text-text-secondary">
                   {weekday.replace(".", "")}
                 </div>
               ))}
@@ -626,10 +627,10 @@ export function CalendarScheduleSurface(props: Props) {
                     aria-current={isToday ? "date" : undefined}
                     className={cn(
                       "mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-medium tabular-nums",
-                      !isCurrentMonth && "text-[#c2c7d0]",
-                      isCurrentMonth && "text-[#344054] hover:bg-[#f0f2f5]",
-                      isSelected && "bg-[#17191f] text-white hover:bg-[#17191f]",
-                      isToday && !isSelected && "ring-1 ring-[#d1ad42]",
+                      !isCurrentMonth && "text-text-tertiary",
+                      isCurrentMonth && "text-text hover:bg-surface-sunken",
+                      isSelected && "bg-text text-white hover:bg-text",
+                      isToday && !isSelected && "ring-1 ring-accent",
                     )}
                   >
                     {date.getDate()}
@@ -639,9 +640,9 @@ export function CalendarScheduleSurface(props: Props) {
             </div>
           </div>
 
-          <div className="rounded-lg border border-[#e0e3e9] bg-white p-4 shadow-[0_4px_14px_rgba(29,38,53,0.04)]">
+          <div className="rounded-lg border border-border bg-surface p-4 shadow-[0_4px_14px_rgba(29,38,53,0.04)]">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[13px] font-semibold text-[#101828]">
+              <h2 className="text-[13px] font-semibold text-text">
                 {copy("My Schedule", "Моё расписание", "לוח הזמנים שלי")}
               </h2>
             </div>
@@ -651,7 +652,7 @@ export function CalendarScheduleSurface(props: Props) {
                 return (
                   <label
                     key={eventType}
-                    className="flex min-h-10 cursor-pointer items-center gap-3 rounded-md px-2 hover:bg-[#f7f8fa]"
+                    className="flex min-h-10 cursor-pointer items-center gap-3 rounded-md px-2 hover:bg-surface-subtle"
                   >
                     <input
                       type="checkbox"
@@ -663,14 +664,14 @@ export function CalendarScheduleSurface(props: Props) {
                       className={cn(
                         "flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--dmx-link)]",
                         enabled
-                          ? "border-[#7457c8] bg-[#7457c8] text-white"
-                          : "border-[#cfd4dc] bg-white text-transparent",
+                          ? "border-event-meeting-fg bg-event-meeting-fg text-white"
+                          : "border-border-strong bg-surface text-transparent",
                       )}
                     >
                       <Check aria-hidden="true" className="h-3.5 w-3.5" />
                     </span>
                     <span className={cn("h-3 w-3 rounded-full", EVENT_DOT[eventType])} />
-                    <span className="text-[12px] font-medium text-[#344054]">
+                    <span className="text-[12px] font-medium text-text">
                       {eventTypeLabel(eventType)}
                     </span>
                   </label>
@@ -679,8 +680,8 @@ export function CalendarScheduleSurface(props: Props) {
             </div>
           </div>
 
-          <div className="rounded-lg border border-[#e0e3e9] bg-white p-4 shadow-[0_4px_14px_rgba(29,38,53,0.04)]">
-            <div className="mb-3 text-[11px] font-semibold uppercase text-[#758096]">
+          <div className="rounded-lg border border-border bg-surface p-4 shadow-[0_4px_14px_rgba(29,38,53,0.04)]">
+            <div className="mb-3 text-[11px] font-semibold uppercase text-text-secondary">
               {copy("Crews", "Бригады", "צוותים")}
             </div>
             <div className="space-y-1.5">
@@ -695,28 +696,28 @@ export function CalendarScheduleSurface(props: Props) {
                     `Открыть строку расписания: ${crew.title}`,
                     `פתח שורת לוח: ${crew.title}`,
                   )}
-                  className="flex w-full items-center gap-2.5 rounded-md border border-transparent px-2 py-2 text-start hover:border-[#e1e4e9] hover:bg-[#f7f8fa]"
+                  className="flex w-full items-center gap-2.5 rounded-md border border-transparent px-2 py-2 text-start hover:border-border-strong hover:bg-surface-subtle"
                 >
                   <span
                     className={cn(
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
-                      crew.tone === "a" && "bg-[#fff3cf] text-[#805d00]",
-                      crew.tone === "b" && "bg-[#e9f2ff] text-[#2764a8]",
-                      crew.tone === "c" && "bg-[#e8f7ee] text-[#277a45]",
-                      crew.tone === "u" && "bg-[#eef0f3] text-[#758096]",
+                      crew.tone === "a" && "bg-status-warning-bg text-status-warning-fg",
+                      crew.tone === "b" && "bg-status-progress-bg text-status-progress-fg",
+                      crew.tone === "c" && "bg-status-ok-bg text-status-ok-fg",
+                      crew.tone === "u" && "bg-surface-sunken text-text-secondary",
                     )}
                   >
                     {crew.initials}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block break-words text-[12px] font-semibold leading-4 text-[#344054]">
+                    <span className="block break-words text-[12px] font-semibold leading-4 text-text">
                       {crew.title}
                     </span>
-                    <span className="mt-1 block break-words text-[11px] leading-4 text-[#667085]">
+                    <span className="mt-1 block break-words text-[11px] leading-4 text-text-secondary">
                       {laneLoadLabel(crew.id)}
                     </span>
                   </span>
-                  <span className="shrink-0 text-[10px] font-semibold tabular-nums text-[#758096]">
+                  <span className="shrink-0 text-[10px] font-semibold tabular-nums text-text-secondary">
                     {crew.busyDays} {copy("d", "дн.", "ימים")}
                   </span>
                 </button>
@@ -725,13 +726,13 @@ export function CalendarScheduleSurface(props: Props) {
           </div>
         </aside>
 
-        <div className="dmx-calendar-main min-w-0 bg-white">
+        <div className="dmx-calendar-main min-w-0 bg-surface">
           {calendarView === "month" ? (
             <div className="overflow-x-auto">
               <div className="min-w-[640px]">
-                <div className="grid grid-cols-7 border-b border-[#e2e4e9] bg-[#fafbfc]">
+                <div className="grid grid-cols-7 border-b border-border bg-surface-subtle">
                   {miniWeekdays.map((weekday, index) => (
-                    <div key={`${weekday}-${index}`} className="border-e border-[#e6e8ed] px-3 py-3 text-center text-[11px] font-semibold text-[#667085] last:border-e-0">
+                    <div key={`${weekday}-${index}`} className="border-e border-border-subtle px-3 py-3 text-center text-[11px] font-semibold text-text-secondary last:border-e-0">
                       {weekday}
                     </div>
                   ))}
@@ -742,14 +743,14 @@ export function CalendarScheduleSurface(props: Props) {
                     const dayEvents = eventsByDay.get(key) || [];
                     const isCurrentMonth = date.getMonth() === displayMonthDate.getMonth();
                     return (
-                      <div key={key} className={cn("min-h-[132px] border-b border-e border-[#e6e8ed] p-2", !isCurrentMonth && "bg-[#fafbfc]") }>
+                      <div key={key} className={cn("min-h-[132px] border-b border-e border-border-subtle p-2", !isCurrentMonth && "bg-surface-subtle") }>
                         <button
                           type="button"
                           onClick={() => onSelectDate(date, "day")}
                           aria-label={copy("Open day", "Открыть день", "פתיחת יום") + ": " + new Intl.DateTimeFormat(localeTag, { dateStyle: "long" }).format(date)}
                           className={cn(
                             "mb-1 flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums",
-                            isSameDay(date, now) ? "bg-[#17191f] text-white" : "text-[#667085] hover:bg-[#f0f2f5]",
+                            isSameDay(date, now) ? "bg-text text-white" : "text-text-secondary hover:bg-surface-sunken",
                           )}
                         >
                           {date.getDate()}
@@ -763,7 +764,7 @@ export function CalendarScheduleSurface(props: Props) {
                               className={cn(
                                 "block w-full truncate rounded-[5px] border-s-2 px-2 py-1 text-start text-[10px] font-semibold",
                                 EVENT_STYLE[event.event_type],
-                                event.isAtRisk && "border-[#e89a96] bg-[#fff0ef] text-[#922f2a]",
+                                event.isAtRisk && "border-status-problem-border bg-status-problem-bg text-status-problem-fg",
                               )}
                             >
                               {timeLabel(event.starts_at)} {event.title}
@@ -774,7 +775,7 @@ export function CalendarScheduleSurface(props: Props) {
                               type="button"
                               onClick={() => onSelectDate(date, "day")}
                               aria-label={copy("Show all events", "Показать все события", "הצגת כל האירועים") + ": " + new Intl.DateTimeFormat(localeTag, { dateStyle: "long" }).format(date)}
-                              className="w-full rounded px-1 py-1 text-start text-[11px] font-medium text-[#4f3a85] hover:bg-[#f2f0fa]"
+                              className="w-full rounded px-1 py-1 text-start text-[11px] font-medium text-event-meeting-fg hover:bg-event-meeting-bg"
                             >
                               +{dayEvents.length - 3} {copy("more", "ещё", "נוספים")}
                             </button>
@@ -790,10 +791,10 @@ export function CalendarScheduleSurface(props: Props) {
             <div className="max-h-[760px] overflow-auto overscroll-contain">
               <div className={cn(calendarView === "day" ? "min-w-[280px]" : "min-w-[700px]") }>
                 <div
-                  className="sticky top-0 z-30 grid border-b border-[#dfe2e8] bg-white"
+                  className="sticky top-0 z-30 grid border-b border-border bg-surface"
                   style={{ gridTemplateColumns: `64px repeat(${calendarDays.length}, minmax(0, 1fr))` }}
                 >
-                  <div className="flex items-end justify-center pb-4 text-[10px] font-semibold text-[#758096]">
+                  <div className="flex items-end justify-center pb-4 text-[10px] font-semibold text-text-secondary">
                     {timezoneLabel}
                   </div>
                   {calendarDays.map((date) => {
@@ -805,14 +806,14 @@ export function CalendarScheduleSurface(props: Props) {
                         key={key}
                         onClick={() => onSelectDate(date)}
                         className={cn(
-                          "border-s border-[#e2e4e9] px-2 py-4 text-center hover:bg-[#f8f9fb]",
-                          today && "bg-[#fffaf0]",
+                          "border-s border-border px-2 py-4 text-center hover:bg-surface-subtle",
+                          today && "bg-surface-subtle",
                         )}
                       >
-                        <span className="block text-[10px] font-semibold uppercase text-[#758096]">
+                        <span className="block text-[10px] font-semibold uppercase text-text-secondary">
                           {new Intl.DateTimeFormat(localeTag, { weekday: "short" }).format(date).replace(".", "")}
                         </span>
-                        <span className={cn("mt-1 inline-flex h-8 min-w-8 items-center justify-center rounded-full px-1 text-[20px] font-semibold tabular-nums", today ? "bg-[#17191f] text-white" : "text-[#101828]") }>
+                        <span className={cn("mt-1 inline-flex h-8 min-w-8 items-center justify-center rounded-full px-1 text-[20px] font-semibold tabular-nums", today ? "bg-text text-white" : "text-text") }>
                           {date.getDate()}
                         </span>
                       </button>
@@ -824,11 +825,11 @@ export function CalendarScheduleSurface(props: Props) {
                   className="grid"
                   style={{ gridTemplateColumns: `64px repeat(${calendarDays.length}, minmax(0, 1fr))` }}
                 >
-                  <div className="relative bg-white" style={{ height: `${BODY_HEIGHT}px` }}>
+                  <div className="relative bg-surface" style={{ height: `${BODY_HEIGHT}px` }}>
                     {hours.map((hour, index) => (
                       <span
                         key={hour}
-                        className="absolute end-3 -translate-y-1/2 text-[10px] font-semibold tabular-nums text-[#758096]"
+                        className="absolute end-3 -translate-y-1/2 text-[10px] font-semibold tabular-nums text-text-secondary"
                         style={{ top: `${index === 0 ? 8 : index * HOUR_HEIGHT}px` }}
                       >
                         {hourLabel(hour, locale)}
@@ -842,21 +843,21 @@ export function CalendarScheduleSurface(props: Props) {
                     return (
                       <div
                         key={key}
-                        className={cn("relative border-s border-[#e2e4e9]", today && "bg-[#fffcf4]")}
+                        className={cn("relative border-s border-border", today && "bg-surface-subtle")}
                         style={{ height: `${BODY_HEIGHT}px` }}
                       >
                         {hours.map((hour, index) => (
                           <div
                             aria-hidden="true"
                             key={hour}
-                            className="absolute inset-x-0 border-t border-[#e7e9ee]"
+                            className="absolute inset-x-0 border-t border-border"
                             style={{ top: `${index * HOUR_HEIGHT}px` }}
                           />
                         ))}
                         {today && showCurrentTime ? (
                           <div className="pointer-events-none absolute inset-x-0 z-20 flex items-center" style={{ top: `${currentTimeTop}px` }}>
-                            <span className="h-2 w-2 -translate-x-1 rounded-full bg-[#e84f45]" />
-                            <span className="h-px flex-1 bg-[#e84f45]" />
+                            <span className="h-2 w-2 -translate-x-1 rounded-full bg-status-problem-fg" />
+                            <span className="h-px flex-1 bg-status-problem-fg" />
                           </div>
                         ) : null}
                         {layouts.map(renderEvent)}
@@ -869,7 +870,7 @@ export function CalendarScheduleSurface(props: Props) {
           )}
 
           {!isLoading && events.length === 0 ? (
-            <div className="border-t border-[#e2e4e9] bg-[#fafbfc] px-4 py-3 text-center text-[11px] text-[#758096]">
+            <div className="border-t border-border bg-surface-subtle px-4 py-3 text-center text-[11px] text-text-secondary">
               {copy(
                 "No events match the selected filters.",
                 "Нет событий по выбранным фильтрам.",
@@ -878,7 +879,7 @@ export function CalendarScheduleSurface(props: Props) {
             </div>
           ) : null}
           {isLoading ? (
-            <div aria-live="polite" className="border-t border-[#e2e4e9] bg-[#fafbfc] px-4 py-3 text-center text-[11px] text-[#758096]">
+            <div aria-live="polite" className="border-t border-border bg-surface-subtle px-4 py-3 text-center text-[11px] text-text-secondary">
               {copy("Loading schedule…", "Загрузка расписания…", "טוען לוח זמנים…")}
             </div>
           ) : null}

@@ -63,6 +63,38 @@ export default {
           press: "var(--dmx-link-press)",
           tint: "var(--dmx-link-tint)",
         },
+        event: {
+          installation: {
+            bg: "var(--dmx-event-installation-bg)",
+            fg: "var(--dmx-event-installation-fg)",
+            border: "var(--dmx-event-installation-border)",
+            dot: "var(--dmx-event-installation-dot)",
+          },
+          delivery: {
+            bg: "var(--dmx-event-delivery-bg)",
+            fg: "var(--dmx-event-delivery-fg)",
+            border: "var(--dmx-event-delivery-border)",
+            dot: "var(--dmx-event-delivery-dot)",
+          },
+          meeting: {
+            bg: "var(--dmx-event-meeting-bg)",
+            fg: "var(--dmx-event-meeting-fg)",
+            border: "var(--dmx-event-meeting-border)",
+            dot: "var(--dmx-event-meeting-dot)",
+          },
+          consultation: {
+            bg: "var(--dmx-event-consultation-bg)",
+            fg: "var(--dmx-event-consultation-fg)",
+            border: "var(--dmx-event-consultation-border)",
+            dot: "var(--dmx-event-consultation-dot)",
+          },
+          inspection: {
+            bg: "var(--dmx-event-inspection-bg)",
+            fg: "var(--dmx-event-inspection-fg)",
+            border: "var(--dmx-event-inspection-border)",
+            dot: "var(--dmx-event-inspection-dot)",
+          },
+        },
         kpi: {
           yellow: "var(--dmx-kpi-yellow)",
           orange: "var(--dmx-kpi-orange)",

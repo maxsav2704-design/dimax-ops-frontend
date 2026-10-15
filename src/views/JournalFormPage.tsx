@@ -225,7 +225,7 @@ function JournalEditor({ id }: { id: string }) {
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div className="min-w-0">
-            <h1 className="text-lg font-semibold">{copy("Project handoff", "Сдача выполненных работ", "מסירת עבודות")}</h1>
+            <h1 className="dmx-page-title">{copy("Project handoff", "Сдача выполненных работ", "מסירת עבודות")}</h1>
             <p className="break-all text-xs text-text-secondary">
               {id || copy("Journal not selected", "Журнал не выбран", "לא נבחר יומן")}
             </p>

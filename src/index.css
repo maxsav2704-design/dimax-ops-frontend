@@ -59,6 +59,27 @@
     --dmx-shadow-overlay: 0 16px 40px rgba(0, 0, 0, 0.1);
     --dmx-shadow-card: 0 1px 2px rgba(17, 19, 24, 0.04), 0 4px 14px rgba(29, 38, 53, 0.04);
     --dmx-ring-focus: 0 0 0 2px var(--dmx-bg-surface), 0 0 0 4px var(--dmx-link);
+    /* Calendar event types (was a private hex palette inside the schedule surface). */
+    --dmx-event-installation-bg: #edf8f1;
+    --dmx-event-installation-fg: #155c37;
+    --dmx-event-installation-border: #8fd5ad;
+    --dmx-event-installation-dot: #9fd7b7;
+    --dmx-event-delivery-bg: #fff8e8;
+    --dmx-event-delivery-fg: #72530a;
+    --dmx-event-delivery-border: #e3c675;
+    --dmx-event-delivery-dot: #dec887;
+    --dmx-event-meeting-bg: #f2f0fa;
+    --dmx-event-meeting-fg: #4f3a85;
+    --dmx-event-meeting-border: #bcb1e2;
+    --dmx-event-meeting-dot: #bdb5dc;
+    --dmx-event-consultation-bg: #fff1ed;
+    --dmx-event-consultation-fg: #7f493a;
+    --dmx-event-consultation-border: #dfb5a7;
+    --dmx-event-consultation-dot: #debeb3;
+    --dmx-event-inspection-bg: #eef5ff;
+    --dmx-event-inspection-fg: #285b96;
+    --dmx-event-inspection-border: #9dbfe9;
+    --dmx-event-inspection-dot: #a8c6e9;
 
     --dmx-text-11: 0.6875rem;
     --dmx-text-12: 0.75rem;
@@ -200,6 +221,26 @@
     --dmx-shadow-overlay: 0 16px 40px rgba(0, 0, 0, 0.24);
     --dmx-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.18);
     --dmx-ring-focus: 0 0 0 2px var(--dmx-bg-surface), 0 0 0 4px var(--dmx-link);
+    --dmx-event-installation-bg: #102e1d;
+    --dmx-event-installation-fg: #9fe0b8;
+    --dmx-event-installation-border: #1e5a38;
+    --dmx-event-installation-dot: #4fb87a;
+    --dmx-event-delivery-bg: #39240a;
+    --dmx-event-delivery-fg: #f0d58a;
+    --dmx-event-delivery-border: #6a4410;
+    --dmx-event-delivery-dot: #c9a548;
+    --dmx-event-meeting-bg: #2a1d47;
+    --dmx-event-meeting-fg: #cdb8f3;
+    --dmx-event-meeting-border: #4a3580;
+    --dmx-event-meeting-dot: #9b85d6;
+    --dmx-event-consultation-bg: #3a1f17;
+    --dmx-event-consultation-fg: #f0bfae;
+    --dmx-event-consultation-border: #6a3b2c;
+    --dmx-event-consultation-dot: #c98a73;
+    --dmx-event-inspection-bg: #0f2547;
+    --dmx-event-inspection-fg: #a9c9f5;
+    --dmx-event-inspection-border: #1e4280;
+    --dmx-event-inspection-dot: #6b9be0;
 
     --background: 201 26% 8%;
     --foreground: 35 26% 92%;

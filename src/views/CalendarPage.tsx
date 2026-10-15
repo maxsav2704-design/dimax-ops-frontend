@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { CalendarScheduleSurface } from "@/components/calendar/CalendarScheduleSurface";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -937,6 +938,18 @@ export default function CalendarPage() {
   return (
     <DashboardLayout>
       <div data-testid="calendar-v27" className="page-shell page-stack-tight motion-stagger">
+        <DimaxPageHeader
+          breadcrumbs={[
+            { label: copy("Dashboard", "Главная", "ראשי"), href: "/" },
+            { label: copy("Calendar", "Календарь", "יומן") },
+          ]}
+          title={copy("Calendar", "Календарь", "יומן")}
+          subtitle={copy(
+            "Installer schedule, assignments and the unassigned queue by period.",
+            "График монтажников, назначения и очередь без назначения по периодам.",
+            "לוח המתקינים, השיבוצים והתור ללא שיבוץ לפי תקופה.",
+          )}
+        />
         {hasLoadError && (
           <div className={calendarNoticeClass("error")}>{loadErrorMessage}</div>
         )}
