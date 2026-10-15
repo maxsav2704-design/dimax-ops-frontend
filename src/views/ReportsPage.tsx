@@ -26,6 +26,7 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
+import { COMPANY_CURRENCY } from "@/components/dimax";
 import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
 import { ProjectMarginBasis, ProjectMarginNotice } from "@/components/prices/ProjectMarginNotice";
 import { InstallerFinancialBasis, InstallerFinancialNotice, InstallerFinancialBand } from "@/components/prices/InstallerFinancialNotice";
@@ -3215,7 +3216,7 @@ export default function ReportsPage() {
       eyebrow: copy("Door financial exposure", "Финансовый риск по дверям", "חשיפה כספית לפי דלתות"),
       title: copy("Open issues and delayed doors", "Открытые проблемы и задержки монтажа", "תקלות פתוחות ודלתות מעוכבות"),
       value: canExportFinancialReports
-        ? `${formatAmount(marginLeakageValue)} NIS`
+        ? `${formatAmount(marginLeakageValue)} ${COMPANY_CURRENCY}`
         : copy("Restricted", "Нет доступа", "אין הרשאה"),
       delta: canExportFinancialReports
         ? `${copy("Unique doors", "Уникальные двери", "דלתות ייחודיות")}: ${formatCount(issuesAddonsImpact?.summary?.exposure_doors)}`
@@ -3235,7 +3236,7 @@ export default function ReportsPage() {
       delta: canExportFinancialReports
         ? `${formatAmount(
             riskConcentration?.summary?.open_issue_profit_at_risk,
-          )} NIS at risk`
+          )} ${COMPANY_CURRENCY} at risk`
         : "finance access required",
       detail:
         canExportFinancialReports && riskConcentration?.projects?.[0]

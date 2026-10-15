@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { COMPANY_CURRENCY } from "@/components/dimax";
+import { formatLocaleMoney } from "@/lib/formatting";
 import {
   Dialog,
   DialogContent,
@@ -103,15 +105,12 @@ function normalizeItems<T>(response: ListResponse<T>): T[] {
   return Array.isArray(response) ? response : response.items || [];
 }
 
+// App locale (not the browser's) and the company currency, like every other money value.
 function formatMoney(value: string | number | null | undefined): string {
-  const amount = Number(value ?? 0);
-  if (!Number.isFinite(amount)) {
-    return String(value ?? "-");
-  }
-  return new Intl.NumberFormat(undefined, {
+  return formatLocaleMoney(value ?? 0, COMPANY_CURRENCY, undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount);
+  });
 }
 
 function formatDateTime(value: string): string {

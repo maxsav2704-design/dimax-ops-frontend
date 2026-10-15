@@ -174,8 +174,8 @@ describe("ReportsPage", () => {
       expect(within(row).getByText("-")).toBeInTheDocument();
     }
     const card = screen.getByRole("button", { name: /Door financial exposure/ });
-    expect(within(card).getByText(`${exposure ?? "-"} NIS`)).toBeInTheDocument();
-    expect(within(card).queryByText("500.00 NIS")).not.toBeInTheDocument();
+    expect(within(card).getByText(`${exposure ?? "-"} ILS`)).toBeInTheDocument();
+    expect(within(card).queryByText("500.00 ILS")).not.toBeInTheDocument();
     client.clear();
   });
 
