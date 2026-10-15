@@ -11,6 +11,7 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import {
+  InlineNotice,
   KpiCard as DimaxKpiCard,
   WidgetCard,
 } from "@/components/dimax";
@@ -110,17 +111,6 @@ function BoolBadge({ value, locale }: { value: boolean; locale?: string }) {
       )}{" "}
       {label}{" "}
     </span>
-  );
-}
-function settingsNoticeClass(tone: "success" | "error" | "warning"): string {
-  return cn(
-    "flex rounded-lg border px-4 py-3 text-[13px]",
-    tone === "success" &&
-      "items-center gap-2 border-status-ok-border bg-status-ok-bg text-status-ok-fg",
-    tone === "error" &&
-      "items-start gap-2 border-status-problem-border bg-status-problem-bg text-status-problem-fg",
-    tone === "warning" &&
-      "items-start gap-2 border-status-warning-border bg-status-warning-bg text-status-warning-fg",
   );
 }
 export default function SettingsPage() {
@@ -393,35 +383,17 @@ export default function SettingsPage() {
           />
         </div>
 
-        {isError && (
-          <div className={settingsNoticeClass("error")}>
-            {" "}
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{" "}
-            {loadErrorMessage}{" "}
-          </div>
-        )}{" "}
+        {isError && <InlineNotice tone="error">{loadErrorMessage}</InlineNotice>}{" "}
         {!canManageSettings && (
-          <div className={settingsNoticeClass("warning")}>
-            {" "}
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{" "}
+          <InlineNotice tone="warning">
             {copy(
               "Installer role has read-only access to company settings.",
               "Роль монтажника имеет доступ к настройкам компании только для чтения.",
               "לתפקיד מתקין יש גישת קריאה בלבד להגדרות החברה.",
-            )}{" "}
-          </div>
+            )}
+          </InlineNotice>
         )}{" "}
-        {feedback && (
-          <div className={settingsNoticeClass(feedback.tone)}>
-            {" "}
-            {feedback.tone === "error" ? (
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-            )}{" "}
-            {feedback.message}{" "}
-          </div>
-        )}{" "}
+        {feedback && <InlineNotice tone={feedback.tone}>{feedback.message}</InlineNotice>}{" "}
         {isLoading && (
           <div className="rounded-lg border border-border bg-surface p-4 text-[13px] text-text-secondary">
             {" "}

@@ -16,6 +16,7 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import {
+  InlineNotice,
   KpiCard as DimaxKpiCard,
   WidgetCard,
 } from "@/components/dimax";
@@ -116,17 +117,6 @@ function formatDate(value: string): string {
   return date.toLocaleDateString();
 }
 
-function installersNoticeClass(tone: "success" | "error" | "warning"): string {
-  return cn(
-    "mb-4 flex items-start gap-2 rounded-lg border px-4 py-3 text-[13px]",
-    tone === "success" &&
-      "border-status-ok-border bg-status-ok-bg text-status-ok-fg",
-    tone === "error" &&
-      "border-status-problem-border bg-status-problem-bg text-status-problem-fg",
-    tone === "warning" &&
-      "border-status-warning-border bg-status-warning-bg text-status-warning-fg",
-  );
-}
 
 function InstallerCard({
   installer,
@@ -963,38 +953,34 @@ export default function InstallersPage() {
         </div>
 
         {hasError && (
-          <div className={installersNoticeClass("error")}>
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>
-              {readableApiError(
-                installersQuery.error,
-                locale,
-                t("installers.error"),
-              )}
-            </span>
-          </div>
+          <InlineNotice tone="error" className="mb-4">
+            {readableApiError(
+              installersQuery.error,
+              locale,
+              t("installers.error"),
+            )}
+          </InlineNotice>
         )}
         {actionError && (
-          <div className={installersNoticeClass("error")}>
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{actionError}</span>
-          </div>
+          <InlineNotice tone="error" className="mb-4">
+            {actionError}
+          </InlineNotice>
         )}
         {notice && (
-          <div className={installersNoticeClass("success")}>
-            <UserRound className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{notice}</span>
-          </div>
+          <InlineNotice tone="success" className="mb-4">
+            {notice}
+          </InlineNotice>
         )}
         {!canManageInstallers && (
-          <div className={installersNoticeClass("warning")}>
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>
-              {canViewInstallerRates
-                ? "Installer profile changes are read-only for your scope, but rate data remain available."
-                : t("installers.readOnlyNotice")}
-            </span>
-          </div>
+          <InlineNotice tone="warning" className="mb-4">
+            {canViewInstallerRates
+              ? copy(
+                  "Installer profile changes are read-only for your scope, but rate data remain available.",
+                  "Изменение профилей монтажников недоступно для вашей роли, но данные о ставках остаются видимыми.",
+                  "שינוי פרופילי מתקינים אינו זמין לתפקידך, אך נתוני התעריפים נשארים זמינים.",
+                )
+              : t("installers.readOnlyNotice")}
+          </InlineNotice>
         )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

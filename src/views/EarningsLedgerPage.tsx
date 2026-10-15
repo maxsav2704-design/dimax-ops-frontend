@@ -4,9 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import {
-  AlertCircle,
   CalendarDays,
-  CheckCheck,
   Download,
   History,
   RefreshCw,
@@ -15,7 +13,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { COMPANY_CURRENCY, EmptyState, TableSkeleton } from "@/components/dimax";
+import { COMPANY_CURRENCY, EmptyState, InlineNotice, TableSkeleton } from "@/components/dimax";
 import { formatLocaleMoney } from "@/lib/formatting";
 import {
   Dialog,
@@ -221,20 +219,6 @@ function entryTone(entryType: LedgerEntryType): string {
     return "border-status-problem-border bg-status-problem-bg text-status-problem-fg";
   }
   return "border-status-warning-border bg-status-warning-bg text-status-warning-fg";
-}
-
-function ledgerNoticeClass(tone: "success" | "error"): string {
-  return cn(
-    "flex rounded-lg border px-4 py-3 text-[13px]",
-    tone === "success" &&
-      "items-center gap-2 border-status-ok-border bg-status-ok-bg text-status-ok-fg",
-    tone === "error" &&
-      "items-start gap-2 border-status-problem-border bg-status-problem-bg text-status-problem-fg",
-  );
-}
-
-function ledgerWarningClass(): string {
-  return "flex rounded-lg border border-status-warning-border bg-status-warning-bg px-4 py-3 text-[13px] text-status-warning-fg";
 }
 
 function workLabel(item: EarningsLedgerItem): string {
@@ -546,14 +530,13 @@ export default function EarningsLedgerPage() {
               {copy("Earnings Ledger", "Реестр начислений", "יומן תשלומים")}
             </h1>
           </section>
-          <div className={ledgerNoticeClass("error")}>
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <InlineNotice tone="error">
             {copy(
               "Payroll ledger requires finance access.",
               "Реестр начислений требует финансового доступа.",
               "יומן התשלומים דורש גישת כספים.",
             )}
-          </div>
+          </InlineNotice>
         </div>
       </DashboardLayout>
     );
@@ -681,16 +664,9 @@ export default function EarningsLedgerPage() {
         </section>
 
         {projectFilterMissing ? (
-          <div className={ledgerWarningClass()}>
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <span>
-                {copy(
-                  `Requested project ${projectId} is not available in the current payroll scope. The ledger was not loaded for another project.`,
-                  `Объект ${projectId} недоступен в текущем контексте начислений. Реестр не был загружен по другому объекту.`,
-                  `הפרויקט ${projectId} אינו זמין בהקשר השכר הנוכחי. היומן לא נטען עבור פרויקט אחר.`,
-                )}
-              </span>
+          <InlineNotice
+            tone="warning"
+            action={
               <button
                 type="button"
                 className="dmx-secondary-action shrink-0"
@@ -701,8 +677,14 @@ export default function EarningsLedgerPage() {
               >
                 {copy("Show all projects", "Показать все объекты", "הצג את כל הפרויקטים")}
               </button>
-            </div>
-          </div>
+            }
+          >
+            {copy(
+              `Requested project ${projectId} is not available in the current payroll scope. The ledger was not loaded for another project.`,
+              `Объект ${projectId} недоступен в текущем контексте начислений. Реестр не был загружен по другому объекту.`,
+              `הפרויקט ${projectId} אינו זמין בהקשר השכר הנוכחי. היומן לא נטען עבור פרויקט אחר.`,
+            )}
+          </InlineNotice>
         ) : null}
 
         <section className="toolbar-panel page-stack-tight">
@@ -854,31 +836,25 @@ export default function EarningsLedgerPage() {
         </section>
 
         {notice ? (
-          <div className={ledgerNoticeClass("success")}>
-            <CheckCheck className="h-4 w-4 shrink-0" />
-            {notice}
-          </div>
+          <InlineNotice tone="success">{notice}</InlineNotice>
         ) : null}
 
         {ledgerQuery.isError ||
         correctionMutation.isError ||
         exportMutation.isError ? (
-          <div className={ledgerNoticeClass("error")}>
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              {readableApiError(
-                ledgerQuery.error ||
-                  correctionMutation.error ||
-                  exportMutation.error,
-                locale,
-                copy(
-                  "Failed to load, update or export earnings ledger.",
-                  "Не удалось загрузить, обновить или экспортировать реестр начислений.",
-                  "טעינת, עדכון או ייצוא יומן התשלומים נכשלו.",
-                ),
-              )}
-            </span>
-          </div>
+          <InlineNotice tone="error">
+            {readableApiError(
+              ledgerQuery.error ||
+                correctionMutation.error ||
+                exportMutation.error,
+              locale,
+              copy(
+                "Failed to load, update or export earnings ledger.",
+                "Не удалось загрузить, обновить или экспортировать реестр начислений.",
+                "טעינת, עדכון או ייצוא יומן התשלומים נכשלו.",
+              ),
+            )}
+          </InlineNotice>
         ) : null}
 
         <section className="data-table-shell overflow-hidden">
