@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { COMPANY_CURRENCY } from "@/components/dimax";
+import { COMPANY_CURRENCY, EmptyState, TableSkeleton } from "@/components/dimax";
 import { formatLocaleMoney } from "@/lib/formatting";
 import {
   Dialog,
@@ -884,21 +884,17 @@ export default function EarningsLedgerPage() {
         <section className="data-table-shell overflow-hidden">
           <div className="divide-y divide-border-subtle md:hidden">
             {ledgerQuery.isLoading ? (
-              <div className="px-4 py-8 text-sm text-text-secondary">
-                {copy(
-                  "Loading ledger...",
-                  "Загружаем реестр...",
-                  "טוען יומן...",
-                )}
-              </div>
+              <TableSkeleton rows={4} columns={3} testId="ledger-loading-mobile" />
             ) : items.length === 0 ? (
-              <div className="px-4 py-8 text-sm text-text-secondary">
-                {copy(
+              <EmptyState
+                variant="row"
+                testId="ledger-empty-mobile"
+                title={copy(
                   "No ledger entries match current filters.",
                   "Нет начислений по текущим фильтрам.",
                   "אין רשומות לפי הסינון הנוכחי.",
                 )}
-              </div>
+              />
             ) : (
               items.map((item) => {
                 const amount = Number(item.amount_snapshot);
@@ -1052,28 +1048,22 @@ export default function EarningsLedgerPage() {
               <TableBody>
                 {ledgerQuery.isLoading ? (
                   <TableRow className="data-table-row">
-                    <TableCell
-                      colSpan={8}
-                      className="py-8 text-sm text-text-secondary"
-                    >
-                      {copy(
-                        "Loading ledger...",
-                        "Загружаем реестр...",
-                        "טוען יומן...",
-                      )}
+                    <TableCell colSpan={8} className="p-0">
+                      <TableSkeleton rows={5} columns={8} testId="ledger-loading" />
                     </TableCell>
                   </TableRow>
                 ) : items.length === 0 ? (
                   <TableRow className="data-table-row">
-                    <TableCell
-                      colSpan={8}
-                      className="py-8 text-sm text-text-secondary"
-                    >
-                      {copy(
-                        "No ledger entries match current filters.",
-                        "Нет начислений по текущим фильтрам.",
-                        "אין רשומות לפי הסינון הנוכחי.",
-                      )}
+                    <TableCell colSpan={8} className="p-0">
+                      <EmptyState
+                        variant="row"
+                        testId="ledger-empty"
+                        title={copy(
+                          "No ledger entries match current filters.",
+                          "Нет начислений по текущим фильтрам.",
+                          "אין רשומות לפי הסינון הנוכחי.",
+                        )}
+                      />
                     </TableCell>
                   </TableRow>
                 ) : (

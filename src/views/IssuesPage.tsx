@@ -19,6 +19,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
+import { EmptyState, TableSkeleton } from "@/components/dimax";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -1176,15 +1177,21 @@ export default function IssuesPage() {
               </div>
             </div>
             {issuesQuery.isLoading ? (
-              <div className="px-4 py-6 text-[13px] text-text-secondary">
-                {t("issues.loading")}
-              </div>
+              <TableSkeleton rows={5} columns={5} testId="issues-loading" />
             ) : visibleIssues.length === 0 ? (
-              <div className="px-4 py-6 text-[13px] text-text-secondary">
-                {issueSearch.trim()
-                  ? "No issues match current search and filters."
-                  : t("issues.empty")}
-              </div>
+              <EmptyState
+                variant="row"
+                testId="issues-empty"
+                title={
+                  issueSearch.trim()
+                    ? copy(
+                        "No issues match current search and filters.",
+                        "Нет проблем по текущему поиску и фильтрам.",
+                        "אין תקלות התואמות את החיפוש והסינון.",
+                      )
+                    : t("issues.empty")
+                }
+              />
             ) : (
               <div className="overflow-x-auto">
                 {visibleIssues.map((issue) => {
@@ -1197,7 +1204,7 @@ export default function IssuesPage() {
                     ? tt("issues.overdue")
                     : issue.due_at
                       ? formatDateTime(issue.due_at)
-                      : "No due date";
+                      : copy("No due date", "Без срока", "ללא מועד");
                   return (
                     <div
                       key={issue.id}

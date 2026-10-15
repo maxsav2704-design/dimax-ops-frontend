@@ -13,7 +13,26 @@ import { DispatcherBoard } from "@/components/dashboard/DispatcherBoard";
 import { NextSchedule } from "@/components/dashboard/NextSchedule";
 import { apiFetch } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { countNoun, type PluralSpec } from "@/lib/plural";
 import { cn } from "@/lib/utils";
+
+// Count nouns for the KPI detail lines: Russian needs one/few/many forms
+// ("1 дверь осталась", "2 двери осталось", "5 дверей осталось").
+const DOORS_LEFT: PluralSpec = {
+  en: ["door left", "doors left"],
+  ru: ["дверь осталась", "двери осталось", "дверей осталось"],
+  he: ["דלת נותרה", "דלתות נותרו"],
+};
+const ISSUES_BLOCKED: PluralSpec = {
+  en: ["blocked", "blocked"],
+  ru: ["заблокирована", "заблокировано", "заблокировано"],
+  he: ["חסומה", "חסומות"],
+};
+const INSTALLERS_BUSY: PluralSpec = {
+  en: ["busy", "busy"],
+  ru: ["занят", "заняты", "заняты"],
+  he: ["עסוק", "עסוקים"],
+};
 
 type ReportsDashboardResponse = {
   kpi: {
@@ -179,11 +198,8 @@ function dashboardActionLabels(locale: "en" | "ru" | "he") {
       problemProjects: "проблемных",
       openIssues: "открытых проблем",
       pendingDoors: "дверей в ожидании",
-      blocked: "заблокировано",
-      doorsLeft: "дверей осталось",
       installed7d: "Установлено за 7 дней",
       freeInstallers: "Свободные монтажники",
-      busy: "заняты",
       needsAttention: "Требует внимания",
       everythingFine: "Всё в порядке",
       active: "В работе",
@@ -202,11 +218,8 @@ function dashboardActionLabels(locale: "en" | "ru" | "he") {
       problemProjects: "בעייתיים",
       openIssues: "תקלות פתוחות",
       pendingDoors: "דלתות ממתינות",
-      blocked: "חסום",
-      doorsLeft: "דלתות נותרו",
       installed7d: "הותקנו ב-7 ימים",
       freeInstallers: "מתקינים זמינים",
-      busy: "עסוקים",
       needsAttention: "דורש טיפול",
       everythingFine: "הכל תקין",
       active: "בעבודה",
@@ -224,11 +237,8 @@ function dashboardActionLabels(locale: "en" | "ru" | "he") {
     problemProjects: "problem",
     openIssues: "open issues",
     pendingDoors: "pending doors",
-    blocked: "blocked",
-    doorsLeft: "doors left",
     installed7d: "Installed in 7 days",
     freeInstallers: "Available installers",
-    busy: "busy",
     needsAttention: "Needs attention",
     everythingFine: "All clear",
     active: "Active",
@@ -447,7 +457,7 @@ const Index = () => {
     {
       label: copy.kpi.activeProjects,
       value: dashboard?.limits.projects.current ?? 0,
-      detail: `${pendingDoors} ${labels.doorsLeft}`,
+      detail: countNoun(locale, pendingDoors, DOORS_LEFT),
       ready: !!dashboard,
       pending: dashboardQuery.isPending,
       status: labels.active,
@@ -456,7 +466,7 @@ const Index = () => {
     {
       label: labels.installed7d,
       value: kpi?.installed_doors ?? 0,
-      detail: `${pendingDoors} ${labels.doorsLeft}`,
+      detail: countNoun(locale, pendingDoors, DOORS_LEFT),
       ready: !!dashboard,
       pending: dashboardQuery.isPending,
       status: labels.week,
@@ -465,7 +475,7 @@ const Index = () => {
     {
       label: copy.dispatcher.metrics.issues,
       value: openIssues,
-      detail: `${blockedIssues} ${labels.blocked}`,
+      detail: countNoun(locale, blockedIssues, ISSUES_BLOCKED),
       ready: !!dispatcherSummary,
       pending: dispatcherBoardQuery.isPending,
       status:
@@ -475,7 +485,7 @@ const Index = () => {
     {
       label: labels.freeInstallers,
       value: availableInstallers,
-      detail: `${busyInstallers} ${labels.busy}`,
+      detail: countNoun(locale, busyInstallers, INSTALLERS_BUSY),
       ready: !!dispatcherSummary,
       pending: dispatcherBoardQuery.isPending,
       status: labels.availableNow,

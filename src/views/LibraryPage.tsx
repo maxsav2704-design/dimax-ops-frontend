@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, CheckCheck, Pencil, Plus, Search } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
-import { KpiCard as DimaxKpiCard } from "@/components/dimax";
+import { EmptyState, KpiCard as DimaxKpiCard, TableSkeleton } from "@/components/dimax";
 import {
   Dialog,
   DialogContent,
@@ -455,13 +455,13 @@ export default function LibraryPage() {
           <div className="divide-y divide-border-subtle md:hidden">
             {" "}
             {listQuery.isLoading ? (
-              <div className="px-4 py-8 text-sm text-text-secondary">
-                {copy("Loading library...", "Загрузка справочника...", "טוען ספרייה...")}
-              </div>
+              <TableSkeleton rows={4} columns={3} testId="library-loading-mobile" />
             ) : visibleItems.length === 0 ? (
-              <div className="px-4 py-8 text-sm text-text-secondary">
-                {copy("No products found.", "Товары не найдены.", "לא נמצאו מוצרים.")}
-              </div>
+              <EmptyState
+                variant="row"
+                testId="library-empty-mobile"
+                title={copy("No products found.", "Товары не найдены.", "לא נמצאו מוצרים.")}
+              />
             ) : (
               visibleItems.map((item) => (
                 <article key={`${item.id}-mobile`} className="px-3.5 py-3.5">
@@ -564,23 +564,19 @@ export default function LibraryPage() {
                 {" "}
                 {listQuery.isLoading ? (
                   <TableRow className="data-table-row">
-                    {" "}
-                    <TableCell
-                      colSpan={8}
-                      className="py-8 text-sm text-text-secondary"
-                    >
-                      {copy("Loading library...", "Загрузка справочника...", "טוען ספרייה...")}
-                    </TableCell>{" "}
+                    <TableCell colSpan={8} className="p-0">
+                      <TableSkeleton rows={5} columns={8} testId="library-loading" />
+                    </TableCell>
                   </TableRow>
                 ) : visibleItems.length === 0 ? (
                   <TableRow className="data-table-row">
-                    {" "}
-                    <TableCell
-                      colSpan={8}
-                      className="py-8 text-sm text-text-secondary"
-                    >
-                      {copy("No products found.", "Товары не найдены.", "לא נמצאו מוצרים.")}
-                    </TableCell>{" "}
+                    <TableCell colSpan={8} className="p-0">
+                      <EmptyState
+                        variant="row"
+                        testId="library-empty"
+                        title={copy("No products found.", "Товары не найдены.", "לא נמצאו מוצרים.")}
+                      />
+                    </TableCell>
                   </TableRow>
                 ) : (
                   visibleItems.map((item) => (
