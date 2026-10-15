@@ -32,6 +32,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuthSession } from "@/hooks/use-auth-session";
+import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { apiDownload, apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { useI18n } from "@/lib/i18n";
@@ -197,6 +199,9 @@ function filenameFromDisposition(
 export default function DocumentsPage() {
   const queryClient = useQueryClient();
   const { locale } = useI18n();
+  // VIEWER and FINANCE can read templates and history; only OWNER/OPERATIONS may change them.
+  const session = useAuthSession();
+  const canWriteDocuments = canRunPrivilegedAdminActions(session);
   const copy = (en: string, ru: string, he: string) =>
     locale === "ru" ? ru : locale === "he" ? he : en;
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -700,7 +705,7 @@ export default function DocumentsPage() {
               <button
                 type="button"
                 className="dmx-primary-action h-10 justify-center disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={uploadMutation.isPending}
+                disabled={uploadMutation.isPending || !canWriteDocuments}
                 onClick={() => uploadMutation.mutate()}
               >
                 {uploadMutation.isPending ? (
@@ -826,7 +831,7 @@ export default function DocumentsPage() {
             <button
               type="button"
               className="dmx-primary-action h-10 justify-center disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={!canRender}
+              disabled={!canRender || !canWriteDocuments}
               onClick={() => renderMutation.mutate()}
             >
               {renderMutation.isPending ? (
@@ -1005,7 +1010,7 @@ export default function DocumentsPage() {
                             onClick={() =>
                               templateLifecycleMutation.mutate(template)
                             }
-                            disabled={templateLifecycleMutation.isPending}
+                            disabled={templateLifecycleMutation.isPending || !canWriteDocuments}
                             aria-label={
                               template.is_active
                                 ? `Archive ${template.name}`
@@ -1062,6 +1067,7 @@ export default function DocumentsPage() {
                     type="button"
                     className="dmx-secondary-action h-8 px-2.5"
                     onClick={() => templateLifecycleMutation.mutate(template)}
+                    disabled={templateLifecycleMutation.isPending || !canWriteDocuments}
                   >
                     {template.is_active ? (
                       <Archive className="h-3.5 w-3.5" />

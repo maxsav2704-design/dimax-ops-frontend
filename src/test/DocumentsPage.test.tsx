@@ -5,15 +5,23 @@ import type { ReactNode } from "react";
 
 import DocumentsPage from "@/views/DocumentsPage";
 
-const { apiFetchMock, apiDownloadMock } = vi.hoisted(() => ({
+const { apiFetchMock, apiDownloadMock, authSessionMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
   apiDownloadMock: vi.fn(),
+  authSessionMock: vi.fn(),
 }));
 
 vi.mock("@/lib/api", () => ({
   apiFetch: apiFetchMock,
   apiDownload: apiDownloadMock,
 }));
+
+vi.mock("@/hooks/use-auth-session", () => ({
+  useAuthSession: authSessionMock,
+}));
+
+const ownerSession = { id: "admin-1", role: "ADMIN", admin_scope: "OWNER" } as const;
+const viewerSession = { id: "admin-2", role: "ADMIN", admin_scope: "VIEWER" } as const;
 
 vi.mock("@/components/DashboardLayout", () => ({
   DashboardLayout: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -106,6 +114,26 @@ describe("DocumentsPage", () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
     apiDownloadMock.mockReset();
+    authSessionMock.mockReset();
+    authSessionMock.mockReturnValue(ownerSession);
+  });
+
+  it("keeps templates read-only for a VIEWER scope", async () => {
+    authSessionMock.mockReturnValue(viewerSession);
+    apiFetchMock.mockImplementation(baseApiHandler);
+    renderPage();
+
+    await screen.findAllByRole("button", { name: /archive project handover/i });
+    expect(screen.getByRole("button", { name: /upload template/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /generate document/i })).toBeDisabled();
+    for (const button of screen.getAllByRole("button", { name: /archive project handover/i })) {
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+    }
+    // Downloads stay available; no write request was sent.
+    expect(screen.getAllByRole("button", { name: /download/i }).length).toBeGreaterThan(0);
+    const writes = apiFetchMock.mock.calls.filter(([, init]) => init && (init as RequestInit).method && (init as RequestInit).method !== "GET");
+    expect(writes).toHaveLength(0);
   });
 
   it("renders templates, project fields and generated documents", async () => {
