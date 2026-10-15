@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LanguageProvider } from "@/lib/i18n";
 import OperationsPage from "@/views/OperationsPage";
 
 const { apiFetchMock } = vi.hoisted(() => ({
@@ -38,6 +39,21 @@ function renderSubject() {
   return render(
     <QueryClientProvider client={queryClient}>
       <OperationsPage />
+    </QueryClientProvider>
+  );
+}
+
+function renderSubjectInRussian() {
+  window.localStorage.setItem("dimax_locale", "ru");
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <LanguageProvider>
+        <OperationsPage />
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }
@@ -1968,4 +1984,70 @@ describe("OperationsPage", () => {
       expect(screen.getByText("Updated 3 minutes ago")).toBeInTheDocument();
     });
   }, 10000);
+  it("localizes KPI tiles, incident rows and integration cards in Russian with plural-aware counts", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
+      if (path === "/api/v1/admin/sync/health/summary") {
+        return {
+          max_cursor: 4,
+          counts: {
+            ok: 4,
+            warn: 0,
+            danger: 0,
+            total: 4,
+            dead: 0,
+            never_seen: 0,
+            danger_pct: 0,
+          },
+          alerts_sent: 0,
+          top_laggers: [],
+          top_offline: [],
+        };
+      }
+      if (path === "/api/v1/admin/outbox/summary") {
+        return {
+          total: 0,
+          by_channel: {},
+          by_status: {},
+          by_delivery_status: {},
+          pending_overdue_15m: 0,
+          failed_total: 0,
+        };
+      }
+      if (path === "/api/v1/admin/outbox?status=FAILED&limit=8") {
+        return { items: [] };
+      }
+      if (path === "/api/v1/admin/projects/import-runs/failed-queue?limit=8&offset=0") {
+        return { items: [], total: 0, limit: 8, offset: 0 };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    renderSubjectInRussian();
+
+    // KPI tiles: localized title + alias + fallback note.
+    expect(await screen.findByText("Риск синхронизации")).toBeInTheDocument();
+    expect(screen.getByText("Нагрузка очереди синхронизации")).toBeInTheDocument();
+    expect(screen.getByText("0.0% из 4 монтажников")).toBeInTheDocument();
+    expect(screen.getByText("Сбойные отправки")).toBeInTheDocument();
+    expect(screen.getAllByText("н/д")).toHaveLength(2);
+    expect(screen.getByText("свежие")).toBeInTheDocument();
+
+    // Status pill: 3 webhook issues → "3 инцидента" (few form), not "3 инцидентов".
+    expect(screen.getByText("Система деградирует · 3 инцидента")).toBeInTheDocument();
+    expect(screen.getByText(/инцидента требуют внимания/)).toBeInTheDocument();
+
+    // Incident row + filter chips.
+    expect(screen.getByText("twilio: сигнал вебхука")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Подробнее" })).toBeInTheDocument();
+    expect(screen.getByText("Вебхук")).toBeInTheDocument();
+
+    // Integration cards.
+    expect(screen.getByText("в норме · очередь доставки чиста")).toBeInTheDocument();
+    expect(screen.getByText("3 сигнала провайдера/без соответствия")).toBeInTheDocument();
+    expect(screen.getByText("в норме · очередь не нагружена")).toBeInTheDocument();
+  }, 30000);
 });

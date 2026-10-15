@@ -48,6 +48,7 @@ import {
   readableConflictCode,
 } from "@/lib/api-error-display";
 import { useI18n, type Locale } from "@/lib/i18n";
+import { countNoun, pluralNoun, type PluralSpec } from "@/lib/plural";
 import { cn } from "@/lib/utils";
 
 const operationsOverrides: Record<Locale, Record<string, string>> = {
@@ -800,6 +801,52 @@ function freshnessBadgeClass(state: string): string {
 }
 
 type OperationsTone = "blue" | "green" | "neutral" | "orange" | "red";
+
+const INCIDENT_NOUN: PluralSpec = {
+  en: ["incident", "incidents"],
+  ru: ["инцидент", "инцидента", "инцидентов"],
+  he: ["אירוע", "אירועים"],
+};
+const INCIDENTS_NEED_ATTENTION: PluralSpec = {
+  en: ["incident needs attention", "incidents need attention"],
+  ru: ["инцидент требует внимания", "инцидента требуют внимания", "инцидентов требуют внимания"],
+  he: ["אירוע דורש התייחסות", "אירועים דורשים התייחסות"],
+};
+const IMPORTS_PENDING_RECONCILIATION: PluralSpec = {
+  en: ["import pending reconciliation", "imports pending reconciliation"],
+  ru: ["импорт ожидает сверки", "импорта ожидают сверки", "импортов ожидают сверки"],
+  he: ["ייבוא ממתין להתאמה", "ייבואים ממתינים להתאמה"],
+};
+const FAILED_DELIVERIES: PluralSpec = {
+  en: ["failed delivery", "failed deliveries"],
+  ru: ["сбойная доставка", "сбойные доставки", "сбойных доставок"],
+  he: ["משלוח שנכשל", "משלוחים שנכשלו"],
+};
+const QUEUED_SIGNALS: PluralSpec = {
+  en: ["queued signal", "queued signals"],
+  ru: ["сигнал в очереди", "сигнала в очереди", "сигналов в очереди"],
+  he: ["אות בתור", "אותות בתור"],
+};
+const SIGNALS: PluralSpec = {
+  en: ["signal", "signals"],
+  ru: ["сигнал", "сигнала", "сигналов"],
+  he: ["אות", "אותות"],
+};
+const PROVIDER_UNMATCHED_SIGNALS: PluralSpec = {
+  en: ["provider/unmatched signal", "provider/unmatched signals"],
+  ru: ["сигнал провайдера/без соответствия", "сигнала провайдера/без соответствия", "сигналов провайдера/без соответствия"],
+  he: ["אות ספק/לא תואם", "אותות ספק/לא תואמים"],
+};
+const FAILED_RUNS_NEED_RECOVERY: PluralSpec = {
+  en: ["failed run needs recovery", "failed runs need recovery"],
+  ru: ["сбойный запуск требует восстановления", "сбойных запуска требуют восстановления", "сбойных запусков требуют восстановления"],
+  he: ["הרצה שנכשלה דורשת שחזור", "הרצות שנכשלו דורשות שחזור"],
+};
+const QUEUED_CONFLICT_ACTIONS: PluralSpec = {
+  en: ["queued/conflict action", "queued/conflict actions"],
+  ru: ["действие в очереди/конфликте", "действия в очереди/конфликте", "действий в очереди/конфликте"],
+  he: ["פעולה בתור/בקונפליקט", "פעולות בתור/בקונפליקט"],
+};
 
 type RecoveryIncident = {
   actionLabel: string;
@@ -2003,7 +2050,7 @@ export default function OperationsPage() {
   const recoveryStatusLabel =
     recoveryStatusTone === "green"
       ? copy("System nominal", "Система в норме", "המערכת תקינה")
-      : `${copy("System degraded", "Система деградирует", "המערכת במצב ירוד")} · ${activeIncidentCount} ${copy("incidents", "инцидентов", "אירועים")}`;
+      : `${copy("System degraded", "Система деградирует", "המערכת במצב ירוד")} · ${countNoun(locale, activeIncidentCount, INCIDENT_NOUN)}`;
   const freshnessValue =
     freshnessState === "fresh"
       ? copy("fresh", "свежие", "עדכני")
@@ -2015,14 +2062,18 @@ export default function OperationsPage() {
   const recoveryIncidents: RecoveryIncident[] = [
     ...visibleFailedOutbox.slice(0, 3).map((item) => ({
       id: `delivery-${item.id}`,
-      title: `${item.channel} delivery failed`,
-      detail: `${item.recipient || item.subject || "outbox item"} · ${item.attempts}/${item.max_attempts} attempts · ${item.last_error || "no error payload"}`,
+      title: copy(
+        `${item.channel} delivery failed`,
+        `${item.channel}: сбой доставки`,
+        `${item.channel}: כשל במשלוח`,
+      ),
+      detail: `${item.recipient || item.subject || copy("outbox item", "элемент отправки", "פריט שליחה")} · ${item.attempts}/${item.max_attempts} ${copy("attempts", "попыток", "ניסיונות")} · ${item.last_error || copy("no error payload", "нет данных об ошибке", "אין פרטי שגיאה")}`,
       priority: "P1",
       kind: "delivery",
       tone: "red" as OperationsTone,
       icon: MessageCircle,
       age: formatDateTime(item.created_at),
-      actionLabel: "Recover delivery",
+      actionLabel: copy("Recover delivery", "Восстановить доставку", "שחזר משלוח"),
       disabled:
         !canRunPrivilegedActions || busyAction === `outbox:${item.id}`,
       onAction: () => {
@@ -2035,14 +2086,20 @@ export default function OperationsPage() {
     })),
     ...visibleFailedImports.slice(0, 2).map((item) => ({
       id: `import-${item.run_id}`,
-      title: `${item.project_name} import failed`,
-      detail: `${item.source_filename || "manual import"} · rows ${item.parsed_rows} · errors ${item.errors_count} · ${item.last_error || "no error payload"}`,
+      title: copy(
+        `${item.project_name} import failed`,
+        `${item.project_name}: сбой импорта`,
+        `${item.project_name}: כשל בייבוא`,
+      ),
+      detail: `${item.source_filename || copy("manual import", "ручной импорт", "ייבוא ידני")} · ${copy("rows", "строк", "שורות")} ${item.parsed_rows} · ${copy("errors", "ошибок", "שגיאות")} ${item.errors_count} · ${item.last_error || copy("no error payload", "нет данных об ошибке", "אין פרטי שגיאה")}`,
       priority: item.errors_count > 0 ? "P2" : "P3",
       kind: "import",
       tone: "orange" as OperationsTone,
       icon: FileSpreadsheet,
       age: formatDateTime(item.created_at),
-      actionLabel: item.retry_available ? "Recover import" : "Open import",
+      actionLabel: item.retry_available
+        ? copy("Recover import", "Восстановить импорт", "שחזר ייבוא")
+        : copy("Open import", "Открыть импорт", "פתח ייבוא"),
       disabled:
         !item.retry_available ||
         !canRunPrivilegedActions ||
@@ -2065,14 +2122,18 @@ export default function OperationsPage() {
       .slice(0, 2)
       .map((item) => ({
         id: `webhook-${item.id}`,
-        title: `${item.provider} webhook signal`,
+        title: copy(
+          `${item.provider} webhook signal`,
+          `${item.provider}: сигнал вебхука`,
+          `${item.provider}: אות webhook`,
+        ),
         detail: `${item.event_type} · ${item.result}${item.status ? ` · ${item.status}` : ""}${item.error ? ` · ${item.error}` : ""}`,
         priority: "P2",
         kind: "webhook",
         tone: "orange" as OperationsTone,
         icon: Webhook,
         age: formatDateTime(item.created_at),
-        actionLabel: "Details",
+        actionLabel: copy("Details", "Подробнее", "פרטים"),
         disabled: false,
         href: buildDeliveryReportHref({
           outboxId: item.outbox_id || undefined,
@@ -2083,8 +2144,12 @@ export default function OperationsPage() {
       const resetTarget = syncProblemResetTarget(problem);
       return {
         id: `sync-problem-${problem.id}`,
-        title: `${syncProblemInstallerLabel(problem)} sync issue`,
-        detail: `${problem.problem_title || problem.status} · ${readableConflictCode(problem.conflict_code || problem.problem_code || null, locale)} · ${problem.operator_action || problem.error || "manual review required"}`,
+        title: copy(
+          `${syncProblemInstallerLabel(problem)} sync issue`,
+          `${syncProblemInstallerLabel(problem)}: проблема синхронизации`,
+          `${syncProblemInstallerLabel(problem)}: בעיית סנכרון`,
+        ),
+        detail: `${problem.problem_title || problem.status} · ${readableConflictCode(problem.conflict_code || problem.problem_code || null, locale)} · ${problem.operator_action || problem.error || copy("manual review required", "требуется ручная проверка", "נדרשת בדיקה ידנית")}`,
         priority: problem.manual_review_required ? "P2" : "P3",
         kind: "sync",
         tone: problem.manual_review_required
@@ -2092,7 +2157,9 @@ export default function OperationsPage() {
           : ("blue" as OperationsTone),
         icon: ShieldAlert,
         age: formatDateTime(problem.created_at),
-        actionLabel: resetTarget ? "Request resync" : "Details",
+        actionLabel: resetTarget
+          ? copy("Request resync", "Запросить ресинхронизацию", "בקש סנכרון מחדש")
+          : copy("Details", "Подробнее", "פרטים"),
         disabled: !resetTarget || !canRunPrivilegedActions,
         onAction: resetTarget
           ? () => {
@@ -2106,17 +2173,17 @@ export default function OperationsPage() {
   const hasRecoveryIncidents = recoveryIncidents.length > 0;
   const recoveryIntegrations = [
     {
-      label: "WhatsApp / delivery outbox",
+      label: copy("WhatsApp / delivery outbox", "WhatsApp / очередь доставки", "WhatsApp / תור משלוחים"),
       detail:
         failedDeliveryTotal > 0
-          ? `degraded · ${failedDeliveryTotal} failed deliveries`
-          : "nominal · delivery queue clean",
+          ? `${copy("degraded", "деградация", "פגום")} · ${countNoun(locale, failedDeliveryTotal, FAILED_DELIVERIES)}`
+          : copy("nominal · delivery queue clean", "в норме · очередь доставки чиста", "תקין · תור המשלוחים נקי"),
       tone: failedDeliveryTotal > 0 ? ("red" as OperationsTone) : ("green" as OperationsTone),
       icon: MessageCircle,
     },
     {
       label: "Email / SMTP",
-      detail: `${outboxSummary?.by_channel.EMAIL ?? 0} queued signals · ${outboxSummary?.pending_overdue_15m ?? 0} overdue`,
+      detail: `${countNoun(locale, outboxSummary?.by_channel.EMAIL ?? 0, QUEUED_SIGNALS)} · ${outboxSummary?.pending_overdue_15m ?? 0} ${copy("overdue", "просрочено", "באיחור")}`,
       tone:
         (outboxSummary?.pending_overdue_15m ?? 0) > 0
           ? ("orange" as OperationsTone)
@@ -2124,29 +2191,29 @@ export default function OperationsPage() {
       icon: Mail,
     },
     {
-      label: "Delivery webhooks",
+      label: copy("Delivery webhooks", "Вебхуки доставки", "Webhooks של משלוחים"),
       detail:
         webhookIssueTotal > 0
-          ? `${webhookIssueTotal} provider/unmatched signals`
-          : `${webhookSummary?.total_received ?? 0} signals in ${webhookSummary?.window_hours ?? 24}h`,
+          ? countNoun(locale, webhookIssueTotal, PROVIDER_UNMATCHED_SIGNALS)
+          : `${countNoun(locale, webhookSummary?.total_received ?? 0, SIGNALS)} ${copy("in", "за", "ב-")} ${webhookSummary?.window_hours ?? 24}${copy("h", "ч", "ש׳")}`,
       tone: webhookIssueTotal > 0 ? ("orange" as OperationsTone) : ("green" as OperationsTone),
       icon: Webhook,
     },
     {
-      label: "Door file imports",
+      label: copy("Door file imports", "Импорт файлов дверей", "ייבוא קובצי דלתות"),
       detail:
         failedImportTotal > 0
-          ? `${failedImportTotal} failed runs need recovery`
-          : "clean · no failed import runs",
+          ? countNoun(locale, failedImportTotal, FAILED_RUNS_NEED_RECOVERY)
+          : copy("clean · no failed import runs", "чисто · нет сбойных запусков импорта", "נקי · אין הרצות ייבוא שנכשלו"),
       tone: failedImportTotal > 0 ? ("orange" as OperationsTone) : ("green" as OperationsTone),
       icon: FileSpreadsheet,
     },
     {
-      label: "Mobile offline sync",
+      label: copy("Mobile offline sync", "Офлайн-синхронизация мобильного", "סנכרון אופליין של המובייל"),
       detail:
         syncQueuePressure > 0
-          ? `${syncQueuePressure} queued/conflict actions`
-          : "nominal · no queue pressure",
+          ? countNoun(locale, syncQueuePressure, QUEUED_CONFLICT_ACTIONS)
+          : copy("nominal · no queue pressure", "в норме · очередь не нагружена", "תקין · אין עומס בתור"),
       tone: syncQueuePressure > 0 ? ("orange" as OperationsTone) : ("green" as OperationsTone),
       icon: Zap,
     },
@@ -2184,11 +2251,11 @@ export default function OperationsPage() {
                   <b className="font-medium text-text">
                     {activeIncidentCount}
                   </b>{" "}
-                  {copy("incidents need attention ·", "инциденты требуют внимания ·", "דורשות התייחסות ·")}{" "}
+                  {pluralNoun(locale, activeIncidentCount, INCIDENTS_NEED_ATTENTION)} ·{" "}
                   <b className="font-medium text-text">
                     {importsPendingReconciliation}
                   </b>{" "}
-                  {copy("imports pending reconciliation · last scan", "импорт в ожидании сверки · последнее сканирование", "ייבוא בהמתנה לפיוס · סריקה אחרונה")}{" "}
+                  {pluralNoun(locale, importsPendingReconciliation, IMPORTS_PENDING_RECONCILIATION)} · {copy("last scan", "последнее сканирование", "סריקה אחרונה")}{" "}
                   <b className="font-medium text-text">
                     {describeAgeMinutes(freshnessTimestamp, Date.now(), t)}
                   </b>{" "}
@@ -2337,18 +2404,20 @@ export default function OperationsPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-1.5 border-b border-border-subtle bg-surface-subtle px-4 py-2.5">
-                  {[
-                    ["All", recoveryIncidents.length],
-                    ["Delivery", visibleFailedOutbox.length],
-                    ["Webhook", webhookIssueTotal],
-                    ["Sync", visibleSyncProblems.length],
-                    ["Import", visibleFailedImports.length],
-                  ].map(([label, count]) => (
+                  {(
+                    [
+                      ["All", t("common.all"), recoveryIncidents.length],
+                      ["Delivery", copy("Delivery", "Доставка", "משלוח"), visibleFailedOutbox.length],
+                      ["Webhook", copy("Webhook", "Вебхук", "Webhook"), webhookIssueTotal],
+                      ["Sync", copy("Sync", "Синхронизация", "סנכרון"), visibleSyncProblems.length],
+                      ["Import", copy("Import", "Импорт", "ייבוא"), visibleFailedImports.length],
+                    ] as const
+                  ).map(([key, label, count]) => (
                     <span
-                      key={String(label)}
+                      key={key}
                       className={cn(
                         "rounded-full border px-3 py-1 text-[11px] font-medium",
-                        label === "All"
+                        key === "All"
                           ? "border-text bg-text text-text-inverse"
                           : "border-border bg-surface text-text",
                       )}
