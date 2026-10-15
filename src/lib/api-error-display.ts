@@ -34,6 +34,11 @@ const ERROR_COPY: Record<string, LocalizedTriple> = {
     ru: "Не удалось проверить сессию. Повторите попытку через некоторое время.",
     he: "לא ניתן לאמת את ההתחברות. יש לנסות שוב בעוד זמן קצר.",
   },
+  INVALID_CREDENTIALS: {
+    en: "Company ID, email or password is incorrect.",
+    ru: "Неверный ID компании, электронная почта или пароль.",
+    he: "מזהה החברה, האימייל או הסיסמה שגויים.",
+  },
   AUTH_REQUIRED: {
     en: "Your session expired. Sign in again to continue.",
     ru: "Сессия истекла. Войди снова, чтобы продолжить.",

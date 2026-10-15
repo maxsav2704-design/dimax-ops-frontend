@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import {
@@ -344,11 +344,14 @@ export default function IssuesPage() {
   const [form, setForm] = useState<WorkflowFormState>(emptyForm());
   const [formError, setFormError] = useState<string | null>(null);
   const [saveNote, setSaveNote] = useState<string | null>(null);
-  const copy = (en: string, ru: string, he: string) => {
-    if (locale === "ru") return ru;
-    if (locale === "he") return he;
-    return en;
-  };
+  const copy = useCallback(
+    (en: string, ru: string, he: string) => {
+      if (locale === "ru") return ru;
+      if (locale === "he") return he;
+      return en;
+    },
+    [locale],
+  );
   const session = useAuthSession();
   const canManageIssues = canRunPrivilegedAdminActions(session);
   const privilegedActionHint = canManageIssues
@@ -673,46 +676,51 @@ export default function IssuesPage() {
 
   const issueWorkflowTabs = useMemo(
     () => [
-      { label: "Open", status: "OPEN" as const, workflow: "all" as const, count: metrics.open },
       {
-        label: "New",
+        label: copy("Open", "Открытые", "פתוחות"),
+        status: "OPEN" as const,
+        workflow: "all" as const,
+        count: metrics.open,
+      },
+      {
+        label: copy("New", "Новые", "חדשות"),
         status: "OPEN" as const,
         workflow: "NEW" as const,
         count: metrics.workflowCounts.NEW,
       },
       {
-        label: "Triaged",
+        label: copy("Triaged", "Разобранные", "מוינו"),
         status: "OPEN" as const,
         workflow: "TRIAGED" as const,
         count: metrics.workflowCounts.TRIAGED,
       },
       {
-        label: "In progress",
+        label: copy("In progress", "В работе", "בטיפול"),
         status: "OPEN" as const,
         workflow: "IN_PROGRESS" as const,
         count: metrics.workflowCounts.IN_PROGRESS,
       },
       {
-        label: "Blocked",
+        label: copy("Blocked", "Заблокированные", "חסומות"),
         status: "OPEN" as const,
         workflow: "BLOCKED" as const,
         count: metrics.workflowCounts.BLOCKED,
         danger: true,
       },
       {
-        label: "Resolved",
+        label: copy("Resolved", "Решённые", "נפתרו"),
         status: "OPEN" as const,
         workflow: "RESOLVED" as const,
         count: metrics.workflowCounts.RESOLVED,
       },
       {
-        label: "Closed",
+        label: copy("Closed", "Закрытые", "סגורות"),
         status: "CLOSED" as const,
         workflow: "all" as const,
         count: metrics.closed,
       },
     ],
-    [metrics],
+    [copy, metrics],
   );
 
   const exportVisibleIssuesCsv = () => {
@@ -1007,7 +1015,7 @@ export default function IssuesPage() {
                 statusFilter === tab.status && workflowFilter === tab.workflow;
               return (
                 <button
-                  key={tab.label}
+                  key={`${tab.status}-${tab.workflow}`}
                   type="button"
                   onClick={() => {
                     setStatusFilter(tab.status);

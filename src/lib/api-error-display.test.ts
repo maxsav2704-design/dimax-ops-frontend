@@ -50,6 +50,16 @@ describe("api-error-display", () => {
     );
   });
 
+  it("maps a rejected login to localized copy instead of the raw API detail", () => {
+    const error = new ApiError(401, "Invalid credentials", {
+      error: { code: "INVALID_CREDENTIALS", message: "Invalid credentials" },
+    });
+
+    expect(readableApiError(error, "en", "fallback")).toBe("Company ID, email or password is incorrect.");
+    expect(readableApiError(error, "ru", "fallback")).toBe("Неверный ID компании, электронная почта или пароль.");
+    expect(readableApiError(error, "he", "fallback")).toBe("מזהה החברה, האימייל או הסיסמה שגויים.");
+  });
+
   it("maps conflict codes to readable labels", () => {
     expect(readableConflictCode("CONFLICT_ASSIGNMENT_CHANGED", "en")).toBe("Assignment changed");
     expect(readableConflictCode("CONFLICT_INVALID_TRANSITION", "ru")).toBe("Недопустимый переход");
