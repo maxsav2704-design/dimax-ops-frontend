@@ -937,27 +937,27 @@ export default function IssuesPage() {
               {[
                 {
                   tone: "problem",
-                  label: "SLA breached",
+                  label: copy("SLA breached", "Нарушен SLA", "חריגה מ-SLA"),
                   value: metrics.overdue,
-                  note: `${metrics.p1} P1 in current scope`,
+                  note: `${metrics.p1} ${copy("P1 in current scope", "P1 в текущей области", "P1 בהיקף הנוכחי")}`,
                 },
                 {
                   tone: "warning",
-                  label: "Due today",
+                  label: copy("Due today", "Срок сегодня", "לטיפול היום"),
                   value: metrics.dueToday,
-                  note: "within 24h window",
+                  note: copy("within 24h window", "в окне 24 часов", "בחלון של 24 שעות"),
                 },
                 {
                   tone: "accent",
-                  label: "Unassigned",
+                  label: copy("Unassigned", "Не назначено", "ללא שיבוץ"),
                   value: metrics.unassigned,
-                  note: "needs dispatcher triage",
+                  note: copy("needs dispatcher triage", "требует разбора диспетчером", "דורש טיפול של מוקד"),
                 },
                 {
                   tone: "ok",
-                  label: "Resolved / week",
+                  label: copy("Resolved / week", "Решено за неделю", "נפתרו השבוע"),
                   value: metrics.resolvedWeek,
-                  note: "closed or resolved recently",
+                  note: copy("closed or resolved recently", "закрыто или решено недавно", "נסגרו או נפתרו לאחרונה"),
                 },
               ].map((item) => (
                 <div

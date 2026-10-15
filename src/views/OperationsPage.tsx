@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -458,10 +458,10 @@ function formatDateTime(value: string | null): string {
   return parsed.toLocaleString();
 }
 
-function compactMap(value: Record<string, number>): string {
+function compactMap(value: Record<string, number>, fallback = "n/a"): string {
   const entries = Object.entries(value);
   if (entries.length === 0) {
-    return "n/a";
+    return fallback;
   }
   return entries.map(([key, count]) => `${key}: ${count}`).join(" | ");
 }
@@ -1030,11 +1030,14 @@ function RecoveryIntegrationRow({
 export default function OperationsPage() {
   const { locale, t } = useI18n();
   const tt = (key: string) => operationsOverrides[locale]?.[key] ?? t(key);
-  const copy = (en: string, ru: string, he: string) => {
-    if (locale === "ru") return ru;
-    if (locale === "he") return he;
-    return en;
-  };
+  const copy = useCallback(
+    (en: string, ru: string, he: string) => {
+      if (locale === "ru") return ru;
+      if (locale === "he") return he;
+      return en;
+    },
+    [locale],
+  );
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const session = useAuthSession();
@@ -1524,13 +1527,15 @@ export default function OperationsPage() {
   const cards = useMemo(
     () => [
       {
+        // `label` is the internal key used for aliases and links; `title` is what the tile shows.
         label: "Sync danger",
+        title: copy("Sync danger", "Риск синхронизации", "סיכון סנכרון"),
         value: onlyActionable
           ? visibleSyncItems.length
           : (sync?.counts.danger ?? 0),
         note: sync
-          ? `${sync.counts.danger_pct.toFixed(1)}% of ${sync.counts.total} installers`
-          : "Sync health pending",
+          ? `${sync.counts.danger_pct.toFixed(1)}% ${copy("of", "из", "מתוך")} ${sync.counts.total} ${copy("installers", "монтажников", "מתקינים")}`
+          : copy("Sync health pending", "Состояние синхронизации уточняется", "מצב הסנכרון בבדיקה"),
         icon: ShieldAlert,
         tone:
           (onlyActionable
@@ -1541,6 +1546,7 @@ export default function OperationsPage() {
       },
       {
         label: "Failed imports",
+        title: copy("Failed imports", "Сбойные импорты", "ייבואים שנכשלו"),
         value: onlyActionable
           ? visibleFailedImports.length
           : (failedImportsQuery.data?.total ?? 0),
@@ -1548,8 +1554,8 @@ export default function OperationsPage() {
           visibleFailedImports.length > 0
             ? visibleFailedImports[0]?.project_name
             : onlyActionable
-              ? "No actionable imports"
-              : "No failed imports",
+              ? copy("No actionable imports", "Нет импортов, требующих действий", "אין ייבואים הדורשים פעולה")
+              : copy("No failed imports", "Сбойных импортов нет", "אין ייבואים שנכשלו"),
         icon: ServerCrash,
         tone:
           (onlyActionable
@@ -1560,12 +1566,13 @@ export default function OperationsPage() {
       },
       {
         label: "Failed outbox",
+        title: copy("Failed outbox", "Сбойные отправки", "שליחות שנכשלו"),
         value: onlyActionable
           ? visibleFailedOutbox.length
           : (outboxSummary?.failed_total ?? 0),
         note: outboxSummary
-          ? compactMap(outboxSummary.by_channel)
-          : "No outbox data",
+          ? compactMap(outboxSummary.by_channel, copy("n/a", "н/д", "לא זמין"))
+          : copy("No outbox data", "Нет данных об отправках", "אין נתוני שליחה"),
         icon: Siren,
         tone:
           (onlyActionable
@@ -1576,16 +1583,18 @@ export default function OperationsPage() {
       },
       {
         label: "Pending > 15m",
+        title: copy("Pending > 15m", "Ожидают > 15 мин", "ממתינים > 15 דק׳"),
         value: outboxSummary?.pending_overdue_15m ?? 0,
         note: outboxSummary
-          ? compactMap(outboxSummary.by_delivery_status)
-          : "No queue data",
+          ? compactMap(outboxSummary.by_delivery_status, copy("n/a", "н/д", "לא זמין"))
+          : copy("No queue data", "Нет данных очереди", "אין נתוני תור"),
         icon: TimerReset,
         tone:
           (outboxSummary?.pending_overdue_15m ?? 0) > 0 ? "warning" : "neutral",
       },
     ],
     [
+      copy,
       failedImportsQuery.data?.total,
       onlyActionable,
       outboxSummary,
@@ -1993,18 +2002,16 @@ export default function OperationsPage() {
         : "green";
   const recoveryStatusLabel =
     recoveryStatusTone === "green"
-      ? "System nominal"
-      : recoveryStatusTone === "orange"
-        ? `System degraded · ${activeIncidentCount} incidents`
-        : `System degraded · ${activeIncidentCount} incidents`;
+      ? copy("System nominal", "Система в норме", "המערכת תקינה")
+      : `${copy("System degraded", "Система деградирует", "המערכת במצב ירוד")} · ${activeIncidentCount} ${copy("incidents", "инцидентов", "אירועים")}`;
   const freshnessValue =
     freshnessState === "fresh"
-      ? "fresh"
+      ? copy("fresh", "свежие", "עדכני")
       : freshnessState === "stale"
-        ? "stale"
+        ? copy("stale", "устарели", "לא עדכני")
         : freshnessState === "degraded"
-          ? "degraded"
-          : "refreshing";
+          ? copy("degraded", "деградация", "פגום")
+          : copy("refreshing", "обновляются", "מתעדכן");
   const recoveryIncidents: RecoveryIncident[] = [
     ...visibleFailedOutbox.slice(0, 3).map((item) => ({
       id: `delivery-${item.id}`,
@@ -2256,12 +2263,12 @@ export default function OperationsPage() {
                         : "blue";
                 const alias =
                   card.label === "Sync danger"
-                    ? "Sync queue pressure"
+                    ? copy("Sync queue pressure", "Нагрузка очереди синхронизации", "עומס תור הסנכרון")
                     : card.label === "Failed outbox"
-                      ? "Failed deliveries"
+                      ? copy("Failed deliveries", "Сбойные доставки", "משלוחים שנכשלו")
                       : card.label === "Pending > 15m"
-                        ? "Queue aging"
-                        : "Door import recovery";
+                        ? copy("Queue aging", "Старение очереди", "התיישנות התור")
+                        : copy("Door import recovery", "Восстановление импорта дверей", "שחזור ייבוא דלתות");
 
                 return (
                   <RecoveryHealthTile
@@ -2280,7 +2287,7 @@ export default function OperationsPage() {
                             })
                           : undefined
                     }
-                    label={card.label}
+                    label={card.title}
                     status={
                       tone === "red" ? "P1" : tone === "orange" ? "warn" : "ok"
                     }
