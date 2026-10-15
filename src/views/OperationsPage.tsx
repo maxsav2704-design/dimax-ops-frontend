@@ -23,6 +23,7 @@ import {
 import { usePathname, useSearchParams } from "next/navigation";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { PriceConflictReviewDialog } from "@/components/operations/PriceConflictReviewDialog";
 import {
   KpiCard as DimaxKpiCard,
@@ -2147,35 +2148,15 @@ export default function OperationsPage() {
   return (
     <DashboardLayout>
       <div className="page-shell page-stack-tight motion-stagger">
-        <section
-          data-testid="operations-recovery-center"
-          className="overflow-hidden rounded-[14px] border border-border bg-app text-[13px] shadow-sm"
-        >
-          <div className="flex items-center gap-3 border-b border-border bg-app px-4 py-3">
-            <div className="rounded-full bg-text px-3 py-1 text-[11px] font-semibold tracking-[0.12em] text-accent">
-              DIMAX
-            </div>
-            <div className="min-w-0 flex-1 truncate text-center text-[11px] font-medium uppercase tracking-[0.14em] text-text-secondary">
-              {copy("DIMAX GROUP · OPERATIONS", "ГРУППА DIMAX · ОПЕРАЦИИ", "DIMAX GROUP · פעולות")}
-            </div>
-            <div className="flex items-center gap-2 text-text-secondary">
-              <Bell className="h-4 w-4" />
-              <Activity className="h-4 w-4" />
-            </div>
-          </div>
-
-          <div className="space-y-4 p-4">
-            <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-link">
-              {copy("Dashboard", "Главная", "ראשי")} <span className="mx-1 text-text-tertiary">#</span>{" "}
-              <b className="font-medium text-text">{copy("Operations Center", "Операционный центр", "מרכז מבצעים")}</b>
-            </div>
-
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-[24px] font-semibold leading-tight text-text">
-                    {copy("Operations recovery", "Восстановление операций", "שחזור תפעולי")}
-                  </h1>
+        <section data-testid="operations-recovery-center" className="space-y-4 text-13">
+          <div className="space-y-4">
+            <DimaxPageHeader
+              breadcrumbs={[
+                { label: copy("Dashboard", "Главная", "ראשי"), href: "/" },
+                { label: copy("Operations Center", "Операционный центр", "מרכז מבצעים") },
+              ]}
+              title={copy("Operations recovery", "Восстановление операций", "שחזור תפעולי")}
+              status={
                   <span
                     className={cn(
                       "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11.5px] font-medium",
@@ -2190,8 +2171,9 @@ export default function OperationsPage() {
                     />
                     {recoveryStatusLabel}
                   </span>
-                </div>
-                <div className="mt-2 text-[12.5px] text-text-secondary">
+              }
+              meta={
+                <span>
                   <b className="font-medium text-text">
                     {activeIncidentCount}
                   </b>{" "}
@@ -2213,10 +2195,10 @@ export default function OperationsPage() {
                   </b>{" "}
                   · <b className="font-medium text-text">{manualReviewCount}</b>{" "}
                   {copy("manual review", "проверка вручную", "סקירה ידנית")}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap justify-start gap-2 sm:justify-end">
+                </span>
+              }
+              actions={
+                <>
                 <Link href="/settings" className="dmx-secondary-action">
                   <Bell className="h-4 w-4" />
                   {copy("Alerts config", "Конфигурация оповещений", "תצורת התראות")}
@@ -2256,10 +2238,11 @@ export default function OperationsPage() {
                   disabled={isRefreshing}
                 >
                   <RefreshCcw className="h-4 w-4" />
-                  {isRefreshing ? t("common.refreshing") : "Run diagnostics"}
+                  {isRefreshing ? t("common.refreshing") : copy("Run diagnostics", "Запустить диагностику", "הפעלת אבחון")}
                 </button>
-              </div>
-            </div>
+                </>
+              }
+            />
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
               {cards.map((card) => {

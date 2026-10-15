@@ -7,7 +7,10 @@ type DimaxPageHeaderProps = {
   /** Replaces the eyebrow with a breadcrumb trail; the last item is the current page. */
   breadcrumbs?: BreadcrumbItem[];
   title: ReactNode;
+  /** Plain text badge rendered in the quiet week-pill style. */
   badge?: ReactNode;
+  /** A ready-made status pill (tone colours included) rendered next to the title as is. */
+  status?: ReactNode;
   subtitle?: ReactNode;
   /** Secondary facts under the subtitle (counts, last refresh); rendered as a quiet row. */
   meta?: ReactNode;
@@ -16,7 +19,7 @@ type DimaxPageHeaderProps = {
 
 // The one page heading for admin screens: eyebrow or breadcrumbs, a single h1
 // at the page-title size, an optional status badge, subtitle, meta and actions.
-export function DimaxPageHeader({ eyebrow, breadcrumbs, title, badge, subtitle, meta, actions }: DimaxPageHeaderProps) {
+export function DimaxPageHeader({ eyebrow, breadcrumbs, title, badge, status, subtitle, meta, actions }: DimaxPageHeaderProps) {
   return (
     <section className="dmx-page-header">
       <div className="min-w-0 flex-1">
@@ -28,6 +31,7 @@ export function DimaxPageHeader({ eyebrow, breadcrumbs, title, badge, subtitle, 
         <div className="dmx-title-row">
           <h1 className="dmx-page-title">{title}</h1>
           {badge ? <span className="dmx-week-pill">{badge}</span> : null}
+          {status ?? null}
         </div>
         {subtitle ? <p className="dmx-page-subtitle mt-1">{subtitle}</p> : null}
         {meta ? <div className="type-caption mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">{meta}</div> : null}
