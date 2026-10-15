@@ -94,10 +94,15 @@ describe("Index dashboard", () => {
   it("does not present missing data as zero or all clear while loading", () => {
     apiFetchMock.mockImplementation(() => new Promise(() => {}));
     renderSubject();
-    expect(screen.getAllByRole("status")).toHaveLength(3);
+    // 3 per-query loading notices + 2 section skeletons, all role="status".
+    expect(screen.getAllByRole("status")).toHaveLength(5);
+    expect(screen.getByTestId("dashboard-dispatcher-loading")).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByTestId("dashboard-schedule-loading")).toHaveAttribute("aria-busy", "true");
     for (const tile of screen.getAllByTestId("dashboard-kpi")) {
       expect(tile).toHaveAttribute("aria-busy", "true");
       expect(within(tile).queryByText("0")).not.toBeInTheDocument();
+      expect(within(tile).queryByText("—")).not.toBeInTheDocument();
+      expect(within(tile).getByText("Loading")).toHaveClass("sr-only");
     }
     expect(screen.queryByText("All clear")).not.toBeInTheDocument();
     expect(screen.queryByText("No upcoming events.")).not.toBeInTheDocument();

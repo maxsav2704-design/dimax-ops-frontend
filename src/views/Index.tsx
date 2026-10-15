@@ -6,7 +6,8 @@ import { AlertTriangle, CalendarDays, Plus } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DataStateNotice } from "@/components/DataStateNotice";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
-import { COMPANY_CURRENCY } from "@/components/dimax";
+import { CardSkeleton, COMPANY_CURRENCY, TableSkeleton } from "@/components/dimax";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getDashboardCopy } from "@/components/dashboard/copy";
 import { DispatcherBoard } from "@/components/dashboard/DispatcherBoard";
 import { NextSchedule } from "@/components/dashboard/NextSchedule";
@@ -303,6 +304,7 @@ function DashboardV24KpiTile({ item }: { item: DashboardV24Kpi }) {
   const tone = dashboardToneClasses(item.ready ? item.tone : "neutral");
   const unavailable = locale === "ru" ? "Нет данных" : locale === "he" ? "אין נתונים" : "Unavailable";
   const loading = locale === "ru" ? "Загрузка" : locale === "he" ? "טוען" : "Loading";
+  const isLoading = item.pending && !item.ready;
 
   return (
     <div
@@ -318,25 +320,43 @@ function DashboardV24KpiTile({ item }: { item: DashboardV24Kpi }) {
           <div className="min-h-8 text-[10.5px] font-semibold leading-4 text-text-secondary">
             {item.label}
           </div>
-          <span
+          {isLoading ? (
+            <Skeleton className="h-4 w-14 shrink-0 rounded-full" />
+          ) : (
+            <span
+              className={cn(
+                "shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-semibold",
+                tone.status,
+              )}
+            >
+              {item.ready ? item.status : unavailable}
+            </span>
+          )}
+        </div>
+        {isLoading ? (
+          // Same box as the value line so the tile does not jump when data lands.
+          <Skeleton className="mt-2 h-6 w-16" />
+        ) : (
+          <div
             className={cn(
-              "shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-semibold",
-              tone.status,
+              "mt-2 text-[24px] font-semibold leading-none tabular-nums",
+              tone.value,
             )}
           >
-            {item.ready ? item.status : item.pending ? loading : unavailable}
-          </span>
-        </div>
-        <div
-          className={cn(
-            "mt-2 text-[24px] font-semibold leading-none tabular-nums",
-            tone.value,
-          )}
-        >
-          {item.ready ? item.value : "—"}
-        </div>
+            {item.ready ? item.value : "—"}
+          </div>
+        )}
         <div className="mt-3 line-clamp-2 min-h-8 text-[10.5px] leading-4 text-text-secondary">
-          {item.ready ? item.detail : item.pending ? loading : unavailable}
+          {isLoading ? (
+            <>
+              <Skeleton className="mt-0.5 h-3 w-3/4" />
+              <span className="sr-only">{loading}</span>
+            </>
+          ) : item.ready ? (
+            item.detail
+          ) : (
+            unavailable
+          )}
         </div>
       </div>
     </div>
@@ -544,6 +564,9 @@ const Index = () => {
           </div>
         </section>
 
+        {dispatcherBoardQuery.isPending && !dispatcherBoardQuery.data && (
+          <CardSkeleton cards={3} lines={3} testId="dashboard-dispatcher-loading" />
+        )}
         {dispatcherBoardQuery.data && (
           <DispatcherBoard
             summary={dispatcherBoardQuery.data.summary}
@@ -558,6 +581,9 @@ const Index = () => {
           />
         )}
 
+        {nextScheduleQuery.isPending && !nextScheduleQuery.data && (
+          <TableSkeleton rows={3} columns={3} testId="dashboard-schedule-loading" />
+        )}
         {nextScheduleQuery.data && <NextSchedule
           events={events}
           onOpenCalendar={() => router.push("/calendar")}
