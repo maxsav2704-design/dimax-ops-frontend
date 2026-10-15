@@ -3,6 +3,10 @@
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Save, Trash2 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +32,7 @@ export function PriceListEditor({ base, latest, onClose, onSaved }: {
   const [error, setError] = useState("");
   const [uncertain, setUncertain] = useState(false);
   const [conflict, setConflict] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const pending = useRef<DraftInput | null>(null);
   const locked = useRef(false);
   const catalog = useQuery({ queryKey: ["price-catalog"], queryFn: ({ signal }) => loadPriceCatalog(signal), retry: false });
@@ -36,7 +41,10 @@ export function PriceListEditor({ base, latest, onClose, onSaved }: {
     lines.length > 0 && lines.length <= 500 && lines.every((row) => available.has(workKey(row)) && normalizeInstallerPrice(row.installer_price));
 
   function close() {
-    if (!busy && (!dirty || window.confirm(t.leave))) onClose();
+    if (busy) return;
+    // Unsaved edits ask through an in-app alert dialog instead of window.confirm.
+    if (dirty) setLeaveOpen(true);
+    else onClose();
   }
   async function save() {
     if (locked.current || conflict || (!uncertain && !valid)) return;
@@ -111,6 +119,18 @@ export function PriceListEditor({ base, latest, onClose, onSaved }: {
           </Button>
         </div>
       </form>
+      <AlertDialog open={leaveOpen} onOpenChange={setLeaveOpen}>
+        <AlertDialogContent dir={dir}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.leave}</AlertDialogTitle>
+            <AlertDialogDescription>{t.leaveHint}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t.leaveKeep}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setLeaveOpen(false); onClose(); }}>{t.leaveDiscard}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DialogContent>
   </Dialog>;
 }

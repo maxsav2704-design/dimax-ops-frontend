@@ -38,7 +38,8 @@ function mount() {
   return { ...view, client };
 }
 async function inviteForm() {
-  await screen.findByText("Entrance");
+  // 5 s: the first test in the file pays the jsdom/React cold start on a loaded host.
+  await screen.findByText("Entrance", undefined, { timeout: 5000 });
   await waitFor(() => expect(screen.getByRole("button", { name: "Create factory link" })).toBeEnabled());
   fireEvent.click(screen.getByRole("button", { name: "Create factory link" }));
   const form = within(screen.getByRole("dialog"));
@@ -320,5 +321,22 @@ describe("factory price management", () => {
     fireEvent.click(screen.getByRole("button", { name: "Compare current rates" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Price access is unavailable");
     expect(api).toHaveBeenCalledWith(expect.stringContaining(`${PRICE_API}/reconciliation?`), expect.objectContaining({ signal: expect.anything() }));
+  });
+  it("asks through an in-app dialog before discarding unsaved editor changes", async () => {
+    mount(); await screen.findByText("Entrance", undefined, { timeout: 5000 });
+    fireEvent.click(screen.getByRole("button", { name: "New version" }));
+    const form = within(screen.getByRole("dialog"));
+    fireEvent.change(form.getByLabelText("Change request / reason"), { target: { value: "Typed, not saved" } });
+    // [0] is the footer button; the dialog chrome also has an sr-only "Close".
+    fireEvent.click(form.getAllByRole("button", { name: "Close" })[0]);
+    const prompt = await screen.findByRole("alertdialog", { name: "Discard unsaved changes?" });
+    fireEvent.click(within(prompt).getByRole("button", { name: "Keep editing" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(screen.getByLabelText("Change request / reason")).toHaveValue("Typed, not saved");
+    fireEvent.click(screen.getAllByRole("button", { name: "Close" })[0]);
+    const again = await screen.findByRole("alertdialog", { name: "Discard unsaved changes?" });
+    fireEvent.click(within(again).getByRole("button", { name: "Discard changes" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(api.mock.calls.some(([path, init]) => path === PRICE_API && init?.method === "POST")).toBe(false);
   });
 });
