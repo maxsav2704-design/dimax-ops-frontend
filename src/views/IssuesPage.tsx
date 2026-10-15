@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
@@ -874,21 +875,16 @@ export default function IssuesPage() {
   return (
     <DashboardLayout>
       <div className="page-shell page-stack-tight motion-stagger">
-        <section
-          className="rounded-lg border border-border bg-surface"
-          data-testid="issues-control-v26"
-        >
-          <div className="px-4 py-4 md:px-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-link">
-                  {copy("Dashboard", "Главная", "ראשי")} <span className="text-text-tertiary">#</span>{" "}
-                  <span className="text-text">{copy("Issues", "Проблемы", "תקלות")}</span>
-                </div>
-                <h1 className="mt-3 text-[30px] font-semibold leading-tight text-text md:text-[38px]">
-                  {copy("Issues", "Проблемы", "תקלות")}
-                </h1>
-                <p className="mt-2 text-[13px] leading-6 text-text-secondary">
+        <section className="space-y-5" data-testid="issues-control-v26">
+          <div>
+            <DimaxPageHeader
+              breadcrumbs={[
+                { label: copy("Dashboard", "Главная", "ראשי"), href: "/" },
+                { label: copy("Issues", "Проблемы", "תקלות") },
+              ]}
+              title={copy("Issues", "Проблемы", "תקלות")}
+              meta={
+                <span>
                   <span className="font-semibold text-status-problem-fg">
                     {metrics.overdue} {copy("SLA breached", "Нарушено соглашение об уровне обслуживания", "SLA הופר")}
                   </span>{" "}
@@ -900,9 +896,10 @@ export default function IssuesPage() {
                   {copy("unassigned -", "не назначен -", "לא הוקצה -")}{" "}
                   <b className="font-semibold text-text">{metrics.visible}</b>{" "}
                   {copy("visible in current scope", "виден в текущей области", "גלוי בהיקף הנוכחי")}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
+                </span>
+              }
+              actions={
+                <>
                 <button
                   type="button"
                   onClick={exportVisibleIssuesCsv}
@@ -932,10 +929,11 @@ export default function IssuesPage() {
                   <RefreshCw className="h-4 w-4" strokeWidth={1.8} />
                   {tt("common.refresh")}
                 </button>
-              </div>
-            </div>
+                </>
+              }
+            />
 
-            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {[
                 {
                   tone: "problem",
