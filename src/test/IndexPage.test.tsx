@@ -166,7 +166,7 @@ describe("Index dashboard", () => {
     expect(calendar.searchParams.get("starts_at")).toBe(refreshedAt.toISOString());
     expect(calendar.searchParams.get("ends_at")).toBe(new Date(refreshedAt.getTime() + 7 * 86_400_000).toISOString());
     await waitFor(() => expect(screen.getAllByTestId("dashboard-kpi")[1]).toHaveTextContent("3"));
-    expect(screen.getByText("Payroll: 750.00 NIS")).toBeInTheDocument();
+    expect(screen.getByText("Payroll: 750.00 ILS")).toBeInTheDocument();
     expect(subject.queryClient.getQueryCache().getAll()).toHaveLength(3);
   });
 

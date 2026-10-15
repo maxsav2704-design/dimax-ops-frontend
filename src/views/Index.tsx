@@ -5,6 +5,8 @@ import { AlertTriangle, CalendarDays, Plus } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DataStateNotice } from "@/components/DataStateNotice";
+import { DimaxPageHeader } from "@/components/DimaxPageHeader";
+import { COMPANY_CURRENCY } from "@/components/dimax";
 import { getDashboardCopy } from "@/components/dashboard/copy";
 import { DispatcherBoard } from "@/components/dashboard/DispatcherBoard";
 import { NextSchedule } from "@/components/dashboard/NextSchedule";
@@ -129,17 +131,17 @@ function formatCurrency(value: string, locale: "en" | "ru" | "he"): string {
   return `${num.toLocaleString(localeCode(locale), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })} NIS`;
+  })} ${COMPANY_CURRENCY}`;
 }
 
 function formatCompactCurrency(value: string, locale: "en" | "ru" | "he"): string {
   const num = decimalToNumber(value);
   if (Math.abs(num) >= 1000) {
-    return `${Math.round(num / 1000).toLocaleString(localeCode(locale))}k NIS`;
+    return `${Math.round(num / 1000).toLocaleString(localeCode(locale))}k ${COMPANY_CURRENCY}`;
   }
   return `${num.toLocaleString(localeCode(locale), {
     maximumFractionDigits: 0,
-  })} NIS`;
+  })} ${COMPANY_CURRENCY}`;
 }
 
 function createDashboardTimeWindow() {
@@ -461,10 +463,10 @@ const Index = () => {
     },
     {
       label: copy.kpi.revenue,
-      value: kpi ? formatCompactCurrency(kpi.revenue_total, locale) : "0 NIS",
+      value: kpi ? formatCompactCurrency(kpi.revenue_total, locale) : `0 ${COMPANY_CURRENCY}`,
       detail: kpi
         ? `${copy.kpi.payroll}: ${formatCurrency(kpi.payroll_total, locale)}`
-        : `${copy.kpi.payroll}: 0.00 NIS`,
+        : `${copy.kpi.payroll}: 0.00 ${COMPANY_CURRENCY}`,
       ready: !!dashboard,
       pending: dashboardQuery.isPending,
       status: labels.week,
@@ -489,52 +491,41 @@ const Index = () => {
           data-testid="admin-dashboard-v24"
           className="space-y-4"
         >
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-[26px] font-semibold leading-tight text-text">
-                  {dashboardTitle}
-                </h1>
-                <span className="rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium text-text-secondary">
-                  {labels.today} · {todayLabel}
-                </span>
-              </div>
-              <p className="mt-1.5 max-w-3xl text-[13px] leading-5 text-text-secondary">
-                {dashboardSubtitle}
-              </p>
-              <p className="mt-1 text-[11px] text-text-tertiary">
-                {labels.lastRefresh}: {dashboard || dispatcherSummary ? refreshLabel : "—"}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => router.push("/calendar")}
-                className="dmx-secondary-action"
-              >
-                <CalendarDays className="h-4 w-4" strokeWidth={1.8} />
-                {copy.heroActions.calendar}
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/issues")}
-                className="dmx-secondary-action"
-              >
-                <AlertTriangle className="h-4 w-4" strokeWidth={1.8} />
-                {labels.issuesAction}
-                {openIssues > 0 ? ` (${openIssues})` : ""}
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/projects?create=1")}
-                className="dmx-primary-action"
-              >
-                <Plus className="h-4 w-4" strokeWidth={1.8} />
-                {labels.newProject}
-              </button>
-            </div>
-          </div>
+          <DimaxPageHeader
+            title={dashboardTitle}
+            badge={`${labels.today} · ${todayLabel}`}
+            subtitle={dashboardSubtitle}
+            meta={<span>{labels.lastRefresh}: {dashboard || dispatcherSummary ? refreshLabel : "—"}</span>}
+            actions={
+              <>
+                <button
+                  type="button"
+                  onClick={() => router.push("/calendar")}
+                  className="dmx-secondary-action"
+                >
+                  <CalendarDays className="h-4 w-4" strokeWidth={1.8} />
+                  {copy.heroActions.calendar}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/issues")}
+                  className="dmx-secondary-action"
+                >
+                  <AlertTriangle className="h-4 w-4" strokeWidth={1.8} />
+                  {labels.issuesAction}
+                  {openIssues > 0 ? ` (${openIssues})` : ""}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/projects?create=1")}
+                  className="dmx-primary-action"
+                >
+                  <Plus className="h-4 w-4" strokeWidth={1.8} />
+                  {labels.newProject}
+                </button>
+              </>
+            }
+          />
 
           {[
             { query: dashboardQuery, label: labels.reports },
