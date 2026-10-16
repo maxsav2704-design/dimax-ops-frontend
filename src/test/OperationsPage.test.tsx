@@ -2050,4 +2050,43 @@ describe("OperationsPage", () => {
     expect(screen.getByText("3 сигнала провайдера/без соответствия")).toBeInTheDocument();
     expect(screen.getByText("в норме · очередь не нагружена")).toBeInTheDocument();
   }, 30000);
+  it("refreshes only delivery state after an outbox retry, not the import queue", async () => {
+    const FAILED_QUEUE = "/api/v1/admin/projects/import-runs/failed-queue?limit=8&offset=0";
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) return webhookMock;
+      if (path === "/api/v1/admin/sync/health/summary") {
+        return {
+          max_cursor: 4,
+          counts: { ok: 4, warn: 0, danger: 0, total: 4, dead: 0, never_seen: 0, danger_pct: 0 },
+          alerts_sent: 0, top_laggers: [], top_offline: [],
+        };
+      }
+      if (path === "/api/v1/admin/outbox/summary") {
+        return { total: 1, by_channel: { email: 1 }, by_status: { FAILED: 1 }, by_delivery_status: { failed: 1 }, pending_overdue_15m: 0, failed_total: 1 };
+      }
+      if (path === "/api/v1/admin/outbox?status=FAILED&limit=8") {
+        return { items: [{
+          id: "outbox-1", channel: "email", recipient: "ops@dimax.test", subject: "Import failed", status: "FAILED",
+          delivery_status: "failed", attempts: 3, max_attempts: 5, scheduled_at: "2026-03-07T09:00:00Z",
+          created_at: "2026-03-07T08:55:00Z", last_error: "SMTP timeout",
+        }] };
+      }
+      if (path === FAILED_QUEUE) return { items: [], total: 0, limit: 8, offset: 0 };
+      if (path === "/api/v1/admin/outbox/outbox-1/retry") return { item: { id: "outbox-1" } };
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    renderSubject();
+    expect(await screen.findByText("Operations Center")).toBeInTheDocument();
+    const countCalls = (needle: string) => apiFetchMock.mock.calls.filter(([path]) => String(path) === needle).length;
+    const importQueueBefore = countCalls(FAILED_QUEUE);
+    const outboxSummaryBefore = countCalls("/api/v1/admin/outbox/summary");
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry delivery" }));
+    await waitFor(() => expect(countCalls("/api/v1/admin/outbox/outbox-1/retry")).toBe(1));
+    await waitFor(() => expect(countCalls("/api/v1/admin/outbox/summary")).toBeGreaterThan(outboxSummaryBefore));
+
+    expect(countCalls(FAILED_QUEUE)).toBe(importQueueBefore);
+  }, 30000);
 });

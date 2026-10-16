@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   Bell,
@@ -51,6 +51,18 @@ import {
 import { useI18n, type Locale } from "@/lib/i18n";
 import { countNoun, pluralNoun, type PluralSpec } from "@/lib/plural";
 import { queryKeys } from "@/lib/query-keys";
+
+// Keys private to this page; grouped by the server state a mutation touches.
+const OPERATIONS_KEYS = {
+  syncHealth: ["operations-sync-health"] as const,
+  syncProblems: ["operations-sync-problems"] as const,
+  outboxFailed: ["operations-outbox-failed"] as const,
+  failedImports: ["operations-failed-imports"] as const,
+  webhookSummary: ["operations-webhook-signals-summary"] as const,
+  webhookSignals: ["operations-webhook-signals"] as const,
+  retryAudits: ["operations-outbox-retry-audits"] as const,
+  syncRecoveryAudits: ["operations-sync-recovery-audits"] as const,
+} as const;
 import { cn } from "@/lib/utils";
 
 const operationsOverrides: Record<Locale, Record<string, string>> = {
@@ -1121,8 +1133,10 @@ export default function OperationsPage() {
     return () => window.clearTimeout(timeout);
   }, [actionFeedback]);
 
+  const queryClient = useQueryClient();
+
   const syncQuery = useQuery({
-    queryKey: ["operations-sync-health"],
+    queryKey: OPERATIONS_KEYS.syncHealth,
     queryFn: () =>
       apiFetch<SyncHealthSummaryResponse>("/api/v1/admin/sync/health/summary"),
     refetchInterval: 30_000,
@@ -1130,7 +1144,7 @@ export default function OperationsPage() {
 
   const syncProblemsQuery = useQuery({
     queryKey: [
-      "operations-sync-problems",
+      ...OPERATIONS_KEYS.syncProblems,
       syncProblemInstallerFilter,
       syncProblemStatusFilter,
     ],
@@ -1158,7 +1172,7 @@ export default function OperationsPage() {
   });
 
   const outboxFailedQuery = useQuery({
-    queryKey: ["operations-outbox-failed"],
+    queryKey: OPERATIONS_KEYS.outboxFailed,
     queryFn: () =>
       apiFetch<OutboxListResponse>(
         "/api/v1/admin/outbox?status=FAILED&limit=8",
@@ -1167,7 +1181,7 @@ export default function OperationsPage() {
   });
 
   const failedImportsQuery = useQuery({
-    queryKey: ["operations-failed-imports"],
+    queryKey: OPERATIONS_KEYS.failedImports,
     queryFn: () =>
       apiFetch<FailedImportRunsQueueResponse>(
         "/api/v1/admin/projects/import-runs/failed-queue?limit=8&offset=0",
@@ -1175,7 +1189,7 @@ export default function OperationsPage() {
     refetchInterval: 30_000,
   });
   const webhookSummaryQuery = useQuery({
-    queryKey: ["operations-webhook-signals-summary"],
+    queryKey: OPERATIONS_KEYS.webhookSummary,
     queryFn: () =>
       apiFetch<WebhookSignalsSummaryResponse>(
         "/api/v1/admin/outbox/webhook-signals/summary",
@@ -1183,7 +1197,7 @@ export default function OperationsPage() {
     refetchInterval: 30_000,
   });
   const webhookSignalsQuery = useQuery({
-    queryKey: ["operations-webhook-signals"],
+    queryKey: OPERATIONS_KEYS.webhookSignals,
     queryFn: () =>
       apiFetch<WebhookSignalsListResponse>(
         "/api/v1/admin/outbox/webhook-signals?limit=6",
@@ -1191,7 +1205,7 @@ export default function OperationsPage() {
     refetchInterval: 30_000,
   });
   const retryAuditsQuery = useQuery({
-    queryKey: ["operations-outbox-retry-audits"],
+    queryKey: OPERATIONS_KEYS.retryAudits,
     queryFn: () =>
       apiFetch<OutboxRetryAuditListResponse>(
         "/api/v1/admin/outbox/retry-audits?limit=6",
@@ -1199,7 +1213,7 @@ export default function OperationsPage() {
     refetchInterval: 30_000,
   });
   const syncRecoveryAuditsQuery = useQuery({
-    queryKey: ["operations-sync-recovery-audits"],
+    queryKey: OPERATIONS_KEYS.syncRecoveryAudits,
     queryFn: () =>
       apiFetch<AuditChangesResponse>(
         "/api/v1/admin/reports/audit-catalogs?entity_type=sync_state&action=SYNC_STATE_RESET&limit=6",
@@ -1645,6 +1659,7 @@ export default function OperationsPage() {
     ],
   );
 
+  // Manual "Refresh" only: the operator asked for everything.
   async function refetchAll() {
     await Promise.all([
       syncQuery.refetch(),
@@ -1659,6 +1674,29 @@ export default function OperationsPage() {
     ]);
   }
 
+  // After a mutation only the server state it touched is refreshed.
+  async function invalidateKeys(keys: ReadonlyArray<readonly string[]>) {
+    await Promise.all(
+      keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    );
+  }
+  const refreshImportState = () =>
+    invalidateKeys([OPERATIONS_KEYS.failedImports]);
+  const refreshDeliveryState = () =>
+    invalidateKeys([
+      queryKeys.outboxSummary,
+      OPERATIONS_KEYS.outboxFailed,
+      OPERATIONS_KEYS.retryAudits,
+      OPERATIONS_KEYS.webhookSummary,
+      OPERATIONS_KEYS.webhookSignals,
+    ]);
+  const refreshSyncState = () =>
+    invalidateKeys([
+      OPERATIONS_KEYS.syncHealth,
+      OPERATIONS_KEYS.syncProblems,
+      OPERATIONS_KEYS.syncRecoveryAudits,
+    ]);
+
   async function handleRetryImport(runId: string, projectId: string) {
     if (!canRunPrivilegedActions) {
       return;
@@ -1672,7 +1710,7 @@ export default function OperationsPage() {
           method: "POST",
         },
       );
-      await refetchAll();
+      await refreshImportState();
       setActionFeedback({
         tone: "success",
         message: copy(
@@ -1712,7 +1750,7 @@ export default function OperationsPage() {
           reason: "operations_center_manual_retry",
         }),
       });
-      await refetchAll();
+      await refreshDeliveryState();
       setActionFeedback({
         tone: "success",
         message: copy(
@@ -1750,7 +1788,7 @@ export default function OperationsPage() {
       await apiFetch(target.resetPath, {
         method: "POST",
       });
-      await refetchAll();
+      await refreshSyncState();
       setActionFeedback({
         tone: "success",
         message: `Cold resync requested for ${target.label}.`,
@@ -1786,7 +1824,7 @@ export default function OperationsPage() {
           }),
         },
       );
-      await refetchAll();
+      await refreshImportState();
       setLastBatchResult({
         action: "retry",
         createdAt: new Date().toISOString(),
@@ -1840,7 +1878,7 @@ export default function OperationsPage() {
           }),
         },
       );
-      await refetchAll();
+      await refreshImportState();
       setLastBatchResult({
         action: "reconcile",
         createdAt: new Date().toISOString(),
@@ -1894,7 +1932,7 @@ export default function OperationsPage() {
           }),
         },
       );
-      await refetchAll();
+      await refreshDeliveryState();
       setLastBatchResult({
         action: "outbox-retry",
         createdAt: new Date().toISOString(),
