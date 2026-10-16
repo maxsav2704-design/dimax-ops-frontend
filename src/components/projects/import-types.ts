@@ -128,3 +128,44 @@ export type ProjectImportRunDetails = ProjectImportRunItem & {
   would_import?: number;
   would_skip?: number;
 };
+
+export type FailedImportQueueResponse = {
+  items: FailedImportQueueItem[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export type RetryFailedRunsResponse = {
+  items: Array<{
+    run_id: string;
+    project_id: string | null;
+    status: string;
+    imported: number;
+    skipped: number;
+    errors_count: number;
+    last_error?: string | null;
+  }>;
+  total_runs: number;
+  successful_runs: number;
+  failed_runs: number;
+  skipped_runs: number;
+};
+
+export type FailedImportQueueItem = {
+  run_id: string;
+  project_id: string;
+  project_name: string;
+  created_at: string;
+  mode: string;
+  status: string;
+  source_filename: string | null;
+  mapping_profile: string | null;
+  parsed_rows: number;
+  prepared_rows: number;
+  imported: number;
+  skipped: number;
+  errors_count: number;
+  last_error?: string | null;
+  retry_available: boolean;
+};

@@ -73,3 +73,18 @@ export function issueLabel(issue: ProjectOpenIssue): string {
   }
   return parts.join(" - ");
 }
+
+export function chunkIds(values: string[], size: number): string[][] {
+  const safeSize = Math.max(1, size);
+  const chunks: string[][] = [];
+  for (let i = 0; i < values.length; i += safeSize) {
+    chunks.push(values.slice(i, i + safeSize));
+  }
+  return chunks;
+}
+
+// Lazily loaded panels of the selected project. A failed load is recorded
+// here and rendered as a retryable notice instead of an empty panel.
+
+export const FAILED_QUEUE_PAGE_SIZE = 10;
+// Door ledger rows rendered at once; "Show more" reveals the next page.
