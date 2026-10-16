@@ -27,7 +27,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
-import { useI18n, type Locale } from "@/lib/i18n";
+import { useI18n, type Locale, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 type LibraryStatus = "ACTIVE" | "ARCHIVED";
 type LibraryUnit = "piece" | "set" | "point";
@@ -94,8 +94,7 @@ export default function LibraryPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   const searchParams = useSearchParams();
   const initialSearch = (searchParams?.get("q") || "").trim();
   const initialStatus =
@@ -714,8 +713,7 @@ function LibraryForm({
   onChange: React.Dispatch<React.SetStateAction<ProductLibraryForm>>;
   locale: Locale;
 }) {
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   return (
     <div className="grid gap-4">
       {" "}

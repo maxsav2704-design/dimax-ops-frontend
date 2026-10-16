@@ -5,7 +5,7 @@ import { WorkPriceAccrual } from "@/components/operations/WorkPriceAccrual";
 
 const mocks = vi.hoisted(() => ({ api: vi.fn(), locale: "en" }));
 vi.mock("@/lib/api", () => ({ apiFetch: mocks.api }));
-vi.mock("@/lib/i18n", () => ({ useI18n: () => ({ locale: mocks.locale }) }));
+vi.mock("@/lib/i18n", () => ({ useCopy: () => (en: string, ru: string, he: string) => (mocks.locale === "ru" ? ru : mocks.locale === "he" ? he : en), useI18n: () => ({ locale: mocks.locale }) }));
 const receipt = { id: "decision", completed_work_id: "work", amount: "13.52", accrued_at: "2026-10-14T08:00:00Z", reason: "Independent decision checked" };
 const review = { approval_hash: "a".repeat(64), reference: "QA-102", rate: "9.01", amount: "13.52", currency: "ILS",
   confirmed_name: "Factory QA", confirmed_at: "2026-10-13T09:00:00Z", accrual: null,

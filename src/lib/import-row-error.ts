@@ -1,8 +1,7 @@
-import type { Locale } from "./i18n";
+import { localeCopy, type Locale } from "./locale";
 
 export function formatImportRowError(message: string, locale: Locale): string {
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = localeCopy(locale);
   if (message.trim() === "door_type_id or door_type_code is required") {
     return copy(
       "Door type not identified: check the type code in the file or select a default door type",

@@ -1,4 +1,4 @@
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { projectMarginDataRisk, type ProjectMarginCoverage } from "@/lib/project-margin";
 
 export function ProjectMarginBasis({ mode, incomplete = 0 }: {
@@ -6,7 +6,7 @@ export function ProjectMarginBasis({ mode, incomplete = 0 }: {
   incomplete?: number;
 }) {
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   if (mode !== "FACTORY") return null;
   return <div role="status" className="min-w-0 space-y-1 px-3 py-2 text-xs text-text-secondary">
     <p>{copy("Project payroll: recorded earnings, including reversals and corrections. Current rates do not reprice completed work.",
@@ -21,7 +21,7 @@ export function ProjectMarginBasis({ mode, incomplete = 0 }: {
 
 export function ProjectMarginNotice({ data }: { data: ProjectMarginCoverage }) {
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   if (data.pricing_mode !== "FACTORY" || projectMarginDataRisk(data) === 0) return null;
   return <p className="mt-1 text-xs leading-4 text-status-problem-fg">
     {copy("Works without earnings", "Работы без начислений", "עבודות ללא שכר")}: {data.unrecorded_completed_works ?? 0}.

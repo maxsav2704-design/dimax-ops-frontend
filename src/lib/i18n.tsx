@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { getBootstrapLocale, LOCALE_STORAGE_KEY, localeMeta, type Locale } from "@/lib/locale";
+import { getBootstrapLocale, LOCALE_STORAGE_KEY, localeMeta, pickLocale, type Locale } from "@/lib/locale";
 
 export type { Locale } from "@/lib/locale";
 
@@ -2679,6 +2679,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
 export function useI18n(): I18nContextValue {
   return useContext(I18nContext);
+}
+
+/**
+ * Inline tri-lingual copy for the current locale: `copy("Save", "Сохранить", "שמירה")`.
+ * Stable per locale, so it is safe inside useMemo/useCallback dependency lists.
+ * Replaces the per-component `const copy = (en, ru, he) => ...` helpers.
+ */
+export function useCopy(): (en: string, ru: string, he: string) => string {
+  const { locale } = useContext(I18nContext);
+  return useCallback((en: string, ru: string, he: string) => pickLocale(locale, en, ru, he), [locale]);
 }
 
 export const languageOptions = (Object.keys(localeMeta) as Locale[]).map((locale) => ({

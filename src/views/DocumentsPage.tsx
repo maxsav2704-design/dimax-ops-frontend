@@ -35,7 +35,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { apiDownload, apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type DocumentTemplateDTO = {
@@ -192,8 +192,7 @@ export default function DocumentsPage() {
   // VIEWER and FINANCE can read templates and history; only OWNER/OPERATIONS may change them.
   const session = useAuthSession();
   const canWriteDocuments = canRunPrivilegedAdminActions(session);
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [uploadName, setUploadName] = useState("");

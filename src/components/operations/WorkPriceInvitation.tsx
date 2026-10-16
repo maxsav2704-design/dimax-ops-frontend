@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { WorkPriceAccrual } from "@/components/operations/WorkPriceAccrual";
 
 type Contact = { id: string; factory_name: string; recipient_name: string; recipient_email: string };
@@ -17,7 +17,7 @@ type SendRequest = { request_id: string; factory_contact_id: string; proposal_ha
 
 export function WorkPriceInvitation({ proposalId, proposalHash }: { proposalId: string; proposalHash: string }) {
   const { locale } = useI18n();
-  const c = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const c = useCopy();
   const [opened, setOpened] = useState(false);
   const [consent, setConsent] = useState(false);
   const [hours, setHours] = useState(72);

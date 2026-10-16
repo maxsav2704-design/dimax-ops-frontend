@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { PRICE_API, isUncertainPriceWrite, priceErrorStatus, priceRequest, type FactoryContact, type Invitation, type IssuedInvitation, type PriceDetail } from "@/lib/factory-prices";
 import { priceCopy } from "./copy";
 
@@ -25,7 +25,7 @@ export function PriceActionDialog({ action, contact, onClose, onChanged }: {
   const [hours, setHours] = useState("72");
   const [sendEmail, setSendEmail] = useState(false);
   const [emailQueued, setEmailQueued] = useState(false);
-  const copy = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   const [accepted, setAccepted] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);

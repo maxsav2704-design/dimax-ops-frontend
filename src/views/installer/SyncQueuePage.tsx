@@ -25,7 +25,7 @@ import {
 } from "@/lib/api-error-display";
 import { formatLocaleDateTime, formatLocaleNumber } from "@/lib/formatting";
 import { fetchInstallerSyncQueue } from "@/lib/installer-api";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 function syncNoticeClass(): string {
@@ -53,11 +53,7 @@ function syncQueueItemClass(status: string, hasConflict: boolean): string {
 export default function InstallerSyncQueuePage() {
   const { locale } = useI18n();
   const searchParams = useSearchParams();
-  const copy = (en: string, ru: string, he: string) => {
-    if (locale === "ru") return ru;
-    if (locale === "he") return he;
-    return en;
-  };
+  const copy = useCopy();
   const syncStatusLabel = (status: string) => {
     const normalized = status.trim().toUpperCase();
     switch (normalized) {

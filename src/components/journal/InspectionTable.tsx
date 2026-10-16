@@ -1,4 +1,4 @@
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 
 import {
   MasterCircle,
@@ -82,8 +82,7 @@ export default function InspectionTable({
 }: InspectionTableProps) {
   const { locale } = useI18n();
   const cols = tableCols(locale);
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
 
   const updateCell = (rowIndex: number, columnIndex: number, value: string) => {
     const nextRows = [...rows];

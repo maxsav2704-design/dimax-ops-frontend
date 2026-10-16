@@ -1,9 +1,9 @@
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { installerFinancialDataRisk, type InstallerFinancialCoverage, type InstallerMatrixCoverage } from "@/lib/installer-financials";
 
 export function InstallerFinancialBasis({ data, period = false }: { data?: InstallerMatrixCoverage; period?: boolean }) {
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   if (data?.pricing_mode !== "FACTORY") return null;
   return <div role="status" className="min-w-0 space-y-1 px-3 py-2 text-xs text-text-secondary">
     <p>{period ? copy(
@@ -22,7 +22,7 @@ export function InstallerFinancialBasis({ data, period = false }: { data?: Insta
 
 export function InstallerFinancialNotice({ data }: { data: InstallerFinancialCoverage }) {
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   if (data.pricing_mode !== "FACTORY" || installerFinancialDataRisk(data) === 0) return null;
   return <p className="mt-1 text-xs leading-4 text-status-warning-fg">
     {copy("Works without earnings", "Работы без начислений", "עבודות ללא שכר")}: {data.unrecorded_completed_works ?? 0}.

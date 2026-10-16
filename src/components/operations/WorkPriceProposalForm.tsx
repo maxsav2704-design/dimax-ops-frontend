@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { proposalAmount, proposalRate } from "@/lib/work-price-proposal";
 import { WorkPriceInvitation } from "./WorkPriceInvitation";
 
@@ -29,7 +29,7 @@ export function WorkPriceProposalForm({ source, itemId, correction = null }: {
   source: "sync_event" | "sync_queue"; itemId: string; correction?: Correction | null;
 }) {
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   const [opened, setOpened] = useState(false);
   const [rate, setRate] = useState("");
   const [reason, setReason] = useState("");

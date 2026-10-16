@@ -22,7 +22,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type EventType =
@@ -392,11 +392,7 @@ function downloadCsv(filename: string, rows: string[][]): void {
 export default function CalendarPage() {
   const queryClient = useQueryClient();
   const { locale } = useI18n();
-  const copy = useCallback(
-    (en: string, ru: string, he: string) =>
-      locale === "ru" ? ru : locale === "he" ? he : en,
-    [locale],
-  );
+  const copy = useCopy();
   const [weekStartDate, setWeekStartDate] = useState<Date>(
     new Date(),
   );

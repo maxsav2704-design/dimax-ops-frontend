@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { IssueExposureBasis, UnpricedExposureNotice } from "@/components/prices/IssueExposureBasis";
 
 const locale = vi.hoisted(() => ({ value: "en" }));
-vi.mock("@/lib/i18n", () => ({ useI18n: () => ({ locale: locale.value }) }));
+vi.mock("@/lib/i18n", () => ({ useCopy: () => (en: string, ru: string, he: string) => (locale.value === "ru" ? ru : locale.value === "he" ? he : en), useI18n: () => ({ locale: locale.value }) }));
 
 describe("issue exposure basis", () => {
   it.each([

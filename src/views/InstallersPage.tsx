@@ -31,7 +31,7 @@ import {
   canRunPrivilegedAdminActions,
   canViewRates,
 } from "@/lib/admin-access";
-import { useI18n, type Locale } from "@/lib/i18n";
+import { useI18n, type Locale, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Installer = {
@@ -137,8 +137,7 @@ function InstallerCard({
   editHint?: string;
   deleteHint?: string;
 }) {
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   const initials = installer.full_name
     .split(" ")
     .map((part) => part[0] || "")
@@ -248,8 +247,7 @@ function InstallerBaseForm({
   disabled: boolean;
   locale: Locale;
 }) {
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   // Every control gets a programmatic label (screen readers, click-to-focus, tests).
   const idBase = useId();
   void disabled;
@@ -352,11 +350,7 @@ export default function InstallersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { locale, t } = useI18n();
-  const copy = (en: string, ru: string, he: string) => {
-    if (locale === "ru") return ru;
-    if (locale === "he") return he;
-    return en;
-  };
+  const copy = useCopy();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "inactive"

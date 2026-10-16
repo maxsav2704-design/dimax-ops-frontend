@@ -18,7 +18,7 @@ import {
   formatLocaleMoney,
   formatLocaleNumber,
 } from "@/lib/formatting";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { buildInstallerIssuesHref } from "@/views/installer/issue-links";
 import { LtrText } from "@/components/ui/LtrText";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -79,11 +79,7 @@ const workspaceSmallActionClass =
   "inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-text transition-colors hover:bg-surface-subtle";
 export default function InstallerWorkspacePage() {
   const { locale, t } = useI18n();
-  const copy = useCallback((en: string, ru: string, he: string) => {
-    if (locale === "ru") return ru;
-    if (locale === "he") return he;
-    return en;
-  }, [locale]);
+  const copy = useCopy();
   const projectStatusLabel = (status: string) => {
     const normalized = status.trim().toUpperCase();
     switch (normalized) {

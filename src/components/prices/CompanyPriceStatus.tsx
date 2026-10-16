@@ -1,6 +1,6 @@
 import { FileCheck2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { formatLocaleDateTime } from "@/lib/formatting";
 import type { CompanyPricingState } from "@/lib/factory-prices";
 
@@ -9,7 +9,7 @@ export function CompanyPriceStatus({ state, loading, error, refresh, onOpen }: {
   onOpen: (id: string) => void;
 }) {
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   const active = state?.mode === "FACTORY" ? state.active_price : null;
   return <section aria-label={copy("Current pricing", "Действующие цены", "מחירים בתוקף")}
     className="min-w-0 space-y-2 border-s-2 border-accent ps-3 text-sm">

@@ -1,4 +1,4 @@
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 
 export type IssueExposureCoverage = {
   pricing_mode?: "LEGACY" | "FACTORY";
@@ -28,7 +28,7 @@ export function IssueExposureBasis({ data, reasonsShown, addonsShown }: {
   data?: IssueExposureCoverage; reasonsShown?: number; addonsShown?: number;
 }) {
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   if (!data?.pricing_mode) return null;
   return <div role="status" className="min-w-0 space-y-1 px-3 py-2 text-xs text-text-secondary">
     <p>{copy("Risk across unique doors", "Риск по уникальным дверям", "סיכון לפי דלתות ייחודיות")}: {data.exposure_profit_total == null ? "-" : Number(data.exposure_profit_total).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} NIS.

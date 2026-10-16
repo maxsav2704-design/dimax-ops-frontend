@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 
 const NotFound = () => {
   const pathname = usePathname();
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   useEffect(() => {
     console.error(
       "404 Error: User attempted to access non-existent route:",

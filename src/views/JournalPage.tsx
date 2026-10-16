@@ -27,7 +27,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
-import { useI18n, type Locale } from "@/lib/i18n";
+import { useI18n, type Locale, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type ProjectListItem = {
@@ -309,8 +309,7 @@ function SectionMessage({
 export default function JournalPage() {
   const router = useRouter();
   const { t, locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   const session = useAuthSession();
   const canManage = canRunPrivilegedAdminActions(session);
 

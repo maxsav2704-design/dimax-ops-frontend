@@ -22,7 +22,7 @@ import {
   type InstallerIssueMediaAsset,
   updateInstallerIssue,
 } from "@/lib/installer-api";
-import { type Locale, useI18n } from "@/lib/i18n";
+import { type Locale, useI18n, useCopy } from "@/lib/i18n";
 import { readableApiError } from "@/lib/api-error-display";
 import { formatLocaleNumber } from "@/lib/formatting";
 import { cn } from "@/lib/utils";
@@ -201,11 +201,7 @@ function IssueMediaPanel({
 export default function InstallerIssuesPage() {
   const { locale } = useI18n();
   const queryClient = useQueryClient();
-  const copy: CopyFn = (en: string, ru: string, he: string) => {
-    if (locale === "ru") return ru;
-    if (locale === "he") return he;
-    return en;
-  };
+  const copy = useCopy();
   const [projectFilter, setProjectFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");

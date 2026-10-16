@@ -10,7 +10,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { apiDownload, apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 
 type JournalSnapshot = {
   journal: {
@@ -62,8 +62,7 @@ function JournalEditor({ id }: { id: string }) {
   const router = useRouter();
   const canManage = canRunPrivilegedAdminActions(useAuthSession());
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   const [model, setModel] = useState<JournalSnapshot | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [loading, setLoading] = useState(true);

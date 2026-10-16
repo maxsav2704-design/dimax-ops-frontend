@@ -4,7 +4,7 @@ import { CompanyPriceStatus } from "@/components/prices/CompanyPriceStatus";
 import type { CompanyPricingState } from "@/lib/factory-prices";
 
 const locale = vi.hoisted(() => ({ value: "en" }));
-vi.mock("@/lib/i18n", () => ({ useI18n: () => ({ locale: locale.value }) }));
+vi.mock("@/lib/i18n", () => ({ useCopy: () => (en: string, ru: string, he: string) => (locale.value === "ru" ? ru : locale.value === "he" ? he : en), useI18n: () => ({ locale: locale.value }) }));
 const state: CompanyPricingState = { mode: "FACTORY", active_price: {
   price_list_id: "confirmed-1", version: 3, effective_from: "2026-10-04T08:00:00Z", currency: "ILS", items: [],
 } };

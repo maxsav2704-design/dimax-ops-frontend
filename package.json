@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "next dev --webpack -H 0.0.0.0 -p 5173",
     "build": "node scripts/clean-next.mjs && next build --webpack",
-    "quality-gate": "npm run lint && npm run test:production-env && npm run test:standalone && npm run test:repo-config && npm run test:security-headers && npm run test:type-scale && npm run test:coverage-contract && npm run test && npm run build",
+    "quality-gate": "npm run lint && npm run test:production-env && npm run test:standalone && npm run test:repo-config && npm run test:security-headers && npm run test:type-scale && npm run test:i18n-helpers && npm run test:coverage-contract && npm run test && npm run build",
     "quality-gate:installer": "npm run test:installer && npm run test:e2e:installer",
     "quality-gate:installer:strict": "npm run test:installer && npm run test:e2e:installer:strict",
     "quality-gate:installer:local": "node scripts/installer-quality-gate-local.mjs",
@@ -21,6 +21,7 @@
     "test:repo-config": "node --test scripts/repo-config.test.mjs",
     "test:security-headers": "node --test scripts/security-headers.test.mjs",
     "test:type-scale": "node --test scripts/type-scale-ratchet.test.mjs",
+    "test:i18n-helpers": "node --test scripts/local-copy-helper.test.mjs",
     "test:coverage-contract": "node scripts/validate-test-discovery.mjs",
     "start": "next start -H 0.0.0.0 -p 5173",
     "dev:vite": "vite",

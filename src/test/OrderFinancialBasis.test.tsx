@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { OrderFinancialBasis } from "@/components/prices/OrderFinancialBasis";
 
 const locale = vi.hoisted(() => ({ value: "en" }));
-vi.mock("@/lib/i18n", () => ({ useI18n: () => ({ locale: locale.value }) }));
+vi.mock("@/lib/i18n", () => ({ useCopy: () => (en: string, ru: string, he: string) => (locale.value === "ru" ? ru : locale.value === "he" ? he : en), useI18n: () => ({ locale: locale.value }) }));
 
 describe("order financial basis", () => {
   it.each([

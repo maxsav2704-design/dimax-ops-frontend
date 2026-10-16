@@ -5,7 +5,7 @@ import { PriceConflictReviewDialog } from "@/components/operations/PriceConflict
 
 const mocks = vi.hoisted(() => ({ api: vi.fn(), locale: "en", allowed: true, scope: "OWNER" }));
 vi.mock("@/lib/api", () => ({ apiFetch: mocks.api }));
-vi.mock("@/lib/i18n", () => ({ useI18n: () => ({ locale: mocks.locale }) }));
+vi.mock("@/lib/i18n", () => ({ useCopy: () => (en: string, ru: string, he: string) => (mocks.locale === "ru" ? ru : mocks.locale === "he" ? he : en), useI18n: () => ({ locale: mocks.locale }) }));
 vi.mock("@/hooks/use-auth-session", () => ({ useAuthSession: () => ({
   role: "ADMIN", admin_scope: mocks.scope, can_view_rates: mocks.allowed,
 }) }));

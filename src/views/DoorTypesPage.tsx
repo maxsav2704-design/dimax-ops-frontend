@@ -1,10 +1,9 @@
 import { CatalogCrudPage } from "@/components/catalogs/CatalogCrudPage";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 
 export default function DoorTypesPage() {
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
 
   return (
     <CatalogCrudPage

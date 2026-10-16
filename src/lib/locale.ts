@@ -63,3 +63,19 @@ export function getDocumentLocaleBootstrapScript(): string {
     })();
   `;
 }
+
+/**
+ * The one place that turns (en, ru, he) into the text for a locale. Components
+ * use the `useCopy()` hook from "@/lib/i18n"; plain functions that already hold
+ * a locale call this directly.
+ */
+export function pickLocale<T>(locale: Locale, en: T, ru: T, he: T): T {
+  if (locale === "ru") return ru;
+  if (locale === "he") return he;
+  return en;
+}
+
+/** A bound picker for code that resolves many strings for one known locale. */
+export function localeCopy(locale: Locale): (en: string, ru: string, he: string) => string {
+  return (en, ru, he) => pickLocale(locale, en, ru, he);
+}

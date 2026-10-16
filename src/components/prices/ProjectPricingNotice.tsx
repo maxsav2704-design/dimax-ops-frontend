@@ -1,4 +1,4 @@
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 
 export type ProjectPricingCoverage = {
   pricing_mode?: "LEGACY" | "FACTORY";
@@ -11,7 +11,7 @@ export type ProjectPricingCoverage = {
 
 export function ProjectPricingNotice({ data }: { data: ProjectPricingCoverage }) {
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   if (data.pricing_mode !== "FACTORY") return null;
   const missing = (data.missing_planned_rates_doors ?? 0) + (data.missing_planned_rates_addons ?? 0);
   const unrecorded = data.unrecorded_completed_works ?? 0;

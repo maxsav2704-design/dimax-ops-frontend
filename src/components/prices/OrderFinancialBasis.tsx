@@ -1,4 +1,4 @@
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 
 export type OrderFinancialCoverage = {
   pricing_mode?: "LEGACY" | "FACTORY";
@@ -8,7 +8,7 @@ export type OrderFinancialCoverage = {
 
 export function OrderFinancialBasis({ data, shown }: { data?: OrderFinancialCoverage; shown?: number }) {
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   if (data?.pricing_mode !== "FACTORY") return null;
   return <div role="status" className="min-w-0 space-y-1 px-3 py-2 text-xs text-text-secondary">
     <p>{copy(

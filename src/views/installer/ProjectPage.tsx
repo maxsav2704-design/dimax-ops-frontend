@@ -21,7 +21,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { formatLocaleDateTime, formatLocaleNumber } from "@/lib/formatting";
-import { useI18n, type Locale } from "@/lib/i18n";
+import { useI18n, type Locale, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 const projectOverrides: Partial<Record<Locale, Record<string, string>>> = {
   en: {
@@ -246,11 +246,7 @@ export default function InstallerProjectPage({
   projectId,
 }: InstallerProjectPageProps) {
   const { locale, t } = useI18n();
-  const copy = (en: string, ru: string, he: string) => {
-    if (locale === "ru") return ru;
-    if (locale === "he") return he;
-    return en;
-  };
+  const copy = useCopy();
   const normalizeReadableText = (value: string, fallback: string) =>
     /(\?{3,}|Р\u00a0\S|Р§\S)/.test(value) ? fallback : value;
   const pt = (key: string) =>

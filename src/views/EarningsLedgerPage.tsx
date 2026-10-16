@@ -39,7 +39,7 @@ import { apiDownload, apiFetch } from "@/lib/api";
 import { earningsLedgerResponseSchema } from "@/lib/api-schemas";
 import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions, canViewRates } from "@/lib/admin-access";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type LedgerEntryType = "ORIGINAL" | "REVERSAL" | "CORRECTION";
@@ -272,11 +272,7 @@ export default function EarningsLedgerPage() {
   const [correctionReason, setCorrectionReason] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
 
-  const copy = (en: string, ru: string, he: string) => {
-    if (locale === "ru") return ru;
-    if (locale === "he") return he;
-    return en;
-  };
+  const copy = useCopy();
 
   useEffect(() => {
     if (!hasRateAccess || typeof window === "undefined") {

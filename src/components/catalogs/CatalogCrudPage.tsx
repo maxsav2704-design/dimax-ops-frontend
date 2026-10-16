@@ -39,7 +39,7 @@ import {
   canRunPrivilegedAdminActions,
 } from "@/lib/admin-access";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 type CatalogItem = {
   id: string;
@@ -167,8 +167,7 @@ export function CatalogCrudPage({
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   const session = useAuthSession();
   const canManageCatalog = canRunPrivilegedAdminActions(session);
   const canImportCatalog = canManageImports(session);

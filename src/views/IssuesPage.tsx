@@ -20,7 +20,7 @@ import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { EmptyState, InlineNotice, TableSkeleton } from "@/components/dimax";
-import { useI18n, type Locale } from "@/lib/i18n";
+import { useI18n, type Locale, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const issuesOverrides: Partial<Record<Locale, Record<string, string>>> = {
@@ -338,14 +338,7 @@ export default function IssuesPage() {
   const [form, setForm] = useState<WorkflowFormState>(emptyForm());
   const [formError, setFormError] = useState<string | null>(null);
   const [saveNote, setSaveNote] = useState<string | null>(null);
-  const copy = useCallback(
-    (en: string, ru: string, he: string) => {
-      if (locale === "ru") return ru;
-      if (locale === "he") return he;
-      return en;
-    },
-    [locale],
-  );
+  const copy = useCopy();
   const session = useAuthSession();
   const canManageIssues = canRunPrivilegedAdminActions(session);
   const privilegedActionHint = canManageIssues

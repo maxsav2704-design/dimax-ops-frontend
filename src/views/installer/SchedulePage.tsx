@@ -14,7 +14,7 @@ import {
 import { LtrText } from "@/components/ui/LtrText";
 import { apiFetch } from "@/lib/api";
 import { formatLocaleDateTime, formatLocaleNumber } from "@/lib/formatting";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { buildInstallerIssuesHref } from "@/views/installer/issue-links";
 import {
@@ -63,11 +63,7 @@ function scheduleStateCardClass(): string {
 }
 export default function InstallerSchedulePage() {
   const { locale, t } = useI18n();
-  const copy = (en: string, ru: string, he: string) => {
-    if (locale === "ru") return ru;
-    if (locale === "he") return he;
-    return en;
-  };
+  const copy = useCopy();
   const rangePresetLabels: Record<RangePreset, string> = {
     today: t("common.today"),
     "7d": t("installerSchedule.next7Days"),

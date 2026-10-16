@@ -47,7 +47,7 @@ import {
   formatLocaleNumber as formatLocalizedNumber,
   formatLocalePercent as formatLocalizedPercent,
 } from "@/lib/formatting";
-import { useI18n, type Locale } from "@/lib/i18n";
+import { useI18n, type Locale, useCopy } from "@/lib/i18n";
 import { createRequestLimiter } from "@/lib/request-limiter";
 import { cn } from "@/lib/utils";
 
@@ -1576,8 +1576,7 @@ function ReportsInsightCard({ insight }: { insight: ReportsInsight }) {
 function ReportsLibraryCard({ group, locale }: { group: ReportsLibraryGroup; locale: Locale }) {
   const tone = reportsDashboardToneClasses(group.tone);
   const Icon = group.icon;
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
 
   return (
     <div className="overflow-hidden rounded-[12px] border border-border bg-surface">
@@ -1854,11 +1853,7 @@ export default function ReportsPage() {
   const readError = (error: unknown, fallback: string) =>
     readableApiError(error, locale, fallback);
   const tt = (key: string) => reportsOverrides[locale]?.[key] ?? t(key);
-  const copy = (en: string, ru: string, he: string) => {
-    if (locale === "ru") return ru;
-    if (locale === "he") return he;
-    return en;
-  };
+  const copy = useCopy();
   const optionLabel = (label: string) => {
     switch (label) {
       case "Profit":

@@ -14,7 +14,7 @@ import { canAccessAdminModule } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
 import { onAuthChanged } from "@/lib/auth-session";
 import { readableApiError } from "@/lib/api-error-display";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 
 const explanations = {
   EXECUTION_TIME_CORRECTION: ["Execution time was verified separately. The original device record will be retained.", "Дата работы проверена отдельно. Исходная запись телефона будет сохранена.", "מועד הביצוע נבדק בנפרד. הרשומה המקורית מהמכשיר תישמר."],
@@ -36,6 +36,14 @@ const explanations = {
   CATALOG_UNIT_CHANGED: ["The catalog unit differs from the confirmed price unit.", "Единица в справочнике отличается от единицы подтверждённой цены.", "יחידת הקטלוג שונה מיחידת המחיר המאושר."],
   ORIGINAL_PRICE_UNAVAILABLE: ["The original version has no matching work and unit. Quantity needs separate review.", "В исходной версии нет соответствующей работы с той же единицей. Количество требует отдельной проверки.", "בגרסה המקורית אין עבודה תואמת באותה יחידה. הכמות דורשת בדיקה נפרדת."],
 } as const;
+
+function explainAnalysis(
+  code: keyof typeof explanations,
+  copy: (en: string, ru: string, he: string) => string,
+): string | null {
+  const triple = explanations[code];
+  return triple ? copy(triple[0], triple[1], triple[2]) : null;
+}
 
 type ExecutionCorrection = { performed_at: string; evidence_reference: string };
 
@@ -118,8 +126,7 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
     setSessionChanged(true);
     onClose();
   }), [onClose]);
-  const language = locale === "ru" ? 1 : locale === "he" ? 2 : 0;
-  const copy = (en: string, ru: string, he: string) => [en, ru, he][language];
+  const copy = useCopy();
   const query = useQuery({
     queryKey: ["price-conflict-review", source, itemId],
     queryFn: ({ signal }) => apiFetch<Review>(`/api/v1/admin/sync/price-conflicts/${source}/${encodeURIComponent(itemId)}`, { signal }),
@@ -230,7 +237,7 @@ export function PriceConflictReviewDialog({ source, itemId, onClose }: {
           <>
             <div className="flex items-start gap-2 border-s-2 border-status-warning-border bg-status-warning-bg p-3 text-sm text-status-warning-fg" role="status">
               <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-              <p>{explanations[review.analysis_code]?.[language] ?? copy("Manual review required.", "Нужна ручная проверка.", "נדרשת בדיקה ידנית.")}</p>
+              <p>{explainAnalysis(review.analysis_code, copy) ?? copy("Manual review required.", "Нужна ручная проверка.", "נדרשת בדיקה ידנית.")}</p>
             </div>
             <dl className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
               {field(copy("Project", "Объект", "פרויקט"), review.project_name)}

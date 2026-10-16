@@ -48,7 +48,7 @@ import {
   readableApiError,
   readableConflictCode,
 } from "@/lib/api-error-display";
-import { useI18n, type Locale } from "@/lib/i18n";
+import { useI18n, type Locale, useCopy } from "@/lib/i18n";
 import { countNoun, pluralNoun, type PluralSpec } from "@/lib/plural";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -1082,14 +1082,7 @@ function RecoveryIntegrationRow({
 export default function OperationsPage() {
   const { locale, t } = useI18n();
   const tt = (key: string) => operationsOverrides[locale]?.[key] ?? t(key);
-  const copy = useCallback(
-    (en: string, ru: string, he: string) => {
-      if (locale === "ru") return ru;
-      if (locale === "he") return he;
-      return en;
-    },
-    [locale],
-  );
+  const copy = useCopy();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const session = useAuthSession();
@@ -2439,7 +2432,7 @@ export default function OperationsPage() {
                     [
                       ["All", t("common.all"), recoveryIncidents.length],
                       ["Delivery", copy("Delivery", "Доставка", "משלוח"), visibleFailedOutbox.length],
-                      ["Webhook", copy("Webhook", "Вебхук", "Webhook"), webhookIssueTotal],
+                      ["Webhook", copy("Webhook", "Вебхук", "וובהוק"), webhookIssueTotal],
                       ["Sync", copy("Sync", "Синхронизация", "סנכרון"), visibleSyncProblems.length],
                       ["Import", copy("Import", "Импорт", "ייבוא"), visibleFailedImports.length],
                     ] as const

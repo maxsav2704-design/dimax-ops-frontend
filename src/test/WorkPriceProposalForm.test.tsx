@@ -5,7 +5,7 @@ import { WorkPriceProposalForm } from "@/components/operations/WorkPriceProposal
 
 const mocks = vi.hoisted(() => ({ api: vi.fn(), locale: "en" }));
 vi.mock("@/lib/api", () => ({ apiFetch: mocks.api }));
-vi.mock("@/lib/i18n", () => ({ useI18n: () => ({ locale: mocks.locale }) }));
+vi.mock("@/lib/i18n", () => ({ useCopy: () => (en: string, ru: string, he: string) => (mocks.locale === "ru" ? ru : mocks.locale === "he" ? he : en), useI18n: () => ({ locale: mocks.locale }) }));
 const prepared = { review_token: "a".repeat(64), latest: null, scope: {
   project_name: "QA project", installer_name: "QA Installer", work_label: "Adjustment", quantity: "1.50", unit: "pcs",
   missing_price: { performed_at: "2026-10-01T08:00:00Z" },

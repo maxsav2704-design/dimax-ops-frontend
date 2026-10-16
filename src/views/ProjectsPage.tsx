@@ -78,7 +78,7 @@ import {
   canRunPrivilegedAdminActions,
   canViewRates,
 } from "@/lib/admin-access";
-import { useI18n, type Locale } from "@/lib/i18n";
+import { useI18n, type Locale, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const projectsOverrides: Partial<Record<Locale, Record<string, string>>> = {
@@ -1469,8 +1469,7 @@ export default function ProjectsPage() {
     return formatLocaleMoney(value, "ILS", locale, { minimumFractionDigits: 2 });
   };
   const tt = (key: string) => projectsOverrides[locale]?.[key] ?? t(key);
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   const locationLabel = (value: string | null | undefined): string => {
     if (!value) {
       return "-";

@@ -19,7 +19,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { canAccessAdminModule } from "@/lib/admin-access";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 type CompanySettings = {
   id: string;
@@ -116,8 +116,7 @@ function BoolBadge({ value, locale }: { value: boolean; locale?: string }) {
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const { locale } = useI18n();
-  const copy = (en: string, ru: string, he: string) =>
-    locale === "ru" ? ru : locale === "he" ? he : en;
+  const copy = useCopy();
   const [companyName, setCompanyName] = useState("");
   const [emailTestRecipient, setEmailTestRecipient] =
     useState("ops@example.com");

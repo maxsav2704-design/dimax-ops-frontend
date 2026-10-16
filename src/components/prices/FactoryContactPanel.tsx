@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { PRICE_API, priceRequest, type FactoryContact } from "@/lib/factory-prices";
 import { priceCopy } from "./copy";
 
@@ -16,7 +16,7 @@ export function FactoryContactPanel({ contact, owner, pending, error, onChanged 
   const { locale } = useI18n();
   const [editing, setEditing] = useState<{ contact: FactoryContact | null } | null>(null);
   const [revoking, setRevoking] = useState<FactoryContact | null>(null);
-  const text = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const text = useCopy();
   return <section className="min-w-0 border-y border-border py-4" aria-label={text("Factory contact", "Контакт завода", "איש קשר במפעל")}>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h2 className="text-sm font-semibold">{text("Authorized factory contact", "Уполномоченный контакт завода", "איש קשר מורשה במפעל")}</h2>
@@ -36,7 +36,7 @@ export function FactoryContactPanel({ contact, owner, pending, error, onChanged 
 function ContactRevocation({ contact, onClose, onChanged }: { contact: FactoryContact; onClose: () => void; onChanged: () => void }) {
   const { locale, dir } = useI18n();
   const t = priceCopy[locale];
-  const text = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const text = useCopy();
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -65,7 +65,7 @@ function ContactRevocation({ contact, onClose, onChanged }: { contact: FactoryCo
 function ContactEditor({ contact, onClose, onChanged }: { contact: FactoryContact | null; onClose: () => void; onChanged: () => void }) {
   const { locale, dir } = useI18n();
   const t = priceCopy[locale];
-  const text = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const text = useCopy();
   const [values, setValues] = useState({ factory_name: contact?.factory_name ?? "", recipient_name: contact?.recipient_name ?? "", recipient_email: contact?.recipient_email ?? "", authority_reference: contact?.authority_reference ?? "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);

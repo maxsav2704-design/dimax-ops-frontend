@@ -19,7 +19,7 @@ import {
 import { LtrText } from "@/components/ui/LtrText";
 import { formatLocaleMoney, formatLocaleNumber } from "@/lib/formatting";
 import { fetchInstallerEarningsSummary } from "@/lib/installer-api";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 function earningsNoticeClass(): string {
@@ -44,11 +44,7 @@ function earningsProjectRowClass(active: boolean): string {
 export default function InstallerEarningsPage() {
   const { locale } = useI18n();
   const searchParams = useSearchParams();
-  const copy = (en: string, ru: string, he: string) => {
-    if (locale === "ru") return ru;
-    if (locale === "he") return he;
-    return en;
-  };
+  const copy = useCopy();
   const focusedProjectId = (() => {
     const fromParams = (searchParams?.get("project_id") || "").trim();
     if (fromParams) {

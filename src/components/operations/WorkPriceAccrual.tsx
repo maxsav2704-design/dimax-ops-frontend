@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCopy } from "@/lib/i18n";
 
 type Accrual = { id: string; completed_work_id: string; amount: string; accrued_at: string; reason: string };
 type Review = { approval_hash: string; reference: string; rate: string; amount: string; currency: string;
@@ -18,7 +18,7 @@ type Request = { request_id: string; approval_hash: string; reason: string; conf
 
 export function WorkPriceAccrual({ approvalId }: { approvalId: string }) {
   const { locale } = useI18n();
-  const c = (en: string, ru: string, he: string) => locale === "ru" ? ru : locale === "he" ? he : en;
+  const c = useCopy();
   const client = useQueryClient();
   const [opened, setOpened] = useState(false);
   const [reason, setReason] = useState("");

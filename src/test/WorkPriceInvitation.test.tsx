@@ -5,7 +5,7 @@ import { WorkPriceInvitation } from "@/components/operations/WorkPriceInvitation
 
 const mocks = vi.hoisted(() => ({ api: vi.fn(), locale: "en" }));
 vi.mock("@/lib/api", () => ({ apiFetch: mocks.api }));
-vi.mock("@/lib/i18n", () => ({ useI18n: () => ({ locale: mocks.locale }) }));
+vi.mock("@/lib/i18n", () => ({ useCopy: () => (en: string, ru: string, he: string) => (mocks.locale === "ru" ? ru : mocks.locale === "he" ? he : en), useI18n: () => ({ locale: mocks.locale }) }));
 const contact = { id: "approved-contact", factory_name: "Factory QA", recipient_name: "Representative QA", recipient_email: "factory@example.org" };
 const invitation = { ...contact, id: "invitation", expires_at: "2099-10-01T10:00:00Z", revoked_at: null,
   confirmed_at: null, confirmed_name: null, email_outbox_id: "queued-email" };
