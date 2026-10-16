@@ -43,6 +43,10 @@ jobs:
       - name: Verify retained-work reviews in EN RU HE
         run: npx playwright test e2e/execution-time-correction.spec.ts e2e/missing-factory-price.spec.ts e2e/factory-price-approval.spec.ts e2e/work-price-approval.spec.ts --workers=1
 
+      # These three mock the API with page.route() like the step above; no backend or secrets needed.
+      - name: Verify factory price management, reconciliation and activation
+        run: npx playwright test e2e/factory-price-management.spec.ts e2e/factory-price-reconciliation.spec.ts e2e/factory-price-activation.spec.ts --workers=1
+
       - name: Retain compact review screenshots
         if: always()
         uses: actions/upload-artifact@v4

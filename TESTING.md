@@ -31,6 +31,14 @@ Or use the dedicated script:
 npm run test:installer
 ```
 
+### Coverage (on demand)
+
+```bash
+npm run test:coverage
+```
+
+Uses `@vitest/coverage-v8`; the summary prints in the terminal and the `html` / `lcov` reports land in `test-results/coverage` (git-ignored). It is not part of the quality gate because a full run takes about ten minutes on the dev host.
+
 ## Live Dashboard Window Regression
 
 `src/test/IndexPage.test.tsx` advances the clock after an installation and checks

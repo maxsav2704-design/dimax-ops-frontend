@@ -9,11 +9,28 @@ This repository now exposes two GitHub Actions gates:
 
 ## What they cover
 
-`Frontend Quality Gate / quality-gate`:
+`Frontend Quality Gate / quality-gate` runs `npm ci`, then `npm run quality-gate`, which is:
 
-- `npm ci`
-- `npm run test`
+- `npm run lint`
+- `npm run test:production-env` — production env contract
+- `npm run test:standalone` — standalone runtime contract
+- `npm run test:repo-config` — ESLint ignores, Playwright trace policy
+- `npm run test:security-headers` — `next.config.mjs` headers
+- `npm run test:type-scale` — `text-[Npx]` ratchet against `scripts/type-scale-baseline.json`
+- `npm run test:i18n-helpers` — no hand-rolled `(en, ru, he)` helpers; use `useCopy()` / `pickLocale()`
+- `npm run test:coverage-contract` — every Vitest and Playwright file is discovered
+- `npm run test` — Vitest in batches (`scripts/run-vitest-gate.mjs`)
 - `npm run build`
+
+After the gate the workflow installs Chromium and runs the mocked Playwright specs (they stub the API with `page.route()`, no backend or secrets): execution-time correction, missing factory price, factory price approval, work price approval, factory price management, reconciliation and activation.
+
+Coverage is not part of the gate (a full run takes about ten minutes on the dev host). Run it on demand:
+
+```bash
+npm run test:coverage
+```
+
+The report lands in `test-results/coverage` (git-ignored): `text-summary` in the terminal, `html` and `lcov` on disk.
 
 `Installer Quality Gate / quality-gate`:
 
