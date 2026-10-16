@@ -1,6 +1,8 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
+
 import { useRouter, useSearchParams } from "next/navigation";
+
 
 import {
   AlertCircle,
@@ -8,7 +10,6 @@ import {
   ChevronDown,
   Download,
   FileText,
-  FileSpreadsheet,
   FilterX,
   MapPinned,
   MessageCircle,
@@ -18,35 +19,54 @@ import {
   PencilLine,
   RefreshCw,
   Search,
-  Upload,
   UserPlus,
 } from "lucide-react";
 
-
 import { DashboardLayout } from "@/components/DashboardLayout";
+
 
 import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
 
+
 import { DataStateNotice } from "@/components/DataStateNotice";
+
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 
 import { useMediaQuery } from "@/hooks/use-media-query";
 
+
 import { useReferenceList } from "@/hooks/use-reference-list";
+
 
 import { useCompanyPricingState } from "@/hooks/use-company-pricing-state";
 
+
 import { CompanyPriceStatus } from "@/components/prices/CompanyPriceStatus";
+
 
 import { DoorMatrixTile } from "@/components/projects/DoorMatrixTile";
 
+
 import { ProjectDialog } from "@/components/projects/ProjectDialog";
+
+import { DoorImportWizard } from "@/components/projects/DoorImportWizard";
+
+import { useImportCopy } from "@/components/projects/import-copy";
+
+import type { DoorType, ImportColumnsDiagnostics, ImportResult, ImportMappingProfilesResponse } from "@/components/projects/import-types";
+
+import { downloadBlob, filenameFromDisposition } from "@/lib/download";
+
+import { safeDownloadFilename, downloadImportErrorsCsv } from "@/components/projects/import-download";
+
 
 import { emptyProjectForm, normalizeDraftPhone, projectsMetricLabelClass } from "@/components/projects/project-form";
 
+
 import type { ProjectFormState, ProjectLifecycleStatus } from "@/components/projects/project-form";
+
 
 import {
   Breadcrumbs,
@@ -56,6 +76,7 @@ import {
   WidgetCard,
 } from "@/components/dimax";
 
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,7 +84,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+
 import { Button } from "@/components/ui/button";
+
 
 import {
   Dialog,
@@ -74,25 +97,34 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+
 import { Input } from "@/components/ui/input";
+
 
 import { Label } from "@/components/ui/label";
 
+
 import { LtrText } from "@/components/ui/LtrText";
+
 
 import {
   Select,
 } from "@/components/ui/select";
+
 import { StatusBadge } from "@/components/ui/status-badge";
 
+
 import { apiDownload, apiFetch } from "@/lib/api";
+
 import { readableApiError } from "@/lib/api-error-display";
 
-import { formatImportRowError } from "@/lib/import-row-error";
+
 
 import { formatLocaleMoney } from "@/lib/formatting";
 
+
 import { useAuthSession } from "@/hooks/use-auth-session";
+
 
 import {
   canManageImports,
@@ -100,7 +132,9 @@ import {
   canViewRates,
 } from "@/lib/admin-access";
 
+
 import { useI18n, type Locale, useCopy } from "@/lib/i18n";
+
 
 import { cn } from "@/lib/utils";
 
@@ -289,13 +323,6 @@ type ProjectDetailsResponse = {
   whatsapp_deep_link?: string | null;
   call_deep_link?: string | null;
   issues_open?: ProjectOpenIssue[];
-};
-
-type DoorType = {
-  id: string;
-  code: string;
-  name: string;
-  is_active: boolean;
 };
 
 type ReasonItem = {
@@ -538,80 +565,10 @@ type ProjectRiskDrilldownResponse = {
   risky_orders: ProjectRiskOrderItem[];
 };
 
-type ImportRequiredFieldDiagnostics = {
-  field_key: string;
-  display_name: string;
-  found: boolean;
-  matched_columns: string[];
-};
-
-type ImportColumnsDiagnostics = {
-  required_fields: ImportRequiredFieldDiagnostics[];
-  recognized_columns: string[];
-  unmapped_columns: string[];
-  mapping_profile?: string | null;
-  strict_required_fields?: boolean | null;
-  missing_required_fields?: string[];
-  data_summary?: {
-    source_rows: number;
-    prepared_rows: number;
-    rows_with_errors: number;
-    duplicate_rows_skipped: number;
-    zero_price_doors?: number;
-    unique_order_numbers: number;
-    unique_houses: number;
-    unique_floors: number;
-    unique_apartments: number;
-    unique_locations: number;
-    unique_markings: number;
-  } | null;
-  preview_groups?: Array<{
-    order_number: string | null;
-    house_number: string | null;
-    floor_label: string | null;
-    apartment_number: string | null;
-    door_marking: string | null;
-    door_count: number;
-    location_codes: string[];
-    door_type_ids?: string[];
-    door_type_labels?: string[];
-  }>;
-};
-
-type ImportResult = {
-  parsed_rows: number;
-  prepared_rows: number;
-  imported: number;
-  skipped: number;
-  errors: ImportRowError[];
-  diagnostics?: ImportColumnsDiagnostics | null;
-  mode?: "analyze" | "import" | string;
-  would_import?: number;
-  would_skip?: number;
-  idempotency_hit?: boolean;
-};
-
 type BulkAssignDoorsResponse = {
   assigned: number;
   skipped: number;
   assigned_door_ids: string[];
-};
-
-type ImportRowError = {
-  row: number;
-  message: string;
-};
-
-type ImportMappingProfile = {
-  code: string;
-  name: string;
-  description: string;
-  preferred_delimiter: string | null;
-};
-
-type ImportMappingProfilesResponse = {
-  default_code: string;
-  items: ImportMappingProfile[];
 };
 
 type ProjectImportRunItem = {
@@ -933,65 +890,6 @@ function formatBytes(value: number): string {
   return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  try {
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-function escapeCsvCell(value: string | number | null | undefined): string {
-  const text = String(value ?? "");
-  if (/[",\n\r]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
-}
-
-function buildImportErrorsCsv(errors: ImportRowError[]): string {
-  const rows = [
-    ["row", "message"],
-    ...errors.map((errorItem) => [String(errorItem.row), errorItem.message]),
-  ];
-  return rows
-    .map((row) => row.map((cell) => escapeCsvCell(cell)).join(","))
-    .join("\n");
-}
-
-function safeDownloadFilename(value: string): string {
-  return value
-    .trim()
-    .replace(/[\\/:*?"<>|]+/g, "-")
-    .replace(/\s+/g, "-")
-    .slice(0, 140);
-}
-
-function downloadImportErrorsCsv(
-  errors: ImportRowError[],
-  filename: string,
-): void {
-  const csv = buildImportErrorsCsv(errors);
-  downloadBlob(
-    new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }),
-    filename,
-  );
-}
-
-function filenameFromDisposition(
-  disposition: string | null,
-  fallback: string,
-): string {
-  const match = (disposition || "").match(/filename="?([^"]+)"?/i);
-  return match?.[1] || fallback;
-}
-
 function formatPct(value: number | null | undefined): string {
   if (typeof value !== "number" || Number.isNaN(value)) {
     return "-";
@@ -1139,23 +1037,7 @@ export default function ProjectsPage() {
     }
     return LOCATION_LABELS[value]?.[locale] || value;
   };
-  const importRowErrorLabel = (message: string): string => formatImportRowError(message, locale);
-  const importProfileLabel = (code: string, fallback = code) => {
-    switch (code) {
-      case "auto_v1":
-        return copy("Auto detect", "Автоопределение", "זיהוי אוטומטי");
-      case "factory_he_v1":
-        return copy("Factory Hebrew", "Заводской файл на иврите", "קובץ מפעל בעברית");
-      case "supplier_delivery_he_v1":
-        return copy("Hebrew delivery report", "Отчёт поставки на иврите", "דוח אספקה בעברית");
-      case "factory_ru_v1":
-        return copy("Factory Russian", "Заводской файл на русском", "קובץ מפעל ברוסית");
-      case "generic_en_v1":
-        return copy("Generic English", "Универсальный файл на английском", "קובץ כללי באנגלית");
-      default:
-        return fallback;
-    }
-  };
+  const { importRowErrorLabel, importProfileLabel } = useImportCopy();
   const tokenLabel = (value: string) => {
     const normalized = value.trim().toUpperCase();
     switch (normalized) {
@@ -1382,19 +1264,7 @@ export default function ProjectsPage() {
     string | null
   >(null);
 
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [defaultDoorTypeId, setDefaultDoorTypeId] = useState("");
-  const [delimiter, setDelimiter] = useState("");
-  const [mappingProfile, setMappingProfile] = useState("auto_v1");
-  const [createMissingDoorTypes, setCreateMissingDoorTypes] = useState(true);
-  const [downloadingImportTemplate, setDownloadingImportTemplate] =
-    useState(false);
-  const [importLoading, setImportLoading] = useState(false);
-  const [importAction, setImportAction] = useState<"analyze" | "import" | null>(
-    null,
-  );
   const [analysisReady, setAnalysisReady] = useState(false);
-  const [allowPartialImport, setAllowPartialImport] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importHistoryModeFilter, setImportHistoryModeFilter] = useState("all");
   const [importHistoryStatusFilter, setImportHistoryStatusFilter] =
@@ -1485,10 +1355,6 @@ export default function ProjectsPage() {
     () => (selectedProjectId ? (projectDocumentsQuery.data ?? []) : []),
     [projectDocumentsQuery.data, selectedProjectId],
   );
-  const mappingProfiles = useMemo(
-    () => (Array.isArray(mappingProfilesQuery.data?.items) ? mappingProfilesQuery.data.items : []),
-    [mappingProfilesQuery.data],
-  );
   const failedQueue = failedQueueQuery.data ?? null;
   const loadingProjectDetails = projectDetailsQuery.isFetching;
   const loadingProjectDocuments = projectDocumentsQuery.isFetching;
@@ -1510,26 +1376,6 @@ export default function ProjectsPage() {
   const loadFailedQueue = useCallback(async () => {
     await refetchFailedQueue();
   }, [refetchFailedQueue]);
-
-  // Keep the chosen mapping profile valid for the loaded catalog (was inside the loader).
-  useEffect(() => {
-    if (mappingProfilesQuery.isError) {
-      setMappingProfile("auto_v1");
-      return;
-    }
-    const response = mappingProfilesQuery.data;
-    if (!response) return;
-    const items = Array.isArray(response.items) ? response.items : [];
-    setMappingProfile((currentProfile) => {
-      if (response.default_code && items.some((item) => item.code === response.default_code)) {
-        return response.default_code;
-      }
-      if (items.length > 0 && !items.some((item) => item.code === currentProfile)) {
-        return items[0].code;
-      }
-      return currentProfile;
-    });
-  }, [mappingProfilesQuery.data, mappingProfilesQuery.isError]);
 
   // Selected failed runs can only point at rows of the current page.
   useEffect(() => {
@@ -1579,11 +1425,6 @@ export default function ProjectsPage() {
   const [selectedDoorIds, setSelectedDoorIds] = useState<string[]>([]);
   const [bulkAssignInstallerId, setBulkAssignInstallerId] = useState("");
   const [bulkAssignLoading, setBulkAssignLoading] = useState(false);
-
-  const importAnalyzeErrorsCount =
-    importResult?.mode === "analyze" ? importResult.errors.length : 0;
-  const importBlockedByRowErrors =
-    importAnalyzeErrorsCount > 0 && !allowPartialImport;
 
   const deepLinkProjectId = (searchParams?.get("project_id") || "").trim();
   const createProjectRequested = searchParams?.get("create") === "1";
@@ -3044,96 +2885,16 @@ export default function ProjectsPage() {
     node.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [focusedImportRunId, importHistory]);
 
-  const handleDownloadImportTemplate = async () => {
-    if (!canManageProjectImports) return;
-    setDownloadingImportTemplate(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({
-        mapping_profile: mappingProfile || "auto_v1",
-      });
-      const response = await apiDownload(
-        `/api/v1/admin/projects/doors/import-template.xlsx?${params.toString()}`,
-      );
-      const blob = await response.blob();
-      downloadBlob(
-        blob,
-        filenameFromDisposition(
-          response.headers.get("content-disposition"),
-          `dimax-door-import-template-${mappingProfile || "auto_v1"}.xlsx`,
-        ),
-      );
-    } catch (e) {
-      setError(
-        readableApiError(
-          e,
-          locale,
-          copy(
-            "Failed to download import template.",
-            "Не удалось скачать шаблон импорта.",
-            "הורדת תבנית הייבוא נכשלה.",
-          ),
-        ),
-      );
-    } finally {
-      setDownloadingImportTemplate(false);
-    }
+  const handleImportAnalyzed = async (projectId: string) => {
+    await loadImportHistory(projectId);
   };
 
-  const handleImportAction = async (mode: "analyze" | "import") => {
-    if (!canManageProjectImports || !selectedProjectId || !importFile) {
-      return;
-    }
-    setImportLoading(true);
-    setImportAction(mode);
-    setError(null);
-    if (mode === "analyze") {
-      setAllowPartialImport(false);
-      setImportResult(null);
-    }
-    try {
-      const body = new FormData();
-      body.append("file", importFile);
-      body.append("default_our_price", "0");
-      body.append("create_missing_door_types", String(createMissingDoorTypes));
-      body.append("analyze_only", mode === "analyze" ? "true" : "false");
-      body.append(
-        "allow_partial_import",
-        mode === "import" && allowPartialImport ? "true" : "false",
-      );
-      body.append("mapping_profile", mappingProfile);
-      if (defaultDoorTypeId.trim()) {
-        body.append("default_door_type_id", defaultDoorTypeId.trim());
-      }
-      if (delimiter) {
-        body.append("delimiter", delimiter);
-      }
-
-      const response = await apiFetch<ImportResult>(
-        `/api/v1/admin/projects/${selectedProjectId}/doors/import-upload`,
-        {
-          method: "POST",
-          body,
-        },
-      );
-      setImportResult(response);
-      if (mode === "analyze") {
-        setAnalysisReady(response.mode === "analyze");
-      } else {
-        setAnalysisReady(false);
-        setAllowPartialImport(false);
-        await loadProjectDetails(selectedProjectId);
-        await loadLayout(selectedProjectId);
-        await loadProjectPlanFact(selectedProjectId);
-        await loadProjectRisk(selectedProjectId);
-      }
-      await loadImportHistory(selectedProjectId);
-    } catch (e) {
-      setError(readableApiError(e, locale, t("projects.failedImportFile")));
-    } finally {
-      setImportLoading(false);
-      setImportAction(null);
-    }
+  const handleImportCompleted = async (projectId: string) => {
+    await loadProjectDetails(projectId);
+    await loadLayout(projectId);
+    await loadProjectPlanFact(projectId);
+    await loadProjectRisk(projectId);
+    await loadImportHistory(projectId);
   };
 
   const handleRetryImportRun = async (
@@ -8710,470 +8471,23 @@ export default function ProjectsPage() {
                   </div>
                 </WidgetCard>
 
-                <WidgetCard
-                  id="project-door-import"
-                  title={t("projects.importFactoryFile")}
-                  titleAccessory={
-                    <Upload className="h-4 w-4 text-text-secondary" aria-hidden="true" />
-                  }
-                  headerMeta={t("projects.acceptedFormats")}
-                  actionSlot={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void handleDownloadImportTemplate()}
-                      disabled={!canManageProjectImports || downloadingImportTemplate}
-                      className="h-8 w-full justify-center px-2 text-[12px] sm:w-auto"
-                    >
-                      <Download
-                        className="mr-1.5 h-3.5 w-3.5"
-                        aria-hidden="true"
-                      />
-                      {downloadingImportTemplate
-                        ? copy("Downloading...", "Скачивание...", "מוריד...")
-                        : copy(
-                            "Download Excel template",
-                            "Скачать Excel-шаблон",
-                            "הורד תבנית Excel",
-                          )}
-                    </Button>
-                  }
+                <DoorImportWizard
+                  projectId={selectedProjectId}
+                  canManage={canManageProjectImports}
+                  canViewRates={canViewProjectRates}
+                  doorTypes={doorTypes}
+                  loadingDoorTypes={loadingDoorTypes}
+                  doorTypesReady={doorTypesReference.ready}
+                  mappingProfilesQuery={mappingProfilesQuery}
+                  importResult={importResult}
+                  analysisReady={analysisReady}
+                  onImportResultChange={setImportResult}
+                  onAnalysisReadyChange={setAnalysisReady}
+                  onError={setError}
+                  onAnalyzed={handleImportAnalyzed}
+                  onImported={handleImportCompleted}
+                  renderPreviewGroups={renderImportPreviewGroups}
                 >
-                  <p className="text-[12px] text-text-secondary">
-                    {copy(
-                      "Priority columns: order, building, floor, apartment, door model",
-                      "Основные столбцы: заказ, дом, этаж, квартира, модель двери",
-                      "עמודות עיקריות: הזמנה, בניין, קומה, דירה, דגם דלת",
-                    )}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <label className="relative flex h-10 min-w-0 basis-52 grow cursor-pointer items-center rounded-lg border border-dashed border-border bg-surface px-3 text-[13px] text-text-secondary transition-colors hover:border-border-strong focus-within:ring-2 focus-within:ring-accent/35">
-                      <FileSpreadsheet
-                        className="w-4 h-4 mr-2 shrink-0"
-                        aria-hidden="true"
-                      />
-                      <span className="truncate">
-                        {importFile
-                          ? importFile.name
-                          : t("projects.chooseFile")}
-                      </span>
-                      <input
-                        type="file"
-                        disabled={!canManageProjectImports}
-                        aria-label={t("projects.chooseFile")}
-                        className="sr-only"
-                        onChange={(e) => {
-                          setImportFile(e.target.files?.[0] || null);
-                          setAnalysisReady(false);
-                          setAllowPartialImport(false);
-                          setImportResult(null);
-                        }}
-                        accept=".csv,.txt,.tsv,.json,.xml,.xlsx,.pdf"
-                      />
-                    </label>
-                    <select
-                      aria-label={t("projects.autoByFileCode")}
-                      disabled={!doorTypesReference.ready}
-                      value={defaultDoorTypeId}
-                      onChange={(e) => {
-                        setDefaultDoorTypeId(e.target.value);
-                        setAnalysisReady(false);
-                        setAllowPartialImport(false);
-                      }}
-                      className="control-input min-w-0 basis-64 grow"
-                    >
-                      <option value="">
-                        {loadingDoorTypes
-                          ? t("projects.loadingDoorTypes")
-                          : t("projects.autoByFileCode")}
-                      </option>
-                      {doorTypes.filter((doorType) => doorType.is_active).map((doorType) => (
-                        <option key={doorType.id} value={doorType.id}>
-                          {doorType.code} - {doorType.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="grid min-w-0 basis-72 grow grid-cols-2 gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void handleImportAction("analyze")}
-                        disabled={!canManageProjectImports || !importFile || importLoading}
-                        className="h-10 min-w-0 px-2"
-                      >
-                        {importLoading && importAction === "analyze"
-                          ? t("projects.analyzing")
-                          : t("projects.analyze")}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => void handleImportAction("import")}
-                        disabled={
-                          !canManageProjectImports ||
-                          !importFile ||
-                          importLoading ||
-                          !analysisReady ||
-                          importBlockedByRowErrors
-                        }
-                        className="h-10 min-w-0 px-2"
-                      >
-                        {importLoading && importAction === "import"
-                          ? t("projects.importing")
-                          : t("projects.import")}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <select
-                      aria-label={t("projects.mappingProfileAuto")}
-                      value={mappingProfile}
-                      onChange={(e) => {
-                        setMappingProfile(e.target.value);
-                        setAnalysisReady(false);
-                        setAllowPartialImport(false);
-                      }}
-                      className="control-input h-9 min-w-0 basis-52 grow text-[12px]"
-                    >
-                      {loadingMappingProfiles ? (
-                        <option value="auto_v1">
-                          {t("projects.mappingProfileLoading")}
-                        </option>
-                      ) : null}
-                      {!loadingMappingProfiles &&
-                      mappingProfiles.length === 0 ? (
-                        <option value="auto_v1">
-                          {t("projects.mappingProfileAuto")}
-                        </option>
-                      ) : null}
-                      {mappingProfiles.map((profile) => (
-                        <option key={profile.code} value={profile.code}>
-                          {importProfileLabel(profile.code, profile.name)}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      aria-label={t("projects.delimiterAuto")}
-                      value={delimiter}
-                      onChange={(e) => {
-                        setDelimiter(e.target.value);
-                        setAnalysisReady(false);
-                        setAllowPartialImport(false);
-                      }}
-                      className="control-input h-9 min-w-0 basis-52 grow text-[12px]"
-                    >
-                      <option value="">{t("projects.delimiterAuto")}</option>
-                      <option value=",">{t("projects.delimiterComma")}</option>
-                      <option value=";">
-                        {t("projects.delimiterSemicolon")}
-                      </option>
-                      <option value="|">{t("projects.delimiterPipe")}</option>
-                      <option value={"\t"}>{t("projects.delimiterTab")}</option>
-                    </select>
-                    <label className="checkbox-row min-h-9 min-w-0 basis-72 grow rounded-lg border border-border bg-surface px-3 py-2">
-                      <input
-                        type="checkbox"
-                        checked={createMissingDoorTypes}
-                        className="shrink-0"
-                        onChange={(e) => {
-                          setCreateMissingDoorTypes(e.target.checked);
-                          setAnalysisReady(false);
-                          setAllowPartialImport(false);
-                        }}
-                      />
-                      {t("projects.createMissingDoorTypes")}
-                    </label>
-                  </div>
-
-                  {importResult && (
-                    <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-[12px]">
-                      <div className="flex items-center gap-1.5 text-status-ok-fg">
-                        <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
-                        {t("projects.parsedPreparedImportedSkipped")
-                          .replace("{parsed}", String(importResult.parsed_rows))
-                          .replace(
-                            "{prepared}",
-                            String(importResult.prepared_rows),
-                          )
-                          .replace("{imported}", String(importResult.imported))
-                          .replace("{skipped}", String(importResult.skipped))}
-                      </div>
-                      {typeof importResult.would_import === "number" &&
-                      typeof importResult.would_skip === "number" ? (
-                        <div className="mt-1 text-text-secondary">
-                          {t("projects.preflightResult")
-                            .replace(
-                              "{mode}",
-                              importResult.mode === "analyze"
-                                ? t("projects.preflight")
-                                : t("projects.result"),
-                            )
-                            .replace(
-                              "{wouldImport}",
-                              String(importResult.would_import),
-                            )
-                            .replace(
-                              "{wouldSkip}",
-                              String(importResult.would_skip),
-                            )}
-                        </div>
-                      ) : null}
-                      {importResult.mode === "analyze" &&
-                      importAnalyzeErrorsCount === 0 ? (
-                        <div className="mt-1 text-text-secondary">
-                          {t("projects.analyzeCompleted")}
-                        </div>
-                      ) : null}
-                      {importResult.mode === "analyze" &&
-                      importAnalyzeErrorsCount > 0 ? (
-                        <div className="mt-2 flex items-start gap-2 rounded-lg border border-status-problem-border bg-status-problem-bg px-2 py-1.5 text-status-problem-fg">
-                          <AlertCircle
-                            className="mt-0.5 h-4 w-4 shrink-0"
-                            aria-hidden="true"
-                          />
-                          <div>
-                            <div className="font-semibold">
-                              {copy(
-                                "Analyze found row errors",
-                                "Анализ нашёл ошибки в строках",
-                                "הניתוח מצא שגיאות בשורות",
-                              )}
-                            </div>
-                            <div className="mt-0.5 text-[11px] text-text-secondary">
-                              {copy(
-                                "Fix the file and analyze again, or explicitly allow partial import of valid rows.",
-                                "Исправьте файл и повторите анализ либо явно разрешите частичный импорт корректных строк.",
-                                "תקן את הקובץ ונתח שוב, או אשר במפורש יבוא חלקי של שורות תקינות.",
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ) : null}
-                      {importResult.idempotency_hit ? (
-                        <div className="mt-1 text-text-secondary">
-                          {t("projects.idempotencyHit")}
-                        </div>
-                      ) : null}
-                      {importResult.diagnostics?.mapping_profile ? (
-                        <div className="mt-1 text-text-secondary">
-                          {t("projects.mappingProfileValue").replace(
-                            "{value}",
-                            importProfileLabel(
-                              importResult.diagnostics.mapping_profile,
-                            ),
-                          )}
-                        </div>
-                      ) : null}
-                      {importResult.diagnostics?.strict_required_fields !==
-                        undefined &&
-                      importResult.diagnostics?.strict_required_fields !==
-                        null ? (
-                        <div className="mt-1 text-text-secondary">
-                          {t("projects.strictRequiredFields").replace(
-                            "{value}",
-                            importResult.diagnostics.strict_required_fields
-                              ? t("projects.on")
-                              : t("projects.off"),
-                          )}
-                        </div>
-                      ) : null}
-                      {importResult.diagnostics?.missing_required_fields
-                        ?.length ? (
-                        <div className="mt-1 text-status-problem-fg">
-                          {t("projects.missingRequiredFields").replace(
-                            "{fields}",
-                            importResult.diagnostics.missing_required_fields.join(
-                              ", ",
-                            ),
-                          )}
-                        </div>
-                      ) : null}
-                      {importResult.diagnostics?.data_summary ? (
-                        <div className="mt-2">
-                          <div className="text-text-secondary">
-                            {t("projects.importDataSummary")}
-                          </div>
-                          <div className="mt-1 flex flex-wrap gap-1.5">
-                            {[
-                              {
-                                label: t("projects.orders"),
-                                value:
-                                  importResult.diagnostics.data_summary
-                                    .unique_order_numbers,
-                              },
-                              {
-                                label: t("projects.houses"),
-                                value:
-                                  importResult.diagnostics.data_summary
-                                    .unique_houses,
-                              },
-                              {
-                                label: t("projects.floors"),
-                                value:
-                                  importResult.diagnostics.data_summary
-                                    .unique_floors,
-                              },
-                              {
-                                label: t("projects.apartments"),
-                                value:
-                                  importResult.diagnostics.data_summary
-                                    .unique_apartments,
-                              },
-                              {
-                                label: t("projects.locations"),
-                                value:
-                                  importResult.diagnostics.data_summary
-                                    .unique_locations,
-                              },
-                              {
-                                label: t("projects.markings"),
-                                value:
-                                  importResult.diagnostics.data_summary
-                                    .unique_markings,
-                              },
-                              {
-                                label: t("projects.rowErrors"),
-                                value:
-                                  importResult.diagnostics.data_summary
-                                    .rows_with_errors,
-                              },
-                              {
-                                label: t("projects.duplicateRows"),
-                                value:
-                                  importResult.diagnostics.data_summary
-                                    .duplicate_rows_skipped,
-                              },
-                            ].map((item) => (
-                              <span
-                                key={item.label}
-                                className="rounded-full border border-border bg-surface px-2.5 py-1 text-text"
-                              >
-                                {item.label}: {item.value}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                      {canViewProjectRates &&
-                      (importResult.diagnostics?.data_summary
-                        ?.zero_price_doors || 0) > 0 ? (
-                        <div className="mt-2 rounded-lg border border-status-warning-border bg-status-warning-bg px-2.5 py-2 text-status-warning-fg">
-                          {copy(
-                            "Zero client price doors: {count}. Check the source price column or default client price before importing.",
-                            "Двери с нулевой ценой клиента: {count}. Проверьте колонку цены в файле или цену клиента по умолчанию перед импортом.",
-                            "דלתות עם מחיר לקוח אפס: {count}. בדוק את עמודת המחיר בקובץ או מחיר ברירת מחדל לפני הייבוא.",
-                          ).replace(
-                            "{count}",
-                            String(
-                              importResult.diagnostics?.data_summary
-                                ?.zero_price_doors || 0,
-                            ),
-                          )}
-                        </div>
-                      ) : null}
-                      {renderImportPreviewGroups(importResult.diagnostics)}
-                      {importResult.diagnostics?.required_fields?.length ? (
-                        <div className="mt-2">
-                          <div className="text-text-secondary">
-                            {t("projects.requiredColumnsStatus")}
-                          </div>
-                          <div className="mt-1 flex flex-wrap gap-1.5">
-                            {importResult.diagnostics.required_fields.map(
-                              (field) => (
-                                <span
-                                  key={field.field_key}
-                                  className={cn(
-                                    "rounded-full border px-2.5 py-1",
-                                    field.found
-                                      ? "border-status-ok-border bg-status-ok-bg text-status-ok-fg"
-                                      : "border-status-problem-border bg-status-problem-bg text-status-problem-fg",
-                                  )}
-                                  title={
-                                    field.matched_columns.length > 0
-                                      ? `Matched: ${field.matched_columns.join(", ")}`
-                                      : t("projects.notDetected")
-                                  }
-                                >
-                                  {field.display_name}:{" "}
-                                  {field.found
-                                    ? t("projects.found")
-                                    : t("projects.missing")}
-                                </span>
-                              ),
-                            )}
-                          </div>
-                        </div>
-                      ) : null}
-                      {importResult.errors.length > 0 && (
-                        <div className="mt-2 rounded-lg border border-status-problem-border bg-status-problem-bg p-2 text-status-problem-fg">
-                          {importResult.mode === "analyze" ? (
-                            <div className="mb-2 rounded-md border border-status-problem-border bg-surface px-2 py-1.5 text-text">
-                              <label className="checkbox-row text-[12px]">
-                                <input
-                                  type="checkbox"
-                                  checked={allowPartialImport}
-                                  onChange={(event) =>
-                                    setAllowPartialImport(event.target.checked)
-                                  }
-                                />
-                                {copy(
-                                  "Allow partial import of valid rows",
-                                  "Разрешить частичный импорт корректных строк",
-                                  "אפשר יבוא חלקי של שורות תקינות",
-                                )}
-                              </label>
-                              <div className="mt-1 text-[11px] text-text-secondary">
-                                {copy(
-                                  "Rows with errors will not create doors.",
-                                  "Строки с ошибками не создадут двери.",
-                                  "שורות עם שגיאות לא ייצרו דלתות.",
-                                )}
-                              </div>
-                            </div>
-                          ) : null}
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                              {t("projects.errorsPreviewInline").replace(
-                                "{value}",
-                                  importResult.errors
-                                    .slice(0, 5)
-                                    .map(
-                                      (e) =>
-                                        `#${e.row} ${importRowErrorLabel(e.message)}`,
-                                    )
-                                    .join(" | "),
-                              )}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                downloadImportErrorsCsv(
-                                  importResult.errors,
-                                  `dimax-import-errors-${safeDownloadFilename(importFile?.name || "current-file")}.csv`,
-                                )
-                              }
-                              className="h-7 w-full justify-center border-status-problem-border bg-surface px-2 text-[11px] text-status-problem-fg sm:w-auto"
-                            >
-                              <Download
-                                className="mr-1.5 h-3.5 w-3.5"
-                                aria-hidden="true"
-                              />
-                              {copy(
-                                "Download error report",
-                                "Скачать отчёт ошибок",
-                                "הורד דוח שגיאות",
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   <div
                     id="project-import-history"
                     className="mt-4 rounded-lg border border-border bg-surface"
@@ -9747,7 +9061,7 @@ export default function ProjectsPage() {
                       </div>
                     )}
                   </div>
-                </WidgetCard>
+                </DoorImportWizard>
 
                 <div
                   id="project-door-matrix"
