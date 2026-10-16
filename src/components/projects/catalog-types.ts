@@ -16,3 +16,22 @@ export type ProjectAddonPlanItem = {
   installer_price: string | number | null;
   notes?: string | null;
 };
+
+export type LibraryProductItem = {
+  id: string;
+  sku: string;
+  name_ru: string;
+  name_he: string;
+  install_type: string;
+  manufacturer: string | null;
+  unit: string;
+  status: string;
+};
+
+export type InstallerListItem = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  status: string;
+  is_active: boolean;
+};

@@ -44,9 +44,20 @@ import { DoorMatrixTile } from "@/components/projects/DoorMatrixTile";
 
 import { ProjectDialog } from "@/components/projects/ProjectDialog";
 
+import { ManualDoorDialog } from "@/components/projects/ManualDoorDialog";
+
+import { emptyManualDoorForm } from "@/components/projects/manual-door-form";
+
+import type { ManualDoorFormState } from "@/components/projects/manual-door-form";
+
+import type { InstallerListItem, LibraryProductItem } from "@/components/projects/catalog-types";
+
+
 import { FailedImportQueueCard } from "@/components/projects/FailedImportQueueCard";
 
+
 import type { FailedImportQueueResponse } from "@/components/projects/import-types";
+
 
 import { FAILED_QUEUE_PAGE_SIZE } from "@/components/projects/shared";
 
@@ -117,7 +128,6 @@ import { ProjectDocumentsCard } from "@/components/projects/ProjectDocumentsCard
 import type { DocumentGenerationDTO, DocumentTemplateDTO } from "@/components/projects/document-shared";
 
 
-
 import { DoorImportWizard } from "@/components/projects/DoorImportWizard";
 
 
@@ -145,20 +155,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
-
-import { Input } from "@/components/ui/input";
-
-
-import { Label } from "@/components/ui/label";
 
 
 import { LtrText } from "@/components/ui/LtrText";
@@ -326,38 +323,6 @@ type DoorActionResponse = {
   version: number;
 };
 
-type LibraryProductItem = {
-  id: string;
-  sku: string;
-  name_ru: string;
-  name_he: string;
-  install_type: string;
-  manufacturer: string | null;
-  unit: string;
-  status: string;
-};
-
-type InstallerListItem = {
-  id: string;
-  full_name: string;
-  email: string | null;
-  status: string;
-  is_active: boolean;
-};
-
-type ManualDoorFormState = {
-  product_id: string;
-  door_code: string;
-  unit: string;
-  floor: string;
-  location_code: string;
-  order_number: string;
-  install_type: string;
-  is_critical: boolean;
-  assigned_installer_id: string;
-  planned_install_date: string;
-};
-
 type BulkAssignDoorsResponse = {
   assigned: number;
   skipped: number;
@@ -367,21 +332,6 @@ type BulkAssignDoorsResponse = {
 type ProjectImportRunsResponse = {
   items: ProjectImportRunItem[];
 };
-
-function emptyManualDoorForm(): ManualDoorFormState {
-  return {
-    product_id: "",
-    door_code: "",
-    unit: "",
-    floor: "",
-    location_code: "",
-    order_number: "",
-    install_type: "",
-    is_critical: false,
-    assigned_installer_id: "",
-    planned_install_date: "",
-  };
-}
 
 function projectFormFromDetails(
   details: ProjectDetailsResponse | null,
@@ -803,11 +753,17 @@ export default function ProjectsPage() {
     useState<ProjectFormState>(emptyProjectForm());
   // Bumped on every open so ProjectDialog remounts with a fresh form state.
   const [projectDialogSession, setProjectDialogSession] = useState(0);
+  // ManualDoorDialog owns the form; the page passes the values it should open with
+  // and remounts the dialog per open (key) so a fresh form state is guaranteed.
+  const [manualDoorInitialForm, setManualDoorInitialForm] =
+    useState<ManualDoorFormState>(emptyManualDoorForm());
+  const [manualDoorSession, setManualDoorSession] = useState(0);
+  const openManualDoorWith = (form: ManualDoorFormState) => {
+    setManualDoorInitialForm(form);
+    setManualDoorSession((prev) => prev + 1);
+  };
+
   const [manualDoorDialogOpen, setManualDoorDialogOpen] = useState(false);
-  const [manualDoorForm, setManualDoorForm] = useState<ManualDoorFormState>(
-    emptyManualDoorForm(),
-  );
-  const [manualDoorSubmitting, setManualDoorSubmitting] = useState(false);
 
   const [analysisReady, setAnalysisReady] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -1136,13 +1092,6 @@ export default function ProjectsPage() {
   const activeInstallerById = useMemo(
     () => new Map(activeInstallers.map((item) => [item.id, item])),
     [activeInstallers],
-  );
-  const selectedLibraryProduct = useMemo(
-    () =>
-      activeLibraryProducts.find(
-        (item) => item.id === manualDoorForm.product_id,
-      ) || null,
-    [activeLibraryProducts, manualDoorForm.product_id],
   );
   const activeAddonTypes = useMemo(
     () => addonTypes.filter((item) => item.status !== "ARCHIVED"),
@@ -2115,21 +2064,6 @@ export default function ProjectsPage() {
   }, [loadProjects]);
 
   useEffect(() => {
-    if (!selectedLibraryProduct) {
-      return;
-    }
-    setManualDoorForm((prev) => {
-      if (prev.install_type.trim()) {
-        return prev;
-      }
-      return {
-        ...prev,
-        install_type: selectedLibraryProduct.install_type || "",
-      };
-    });
-  }, [selectedLibraryProduct]);
-
-  useEffect(() => {
     if (projects.length === 0 || deepLinkApplied) {
       return;
     }
@@ -2240,7 +2174,7 @@ export default function ProjectsPage() {
         setDeepLinkDoorFlowApplied(true);
         return;
       }
-      setManualDoorForm({
+      openManualDoorWith({
         ...emptyManualDoorForm(),
         product_id: matchedProduct?.id || "",
         install_type:
@@ -2254,7 +2188,7 @@ export default function ProjectsPage() {
     }
 
     if (!deepLinkLibraryProductId && deepLinkLibraryInstallType) {
-      setManualDoorForm({
+      openManualDoorWith({
         ...emptyManualDoorForm(),
         install_type: deepLinkLibraryInstallType,
       });
@@ -2800,107 +2734,24 @@ export default function ProjectsPage() {
     await loadImportHistory(projectId);
   };
 
+  // ManualDoorDialog created a door: refresh the project views and focus the matrix on it.
+  const handleManualDoorCreated = async (projectId: string, doorCode: string) => {
+    await loadProjectDetails(projectId);
+    await loadLayout(projectId);
+    await loadProjectPlanFact(projectId);
+    await loadProjectRisk(projectId);
+    setMatrixApartmentSearch("");
+    setMatrixMarkingSearch(doorCode);
+  };
+
   const openManualDoorDialog = () => {
     if (!canManageProjects || !libraryReference.ready) return;
     const nextForm = emptyManualDoorForm();
-    setManualDoorForm(nextForm);
+    openManualDoorWith(nextForm);
     setProjectFlowNotice(null);
     setProjectActionHint(null);
     setError(null);
     setManualDoorDialogOpen(true);
-  };
-
-  const handleManualDoorSubmit = async () => {
-    if (!canManageProjects || !libraryReference.ready ||
-      (manualDoorForm.assigned_installer_id && !installersReference.ready)) return;
-    if (!selectedProjectId) {
-      return;
-    }
-    const normalizedDoorCode = manualDoorForm.door_code.trim();
-    if (
-      !manualDoorForm.product_id ||
-      !normalizedDoorCode ||
-      !manualDoorForm.unit.trim()
-    ) {
-      setError(
-        copy(
-          "Choose a product and fill door code + unit before saving.",
-          "Выберите продукт и введите код двери + блок перед сохранением.",
-          "בחרו מוצר ומלאו קוד דלת + יחידה לפני השמירה.",
-        ),
-      );
-      return;
-    }
-    if (existingDoorMarkings.has(normalizedDoorCode.toLowerCase())) {
-      setError(
-        copy(
-          `Door code ${normalizedDoorCode} already exists in this project. Review the matrix before creating another door.`,
-          `Код двери ${normalizedDoorCode} уже есть в этом проекте. Проверьте матрицу перед созданием новой двери.`,
-          `קוד הדלת ${normalizedDoorCode} כבר קיים בפרויקט הזה. בדוק את המטריצה לפני יצירת דלת נוספת.`,
-        ),
-      );
-      setMatrixMarkingSearch(normalizedDoorCode);
-      return;
-    }
-
-    setManualDoorSubmitting(true);
-    setError(null);
-    try {
-      await apiFetch(`/api/v1/admin/projects/${selectedProjectId}/doors`, {
-        method: "POST",
-        body: JSON.stringify({
-          ...manualDoorForm,
-          door_code: normalizedDoorCode,
-          unit: manualDoorForm.unit.trim(),
-          floor: manualDoorForm.floor.trim() || null,
-          location_code: manualDoorForm.location_code.trim() || null,
-          order_number: manualDoorForm.order_number.trim() || null,
-          install_type:
-            manualDoorForm.install_type.trim() ||
-            selectedLibraryProduct?.install_type ||
-            null,
-          assigned_installer_id: manualDoorForm.assigned_installer_id || null,
-          planned_install_date: manualDoorForm.planned_install_date || null,
-        }),
-      });
-      setManualDoorDialogOpen(false);
-      setManualDoorForm(emptyManualDoorForm());
-      await loadProjectDetails(selectedProjectId);
-      await loadLayout(selectedProjectId);
-      await loadProjectPlanFact(selectedProjectId);
-      await loadProjectRisk(selectedProjectId);
-      setMatrixApartmentSearch("");
-      setMatrixMarkingSearch(normalizedDoorCode);
-      if (typeof document !== "undefined") {
-        window.setTimeout(() => {
-          document.getElementById("project-door-matrix")?.scrollIntoView?.({
-            behavior: "smooth",
-            block: "start",
-          });
-        }, 0);
-      }
-      setProjectFlowNotice(
-        copy(
-          `Door ${normalizedDoorCode} was added. The project matrix is now filtered to that door.`,
-          `Дверь ${normalizedDoorCode} добавлена. Матрица проекта уже отфильтрована по этой двери.`,
-          `הדלת ${normalizedDoorCode} נוספה. מטריצת הפרויקט כבר מסוננת לדלת הזו.`,
-        ),
-      );
-    } catch (e) {
-      setError(
-        readableApiError(
-          e,
-          locale,
-          copy(
-            "Failed to create door.",
-            "Не удалось создать дверь.",
-            "יצירת הדלת נכשלה.",
-          ),
-        ),
-      );
-    } finally {
-      setManualDoorSubmitting(false);
-    }
   };
 
   return (
@@ -6663,252 +6514,23 @@ export default function ProjectsPage() {
         onUpdated={handleProjectUpdated}
       />
 
-      <Dialog
+      <ManualDoorDialog
+        key={manualDoorSession}
         open={manualDoorDialogOpen}
         onOpenChange={setManualDoorDialogOpen}
-      >
-        <DialogContent className="max-w-[840px]">
-          <DialogHeader>
-            <DialogTitle>
-              {copy(
-                "Add door manually",
-                "Добавить дверь вручную",
-                "הוסף דלת ידנית",
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {copy(
-                "Create one operational door row directly in the selected project using a product from Library.",
-                "Создайте один ряд эксплуатационных дверей непосредственно в выбранном проекте с помощью продукта из справочник.",
-                "צור רשומת דלת תפעולית ישירות בפרויקט הנבחר בעזרת מוצר מהספרייה.",
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="manual-door-product">
-                {copy("Library product", "Библиотечный продукт", "מוצר ספרייה")}
-              </Label>
-              <select
-                id="manual-door-product"
-                value={manualDoorForm.product_id}
-                onChange={(event) =>
-                  setManualDoorForm((prev) => ({
-                    ...prev,
-                    product_id: event.target.value,
-                    install_type:
-                      activeLibraryProducts.find(
-                        (item) => item.id === event.target.value,
-                      )?.install_type || prev.install_type,
-                  }))
-                }
-                className="control-input"
-              >
-                <option value="">
-                  {copy("Choose a product", "Выберите продукт", "בחר מוצר")}
-                </option>
-                {activeLibraryProducts.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.sku} -{" "}
-                    {locale === "he"
-                      ? item.name_he || item.name_ru
-                      : item.name_ru || item.name_he}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="manual-door-code">
-                {copy("Door code", "Код двери", "קוד דלת")}
-              </Label>
-              <Input
-                id="manual-door-code"
-                value={manualDoorForm.door_code}
-                onChange={(event) =>
-                  setManualDoorForm((prev) => ({
-                    ...prev,
-                    door_code: event.target.value,
-                  }))
-                }
-                placeholder={copy("D-1201", "D-1201", "D-1201")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="manual-door-unit">
-                {copy("Unit / apartment", "Единица/квартира", "יחידה/דירה")}
-              </Label>
-              <Input
-                id="manual-door-unit"
-                value={manualDoorForm.unit}
-                onChange={(event) =>
-                  setManualDoorForm((prev) => ({
-                    ...prev,
-                    unit: event.target.value,
-                  }))
-                }
-                placeholder={copy("12-04", "12-04", "12-04")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="manual-door-floor">
-                {copy("Floor", "Этаж", "קומה")}
-              </Label>
-              <Input
-                id="manual-door-floor"
-                value={manualDoorForm.floor}
-                onChange={(event) =>
-                  setManualDoorForm((prev) => ({
-                    ...prev,
-                    floor: event.target.value,
-                  }))
-                }
-                placeholder={copy("12", "12", "12")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="manual-door-location">
-                {copy("Location code", "Код локации", "קוד מיקום")}
-              </Label>
-              <Input
-                id="manual-door-location"
-                value={manualDoorForm.location_code}
-                onChange={(event) =>
-                  setManualDoorForm((prev) => ({
-                    ...prev,
-                    location_code: event.target.value,
-                  }))
-                }
-                placeholder={copy("dira", "dira", "dira")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="manual-door-order">
-                {copy("Order number", "Номер заказа", "מספר הזמנה")}
-              </Label>
-              <Input
-                id="manual-door-order"
-                value={manualDoorForm.order_number}
-                onChange={(event) =>
-                  setManualDoorForm((prev) => ({
-                    ...prev,
-                    order_number: event.target.value,
-                  }))
-                }
-                placeholder={copy("AZ-5001", "AZ-5001", "AZ-5001")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="manual-door-install-type">
-                {copy("Install type", "Тип монтажа", "סוג התקנה")}
-              </Label>
-              <Input
-                id="manual-door-install-type"
-                value={manualDoorForm.install_type}
-                onChange={(event) =>
-                  setManualDoorForm((prev) => ({
-                    ...prev,
-                    install_type: event.target.value,
-                  }))
-                }
-                placeholder={copy("service", "service", "service")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="manual-door-installer">
-                {copy(
-                  "Assigned installer",
-                  "Назначенный монтажник",
-                  "מתקין משויך",
-                )}
-              </Label>
-              <select
-                id="manual-door-installer"
-                disabled={!installersReference.ready}
-                value={manualDoorForm.assigned_installer_id}
-                onChange={(event) =>
-                  setManualDoorForm((prev) => ({
-                    ...prev,
-                    assigned_installer_id: event.target.value,
-                  }))
-                }
-                className="control-input"
-              >
-                <option value="">
-                  {copy(
-                    "Leave unassigned",
-                    "Оставить без назначения",
-                    "השאר ללא שיוך",
-                  )}
-                </option>
-                {activeInstallers.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.full_name}
-                    {item.email ? ` - ${item.email}` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="manual-door-date">
-                {copy(
-                  "Planned install date",
-                  "Плановая дата монтажа",
-                  "תאריך התקנה מתוכנן",
-                )}
-              </Label>
-              <Input
-                id="manual-door-date"
-                type="date"
-                value={manualDoorForm.planned_install_date}
-                onChange={(event) =>
-                  setManualDoorForm((prev) => ({
-                    ...prev,
-                    planned_install_date: event.target.value,
-                  }))
-                }
-              />
-            </div>
-          </div>
-
-          <label className="checkbox-row mt-3">
-            <input
-              type="checkbox"
-              checked={manualDoorForm.is_critical}
-              onChange={(event) =>
-                setManualDoorForm((prev) => ({
-                  ...prev,
-                  is_critical: event.target.checked,
-                }))
-              }
-            />
-            {copy(
-              "Mark as critical door",
-              "Отметить как критичную дверь",
-              "סמן כדלת קריטית",
-            )}
-          </label>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setManualDoorDialogOpen(false)}
-              disabled={manualDoorSubmitting}
-            >
-              {copy("Cancel", "Отмена", "ביטול")}
-            </Button>
-            <Button
-              onClick={() => void handleManualDoorSubmit()}
-              disabled={manualDoorSubmitting || !libraryReference.ready ||
-                Boolean(manualDoorForm.assigned_installer_id && !installersReference.ready)}
-            >
-              {manualDoorSubmitting
-                ? copy("Saving...", "Сохраняем...", "שומר...")
-                : copy("Create door", "Создать дверь", "צור דלת")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        initialForm={manualDoorInitialForm}
+        projectId={selectedProjectId}
+        canManage={canManageProjects}
+        libraryReady={libraryReference.ready}
+        installersReady={installersReference.ready}
+        products={activeLibraryProducts}
+        installers={activeInstallers}
+        existingDoorMarkings={existingDoorMarkings}
+        onError={setError}
+        onNotice={setProjectFlowNotice}
+        onDuplicate={setMatrixMarkingSearch}
+        onCreated={handleManualDoorCreated}
+      />
     </DashboardLayout>
   );
 }
