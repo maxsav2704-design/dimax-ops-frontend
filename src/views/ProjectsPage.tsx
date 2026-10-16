@@ -23,7 +23,7 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
 import { DataStateNotice } from "@/components/DataStateNotice";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { useReferenceList } from "@/hooks/use-reference-list";
 import { useCompanyPricingState } from "@/hooks/use-company-pricing-state";
@@ -1577,9 +1577,6 @@ export default function ProjectsPage() {
     "Справочник недоступен. Повторите его загрузку.",
     "נתוני הקטלוג אינם זמינים. יש לטעון אותם שוב.",
   );
-  const [projectDocuments, setProjectDocuments] = useState<
-    DocumentGenerationDTO[]
-  >([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null,
   );
@@ -1675,8 +1672,6 @@ export default function ProjectsPage() {
   ), [pricing.state]);
   const addonPlanRate = (item: ProjectAddonPlanItem) => !pricingKnown ? null
     : factoryPricing ? factoryAddonRates.get(item.addon_type_id) ?? null : item.installer_price;
-  const [projectDetails, setProjectDetails] =
-    useState<ProjectDetailsResponse | null>(null);
   const [layout, setLayout] = useState<ProjectDoorsLayoutResponse | null>(null);
   const [search, setSearch] = useState("");
   const [projectStatusFilter, setProjectStatusFilter] =
@@ -1684,8 +1679,6 @@ export default function ProjectsPage() {
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [projectsLoaded, setProjectsLoaded] = useState(false);
   const [projectsLoadError, setProjectsLoadError] = useState(false);
-  const [loadingProjectDocuments, setLoadingProjectDocuments] = useState(false);
-  const [loadingProjectDetails, setLoadingProjectDetails] = useState(false);
   const [loadingLayout, setLoadingLayout] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sectionLoadErrors, setSectionLoadErrors] = useState<
@@ -1741,11 +1734,7 @@ export default function ProjectsPage() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [defaultDoorTypeId, setDefaultDoorTypeId] = useState("");
   const [delimiter, setDelimiter] = useState("");
-  const [mappingProfiles, setMappingProfiles] = useState<
-    ImportMappingProfile[]
-  >([]);
   const [mappingProfile, setMappingProfile] = useState("auto_v1");
-  const [loadingMappingProfiles, setLoadingMappingProfiles] = useState(false);
   const [createMissingDoorTypes, setCreateMissingDoorTypes] = useState(true);
   const [downloadingImportTemplate, setDownloadingImportTemplate] =
     useState(false);
@@ -1782,15 +1771,126 @@ export default function ProjectsPage() {
   const [bulkReconcileLoading, setBulkReconcileLoading] = useState(false);
   const [bulkReconcileResult, setBulkReconcileResult] =
     useState<BulkReconcileResponse | null>(null);
-  const [failedQueue, setFailedQueue] =
-    useState<FailedImportQueueResponse | null>(null);
   const [failedQueueOffset, setFailedQueueOffset] = useState(0);
   const [failedQueueOnlySelectedProject, setFailedQueueOnlySelectedProject] =
     useState(false);
-  const [loadingFailedQueue, setLoadingFailedQueue] = useState(false);
   const [selectedFailedRunIds, setSelectedFailedRunIds] = useState<string[]>(
     [],
   );
+
+  // Selected-project panels and page catalogs on react-query. Loader names
+  // below stay as thin refetch wrappers so existing call sites keep working.
+  const projectDetailsQuery = useQuery({
+    queryKey: ["projects", "details", selectedProjectId],
+    queryFn: async () =>
+      (await apiFetch<ProjectDetailsResponse>(`/api/v1/admin/projects/${selectedProjectId}`)) || null,
+    enabled: Boolean(selectedProjectId),
+    retry: false,
+  });
+  const projectDocumentsQuery = useQuery({
+    queryKey: ["projects", "documents", selectedProjectId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("project_id", selectedProjectId as string);
+      params.set("limit", "12");
+      const response = await apiFetch<{ items?: DocumentGenerationDTO[] }>(
+        `/api/v1/admin/documents/generated?${params.toString()}`,
+      );
+      return response.items || [];
+    },
+    enabled: Boolean(selectedProjectId),
+    retry: false,
+  });
+  const mappingProfilesQuery = useQuery({
+    queryKey: ["projects", "import-mapping-profiles"],
+    queryFn: () => apiFetch<ImportMappingProfilesResponse>("/api/v1/admin/projects/import-mapping-profiles"),
+    retry: false,
+  });
+  const failedQueueQuery = useQuery({
+    queryKey: [
+      "projects",
+      "failed-import-queue",
+      failedQueueOffset,
+      failedQueueOnlySelectedProject ? selectedProjectId : null,
+    ],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("limit", String(FAILED_QUEUE_PAGE_SIZE));
+      params.set("offset", String(failedQueueOffset));
+      if (failedQueueOnlySelectedProject && selectedProjectId) {
+        params.set("project_id", selectedProjectId);
+      }
+      const response = await apiFetch<FailedImportQueueResponse>(
+        `/api/v1/admin/projects/import-runs/failed-queue?${params.toString()}`,
+      );
+      return {
+        items: response.items || [],
+        total: response.total || 0,
+        limit: response.limit || FAILED_QUEUE_PAGE_SIZE,
+        offset: response.offset || 0,
+      };
+    },
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+  const projectDetails = selectedProjectId ? (projectDetailsQuery.data ?? null) : null;
+  const projectDocuments = useMemo(
+    () => (selectedProjectId ? (projectDocumentsQuery.data ?? []) : []),
+    [projectDocumentsQuery.data, selectedProjectId],
+  );
+  const mappingProfiles = useMemo(
+    () => (Array.isArray(mappingProfilesQuery.data?.items) ? mappingProfilesQuery.data.items : []),
+    [mappingProfilesQuery.data],
+  );
+  const failedQueue = failedQueueQuery.data ?? null;
+  const loadingProjectDetails = projectDetailsQuery.isFetching;
+  const loadingProjectDocuments = projectDocumentsQuery.isFetching;
+  const loadingMappingProfiles = mappingProfilesQuery.isFetching;
+  const loadingFailedQueue = failedQueueQuery.isFetching;
+  const refetchProjectDetails = projectDetailsQuery.refetch;
+  const refetchProjectDocuments = projectDocumentsQuery.refetch;
+  const refetchMappingProfiles = mappingProfilesQuery.refetch;
+  const refetchFailedQueue = failedQueueQuery.refetch;
+  const loadProjectDetails = useCallback(async (_projectId: string) => {
+    if (selectedProjectId) await refetchProjectDetails();
+  }, [refetchProjectDetails, selectedProjectId]);
+  const loadProjectDocuments = useCallback(async (_projectId: string) => {
+    if (selectedProjectId) await refetchProjectDocuments();
+  }, [refetchProjectDocuments, selectedProjectId]);
+  const loadMappingProfiles = useCallback(async () => {
+    await refetchMappingProfiles();
+  }, [refetchMappingProfiles]);
+  const loadFailedQueue = useCallback(async () => {
+    await refetchFailedQueue();
+  }, [refetchFailedQueue]);
+
+  // Keep the chosen mapping profile valid for the loaded catalog (was inside the loader).
+  useEffect(() => {
+    if (mappingProfilesQuery.isError) {
+      setMappingProfile("auto_v1");
+      return;
+    }
+    const response = mappingProfilesQuery.data;
+    if (!response) return;
+    const items = Array.isArray(response.items) ? response.items : [];
+    setMappingProfile((currentProfile) => {
+      if (response.default_code && items.some((item) => item.code === response.default_code)) {
+        return response.default_code;
+      }
+      if (items.length > 0 && !items.some((item) => item.code === currentProfile)) {
+        return items[0].code;
+      }
+      return currentProfile;
+    });
+  }, [mappingProfilesQuery.data, mappingProfilesQuery.isError]);
+
+  // Selected failed runs can only point at rows of the current page.
+  useEffect(() => {
+    const items = failedQueueQuery.data?.items;
+    if (!items) return;
+    const ids = new Set(items.map((x) => x.run_id));
+    setSelectedFailedRunIds((prev) => prev.filter((id) => ids.has(id)));
+  }, [failedQueueQuery.data]);
   const [retryFailedBatchSize, setRetryFailedBatchSize] = useState(10);
   const [retryFailedProgress, setRetryFailedProgress] = useState<{
     active: boolean;
@@ -2889,54 +2989,7 @@ export default function ProjectsPage() {
     }
   }, [deepLinkProjectId]);
 
-  const loadMappingProfiles = useCallback(async () => {
-    setLoadingMappingProfiles(true);
-    clearSectionError("mappingProfiles");
-    try {
-      const response = await apiFetch<ImportMappingProfilesResponse>(
-        "/api/v1/admin/projects/import-mapping-profiles",
-      );
-      const items = Array.isArray(response.items) ? response.items : [];
-      setMappingProfiles(items);
-      setMappingProfile((currentProfile) => {
-        if (
-          response.default_code &&
-          items.some((item) => item.code === response.default_code)
-        ) {
-          return response.default_code;
-        }
-        if (
-          items.length > 0 &&
-          !items.some((item) => item.code === currentProfile)
-        ) {
-          return items[0].code;
-        }
-        return currentProfile;
-      });
-    } catch {
-      failSection("mappingProfiles");
-      setMappingProfiles([]);
-      setMappingProfile("auto_v1");
-    } finally {
-      setLoadingMappingProfiles(false);
-    }
-  }, [clearSectionError, failSection]);
 
-  const loadProjectDetails = useCallback(async (projectId: string) => {
-    setLoadingProjectDetails(true);
-    clearSectionError("details");
-    try {
-      const response = await apiFetch<ProjectDetailsResponse>(
-        `/api/v1/admin/projects/${projectId}`,
-      );
-      setProjectDetails(response || null);
-    } catch {
-      failSection("details");
-      setProjectDetails(null);
-    } finally {
-      setLoadingProjectDetails(false);
-    }
-  }, [clearSectionError, failSection]);
 
   const loadLayout = useCallback(async (projectId: string) => {
     setLoadingLayout(true);
@@ -2968,24 +3021,6 @@ export default function ProjectsPage() {
     ]);
   };
 
-  const loadProjectDocuments = useCallback(async (projectId: string) => {
-    setLoadingProjectDocuments(true);
-    clearSectionError("documents");
-    try {
-      const params = new URLSearchParams();
-      params.set("project_id", projectId);
-      params.set("limit", "12");
-      const response = await apiFetch<{ items?: DocumentGenerationDTO[] }>(
-        `/api/v1/admin/documents/generated?${params.toString()}`,
-      );
-      setProjectDocuments(response.items || []);
-    } catch {
-      failSection("documents");
-      setProjectDocuments([]);
-    } finally {
-      setLoadingProjectDocuments(false);
-    }
-  }, [clearSectionError, failSection]);
 
   const loadImportHistory = useCallback(async (projectId: string) => {
     setLoadingImportHistory(true);
@@ -3037,40 +3072,6 @@ export default function ProjectsPage() {
     }
   }, [clearSectionError, failSection]);
 
-  const loadFailedQueue = useCallback(async () => {
-    setLoadingFailedQueue(true);
-    clearSectionError("failedQueue");
-    try {
-      const params = new URLSearchParams();
-      params.set("limit", String(FAILED_QUEUE_PAGE_SIZE));
-      params.set("offset", String(failedQueueOffset));
-      if (failedQueueOnlySelectedProject && selectedProjectId) {
-        params.set("project_id", selectedProjectId);
-      }
-      const response = await apiFetch<FailedImportQueueResponse>(
-        `/api/v1/admin/projects/import-runs/failed-queue?${params.toString()}`,
-      );
-      const safe = {
-        items: response.items || [],
-        total: response.total || 0,
-        limit: response.limit || FAILED_QUEUE_PAGE_SIZE,
-        offset: response.offset || 0,
-      };
-      setFailedQueue(safe);
-      const ids = new Set(safe.items.map((x) => x.run_id));
-      setSelectedFailedRunIds((prev) => prev.filter((id) => ids.has(id)));
-    } catch {
-      failSection("failedQueue");
-      setFailedQueue({
-        items: [],
-        total: 0,
-        limit: FAILED_QUEUE_PAGE_SIZE,
-        offset: 0,
-      });
-    } finally {
-      setLoadingFailedQueue(false);
-    }
-  }, [clearSectionError, failSection, failedQueueOffset, failedQueueOnlySelectedProject, selectedProjectId]);
 
   const projectSections: Array<{
     key: ProjectSectionKey;
@@ -3081,12 +3082,14 @@ export default function ProjectsPage() {
   }> = [
     {
       key: "mappingProfiles",
+      failed: mappingProfilesQuery.isError,
       label: copy("Import mapping profiles", "Профили сопоставления импорта", "פרופילי מיפוי ייבוא"),
       loading: loadingMappingProfiles,
       reload: loadMappingProfiles,
     },
     {
       key: "details",
+      failed: projectDetailsQuery.isError,
       label: copy("Project details", "Детали проекта", "פרטי הפרויקט"),
       loading: loadingProjectDetails,
       reload: () => (selectedProjectId ? loadProjectDetails(selectedProjectId) : undefined),
@@ -3121,6 +3124,7 @@ export default function ProjectsPage() {
     },
     {
       key: "documents",
+      failed: projectDocumentsQuery.isError,
       label: copy("Project documents", "Документы проекта", "מסמכי הפרויקט"),
       loading: loadingProjectDocuments,
       reload: () => (selectedProjectId ? loadProjectDocuments(selectedProjectId) : undefined),
@@ -3142,6 +3146,7 @@ export default function ProjectsPage() {
     },
     {
       key: "failedQueue",
+      failed: failedQueueQuery.isError,
       label: copy("Failed import queue", "Очередь сбойных импортов", "תור ייבואים שנכשלו"),
       loading: loadingFailedQueue,
       reload: loadFailedQueue,
@@ -3153,8 +3158,7 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     void loadProjects();
-    void loadMappingProfiles();
-  }, [loadMappingProfiles, loadProjects]);
+  }, [loadProjects]);
 
   useEffect(() => {
     if (
@@ -3330,24 +3334,15 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     if (selectedProjectId) {
-      void loadProjectDetails(selectedProjectId);
+      // Details, documents and financial sections are react-query entries keyed
+      // by selectedProjectId; only the hand-rolled loaders remain here.
       void loadLayout(selectedProjectId);
-      // Financial sections are react-query: they follow selectedProjectId on their own.
       void loadImportHistory(selectedProjectId);
-      void loadProjectDocuments(selectedProjectId);
     } else {
-      setProjectDetails(null);
       setImportHistory([]);
-      setProjectDocuments([]);
       setFocusedImportRunDetails(null);
     }
-  }, [
-    loadImportHistory,
-    loadLayout,
-    loadProjectDetails,
-    loadProjectDocuments,
-    selectedProjectId,
-  ]);
+  }, [loadImportHistory, loadLayout, selectedProjectId]);
 
   useEffect(() => {
     setSelectedDoorIds([]);
@@ -3371,10 +3366,6 @@ export default function ProjectsPage() {
     setFocusedDoorComment("");
     setFocusedDoorOverrideReason("");
   }, [focusedDoorId]);
-
-  useEffect(() => {
-    void loadFailedQueue();
-  }, [loadFailedQueue]);
 
   useEffect(() => {
     if (!projectActionHint) {
