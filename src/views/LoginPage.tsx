@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ArrowRight,
@@ -13,10 +14,10 @@ import {
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { apiFetch } from "@/lib/api";
+import { fetchAuthSession } from "@/hooks/use-auth-session";
 import { resolveAdminHomePath } from "@/lib/admin-access";
 import { safeInternalNextPath } from "@/lib/auth-redirect";
 import {
-  normalizeAuthSession,
   persistAccessToken,
   persistRefreshToken,
 } from "@/lib/auth-session";
@@ -30,18 +31,11 @@ type LoginResponse = {
   token_type: string;
 };
 
-type AuthMeResponse = {
-  role: "ADMIN" | "INSTALLER";
-  admin_scope?: "OWNER" | "OPERATIONS" | "FINANCE" | "VIEWER" | null;
-  can_view_rates?: boolean | null;
-  can_manage_imports?: boolean | null;
-  can_manage_users?: boolean | null;
-};
-
-async function resolveDefaultPath(): Promise<string> {
+async function resolveDefaultPath(queryClient: QueryClient): Promise<string> {
   try {
-    const body = await apiFetch<AuthMeResponse>("/api/v1/auth/me");
-    const session = normalizeAuthSession(body);
+    // Fresh read right after login; it also seeds the shared cache so the
+    // RequireAuth gate on the next route does not call /auth/me again.
+    const session = await fetchAuthSession(queryClient, { fresh: true });
     if (!session) {
       return "/";
     }
@@ -82,6 +76,7 @@ function enableLoginPageInteractivityGuard(): () => void {
 
 export default function LoginPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { locale, t } = useI18n();
   const [companyId, setCompanyId] = useState(
     () =>
@@ -170,7 +165,7 @@ export default function LoginPage() {
       }
       localStorage.setItem("dimax_company_id", companyId.trim());
       localStorage.setItem("dimax_email", email.trim());
-      let nextPath = await resolveDefaultPath();
+      let nextPath = await resolveDefaultPath(queryClient);
       if (typeof window !== "undefined") {
         const fromQuery = new URLSearchParams(window.location.search).get(
           "next",

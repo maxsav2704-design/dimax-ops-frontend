@@ -25,6 +25,7 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { COMPANY_CURRENCY, InlineNotice } from "@/components/dimax";
+import { queryKeys } from "@/lib/query-keys";
 import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
 import { ProjectMarginBasis, ProjectMarginNotice } from "@/components/prices/ProjectMarginNotice";
 import { InstallerFinancialBasis, InstallerFinancialNotice, InstallerFinancialBand } from "@/components/prices/InstallerFinancialNotice";
@@ -2007,7 +2008,7 @@ export default function ReportsPage() {
   });
 
   const outboxSummaryQuery = useQuery({
-    queryKey: ["outbox-summary"],
+    queryKey: queryKeys.outboxSummary,
     queryFn: ({ signal }) =>
       reportApiFetch<OutboxSummaryResponse>(
         "/api/v1/admin/outbox/summary",
@@ -2396,7 +2397,7 @@ export default function ReportsPage() {
           "ניסיון המשלוח הופעל מחדש והדוחות רועננו.",
         ),
       );
-      await queryClient.invalidateQueries({ queryKey: ["outbox-summary"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.outboxSummary });
       await queryClient.invalidateQueries({ queryKey: ["outbox-failed"] });
       await queryClient.invalidateQueries({ queryKey: ["reports-delivery"] });
     },

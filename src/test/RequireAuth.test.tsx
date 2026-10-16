@@ -192,7 +192,7 @@ describe("RequireAuth", () => {
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
-  it("hides the next route until its access check succeeds", async () => {
+  it("reuses the verified session for the next route instead of calling /auth/me again", async () => {
     apiFetchMock.mockResolvedValueOnce({ role: "ADMIN", admin_scope: "OWNER" });
     const { rerender, queryClient } = renderSubject();
     await screen.findByText("protected");
@@ -203,9 +203,27 @@ describe("RequireAuth", () => {
         <RequireAuth><div>private settings</div></RequireAuth>
       </QueryClientProvider>,
     );
+    expect(await screen.findByText("private settings")).toBeInTheDocument();
+    expect(apiFetchMock).toHaveBeenCalledTimes(1);
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("hides the next route until a stale session is re-verified", async () => {
+    apiFetchMock.mockResolvedValueOnce({ role: "ADMIN", admin_scope: "OWNER" });
+    const { rerender, queryClient } = renderSubject();
+    await screen.findByText("protected");
+    await queryClient.invalidateQueries({ queryKey: ["auth-me"] });
+    pathnameMock.mockReturnValue("/settings");
+    apiFetchMock.mockRejectedValueOnce(new ApiError(503, "Server unavailable"));
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <RequireAuth><div>private settings</div></RequireAuth>
+      </QueryClientProvider>,
+    );
     expect(screen.queryByText("private settings")).not.toBeInTheDocument();
     await screen.findByRole("alert");
     expect(screen.queryByText("private settings")).not.toBeInTheDocument();
+    expect(apiFetchMock).toHaveBeenCalledTimes(2);
     expect(replaceMock).not.toHaveBeenCalled();
   });
 });

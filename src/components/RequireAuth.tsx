@@ -1,7 +1,9 @@
 "use client";
 
-import { ApiError, apiFetch } from "@/lib/api";
+import { ApiError } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
+import { fetchAuthSession } from "@/hooks/use-auth-session";
+import { queryKeys } from "@/lib/query-keys";
 import { useI18n } from "@/lib/i18n";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,15 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { normalizeAuthSession, type AuthSession } from "@/lib/auth-session";
-
-type AuthMeResponse = {
-  role: "ADMIN" | "INSTALLER";
-  admin_scope?: "OWNER" | "OPERATIONS" | "FINANCE" | "VIEWER" | null;
-  can_view_rates?: boolean | null;
-  can_manage_imports?: boolean | null;
-  can_manage_users?: boolean | null;
-};
+import type { AuthSession } from "@/lib/auth-session";
 
 type AuthScope = "admin" | "installer" | "any";
 
@@ -98,12 +92,12 @@ export function RequireAuth({
       );
 
       try {
-        const me = await apiFetch<AuthMeResponse>("/api/v1/auth/me");
-        const session = normalizeAuthSession(me);
+        // Shared cache: a route change inside the stale window reuses the
+        // verified session instead of calling /auth/me on every navigation.
+        const session = await fetchAuthSession(queryClient);
         if (cancelled) {
           return;
         }
-        queryClient.setQueryData(["auth-me"], session);
         if (!session) {
           replace(authRequiredPath);
           return;
@@ -130,7 +124,7 @@ export function RequireAuth({
       } catch (error) {
         if (!cancelled) {
           if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-            queryClient.setQueryData(["auth-me"], null);
+            queryClient.setQueryData(queryKeys.authMe, null);
             replace(authRequiredPath);
           } else {
             setAccess({ path: next, scope, state: "error", error });

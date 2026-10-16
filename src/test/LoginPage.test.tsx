@@ -1,8 +1,19 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState, type ReactNode } from "react";
 
 import { LanguageProvider } from "@/lib/i18n";
 import LoginPage from "@/views/LoginPage";
+
+function TestProviders({ children }: { children: ReactNode }) {
+  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+  return (
+    <QueryClientProvider client={client}>
+      <LanguageProvider>{children}</LanguageProvider>
+    </QueryClientProvider>
+  );
+}
 
 const { replaceMock, apiFetchMock } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
@@ -57,9 +68,9 @@ describe("LoginPage", () => {
 
   it("publishes login readiness only after hydration and enables complete credentials", async () => {
     const { container } = render(
-      <LanguageProvider>
+      <TestProviders>
         <LoginPage />
-      </LanguageProvider>
+      </TestProviders>
     );
 
     const form = container.querySelector("form.login-form");
@@ -80,9 +91,9 @@ describe("LoginPage", () => {
     window.history.replaceState({}, "", "/login?error=access_denied&next=%2Freports");
 
     render(
-      <LanguageProvider>
+      <TestProviders>
         <LoginPage />
-      </LanguageProvider>
+      </TestProviders>
     );
 
     await waitFor(() => {
@@ -95,9 +106,9 @@ describe("LoginPage", () => {
     window.history.replaceState({}, "", "/login?error=auth_required&next=%2Fprojects");
 
     render(
-      <LanguageProvider>
+      <TestProviders>
         <LoginPage />
-      </LanguageProvider>
+      </TestProviders>
     );
 
     await waitFor(() => {
@@ -119,9 +130,9 @@ describe("LoginPage", () => {
     });
 
     render(
-      <LanguageProvider>
+      <TestProviders>
         <LoginPage />
-      </LanguageProvider>
+      </TestProviders>
     );
 
     fireEvent.change(screen.getByLabelText("Company ID"), { target: { value: "company-1" } });
@@ -140,9 +151,9 @@ describe("LoginPage", () => {
       status: 0,
     }));
     render(
-      <LanguageProvider>
+      <TestProviders>
         <LoginPage />
-      </LanguageProvider>,
+      </TestProviders>,
     );
 
     fireEvent.change(screen.getByLabelText("Company ID"), { target: { value: "company-1" } });
@@ -170,9 +181,9 @@ describe("LoginPage", () => {
     document.body.style.paddingRight = "15px";
 
     render(
-      <LanguageProvider>
+      <TestProviders>
         <LoginPage />
-      </LanguageProvider>
+      </TestProviders>
     );
 
     await waitFor(() => {
@@ -190,9 +201,9 @@ describe("LoginPage", () => {
 
   it("removes the login interaction guard after leaving login", async () => {
     const { unmount } = render(
-      <LanguageProvider>
+      <TestProviders>
         <LoginPage />
-      </LanguageProvider>
+      </TestProviders>
     );
 
     await waitFor(() => {
@@ -229,9 +240,9 @@ describe("LoginPage", () => {
     });
 
     render(
-      <LanguageProvider>
+      <TestProviders>
         <LoginPage />
-      </LanguageProvider>
+      </TestProviders>
     );
 
     fireEvent.change(screen.getByLabelText("Company ID"), { target: { value: "company-1" } });
@@ -265,9 +276,9 @@ describe("LoginPage", () => {
     });
 
     render(
-      <LanguageProvider>
+      <TestProviders>
         <LoginPage />
-      </LanguageProvider>
+      </TestProviders>
     );
 
     fireEvent.change(screen.getByLabelText("Company ID"), { target: { value: "company-1" } });
@@ -303,9 +314,9 @@ describe("LoginPage", () => {
     });
 
     render(
-      <LanguageProvider>
+      <TestProviders>
         <LoginPage />
-      </LanguageProvider>
+      </TestProviders>
     );
 
     fireEvent.change(screen.getByLabelText("Company ID"), { target: { value: "company-1" } });

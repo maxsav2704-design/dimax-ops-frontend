@@ -50,6 +50,7 @@ import {
 } from "@/lib/api-error-display";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { countNoun, pluralNoun, type PluralSpec } from "@/lib/plural";
+import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 
 const operationsOverrides: Record<Locale, Record<string, string>> = {
@@ -1150,7 +1151,7 @@ export default function OperationsPage() {
   });
 
   const outboxSummaryQuery = useQuery({
-    queryKey: ["operations-outbox-summary"],
+    queryKey: queryKeys.outboxSummary,
     queryFn: () =>
       apiFetch<OutboxSummaryResponse>("/api/v1/admin/outbox/summary"),
     refetchInterval: 30_000,
