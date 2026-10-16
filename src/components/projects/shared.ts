@@ -1,4 +1,5 @@
 // Moved verbatim from ProjectsPage.tsx (monolith split).
+import { type ProjectOpenIssue } from "@/components/projects/project-types";
 import { normalizeDraftPhone } from "@/components/projects/project-form";
 
 export function formatDateTime(value: string): string {
@@ -47,4 +48,28 @@ export function formatReadablePhone(value: string | null | undefined): string {
     return `+972 ${normalized.slice(4, 6)}-${normalized.slice(6, 9)}-${normalized.slice(9)}`;
   }
   return normalized;
+}
+
+export function initialsFromName(value: string | null | undefined): string {
+  const parts = String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) {
+    return "--";
+  }
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+}
+
+export function issueLabel(issue: ProjectOpenIssue): string {
+  const parts = [issue.title, issue.details].filter(
+    (value) => !!value && value.trim().length > 0,
+  );
+  if (parts.length === 0) {
+    return issue.status;
+  }
+  return parts.join(" - ");
 }

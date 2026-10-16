@@ -72,3 +72,20 @@ export type ProjectOpenIssue = {
   title: string | null;
   details: string | null;
 };
+
+export type ProjectImportRunItem = {
+  id: string;
+  created_at: string;
+  mode: string;
+  status: string;
+  source_filename: string | null;
+  mapping_profile: string | null;
+  parsed_rows: number;
+  prepared_rows: number;
+  imported: number;
+  skipped: number;
+  errors_count: number;
+  idempotency_hit: boolean;
+  retry_available: boolean;
+  last_error?: string | null;
+};

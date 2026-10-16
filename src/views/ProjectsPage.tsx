@@ -1,5 +1,6 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 
+
 import { useRouter, useSearchParams } from "next/navigation";
 
 
@@ -44,7 +45,15 @@ import { DoorMatrixTile } from "@/components/projects/DoorMatrixTile";
 
 import { ProjectDialog } from "@/components/projects/ProjectDialog";
 
+import { ProjectSideWidgets } from "@/components/projects/ProjectSideWidgets";
+
+import type { ProjectImportRunItem } from "@/components/projects/project-types";
+
+import { issueLabel } from "@/components/projects/shared";
+
+
 import { ProjectSettingsCard } from "@/components/projects/ProjectSettingsCard";
+
 
 import type { ProjectDetailsResponse, ProjectListItem, ProjectOpenIssue } from "@/components/projects/project-types";
 
@@ -93,7 +102,9 @@ import { safeDownloadFilename, downloadImportErrorsCsv } from "@/components/proj
 
 import { emptyProjectForm, projectsMetricLabelClass } from "@/components/projects/project-form";
 
+
 import type { ProjectFormState } from "@/components/projects/project-form";
+
 
 import {
   Breadcrumbs,
@@ -102,7 +113,6 @@ import {
   PillButton,
   WidgetCard,
 } from "@/components/dimax";
-
 
 
 import { Button } from "@/components/ui/button";
@@ -356,23 +366,6 @@ type BulkAssignDoorsResponse = {
   assigned_door_ids: string[];
 };
 
-type ProjectImportRunItem = {
-  id: string;
-  created_at: string;
-  mode: string;
-  status: string;
-  source_filename: string | null;
-  mapping_profile: string | null;
-  parsed_rows: number;
-  prepared_rows: number;
-  imported: number;
-  skipped: number;
-  errors_count: number;
-  idempotency_hit: boolean;
-  retry_available: boolean;
-  last_error?: string | null;
-};
-
 type ProjectImportRunsResponse = {
   items: ProjectImportRunItem[];
 };
@@ -598,20 +591,6 @@ const FAILED_QUEUE_PAGE_SIZE = 10;
 // Door ledger rows rendered at once; "Show more" reveals the next page.
 const LEDGER_ROW_PAGE = 100;
 
-function initialsFromName(value: string | null | undefined): string {
-  const parts = String(value || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (parts.length === 0) {
-    return "--";
-  }
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("");
-}
-
 function daysUntilDate(value: string | null | undefined): number | null {
   if (!value) {
     return null;
@@ -677,16 +656,6 @@ function matrixCompletionPct(installedCount: number, totalDoors: number): number
 
 function matrixDoorTileLabel(row: MatrixRow): string {
   return row.door_marking.trim() || row.unit_label;
-}
-
-function issueLabel(issue: ProjectOpenIssue): string {
-  const parts = [issue.title, issue.details].filter(
-    (value) => !!value && value.trim().length > 0,
-  );
-  if (parts.length === 0) {
-    return issue.status;
-  }
-  return parts.join(" - ");
 }
 
 function parseIdsCsv(value: string | null): string[] {
@@ -1983,8 +1952,6 @@ export default function ProjectsPage() {
     projectDoorTotals.totalDoors - projectDoorTotals.assignedCount,
     0,
   );
-  const projectTopIssues = (projectDetails?.issues_open || []).slice(0, 3);
-  const projectRecentImportActivity = importHistory.slice(0, 3);
   const projectFinancialReady = Boolean(
     canViewProjectRates && projectPlanFact && projectRisk?.summary,
   );
@@ -4755,241 +4722,21 @@ export default function ProjectsPage() {
                     </details>
                   </section>
 
-                  <aside className="space-y-3" data-testid="project-detail-v28-side">
-                    <WidgetCard
-                      title={copy("Stakeholders", "Участники", "מעורבים")}
-                      headerMeta={copy(
-                        "Contacts and assigned installers",
-                        "Контакты и назначенные монтажники",
-                        "אנשי קשר ומתקינים משובצים",
-                      )}
-                      bleed
-                    >
-                      <div className="divide-y divide-border-subtle">
-                        <div className="grid grid-cols-[32px_1fr] gap-2 px-4 py-3">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--dmx-accent-tint)] text-[11px] font-semibold text-text">
-                            {initialsFromName(projectDetails?.contact_name)}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="truncate text-[12.5px] font-medium text-text">
-                              {projectDetails?.contact_name
-                                ? `${copy("Contact", "Контакт", "איש קשר")}: ${projectDetails.contact_name}`
-                                : copy("Site contact missing", "Контакт объекта не задан", "חסר איש קשר")}
-                            </div>
-                            <div className="truncate text-[10.5px] text-text-secondary">
-                              {projectDetails?.developer_company ||
-                                copy("Developer", "Застройщик", "יזם")}
-                            </div>
-                          </div>
-                        </div>
-                        {projectAssignedInstallerSummary.length === 0 ? (
-                          <div className="px-4 py-3 text-[12px] text-text-secondary">
-                            {copy(
-                              "No doors are assigned to installers yet.",
-                              "Двери ещё не назначены монтажникам.",
-                              "עדיין אין דלתות משובצות למתקינים.",
-                            )}
-                          </div>
-                        ) : (
-                          projectAssignedInstallerSummary.slice(0, 3).map((installer) => (
-                            <div
-                              key={installer.id}
-                              className="grid grid-cols-[32px_1fr_auto] gap-2 px-4 py-3"
-                            >
-                              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-sunken text-[11px] font-semibold text-text-secondary">
-                                {initialsFromName(installer.name)}
-                              </span>
-                              <div className="min-w-0">
-                                <div className="truncate text-[12.5px] font-medium text-text">
-                                  {copy("Installer", "Монтажник", "מתקין")}:{" "}
-                                  {installer.name}
-                                </div>
-                                <div className="truncate text-[10.5px] text-text-secondary">
-                                  {installer.email ||
-                                    copy("Assigned installer", "Назначенный монтажник", "מתקין משובץ")}
-                                </div>
-                              </div>
-                              <LtrText className="self-center rounded-full border border-border bg-surface-subtle px-2 py-1 text-[10.5px] font-medium text-text">
-                                {installer.doorCount}
-                              </LtrText>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </WidgetCard>
-
-                    <WidgetCard
-                      title={copy("Finance", "Финансы", "כספים")}
-                      headerMeta={copy(
-                        "Plan/fact summary",
-                        "Кратко план/факт",
-                        "סיכום תכנון מול ביצוע",
-                      )}
-                      actionSlot={
-                        <button
-                          type="button"
-                          onClick={() =>
-                            scrollToProjectSection(
-                              projectFinancialReady
-                                ? "project-financial-screen"
-                                : "project-commercial-restricted",
-                            )
-                          }
-                          className="text-[11.5px] font-medium text-link hover:underline"
-                        >
-                          {copy("Details", "Детали", "פרטים")}
-                        </button>
-                      }
-                    >
-                      {projectFinancialReady && projectPlanFact && projectRisk?.summary ? (
-                        <div className="space-y-2 text-[12px]">
-                          <MetricRow
-                            label={copy("Revenue", "Выручка", "הכנסות")}
-                            value={formatMoney(projectPlanFact.actual_revenue_total)}
-                          />
-                          <MetricRow
-                            label={copy("Payroll", "Начисления", "שכר מתקינים")}
-                            value={formatMoney(projectPlanFact.actual_payroll_total)}
-                          />
-                          <MetricRow
-                            label={copy("Profit", "Прибыль", "רווח")}
-                            value={formatMoney(projectRisk.summary.actual_profit_total)}
-                          />
-                          <MetricRow
-                            label={copy("Margin", "Маржа", "מרווח")}
-                            value={formatPct(projectRisk.summary.actual_margin_pct)}
-                          />
-                        </div>
-                      ) : (
-                        <div className="text-[12px] leading-5 text-text-secondary">
-                          {canViewProjectRates
-                            ? copy(
-                                "Financial data is still loading or missing for this project.",
-                                "Финансовые данные ещё загружаются или не заполнены по объекту.",
-                                "הנתונים הכספיים עדיין נטענים או חסרים בפרויקט.",
-                              )
-                            : commercialAccessRestrictedTitle}
-                        </div>
-                      )}
-                    </WidgetCard>
-
-                    <WidgetCard
-                      title={copy("Open issues", "Открытые проблемы", "בעיות פתוחות")}
-                      titleAccessory={
-                        <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-[10.5px] text-text-secondary">
-                          {projectOpenIssues}
-                        </span>
-                      }
-                      actionSlot={
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMatrixIssueFilter("issues");
-                            scrollToProjectSection("project-door-matrix");
-                          }}
-                          className="text-[11.5px] font-medium text-link hover:underline"
-                        >
-                          {copy("View all", "Все", "הצג הכל")}
-                        </button>
-                      }
-                      bleed
-                    >
-                      {projectTopIssues.length === 0 ? (
-                        <div className="px-4 py-3 text-[12px] text-text-secondary">
-                          {copy(
-                            "No open issues on this project.",
-                            "По объекту нет открытых проблем.",
-                            "אין בעיות פתוחות בפרויקט.",
-                          )}
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-border-subtle">
-                          {projectTopIssues.map((issue) => (
-                            <button
-                              key={issue.id}
-                              type="button"
-                              onClick={() => {
-                                setMatrixIssueFilter("issues");
-                                scrollToProjectSection("project-door-matrix");
-                              }}
-                              className="grid w-full grid-cols-[24px_1fr] gap-2 px-4 py-3 text-start hover:bg-surface-subtle"
-                            >
-                              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-status-problem-bg text-[10px] font-semibold text-status-problem-fg">
-                                !
-                              </span>
-                              <span className="min-w-0">
-                                <span className="block truncate text-[12px] font-medium text-text">
-                                  {issueLabel(issue)}
-                                </span>
-                                <span className="mt-0.5 block truncate text-[10.5px] text-text-secondary">
-                                  {copy("Door", "Дверь", "דלת")} {issue.door_id} ·{" "}
-                                  {tokenLabel(issue.status)}
-                                </span>
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </WidgetCard>
-
-                    <WidgetCard
-                      title={copy("Activity", "Активность", "פעילות")}
-                      headerMeta={copy(
-                        "Latest import and recovery events",
-                        "Последние события импорта и восстановления",
-                        "אירועי יבוא ושחזור אחרונים",
-                      )}
-                      actionSlot={
-                        <button
-                          type="button"
-                          onClick={() => scrollToProjectSection("project-import-history")}
-                          className="text-[11.5px] font-medium text-link hover:underline"
-                        >
-                          {copy("Log", "Журнал", "יומן")}
-                        </button>
-                      }
-                      bleed
-                    >
-                      {projectRecentImportActivity.length === 0 ? (
-                        <div className="px-4 py-3 text-[12px] text-text-secondary">
-                          {copy(
-                            "No recent import activity.",
-                            "Недавней активности импорта нет.",
-                            "אין פעילות יבוא אחרונה.",
-                          )}
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-border-subtle">
-                          {projectRecentImportActivity.map((item) => (
-                            <div
-                              key={item.id}
-                              className="grid grid-cols-[10px_1fr] gap-3 px-4 py-3"
-                            >
-                              <span
-                                className={cn(
-                                  "mt-1 h-2.5 w-2.5 rounded-full",
-                                  item.status === "FAILED"
-                                    ? "bg-kpi-red"
-                                    : item.status === "COMPLETED"
-                                      ? "bg-kpi-green"
-                                      : "bg-kpi-yellow",
-                                )}
-                                aria-hidden="true"
-                              />
-                              <div className="min-w-0">
-                                <div className="truncate text-[12px] font-medium text-text">
-                                  {tokenLabel(item.status)}
-                                </div>
-                                <div className="mt-0.5 truncate text-[10.5px] text-text-secondary">
-                                  {formatDateTime(item.created_at)}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </WidgetCard>
-                  </aside>
+                  <ProjectSideWidgets
+                    canViewRates={canViewProjectRates}
+                    restrictedTitle={commercialAccessRestrictedTitle}
+                    formatMoney={formatMoney}
+                    details={projectDetails}
+                    financialReady={projectFinancialReady}
+                    openIssues={projectOpenIssues}
+                    planFact={projectPlanFact}
+                    risk={projectRisk}
+                    importHistory={importHistory}
+                    assignedInstallers={projectAssignedInstallerSummary}
+                    scrollToSection={scrollToProjectSection}
+                    tokenLabel={tokenLabel}
+                    onMatrixIssueFilterChange={setMatrixIssueFilter}
+                  />
                 </div>
 
                 <ProjectSettingsCard
