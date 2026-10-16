@@ -43,15 +43,19 @@ import { useReferenceList } from "@/hooks/use-reference-list";
 import { useCompanyPricingState } from "@/hooks/use-company-pricing-state";
 
 
-import { CompanyPriceStatus } from "@/components/prices/CompanyPriceStatus";
-
 
 import { DoorMatrixTile } from "@/components/projects/DoorMatrixTile";
 
 
 import { ProjectDialog } from "@/components/projects/ProjectDialog";
 
+import { AdditionalWorksCard } from "@/components/projects/AdditionalWorksCard";
+
+import type { AddonTypeItem, ProjectAddonPlanItem } from "@/components/projects/catalog-types";
+
+
 import { UrgencySurchargesCard } from "@/components/projects/UrgencySurchargesCard";
+
 
 import type { UrgencySurchargeItem } from "@/components/projects/urgency-form";
 
@@ -374,23 +378,6 @@ type InstallerListItem = {
   is_active: boolean;
 };
 
-type AddonTypeItem = {
-  id: string;
-  name: string;
-  unit: string;
-  status?: string;
-};
-
-type ProjectAddonPlanItem = {
-  id?: string;
-  addon_type_id: string;
-  addon_name?: string | null;
-  qty_planned: string | number;
-  client_price: string | number;
-  installer_price: string | number | null;
-  notes?: string | null;
-};
-
 type ManualDoorFormState = {
   product_id: string;
   door_code: string;
@@ -402,14 +389,6 @@ type ManualDoorFormState = {
   is_critical: boolean;
   assigned_installer_id: string;
   planned_install_date: string;
-};
-
-type AdditionalWorkFormState = {
-  addon_type_id: string;
-  qty_planned: string;
-  client_price: string;
-  installer_price: string;
-  notes: string;
 };
 
 type LayoutDoor = {
@@ -638,16 +617,6 @@ function projectFormFromDetails(
       developer?.whatsapp || details?.developer_whatsapp || "",
     contact_email: developer?.email || details?.contact_email || "",
     developer_notes: developer?.notes || details?.developer_notes || "",
-  };
-}
-
-function emptyAdditionalWorkForm(): AdditionalWorkFormState {
-  return {
-    addon_type_id: "",
-    qty_planned: "1",
-    client_price: "",
-    installer_price: "",
-    notes: "",
   };
 }
 
@@ -1182,12 +1151,6 @@ export default function ProjectsPage() {
     emptyManualDoorForm(),
   );
   const [manualDoorSubmitting, setManualDoorSubmitting] = useState(false);
-  const [additionalWorkDialogOpen, setAdditionalWorkDialogOpen] =
-    useState(false);
-  const [additionalWorkForm, setAdditionalWorkForm] =
-    useState<AdditionalWorkFormState>(emptyAdditionalWorkForm());
-  const [additionalWorkSubmitting, setAdditionalWorkSubmitting] =
-    useState(false);
 
   const [analysisReady, setAnalysisReady] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -1554,13 +1517,6 @@ export default function ProjectsPage() {
   const activeAddonTypes = useMemo(
     () => addonTypes.filter((item) => item.status !== "ARCHIVED"),
     [addonTypes],
-  );
-  const selectedAddonType = useMemo(
-    () =>
-      activeAddonTypes.find(
-        (item) => item.id === additionalWorkForm.addon_type_id,
-      ) || null,
-    [activeAddonTypes, additionalWorkForm.addon_type_id],
   );
   const addonPlanTotals = useMemo(() => {
     return projectAddonPlan.reduce(
@@ -3369,6 +3325,12 @@ export default function ProjectsPage() {
     }
   };
 
+  // AdditionalWorksCard saved a plan row: refresh the financial views (as before the split).
+  const handleAdditionalWorkSaved = async (projectId: string) => {
+    await loadProjectPlanFact(projectId);
+    await loadProjectRisk(projectId);
+  };
+
   const openManualDoorDialog = () => {
     if (!canManageProjects || !libraryReference.ready) return;
     const nextForm = emptyManualDoorForm();
@@ -3469,119 +3431,6 @@ export default function ProjectsPage() {
       );
     } finally {
       setManualDoorSubmitting(false);
-    }
-  };
-
-  const openAdditionalWorkDialog = () => {
-    if (!canManageProjects || !pricingReady) return;
-    if (!canViewProjectRates) {
-      setError(commercialAccessRestrictedDetail);
-      return;
-    }
-    setAdditionalWorkForm(emptyAdditionalWorkForm());
-    setProjectFlowNotice(null);
-    setProjectActionHint(null);
-    setError(null);
-    setAdditionalWorkDialogOpen(true);
-  };
-
-  const handleAdditionalWorkSubmit = async () => {
-    if (!canManageProjects || !pricingReady) return;
-    if (!selectedProjectId) {
-      return;
-    }
-    if (!canViewProjectRates) {
-      setError(commercialAccessRestrictedDetail);
-      return;
-    }
-    const qtyPlanned = Number(additionalWorkForm.qty_planned.trim());
-    const clientPrice = Number(additionalWorkForm.client_price.trim());
-    const installerPrice = Number(additionalWorkForm.installer_price.trim());
-    if (
-      !additionalWorkForm.addon_type_id ||
-      !additionalWorkForm.qty_planned.trim() ||
-      !additionalWorkForm.client_price.trim() ||
-      (!factoryPricing && !additionalWorkForm.installer_price.trim())
-    ) {
-      setError(
-        copy(
-          "Choose an add-on and fill qty + prices before saving.",
-          "Выберите доп. работу и заполните количество и цены перед сохранением.",
-          "בחר עבודת תוספת ומלא כמות ומחירים לפני השמירה.",
-        ),
-      );
-      return;
-    }
-    if (
-      !Number.isFinite(qtyPlanned) ||
-      qtyPlanned <= 0 ||
-      !Number.isFinite(clientPrice) ||
-      clientPrice <= 0 ||
-      (!factoryPricing && (!Number.isFinite(installerPrice) || installerPrice <= 0))
-    ) {
-      setError(
-        copy(
-          "Use positive numbers for planned qty and both prices.",
-          "Используйте положительные числа для количества и обеих цен.",
-          "השתמש במספרים חיוביים לכמות ולשני המחירים.",
-        ),
-      );
-      return;
-    }
-
-    setAdditionalWorkSubmitting(true);
-    setError(null);
-    try {
-      await apiFetch(
-        `/api/v1/admin/projects/${selectedProjectId}/addons/plan`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            addon_type_id: additionalWorkForm.addon_type_id,
-            qty_planned: additionalWorkForm.qty_planned.trim(),
-            client_price: additionalWorkForm.client_price.trim(),
-            ...(!factoryPricing ? { installer_price: additionalWorkForm.installer_price.trim() } : {}),
-            notes: additionalWorkForm.notes.trim() || null,
-          }),
-        },
-      );
-      setAdditionalWorkDialogOpen(false);
-      setAdditionalWorkForm(emptyAdditionalWorkForm());
-      await loadProjectAddonPlan(selectedProjectId);
-      await loadProjectPlanFact(selectedProjectId);
-      await loadProjectRisk(selectedProjectId);
-      if (typeof document !== "undefined") {
-        window.setTimeout(() => {
-          document
-            .getElementById("project-additional-works")
-            ?.scrollIntoView?.({
-              behavior: "smooth",
-              block: "start",
-            });
-        }, 0);
-      }
-      setProjectFlowNotice(
-        copy(
-          `${selectedAddonType?.name || "Additional work"} was added to the project plan.`,
-          `${selectedAddonType?.name || "Доп. работа"} добавлена в план проекта.`,
-          `${selectedAddonType?.name || "עבודה נוספת"} נוספה לתוכנית הפרויקט.`,
-        ),
-      );
-    } catch (e) {
-      setError(
-        readableApiError(
-          e,
-          locale,
-          copy(
-            "Failed to save additional work plan.",
-            "Не удалось сохранить план доп. работ.",
-            "שמירת תוכנית עבודות נוספות נכשלה.",
-          ),
-        ),
-      );
-      pricing.refresh();
-    } finally {
-      setAdditionalWorkSubmitting(false);
     }
   };
 
@@ -5897,311 +5746,32 @@ export default function ProjectsPage() {
 
                 {canViewProjectRates ? (
                   <>
-                    <WidgetCard
-                      id="project-additional-works"
-                      title={copy(
-                        "Additional Works",
-                        "Дополнительные работы",
-                        "עבודות נוספות",
-                      )}
-                      headerMeta={copy(
-                        "Commercial plan layer",
-                        "Коммерческий плановый слой",
-                        "שכבת תוכנית מסחרית",
-                      )}
-                    >
-                      <div className="space-y-4">
-                      <CompanyPriceStatus {...pricing} onOpen={() => router.push("/price-lists")} />
-                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div className="max-w-2xl">
-                          <h3 className="text-[15px] font-semibold leading-tight text-text">
-                            {copy(
-                              "Plan add-on work lines before installers start recording facts.",
-                              "Планируйте строки доп. работ до того, как монтажники начнут фиксировать факты.",
-                              "תכנן שורות עבודות נוספות לפני שהמתקינים מתחילים לרשום ביצוע בפועל.",
-                            )}
-                          </h3>
-                          <p className="mt-2 text-[12px] leading-6 text-text-secondary">
-                            {copy(
-                              "Plan the work, quantity and client price. Installer prices follow the current company pricing mode.",
-                              "Укажите работу, объём и цену клиента. Цена монтажника определяется действующим режимом цен компании.",
-                              "תכננו עבודה, כמות ומחיר לקוח. מחירי המתקין נקבעים לפי מצב התמחור של החברה.",
-                            )}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 flex-col items-start gap-2 md:items-end">
-                          <Button
-                            type="button"
-                            onClick={openAdditionalWorkDialog}
-                            className="gap-2"
-                            disabled={
-                              !canManageProjects ||
-                              !pricingReady ||
-                              !addonTypesReference.ready || activeAddonTypes.length === 0
-                            }
-                          >
-                            <Plus className="h-4 w-4" />
-                            {copy(
-                              "Add additional work",
-                              "Добавить доп. работу",
-                              "הוסף עבודה נוספת",
-                            )}
-                          </Button>
-                          <div className="text-[11px] text-text-secondary">
-                            {loadingAddonTypes
-                              ? copy(
-                                  "Loading add-on types...",
-                                  "Загружаем типы доп. работ...",
-                                  "טוען סוגי עבודות נוספות...",
-                                )
-                              : addonTypesReference.error ? referenceUnavailable
-                              : activeAddonTypes.length === 0
-                                ? copy(
-                                    "No active add-on types yet.",
-                                    "Пока нет активных типов доп. работ.",
-                                    "עדיין אין סוגי עבודות נוספות פעילים.",
-                                  )
-                                : copy(
-                                    "Installer facts can land on this plan later.",
-                                    "Позже монтажники смогут фиксировать факты по этому плану.",
-                                    "בהמשך מתקינים יוכלו לדווח ביצוע בפועל על התוכנית הזו.",
-                                  )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                        <DimaxKpiCard
-                          className="min-h-[96px]"
-                          label={copy("Plan rows", "Строк плана", "שורות תוכנית")}
-                          value={addonPlanTotals.rows}
-                          barColor="blue"
-                        />
-                        <DimaxKpiCard
-                          className="min-h-[96px]"
-                          label={copy(
-                            "Planned qty",
-                            "Плановое кол-во",
-                            "כמות מתוכננת",
-                          )}
-                          value={addonPlanTotals.qty}
-                          barColor="green"
-                        />
-                        <DimaxKpiCard
-                          className="min-h-[96px]"
-                          label={copy("Client total", "Сумма клиента", 'סה"כ לקוח')}
-                          value={formatMoney(addonPlanTotals.client)}
-                          barColor="yellow"
-                        />
-                        <DimaxKpiCard
-                          className="min-h-[96px]"
-                          label={copy(
-                            "Installer total",
-                            "Сумма монтажника",
-                            'סה"כ מתקין',
-                          )}
-                          value={addonPlanTotals.missingPrice ? missingAddonPrice : formatMoney(addonPlanTotals.installer)}
-                          barColor="orange"
-                        />
-                      </div>
-
-                      <div className="mt-4 divide-y divide-border-subtle overflow-hidden rounded-lg border border-border bg-surface md:hidden">
-                        {loadingProjectAddonPlan ? (
-                          <div className="px-3.5 py-4 text-[12px] text-text-secondary">
-                            {copy(
-                              "Loading additional works plan...",
-                              "Загружаем план доп. работ...",
-                              "טוען תוכנית עבודות נוספות...",
-                            )}
-                          </div>
-                        ) : projectAddonPlan.length === 0 ? (
-                          <div className="px-3.5 py-4 text-[12px] text-text-secondary">
-                            {copy(
-                              "No additional works planned yet.",
-                              "Пока нет запланированных доп. работ.",
-                              "עדיין אין עבודות נוספות מתוכננות.",
-                            )}
-                          </div>
-                        ) : (
-                          projectAddonPlan.map((item, index) => {
-                            const addon =
-                              activeAddonTypes.find(
-                                (row) => row.id === item.addon_type_id,
-                              ) || null;
-                            return (
-                              <article
-                                key={
-                                  item.id || `${item.addon_type_id}-${index}`
-                                }
-                                className="px-3.5 py-3.5"
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0">
-                                    <div className="text-[13px] font-semibold leading-5 text-text">
-                                      {item.addon_name ||
-                                        addon?.name ||
-                                        item.addon_type_id}
-                                    </div>
-                                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                                      <span className="inline-flex rounded-full bg-surface-sunken px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
-                                        {addon?.unit ||
-                                          copy(
-                                            "No unit",
-                                            "Без ед.",
-                                            "ללא יחידה",
-                                          )}
-                                      </span>
-                                      <span className="inline-flex rounded-full border border-status-ok-border bg-status-ok-bg px-2 py-1 text-[10.5px] font-semibold leading-none text-status-ok-fg">
-                                        {copy("Planned", "План", "מתוכנן")}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="shrink-0 text-end">
-                                    <div className={projectsMetricLabelClass}>
-                                      {copy("Qty", "Кол-во", "כמות")}
-                                    </div>
-                                    <div className="mt-1 text-[17px] font-medium leading-tight text-text tabular-nums">
-                                      {item.qty_planned}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="mt-3 grid grid-cols-2 gap-2">
-                                  <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
-                                    <div className={projectsMetricLabelClass}>
-                                      {copy("Client", "Клиент", "לקוח")}
-                                    </div>
-                                    <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
-                                      {formatMoney(
-                                        Number(item.client_price) || 0,
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
-                                    <div className={projectsMetricLabelClass}>
-                                      {copy("Installer", "Монтажник", "מתקין")}
-                                    </div>
-                                    <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
-                                      {addonPlanRate(item) == null ? missingAddonPrice : formatMoney(Number(addonPlanRate(item)))}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {item.notes ? (
-                                  <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-[12px] leading-5 text-text-secondary">
-                                    {item.notes}
-                                  </div>
-                                ) : null}
-                              </article>
-                            );
-                          })
-                        )}
-                      </div>
-
-                      <div className="mt-4 hidden overflow-auto rounded-lg border border-border bg-surface md:block">
-                        <table className="min-w-[720px] w-full text-[12px] leading-5">
-                          <thead className="bg-surface-subtle text-text-secondary">
-                            <tr>
-                              <th className="w-[28%] px-3 py-2.5 text-start font-medium">
-                                {copy("Add-on", "Доп. работа", "עבודה נוספת")}
-                              </th>
-                              <th className="px-3 py-2.5 text-start font-medium">
-                                {copy("Unit", "Ед.", "יחידה")}
-                              </th>
-                              <th className="px-3 py-2.5 text-end font-medium">
-                                {copy("Qty planned", "План", "כמות")}
-                              </th>
-                              <th className="px-3 py-2.5 text-end font-medium">
-                                {copy(
-                                  "Client price",
-                                  "Цена клиента",
-                                  "מחיר לקוח",
-                                )}
-                              </th>
-                              <th className="px-3 py-2.5 text-end font-medium">
-                                {copy(
-                                  "Installer price",
-                                  "Цена монтажника",
-                                  "מחיר מתקין",
-                                )}
-                              </th>
-                              <th className="px-3 py-2.5 text-start font-medium">
-                                {copy("Notes", "Примечание", "הערה")}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {loadingProjectAddonPlan ? (
-                              <tr>
-                                <td
-                                  className="px-3 py-4 text-text-secondary"
-                                  colSpan={6}
-                                >
-                                  {copy(
-                                    "Loading additional works plan...",
-                                    "Загружаем план доп. работ...",
-                                    "טוען תוכנית עבודות נוספות...",
-                                  )}
-                                </td>
-                              </tr>
-                            ) : projectAddonPlan.length === 0 ? (
-                              <tr>
-                                <td
-                                  className="px-3 py-4 text-text-secondary"
-                                  colSpan={6}
-                                >
-                                  {copy(
-                                    "No additional works planned yet.",
-                                    "Пока нет запланированных доп. работ.",
-                                    "עדיין אין עבודות נוספות מתוכננות.",
-                                  )}
-                                </td>
-                              </tr>
-                            ) : (
-                              projectAddonPlan.map((item, index) => {
-                                const addon =
-                                  activeAddonTypes.find(
-                                    (row) => row.id === item.addon_type_id,
-                                  ) || null;
-                                return (
-                                  <tr
-                                    key={
-                                      item.id ||
-                                      `${item.addon_type_id}-${index}`
-                                    }
-                                    className="row-hover border-t border-border"
-                                  >
-                                    <td className="px-3 py-2.5 font-medium text-text">
-                                      {item.addon_name ||
-                                        addon?.name ||
-                                        item.addon_type_id}
-                                    </td>
-                                    <td className="px-3 py-2.5 text-text-secondary">
-                                      {addon?.unit || "-"}
-                                    </td>
-                                    <td className="px-3 py-2.5 text-end tabular-nums">
-                                      {item.qty_planned}
-                                    </td>
-                                    <td className="px-3 py-2.5 text-end tabular-nums">
-                                      {formatMoney(
-                                        Number(item.client_price) || 0,
-                                      )}
-                                    </td>
-                                    <td className="px-3 py-2.5 text-end tabular-nums">
-                                      {addonPlanRate(item) == null ? missingAddonPrice : formatMoney(Number(addonPlanRate(item)))}
-                                    </td>
-                                    <td className="px-3 py-2.5 text-text-secondary">
-                                      {item.notes || "-"}
-                                    </td>
-                                  </tr>
-                                );
-                              })
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                      </div>
-                    </WidgetCard>
+                    <AdditionalWorksCard
+                      projectId={selectedProjectId}
+                      canManage={canManageProjects}
+                      canViewRates={canViewProjectRates}
+                      pricing={pricing}
+                      pricingReady={pricingReady}
+                      factoryPricing={factoryPricing}
+                      factoryAddonRates={factoryAddonRates}
+                      addonPlanRate={addonPlanRate}
+                      addonPlanTotals={addonPlanTotals}
+                      formatMoney={formatMoney}
+                      missingAddonPrice={missingAddonPrice}
+                      referenceUnavailable={referenceUnavailable}
+                      addonTypes={activeAddonTypes}
+                      loadingAddonTypes={loadingAddonTypes}
+                      addonTypesReady={addonTypesReference.ready}
+                      addonTypesError={addonTypesReference.error}
+                      plan={projectAddonPlan}
+                      loadingPlan={loadingProjectAddonPlan}
+                      onReloadPlan={loadProjectAddonPlan}
+                      restrictedDetail={commercialAccessRestrictedDetail}
+                      onError={setError}
+                      onNotice={setProjectFlowNotice}
+                      onActionHint={setProjectActionHint}
+                      onSaved={handleAdditionalWorkSaved}
+                    />
 
                     <UrgencySurchargesCard
                       projectId={selectedProjectId}
@@ -10301,170 +9871,6 @@ export default function ProjectsPage() {
         onCreated={handleProjectCreated}
         onUpdated={handleProjectUpdated}
       />
-
-      <Dialog
-        open={additionalWorkDialogOpen}
-        onOpenChange={setAdditionalWorkDialogOpen}
-      >
-        <DialogContent className="max-w-[760px]">
-          <DialogHeader>
-            <DialogTitle>
-              {copy(
-                "Add additional work",
-                "Добавить доп. работу",
-                "הוסף עבודה נוספת",
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {copy(
-                "Create one planned add-on line for the selected project. Installers will later record facts against this plan.",
-                "Создайте одну плановую строку доп. работ для выбранного проекта. Позже монтажники будут фиксировать факты по этому плану.",
-                "צור שורת תוספת מתוכננת אחת עבור הפרויקט שנבחר. מתקינים ירשמו מאוחר יותר עובדות נגד תוכנית זו.",
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="additional-work-type">
-                {copy("Add-on type", "Тип доп. работы", "סוג עבודה נוספת")}
-              </Label>
-              <select
-                id="additional-work-type"
-                value={additionalWorkForm.addon_type_id}
-                onChange={(event) =>
-                  setAdditionalWorkForm((prev) => ({
-                    ...prev,
-                    addon_type_id: event.target.value,
-                  }))
-                }
-                className="control-input"
-              >
-                <option value="">
-                  {copy(
-                    "Choose add-on",
-                    "Выберите доп. работу",
-                    "בחר עבודה נוספת",
-                  )}
-                </option>
-                {activeAddonTypes.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} {item.unit ? `(${item.unit})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="additional-work-qty">
-                {copy("Qty planned", "Плановое количество", "כמות מתוכננת")}
-              </Label>
-              <Input
-                id="additional-work-qty"
-                value={additionalWorkForm.qty_planned}
-                onChange={(event) =>
-                  setAdditionalWorkForm((prev) => ({
-                    ...prev,
-                    qty_planned: event.target.value,
-                  }))
-                }
-                placeholder="1"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="additional-work-client-price">
-                {copy("Client price", "Цена клиента", "מחיר לקוח")}
-              </Label>
-              <Input
-                id="additional-work-client-price"
-                value={additionalWorkForm.client_price}
-                onChange={(event) =>
-                  setAdditionalWorkForm((prev) => ({
-                    ...prev,
-                    client_price: event.target.value,
-                  }))
-                }
-                placeholder="0"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="additional-work-installer-price">
-                {copy("Installer price", "Цена монтажника", "מחיר מתקין")}
-              </Label>
-              {factoryPricing ? <output id="additional-work-installer-price" className="block min-h-10 py-2 text-sm font-medium" aria-live="polite">
-                {factoryAddonRates.has(additionalWorkForm.addon_type_id)
-                  ? formatMoney(Number(factoryAddonRates.get(additionalWorkForm.addon_type_id))) : missingAddonPrice}
-              </output> : <Input
-                id="additional-work-installer-price"
-                value={additionalWorkForm.installer_price}
-                onChange={(event) =>
-                  setAdditionalWorkForm((prev) => ({
-                    ...prev,
-                    installer_price: event.target.value,
-                  }))
-                }
-                placeholder="0"
-                disabled={!pricingReady}
-              />}
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="additional-work-notes">
-                {copy("Notes", "Примечание", "הערה")}
-              </Label>
-              <Input
-                id="additional-work-notes"
-                value={additionalWorkForm.notes}
-                onChange={(event) =>
-                  setAdditionalWorkForm((prev) => ({
-                    ...prev,
-                    notes: event.target.value,
-                  }))
-                }
-                placeholder={copy(
-                  "Optional planning note",
-                  "Необязательная заметка",
-                  "הערת תכנון אופציונלית",
-                )}
-              />
-            </div>
-          </div>
-
-          <div className="text-[12px] text-text-secondary">
-            {selectedAddonType
-              ? copy(
-                  `Selected unit: ${selectedAddonType.unit || "-"}`,
-                  `Выбранная единица: ${selectedAddonType.unit || "-"}`,
-                  `יחידת המדידה שנבחרה: ${selectedAddonType.unit || "-"}`,
-                )
-              : copy(
-                  "Select an add-on type to confirm unit and pricing row.",
-                  "Выберите тип доп. работы, чтобы подтвердить единицу и ценовую строку.",
-                  "בחר סוג עבודה נוספת כדי לאשר יחידה ושורת תמחור.",
-                )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setAdditionalWorkDialogOpen(false)}
-              disabled={additionalWorkSubmitting}
-            >
-              {copy("Cancel", "Отмена", "ביטול")}
-            </Button>
-            <Button
-              onClick={() => void handleAdditionalWorkSubmit()}
-              disabled={additionalWorkSubmitting || !pricingReady}
-            >
-              {additionalWorkSubmitting
-                ? copy("Saving...", "Сохраняем...", "שומר...")
-                : copy(
-                    "Save additional work",
-                    "Сохранить доп. работу",
-                    "שמור עבודה נוספת",
-                  )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog
         open={manualDoorDialogOpen}
