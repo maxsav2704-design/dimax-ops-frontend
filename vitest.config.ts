@@ -18,7 +18,7 @@ export default defineConfig({
       reporter: ["text-summary", "html", "lcov"],
       reportsDirectory: "test-results/coverage", // test-results is git-ignored
       include: ["src/**/*.{ts,tsx}"],
-      exclude: ["src/**/*.{test,spec}.{ts,tsx}", "src/test/**", "src/App.tsx", "src/main.tsx"],
+      exclude: ["src/**/*.{test,spec}.{ts,tsx}", "src/test/**"],
     },
   },
   resolve: {
