@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
@@ -25,6 +25,7 @@ import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/
 import { DataStateNotice } from "@/components/DataStateNotice";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { useReferenceList } from "@/hooks/use-reference-list";
 import { useCompanyPricingState } from "@/hooks/use-company-pricing-state";
 import { CompanyPriceStatus } from "@/components/prices/CompanyPriceStatus";
@@ -1233,6 +1234,8 @@ const LOCATION_LABELS: Record<
 };
 
 const FAILED_QUEUE_PAGE_SIZE = 10;
+// Door ledger rows rendered at once; "Show more" reveals the next page.
+const LEDGER_ROW_PAGE = 100;
 
 function initialsFromName(value: string | null | undefined): string {
   const parts = String(value || "")
@@ -1915,6 +1918,13 @@ export default function ProjectsPage() {
   );
   const [matrixApartmentSearch, setMatrixApartmentSearch] = useState("");
   const [matrixMarkingSearch, setMatrixMarkingSearch] = useState("");
+  // Typing stays responsive: the ledger filters on the deferred value.
+  const deferredApartmentSearch = useDeferredValue(matrixApartmentSearch);
+  const deferredMarkingSearch = useDeferredValue(matrixMarkingSearch);
+  // One ledger layout at a time (cards below md, table from md); both keep
+  // their breakpoint classes so the hydration default never shows through.
+  const ledgerDesktop = useMediaQuery("(min-width: 768px)", true);
+  const [ledgerRowLimit, setLedgerRowLimit] = useState(LEDGER_ROW_PAGE);
   const [selectedDoorIds, setSelectedDoorIds] = useState<string[]>([]);
   const [bulkAssignInstallerId, setBulkAssignInstallerId] = useState("");
   const [bulkAssignLoading, setBulkAssignLoading] = useState(false);
@@ -2401,8 +2411,8 @@ export default function ProjectsPage() {
   );
 
   const filteredMatrixRows = useMemo(() => {
-    const aptQ = matrixApartmentSearch.trim().toLowerCase();
-    const markingQ = matrixMarkingSearch.trim().toLowerCase();
+    const aptQ = deferredApartmentSearch.trim().toLowerCase();
+    const markingQ = deferredMarkingSearch.trim().toLowerCase();
     return matrixRows.filter((row) => {
       if (matrixOrderNumber !== "all" && row.order_number !== matrixOrderNumber)
         return false;
@@ -2445,9 +2455,18 @@ export default function ProjectsPage() {
     matrixStatus,
     matrixInstaller,
     matrixIssueFilter,
-    matrixApartmentSearch,
-    matrixMarkingSearch,
+    deferredApartmentSearch,
+    deferredMarkingSearch,
   ]);
+  const visibleMatrixRows = useMemo(
+    () => filteredMatrixRows.slice(0, ledgerRowLimit),
+    [filteredMatrixRows, ledgerRowLimit],
+  );
+  const hiddenMatrixRows = filteredMatrixRows.length - visibleMatrixRows.length;
+  useEffect(() => {
+    // A new filter result starts from the first page again.
+    setLedgerRowLimit(LEDGER_ROW_PAGE);
+  }, [filteredMatrixRows]);
 
   const matrixDoorIds = useMemo(
     () => matrixRows.map((row) => row.door_id),
@@ -11780,6 +11799,7 @@ export default function ProjectsPage() {
                         </div>
                       ))}
                     </div>
+                    {!ledgerDesktop && (
                     <div className="divide-y divide-border-subtle md:hidden">
                       {filteredMatrixRows.length === 0 ? (
                         <div className="px-3.5 py-4 text-[12px] text-text-secondary">
@@ -11790,7 +11810,7 @@ export default function ProjectsPage() {
                           )}
                         </div>
                       ) : (
-                        filteredMatrixRows.map((row) => (
+                        visibleMatrixRows.map((row) => (
                           <div
                             key={row.door_id}
                             data-testid={`project-door-row-${row.door_id}`}
@@ -11898,6 +11918,8 @@ export default function ProjectsPage() {
                         ))
                       )}
                     </div>
+                    )}
+                    {ledgerDesktop && (
                     <div className="hidden overflow-auto md:block">
                       <table className="w-full min-w-[980px] border-separate border-spacing-0 text-[12px] leading-5">
                         <thead className="bg-surface-subtle text-text-secondary">
@@ -11967,7 +11989,7 @@ export default function ProjectsPage() {
                               </td>
                             </tr>
                           ) : (
-                            filteredMatrixRows.map((row) => (
+                            visibleMatrixRows.map((row) => (
                               <tr
                                 key={row.door_id}
                                 data-testid={`project-door-table-row-${row.door_id}`}
@@ -12068,6 +12090,29 @@ export default function ProjectsPage() {
                         </tbody>
                       </table>
                     </div>
+                    )}
+                    {hiddenMatrixRows > 0 && (
+                      <div
+                        data-testid="project-door-ledger-more"
+                        className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-3.5 py-3 text-[12px] text-text-secondary"
+                      >
+                        <span>
+                          {copy("Showing {shown} of {total} doors", "Показано {shown} из {total} дверей", "מוצגות {shown} מתוך {total} דלתות")
+                            .replace("{shown}", String(visibleMatrixRows.length))
+                            .replace("{total}", String(filteredMatrixRows.length))}
+                        </span>
+                        <button
+                          type="button"
+                          className="dmx-secondary-action"
+                          onClick={() => setLedgerRowLimit((limit) => limit + LEDGER_ROW_PAGE)}
+                        >
+                          {copy("Show {n} more", "Показать ещё {n}", "הצג עוד {n}").replace(
+                            "{n}",
+                            String(Math.min(LEDGER_ROW_PAGE, hiddenMatrixRows)),
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 

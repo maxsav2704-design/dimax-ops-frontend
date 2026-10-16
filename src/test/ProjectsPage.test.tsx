@@ -4337,4 +4337,31 @@ describe("ProjectsPage", () => {
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
     expect(apiFetchMock.mock.calls.filter(([path]) => String(path).startsWith("/api/v1/admin/documents/generated?")).length).toBeGreaterThanOrEqual(2);
   });
+
+  it("renders the door ledger one page at a time and reveals the rest on demand", async () => {
+    const doors = Array.from({ length: 120 }, (_, index) => ({
+      id: `door-${index + 1}`, door_marking: `D-${index + 1}`, unit_label: `Unit ${index + 1}`, apartment_number: String(index + 1),
+      status: "NOT_INSTALLED", installer_id: null, door_type_id: "type-1",
+    }));
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [{ id: "project-1", name: "Tower", status: "ACTIVE" }] };
+      if (path === "/api/v1/admin/projects/project-1") return { id: "project-1", name: "Tower", issues_open: [] };
+      if (path.includes("/doors/layout")) return {
+        project_id: "project-1", total_doors: doors.length,
+        buckets: [{ house_number: "1", floor_label: "2", total: doors.length, status_breakdown: { NOT_INSTALLED: doors.length }, doors }],
+      };
+      return { items: [], total: 0 };
+    });
+    render(<ProjectsPage />, { wrapper: Providers });
+    await screen.findByTestId("project-door-row-door-1");
+
+    // jsdom's matchMedia reports no match: the card layout renders, the table does not.
+    expect(screen.getAllByTestId(/^project-door-row-/)).toHaveLength(100);
+    expect(screen.queryAllByTestId(/^project-door-table-row-/)).toHaveLength(0);
+    const more = screen.getByTestId("project-door-ledger-more");
+    expect(more).toHaveTextContent("Showing 100 of 120 doors");
+    fireEvent.click(within(more).getByRole("button", { name: "Show 20 more" }));
+    expect(screen.getAllByTestId(/^project-door-row-/)).toHaveLength(120);
+    expect(screen.queryByTestId("project-door-ledger-more")).not.toBeInTheDocument();
+  }, 30000);
 });
