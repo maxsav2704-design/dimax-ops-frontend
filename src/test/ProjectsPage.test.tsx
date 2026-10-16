@@ -1,12 +1,19 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { ApiError } from "@/lib/api";
 import { LanguageProvider } from "@/lib/i18n";
 import { LOCALE_STORAGE_KEY } from "@/lib/locale";
 import { createDownloadResponse } from "@/test/download-response";
 import ProjectsPage from "@/views/ProjectsPage";
+
+// The page reads reference catalogs through react-query; one client per test.
+function Providers({ children }: { children: ReactNode }) {
+  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+}
 
 const { apiFetchMock, apiDownloadMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
@@ -120,7 +127,7 @@ describe("ProjectsPage", () => {
   it.each([true, false])("factory add-on planning omits manual price and keeps urgency read-only (priced=%s)", async (priced) => {
     addonProjectFixture();
     pricingMock.mockReturnValue(factoryMode(priced));
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
     const add = await screen.findByRole("button", { name: "Add additional work" });
     await waitFor(() => expect(add).toBeEnabled());
     expect(screen.getByRole("button", { name: "Add urgency surcharge" })).toBeDisabled();
@@ -143,7 +150,7 @@ describe("ProjectsPage", () => {
     addonProjectFixture();
     pricingMock.mockReturnValue({ state: undefined, loading: status === "loading", error: status === "error",
       legacyWritable: false, refresh: pricingRefreshMock });
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
     expect(await screen.findByRole("button", { name: "Add additional work" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Add urgency surcharge" })).toBeDisabled();
     if (status === "error") {
@@ -156,7 +163,7 @@ describe("ProjectsPage", () => {
   it("keeps the last verified addon price visible during background refresh while locking writes", async () => {
     addonProjectFixture();
     pricingMock.mockReturnValue({ ...factoryMode(), loading: true });
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
     expect(await screen.findByRole("button", { name: "Add additional work" })).toBeDisabled();
     await waitFor(() => expect(screen.getAllByText("Adjustment").length).toBeGreaterThan(0));
     expect(screen.queryByText("No confirmed price")).not.toBeInTheDocument();
@@ -173,7 +180,7 @@ describe("ProjectsPage", () => {
       return read(path, init);
     });
     pricingRefreshMock.mockImplementation(() => pricingMock.mockReturnValue(factoryMode()));
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
     fireEvent.click(await screen.findByRole("button", { name: "Add additional work" }));
     const dialog = within(screen.getByRole("dialog", { name: "Add additional work" }));
     fireEvent.change(dialog.getByLabelText("Add-on type"), { target: { value: "addon-1" } });
@@ -194,7 +201,7 @@ describe("ProjectsPage", () => {
       }
       return path === "/api/v1/admin/projects" ? { items: [] } : [];
     });
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
     fireEvent.click(await screen.findByRole("button", { name: "New project" }));
     const dialog = screen.getByRole("dialog", { name: "Create project" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Create project" }));
@@ -216,7 +223,7 @@ describe("ProjectsPage", () => {
     window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
     apiFetchMock.mockImplementation(async (path: string) =>
       path === "/api/v1/admin/projects" ? { items: [] } : []);
-    render(<LanguageProvider><ProjectsPage /></LanguageProvider>);
+    render(<LanguageProvider><ProjectsPage /></LanguageProvider>, { wrapper: Providers });
     expect(await screen.findByRole("heading", { name: title, level: 1 })).toBeInTheDocument();
     const header = within(screen.getByTestId("projects-list-v25"));
     expect(header.getByRole("button", { name: new RegExp(active) })).toHaveAttribute("aria-pressed", "false");
@@ -234,7 +241,7 @@ describe("ProjectsPage", () => {
     const pendingProjects = new Promise((_, reject) => { rejectProjects = reject; });
     apiFetchMock.mockImplementation(async (path: string) =>
       path === "/api/v1/admin/projects" ? pendingProjects : []);
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
     expect(screen.queryByText("No projects found.")).not.toBeInTheDocument();
     rejectProjects(new TypeError("Failed to fetch"));
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not load data");
@@ -263,7 +270,7 @@ describe("ProjectsPage", () => {
       };
       return { items: [], total: 0 };
     });
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
     await screen.findByTestId("project-detail-v28-door-tile-door-1");
     const catalogs = within(screen.getByRole("region", { name: "Project catalogs" }));
     expect(catalogs.getByRole("alert")).toHaveTextContent("Door types");
@@ -297,7 +304,7 @@ describe("ProjectsPage", () => {
       if (path.startsWith(failedPath) && unavailable) throw new TypeError("Failed to fetch");
       return path === "/api/v1/admin/projects" ? { items: [] } : [];
     });
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
     const notice = await screen.findByRole("alert");
     expect(notice).toHaveTextContent(label);
     unavailable = false;
@@ -434,7 +441,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Import Factory File")).toBeInTheDocument();
 
@@ -535,7 +542,7 @@ describe("ProjectsPage", () => {
     });
 
     try {
-      render(<ProjectsPage />);
+      render(<ProjectsPage />, { wrapper: Providers });
 
       expect(await screen.findByText("Import Factory File")).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Download Excel template" }));
@@ -628,7 +635,7 @@ describe("ProjectsPage", () => {
     });
 
     try {
-      const { container } = render(<ProjectsPage />);
+      const { container } = render(<ProjectsPage />, { wrapper: Providers });
 
       expect(await screen.findByText("Import Factory File")).toBeInTheDocument();
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
@@ -738,7 +745,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    const { container } = render(<ProjectsPage />);
+    const { container } = render(<ProjectsPage />, { wrapper: Providers });
 
     const portfolioHeader = await screen.findByTestId("projects-list-v25");
     expect(within(portfolioHeader).getByRole("heading", { name: "Projects", level: 1 })).toBeInTheDocument();
@@ -883,7 +890,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Project documents")).toBeInTheDocument();
     expect((await screen.findAllByText("Project Handover")).length).toBeGreaterThan(0);
@@ -927,7 +934,7 @@ describe("ProjectsPage", () => {
       };
       return { items: [], total: 0 };
     });
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
     await screen.findByTestId("project-detail-v28-door-tile-door-1");
     const workspace = within(screen.getByTestId("project-detail-v28-door-workspace"));
     const search = workspace.getByRole("textbox", { name: "Search doors" });
@@ -1106,7 +1113,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Project Detail Matrix")).toBeInTheDocument();
     expect(screen.getByText("Door Allocation Matrix")).toBeInTheDocument();
@@ -1352,7 +1359,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Project Detail Matrix")).toBeInTheDocument();
 
@@ -1495,7 +1502,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Project Detail Matrix")).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("checkbox", { name: "Select visible doors" })[0]);
@@ -1663,7 +1670,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Project Detail Matrix")).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("checkbox", { name: "Select visible doors" })[0]);
@@ -1829,7 +1836,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Project Financial Screen")).toBeInTheDocument();
     expect(await screen.findByText("Plan vs Fact Ledger")).toBeInTheDocument();
@@ -2011,7 +2018,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     fireEvent.click(await screen.findByRole("button", { name: "Open Library" }));
     expect(pushMock).toHaveBeenCalledWith(
@@ -2195,7 +2202,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Manual Door Creation")).toBeInTheDocument();
 
@@ -2355,7 +2362,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Add door manually")).toBeInTheDocument();
     expect(screen.getByText("Focused project project-1")).toBeInTheDocument();
@@ -2420,7 +2427,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(
       await screen.findByText(
@@ -2589,7 +2596,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     fireEvent.click(await screen.findByRole("button", { name: "Add door manually" }));
     const editor = within(screen.getByRole("dialog", { name: "Add door manually" }));
@@ -2760,7 +2767,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     const addButton = await screen.findByRole("button", { name: "Add additional work" });
     fireEvent.click(addButton);
@@ -2945,7 +2952,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     const addButton = await screen.findByRole("button", { name: "Add urgency surcharge" });
     fireEvent.click(addButton);
@@ -3039,7 +3046,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(
       (await screen.findAllByText("Commercial access is restricted")).length,
@@ -3149,7 +3156,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     fireEvent.click(await screen.findByRole("button", { name: "Add additional work" }));
     fireEvent.change(screen.getByLabelText("Add-on type"), {
@@ -3298,7 +3305,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Import History")).toBeInTheDocument();
 
@@ -3493,7 +3500,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Import History")).toBeInTheDocument();
 
@@ -3650,7 +3657,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Select all filtered (2)")).toBeInTheDocument();
 
@@ -3805,7 +3812,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     fireEvent.change(await screen.findByLabelText("Project code"), { target: { value: "PRJ-777" } });
     fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Harbor Tower" } });
@@ -3909,7 +3916,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     const projectHeader = await screen.findByTestId("project-detail-v2-header");
     expect(within(projectHeader).getByText("PRJ-001")).toBeInTheDocument();
@@ -4003,7 +4010,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     expect(await screen.findByRole("button", { name: "Actions" })).toBeInTheDocument();
   }, 25000);
@@ -4075,7 +4082,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     const phoneCopyButton = await screen.findByRole("button", { name: "+972 50-123-4567" });
     expect(screen.getByRole("link", { name: "Call" })).toHaveAttribute("href", "tel:+972501234567");
@@ -4141,7 +4148,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     fireEvent.click(await screen.findByRole("button", { name: "New project" }));
     fireEvent.change(screen.getByLabelText("Address search / fallback"), {
@@ -4183,7 +4190,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     fireEvent.click(await screen.findByRole("button", { name: "New project" }));
 
@@ -4215,7 +4222,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
     fireEvent.click(await screen.findByRole("button", { name: "New project" }));
 
     fireEvent.change(screen.getByLabelText("Project code"), { target: { value: "PRJ-042" } });
@@ -4247,7 +4254,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
     fireEvent.click(await screen.findByRole("button", { name: "New project" }));
 
     fireEvent.change(screen.getByLabelText("Latitude"), { target: { value: "31.8014" } });
@@ -4292,7 +4299,7 @@ describe("ProjectsPage", () => {
       return {};
     });
 
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
 
     fireEvent.click(await screen.findByRole("button", { name: "New project" }));
     fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Validation Project" } });
@@ -4322,7 +4329,7 @@ describe("ProjectsPage", () => {
       }
       return { items: [], total: 0 };
     });
-    render(<ProjectsPage />);
+    render(<ProjectsPage />, { wrapper: Providers });
     const notice = await screen.findByRole("alert", {}, { timeout: 5000 });
     expect(notice).toHaveTextContent("Project documents");
     documentsDown = false;

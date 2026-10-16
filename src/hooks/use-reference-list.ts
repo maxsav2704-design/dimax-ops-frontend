@@ -1,63 +1,55 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { ApiError, apiFetch } from "@/lib/api";
 
-type ReferenceState<T> = {
-  path: string;
-  items: T[];
-  loaded: boolean;
-  loading: boolean;
-  error: boolean;
-};
+const EMPTY_ITEMS: readonly never[] = Object.freeze([]);
 
-function initialState<T>(path: string): ReferenceState<T> {
-  return { path, items: [], loaded: false, loading: true, error: false };
+export const referenceListQueryKey = (path: string, pageSize?: number) =>
+  ["reference-list", path, pageSize ?? null] as const;
+
+// Loads every page of a paginated catalog; commits only when all pages arrived.
+async function loadReferenceList<T>(path: string, pageSize: number | undefined, signal: AbortSignal): Promise<T[]> {
+  const items: T[] = [];
+  let nextPath = path;
+  for (;;) {
+    const response = await apiFetch<T[] | { items?: T[] }>(nextPath, { signal });
+    const page = Array.isArray(response) ? response : response?.items ?? [];
+    if (!Array.isArray(page)) throw new Error("Invalid reference list response");
+    items.push(...page);
+    if (!pageSize || page.length < pageSize) break;
+    const url = new URL(nextPath, "http://reference.local");
+    url.searchParams.set("offset", String(Number(url.searchParams.get("offset") || 0) + page.length));
+    nextPath = url.pathname + url.search;
+  }
+  return items;
 }
 
+/**
+ * Reference catalog (door types, installers, reasons, ...) through the shared
+ * react-query cache. Same shape as before: items / loaded / loading / error /
+ * ready / reload. A 401/403 drops the previously loaded items; any other
+ * failure keeps the last good list and flags `error` so the page can offer a retry.
+ */
 export function useReferenceList<T>(path: string, pageSize?: number) {
-  const [state, setState] = useState<ReferenceState<T>>(() => initialState(path));
-  const activeRequest = useRef<AbortController | null>(null);
+  const query = useQuery({
+    queryKey: referenceListQueryKey(path, pageSize),
+    queryFn: ({ signal }) => loadReferenceList<T>(path, pageSize, signal),
+    retry: false,
+  });
 
+  const accessRejected =
+    query.error instanceof ApiError && (query.error.status === 401 || query.error.status === 403);
+  // Stable empty list: a fresh `[]` per render would re-trigger every effect
+  // and memo that depends on `items` and loop the page.
+  const items = accessRejected ? (EMPTY_ITEMS as unknown as T[]) : (query.data ?? (EMPTY_ITEMS as unknown as T[]));
+  const loaded = query.data !== undefined && !accessRejected;
+  const loading = query.isFetching;
+  const error = query.isError;
+  const refetch = query.refetch;
   const reload = useCallback(async () => {
-    activeRequest.current?.abort();
-    const controller = new AbortController();
-    activeRequest.current = controller;
-    setState((previous) => previous.path === path
-      ? { ...previous, loading: true }
-      : initialState(path));
-    try {
-      const items: T[] = [];
-      let nextPath = path;
-      // Commit paginated catalogs only after every page has loaded successfully.
-      while (!controller.signal.aborted) {
-        const response = await apiFetch<T[] | { items?: T[] }>(nextPath, { signal: controller.signal });
-        if (controller.signal.aborted) return;
-        const page = Array.isArray(response) ? response : response?.items ?? [];
-        if (!Array.isArray(page)) throw new Error("Invalid reference list response");
-        items.push(...page);
-        if (!pageSize || page.length < pageSize) break;
-        const url = new URL(nextPath, "http://reference.local");
-        url.searchParams.set("offset", String(Number(url.searchParams.get("offset") || 0) + page.length));
-        nextPath = url.pathname + url.search;
-      }
-      if (controller.signal.aborted) return;
-      setState({ path, items, loaded: true, loading: false, error: false });
-    } catch (error) {
-      if (controller.signal.aborted) return;
-      const accessRejected = error instanceof ApiError && (error.status === 401 || error.status === 403);
-      setState((previous) => ({
-        ...(previous.path === path && !accessRejected ? previous : initialState<T>(path)),
-        loading: false,
-        error: true,
-      }));
-    }
-  }, [path, pageSize]);
+    await refetch();
+  }, [refetch]);
 
-  useEffect(() => {
-    void reload();
-    return () => activeRequest.current?.abort();
-  }, [reload]);
-
-  const current = state.path === path ? state : initialState<T>(path);
-  return { ...current, ready: current.loaded && !current.loading && !current.error, reload };
+  return { path, items, loaded, loading, error, ready: loaded && !loading && !error, reload };
 }
