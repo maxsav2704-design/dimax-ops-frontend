@@ -1,5 +1,7 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+
 import { useRouter, useSearchParams } from "next/navigation";
+
 import {
   AlertCircle,
   CheckCircle2,
@@ -20,16 +22,32 @@ import {
   UserPlus,
 } from "lucide-react";
 
+
 import { DashboardLayout } from "@/components/DashboardLayout";
+
 import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
+
 import { DataStateNotice } from "@/components/DataStateNotice";
+
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+
 import { useMediaQuery } from "@/hooks/use-media-query";
+
 import { useReferenceList } from "@/hooks/use-reference-list";
+
 import { useCompanyPricingState } from "@/hooks/use-company-pricing-state";
+
 import { CompanyPriceStatus } from "@/components/prices/CompanyPriceStatus";
+
 import { DoorMatrixTile } from "@/components/projects/DoorMatrixTile";
+
+import { ProjectDialog } from "@/components/projects/ProjectDialog";
+
+import { emptyProjectForm, normalizeDraftPhone, projectsMetricLabelClass } from "@/components/projects/project-form";
+
+import type { ProjectFormState, ProjectLifecycleStatus } from "@/components/projects/project-form";
+
 import {
   Breadcrumbs,
   KpiCard as DimaxKpiCard,
@@ -37,19 +55,16 @@ import {
   PillButton,
   WidgetCard,
 } from "@/components/dimax";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+
 import { Button } from "@/components/ui/button";
+
 import {
   Dialog,
   DialogContent,
@@ -58,29 +73,37 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
 import { Input } from "@/components/ui/input";
+
 import { Label } from "@/components/ui/label";
+
 import { LtrText } from "@/components/ui/LtrText";
+
 import {
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { ApiError, apiDownload, apiFetch } from "@/lib/api";
+
+import { apiDownload, apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
+
 import { formatImportRowError } from "@/lib/import-row-error";
+
 import { formatLocaleMoney } from "@/lib/formatting";
+
 import { useAuthSession } from "@/hooks/use-auth-session";
+
 import {
   canManageImports,
   canRunPrivilegedAdminActions,
   canViewRates,
 } from "@/lib/admin-access";
+
 import { useI18n, type Locale, useCopy } from "@/lib/i18n";
+
 import { cn } from "@/lib/utils";
+
 
 const projectsOverrides: Partial<Record<Locale, Record<string, string>>> = {
   he: {
@@ -122,16 +145,6 @@ const projectsOverrides: Partial<Record<Locale, Record<string, string>>> = {
 function projectsPanelClass(extra?: string): string {
   return cn("rounded-lg border border-border bg-surface", extra);
 }
-
-const projectsMetricLabelClass =
-  "text-[10.5px] font-semibold uppercase text-text-secondary";
-
-type ProjectLifecycleStatus =
-  | "PLANNED"
-  | "ACTIVE"
-  | "ON_HOLD"
-  | "COMPLETED"
-  | "CANCELLED";
 
 type ProjectHealthStatus = "NORMAL" | "AT_RISK" | "BLOCKED";
 
@@ -277,39 +290,6 @@ type ProjectDetailsResponse = {
   call_deep_link?: string | null;
   issues_open?: ProjectOpenIssue[];
 };
-
-type ProjectFormState = {
-  code: string;
-  name: string;
-  planned_start_date: string;
-  planned_end_date: string;
-  lifecycle_status: ProjectLifecycleStatus;
-  address: string;
-  address_street: string;
-  address_building: string;
-  address_city: string;
-  address_entrance: string;
-  address_lat: string;
-  address_lng: string;
-  address_waze_url: string;
-  developer_company: string;
-  contact_name: string;
-  contact_phone: string;
-  developer_phone_alt: string;
-  developer_whatsapp: string;
-  contact_email: string;
-  developer_notes: string;
-};
-
-type ProjectFormFieldErrors = Partial<
-  Record<
-    | "contact_phone"
-    | "developer_phone_alt"
-    | "developer_whatsapp"
-    | "address_waze_url",
-    string
-  >
->;
 
 type DoorType = {
   id: string;
@@ -655,56 +635,6 @@ type ProjectImportRunsResponse = {
   items: ProjectImportRunItem[];
 };
 
-type ProjectAddressSuggestion = {
-  key: string;
-  label: string;
-  street: string;
-  building: string;
-  city: string;
-  entrance: string;
-  lat: string;
-  lng: string;
-};
-
-type ProjectAddressSuggestionsResponse = {
-  items: ProjectAddressSuggestion[];
-};
-
-const PROJECT_CITY_COORDS: Array<{
-  lat: string;
-  lng: string;
-  aliases: string[];
-}> = [
-  { lat: "31.8014", lng: "34.6435", aliases: ["ashdod", "אשדוד", "ашдод"] },
-  {
-    lat: "31.2518",
-    lng: "34.7915",
-    aliases: ["ashkelon", "אשקלון", "ашкелон"],
-  },
-  {
-    lat: "31.7683",
-    lng: "35.2137",
-    aliases: ["jerusalem", "ירושלים", "иерусалим"],
-  },
-  {
-    lat: "32.0853",
-    lng: "34.7818",
-    aliases: ["tel aviv", "tel-aviv", "תל אביב", "тель авив"],
-  },
-  { lat: "32.7940", lng: "34.9896", aliases: ["haifa", "חיפה", "хайфа"] },
-  {
-    lat: "31.9980",
-    lng: "34.7320",
-    aliases: ["rishon lezion", "ראשון לציון", "ришон лецион"],
-  },
-  { lat: "32.3215", lng: "34.8532", aliases: ["netanya", "נתניה", "нетания"] },
-  {
-    lat: "31.2520",
-    lng: "34.7913",
-    aliases: ["beer sheva", "be'er sheva", "באר שבע", "беэр шева"],
-  },
-];
-
 function emptyManualDoorForm(): ManualDoorFormState {
   return {
     product_id: "",
@@ -720,115 +650,6 @@ function emptyManualDoorForm(): ManualDoorFormState {
   };
 }
 
-function emptyProjectForm(): ProjectFormState {
-  return {
-    code: "",
-    name: "",
-    planned_start_date: "",
-    planned_end_date: "",
-    lifecycle_status: "ACTIVE",
-    address: "",
-    address_street: "",
-    address_building: "",
-    address_city: "",
-    address_entrance: "",
-    address_lat: "",
-    address_lng: "",
-    address_waze_url: "",
-    developer_company: "",
-    contact_name: "",
-    contact_phone: "",
-    developer_phone_alt: "",
-    developer_whatsapp: "",
-    contact_email: "",
-    developer_notes: "",
-  };
-}
-
-function normalizeDraftPhone(value: string): string | null {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  let digits = trimmed.replace(/[^\d+]/g, "");
-  if (digits.startsWith("00")) {
-    digits = `+${digits.slice(2)}`;
-  }
-  if (digits.startsWith("0")) {
-    digits = `+972${digits.slice(1)}`;
-  } else if (!digits.startsWith("+")) {
-    digits = `+${digits}`;
-  }
-  digits = `+${digits.replace(/[^\d]/g, "")}`;
-  return digits.length >= 12 && digits.length <= 13 ? digits : null;
-}
-
-function buildDraftProjectAddress(form: ProjectFormState): string {
-  const structured = [
-    form.address_street.trim(),
-    form.address_building.trim(),
-    form.address_city.trim(),
-  ].filter(Boolean);
-  const base =
-    structured.length > 0 ? structured.join(", ") : form.address.trim();
-  if (!base) {
-    return "";
-  }
-  return form.address_entrance.trim()
-    ? `${base}, ${form.address_entrance.trim()}`
-    : base;
-}
-
-function buildDraftWazeLink(form: ProjectFormState): string | null {
-  if (form.address_lat.trim() && form.address_lng.trim()) {
-    return `https://www.waze.com/ul?ll=${encodeURIComponent(form.address_lat.trim())},${encodeURIComponent(form.address_lng.trim())}&navigate=yes`;
-  }
-  if (form.address_waze_url.trim()) {
-    return form.address_waze_url.trim();
-  }
-  const address = buildDraftProjectAddress(form);
-  if (!address) {
-    return null;
-  }
-  return `https://www.waze.com/ul?q=${encodeURIComponent(address)}&navigate=yes`;
-}
-
-function buildDraftWhatsappMessage(
-  form: ProjectFormState,
-  locale: Locale,
-): string | null {
-  const code = form.code.trim();
-  const name = form.name.trim();
-  if (!code && !name) {
-    return null;
-  }
-  const projectRef = code && name ? `${name} (${code})` : name || code;
-  if (locale === "ru") {
-    return `Добрый день, по проекту ${projectRef}`;
-  }
-  if (locale === "he") {
-    return `שלום, בקשר לפרויקט ${projectRef}`;
-  }
-  return `Hello, regarding project ${projectRef}`;
-}
-
-function buildDraftWhatsappLink(
-  form: ProjectFormState,
-  locale: Locale,
-): string | null {
-  const phone = normalizeDraftPhone(
-    form.developer_whatsapp || form.contact_phone,
-  );
-  if (!phone) {
-    return null;
-  }
-  const message = buildDraftWhatsappMessage(form, locale);
-  const waPhone = phone.replace("+", "");
-  return message
-    ? `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}`
-    : `https://wa.me/${waPhone}`;
-}
-
 function formatReadablePhone(value: string | null | undefined): string {
   const normalized = normalizeDraftPhone(value || "");
   if (!normalized) {
@@ -840,173 +661,12 @@ function formatReadablePhone(value: string | null | undefined): string {
   return normalized;
 }
 
-function formatProjectPhoneInput(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  let digits = trimmed.replace(/[^\d+]/g, "");
-  if (digits.startsWith("00")) {
-    digits = `+${digits.slice(2)}`;
-  }
-  if (digits.startsWith("0")) {
-    digits = `+972${digits.slice(1)}`;
-  } else if (digits.startsWith("972")) {
-    digits = `+${digits}`;
-  } else if (!digits.startsWith("+")) {
-    digits = `+972${digits}`;
-  }
-
-  return `+${digits.replace(/[^\d]/g, "")}`;
-}
-
 async function copyTextToClipboard(value: string): Promise<boolean> {
   if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
     return false;
   }
   await navigator.clipboard.writeText(value);
   return true;
-}
-
-function buildDraftMapPreviewUrl(form: ProjectFormState): string | null {
-  const lat = Number(form.address_lat.trim());
-  const lng = Number(form.address_lng.trim());
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    return null;
-  }
-  const delta = 0.01;
-  const bbox = [lng - delta, lat - delta, lng + delta, lat + delta]
-    .map((item) => item.toFixed(6))
-    .join("%2C");
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat.toFixed(6)}%2C${lng.toFixed(6)}`;
-}
-
-function buildProjectFieldErrorCopy(
-  field: keyof ProjectFormFieldErrors,
-  locale: Locale,
-): string {
-  const copyByField: Record<
-    keyof ProjectFormFieldErrors,
-    Record<Locale, string>
-  > = {
-    contact_phone: {
-      en: "Enter the primary phone in +972XXXXXXXXX format.",
-      ru: "Введите основной телефон в формате +972XXXXXXXXX.",
-      he: "הזן את הטלפון הראשי בפורמט ‎+972XXXXXXXXX.",
-    },
-    developer_phone_alt: {
-      en: "Enter the backup phone in +972XXXXXXXXX format.",
-      ru: "Введите дополнительный телефон в формате +972XXXXXXXXX.",
-      he: "הזן את הטלפון הנוסף בפורמט ‎+972XXXXXXXXX.",
-    },
-    developer_whatsapp: {
-      en: "Enter the WhatsApp number in +972XXXXXXXXX format.",
-      ru: "Введите номер WhatsApp в формате +972XXXXXXXXX.",
-      he: "הזן את מספר ה-WhatsApp בפורמט ‎+972XXXXXXXXX.",
-    },
-    address_waze_url: {
-      en: "Enter a valid http or https Waze link.",
-      ru: "Введите корректную Waze-ссылку с http или https.",
-      he: "הזן קישור Waze תקין עם http או https.",
-    },
-  };
-
-  return copyByField[field][locale];
-}
-
-function lookupProjectCityCoords(
-  city: string,
-): { lat: string; lng: string } | null {
-  const normalized = city.trim().toLowerCase();
-  if (!normalized) {
-    return null;
-  }
-  const match = PROJECT_CITY_COORDS.find((item) =>
-    item.aliases.some((alias) => normalized.includes(alias)),
-  );
-  return match ? { lat: match.lat, lng: match.lng } : null;
-}
-
-function buildProjectAddressSuggestions(
-  raw: string,
-): ProjectAddressSuggestion[] {
-  const value = raw.trim();
-  if (value.length < 3) {
-    return [];
-  }
-
-  const suggestions: ProjectAddressSuggestion[] = [];
-  const seen = new Set<string>();
-
-  const pushSuggestion = (
-    street: string,
-    building: string,
-    city: string,
-    entrance: string,
-  ) => {
-    const normalizedStreet = street.trim();
-    const normalizedBuilding = building.trim();
-    const normalizedCity = city.trim();
-    const normalizedEntrance = entrance.trim();
-    if (!normalizedStreet && !normalizedCity) {
-      return;
-    }
-    const label = [
-      normalizedStreet,
-      normalizedBuilding,
-      normalizedCity,
-      normalizedEntrance,
-    ]
-      .filter(Boolean)
-      .join(", ");
-    if (!label || seen.has(label.toLowerCase())) {
-      return;
-    }
-    seen.add(label.toLowerCase());
-    const coords = lookupProjectCityCoords(normalizedCity);
-    suggestions.push({
-      key: label.toLowerCase(),
-      label,
-      street: normalizedStreet,
-      building: normalizedBuilding,
-      city: normalizedCity,
-      entrance: normalizedEntrance,
-      lat: coords?.lat || "",
-      lng: coords?.lng || "",
-    });
-  };
-
-  const commaParts = value
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  if (commaParts.length >= 3) {
-    pushSuggestion(
-      commaParts[0] || "",
-      commaParts[1] || "",
-      commaParts[2] || "",
-      commaParts.slice(3).join(", "),
-    );
-  }
-
-  const compactMatch = value.match(
-    /^(.+?)\s+(\d+[A-Za-zА-Яа-я/-]*)\s+([A-Za-z\u0590-\u05FF\u0400-\u04FF][A-Za-z\u0590-\u05FF\u0400-\u04FF\s-]*?)(?:\s+([A-Za-z0-9\u0590-\u05FF\u0400-\u04FF-]+))?$/u,
-  );
-  if (compactMatch) {
-    pushSuggestion(
-      compactMatch[1] || "",
-      compactMatch[2] || "",
-      compactMatch[3] || "",
-      compactMatch[4] || "",
-    );
-  }
-
-  if (suggestions.length === 0) {
-    pushSuggestion(value, "", "", "");
-  }
-
-  return suggestions;
 }
 
 function projectFormFromDetails(
@@ -1694,12 +1354,10 @@ export default function ProjectsPage() {
   const [projectDialogMode, setProjectDialogMode] = useState<"create" | "edit">(
     "create",
   );
-  const [projectForm, setProjectForm] =
+  const [projectDialogInitialForm, setProjectDialogInitialForm] =
     useState<ProjectFormState>(emptyProjectForm());
-  const [projectFormFieldErrors, setProjectFormFieldErrors] =
-    useState<ProjectFormFieldErrors>({});
-  const [projectSubmitting, setProjectSubmitting] = useState(false);
-  const [projectSubmitError, setProjectSubmitError] = useState<string | null>(null);
+  // Bumped on every open so ProjectDialog remounts with a fresh form state.
+  const [projectDialogSession, setProjectDialogSession] = useState(0);
   const [manualDoorDialogOpen, setManualDoorDialogOpen] = useState(false);
   const [manualDoorForm, setManualDoorForm] = useState<ManualDoorFormState>(
     emptyManualDoorForm(),
@@ -1896,13 +1554,6 @@ export default function ProjectsPage() {
   );
   const [deepLinkApplied, setDeepLinkApplied] = useState(false);
   const [deepLinkProjectMissing, setDeepLinkProjectMissing] = useState(false);
-  const [projectAddressSuggestions, setProjectAddressSuggestions] = useState<
-    ProjectAddressSuggestion[]
-  >([]);
-  const [
-    loadingProjectAddressSuggestions,
-    setLoadingProjectAddressSuggestions,
-  ] = useState(false);
   const [deepLinkFocusApplied, setDeepLinkFocusApplied] = useState(false);
   const [createProjectDeepLinkApplied, setCreateProjectDeepLinkApplied] =
     useState(false);
@@ -3046,8 +2697,6 @@ export default function ProjectsPage() {
     }
   }, [deepLinkProjectId]);
 
-
-
   const loadLayout = useCallback(async (projectId: string) => {
     setLoadingLayout(true);
     setError(null);
@@ -3077,10 +2726,6 @@ export default function ProjectsPage() {
       loadImportHistory(projectId),
     ]);
   };
-
-
-
-
 
   const projectSections: Array<{
     key: ProjectSectionKey;
@@ -3725,44 +3370,11 @@ export default function ProjectsPage() {
     setSelectedProjectId(projectId);
   };
 
-  const projectFormPayload = {
-    code: projectForm.code.trim() || null,
-    name: projectForm.name.trim(),
-    planned_start_date: projectForm.planned_start_date || null,
-    planned_end_date: projectForm.planned_end_date || null,
-    lifecycle_status: projectForm.lifecycle_status,
-    address: projectForm.address.trim(),
-    address_street: projectForm.address_street.trim() || null,
-    address_building: projectForm.address_building.trim() || null,
-    address_city: projectForm.address_city.trim() || null,
-    address_entrance: projectForm.address_entrance.trim() || null,
-    address_lat: projectForm.address_lat.trim()
-      ? Number(projectForm.address_lat)
-      : null,
-    address_lng: projectForm.address_lng.trim()
-      ? Number(projectForm.address_lng)
-      : null,
-    address_waze_url: projectForm.address_waze_url.trim() || null,
-    developer_company: projectForm.developer_company.trim() || null,
-    contact_name: projectForm.contact_name.trim() || null,
-    contact_phone: projectForm.contact_phone.trim() || null,
-    developer_phone_alt: projectForm.developer_phone_alt.trim() || null,
-    developer_whatsapp: projectForm.developer_whatsapp.trim() || null,
-    contact_email: projectForm.contact_email.trim() || null,
-    developer_notes: projectForm.developer_notes.trim() || null,
-  };
-  const draftWazeLink = buildDraftWazeLink(projectForm);
-  const draftWhatsappLink = buildDraftWhatsappLink(projectForm, locale);
-  const draftCallLink = normalizeDraftPhone(projectForm.contact_phone)
-    ? `tel:${normalizeDraftPhone(projectForm.contact_phone)}`
-    : null;
-
   const openCreateProjectDialog = () => {
     if (!canManageProjects) return;
-    setProjectSubmitError(null);
     setProjectDialogMode("create");
-    setProjectForm(emptyProjectForm());
-    setProjectFormFieldErrors({});
+    setProjectDialogInitialForm(emptyProjectForm());
+    setProjectDialogSession((prev) => prev + 1);
     setProjectFlowNotice(null);
     setProjectActionHint(null);
     setError(null);
@@ -3778,10 +3390,9 @@ export default function ProjectsPage() {
       return;
     }
     setCreateProjectDeepLinkApplied(true);
-    setProjectSubmitError(null);
     setProjectDialogMode("create");
-    setProjectForm(emptyProjectForm());
-    setProjectFormFieldErrors({});
+    setProjectDialogInitialForm(emptyProjectForm());
+    setProjectDialogSession((prev) => prev + 1);
     setProjectFlowNotice(null);
     setProjectActionHint(null);
     setError(null);
@@ -3792,42 +3403,42 @@ export default function ProjectsPage() {
     createProjectRequested,
   ]);
 
+  const handleProjectCreated = async (projectId: string) => {
+    await loadProjects();
+    setSelectedProjectId(projectId);
+    setProjectFlowNotice(
+      copy(
+        "Project created. Continue with address, contacts and import flow.",
+        "Проект создан. Продолжайте с адресом, контактами и импортом.",
+        "הפרויקט נוצר. המשך עם כתובת, אנשי קשר וזרימת הייבוא.",
+      ),
+    );
+  };
+
+  const handleProjectUpdated = async (projectId: string) => {
+    await loadProjects();
+    await loadProjectDetails(projectId);
+    setProjectFlowNotice(
+      copy(
+        "Project settings updated. Quick actions are ready where data is available.",
+        "Настройки проекта обновлены. Быстрые действия готовы там, где данные заполнены.",
+        "הגדרות הפרויקט עודכנו. פעולות מהירות מוכנות היכן שהנתונים מולאו.",
+      ),
+    );
+  };
+
   const openEditProjectDialog = () => {
     if (!canManageProjects) return;
-    setProjectSubmitError(null);
     if (!projectDetails) {
       return;
     }
     setProjectDialogMode("edit");
-    setProjectForm(projectFormFromDetails(projectDetails));
-    setProjectFormFieldErrors({});
+    setProjectDialogInitialForm(projectFormFromDetails(projectDetails));
+    setProjectDialogSession((prev) => prev + 1);
     setProjectFlowNotice(null);
     setProjectActionHint(null);
     setError(null);
     setProjectDialogOpen(true);
-  };
-
-  const applyProjectAddressSuggestion = (
-    suggestion: ProjectAddressSuggestion,
-  ) => {
-    setProjectForm((prev) => ({
-      ...prev,
-      address: suggestion.label,
-      address_street: suggestion.street,
-      address_building: suggestion.building,
-      address_city: suggestion.city,
-      address_entrance: suggestion.entrance,
-      address_lat: suggestion.lat,
-      address_lng: suggestion.lng,
-    }));
-    setProjectFormFieldErrors((prev) => {
-      if (!prev.address_waze_url) {
-        return prev;
-      }
-      const next = { ...prev };
-      delete next.address_waze_url;
-      return next;
-    });
   };
 
   const showProjectActionHint = (message: string) => {
@@ -4185,161 +3796,6 @@ export default function ProjectsPage() {
       );
     } finally {
       setDownloadingDocumentId(null);
-    }
-  };
-
-  const updateProjectFormField = <K extends keyof ProjectFormState>(
-    field: K,
-    value: ProjectFormState[K],
-  ) => {
-    setProjectForm((prev) => ({ ...prev, [field]: value }));
-    if (field in projectFormFieldErrors) {
-      setProjectFormFieldErrors((prev) => {
-        const next = { ...prev };
-        delete next[field as keyof ProjectFormFieldErrors];
-        return next;
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (!projectDialogOpen) {
-      setProjectAddressSuggestions([]);
-      setLoadingProjectAddressSuggestions(false);
-      return;
-    }
-
-    const query = projectForm.address.trim();
-    if (query.length < 3) {
-      setProjectAddressSuggestions([]);
-      setLoadingProjectAddressSuggestions(false);
-      return;
-    }
-
-    let active = true;
-    const timeoutId = window.setTimeout(async () => {
-      setLoadingProjectAddressSuggestions(true);
-      try {
-        const response = await apiFetch<ProjectAddressSuggestionsResponse>(
-          `/api/v1/admin/projects/address-suggestions?q=${encodeURIComponent(query)}&limit=5`,
-        );
-        if (active) {
-          setProjectAddressSuggestions(response.items || []);
-        }
-      } catch {
-        if (active) {
-          setProjectAddressSuggestions(buildProjectAddressSuggestions(query));
-        }
-      } finally {
-        if (active) {
-          setLoadingProjectAddressSuggestions(false);
-        }
-      }
-    }, 250);
-
-    return () => {
-      active = false;
-      window.clearTimeout(timeoutId);
-    };
-  }, [projectDialogOpen, projectForm.address]);
-
-  const handleProjectSubmit = async () => {
-    if (!canManageProjects) return;
-    if (!projectForm.name.trim()) {
-      setProjectSubmitError(
-        copy(
-          "Project name is required.",
-          "Название проекта обязательно.",
-          "שם הפרויקט הוא שדה חובה.",
-        ),
-      );
-      return;
-    }
-
-    setProjectSubmitting(true);
-    setProjectSubmitError(null);
-    setProjectFormFieldErrors({});
-
-    try {
-      if (projectDialogMode === "create") {
-        const response = await apiFetch<{ id: string }>(
-          "/api/v1/admin/projects",
-          {
-            method: "POST",
-            body: JSON.stringify(projectFormPayload),
-          },
-        );
-        await loadProjects();
-        setSelectedProjectId(response.id);
-        setProjectDialogOpen(false);
-        setProjectForm(emptyProjectForm());
-        setProjectFlowNotice(
-          copy(
-            "Project created. Continue with address, contacts and import flow.",
-            "Проект создан. Продолжайте с адресом, контактами и импортом.",
-            "הפרויקט נוצר. המשך עם כתובת, אנשי קשר וזרימת הייבוא.",
-          ),
-        );
-        return;
-      }
-
-      if (!selectedProjectId) {
-        return;
-      }
-      await apiFetch(`/api/v1/admin/projects/${selectedProjectId}`, {
-        method: "PATCH",
-        body: JSON.stringify(projectFormPayload),
-      });
-      await loadProjects();
-      await loadProjectDetails(selectedProjectId);
-      setProjectDialogOpen(false);
-      setProjectFlowNotice(
-        copy(
-          "Project settings updated. Quick actions are ready where data is available.",
-          "Настройки проекта обновлены. Быстрые действия готовы там, где данные заполнены.",
-          "הגדרות הפרויקט עודכנו. פעולות מהירות מוכנות היכן שהנתונים מולאו.",
-        ),
-      );
-    } catch (e) {
-      if (e instanceof ApiError) {
-        const fieldFromMeta =
-          typeof e.meta?.field === "string" ? e.meta.field : null;
-        const apiField = (e.field || fieldFromMeta) as
-          | keyof ProjectFormFieldErrors
-          | undefined;
-        if (
-          e.code === "INVALID_PHONE" &&
-          apiField &&
-          apiField in emptyProjectForm()
-        ) {
-          setProjectFormFieldErrors((prev) => ({
-            ...prev,
-            [apiField]: buildProjectFieldErrorCopy(apiField, locale),
-          }));
-        }
-        if (e.code === "INVALID_WAZE_URL") {
-          setProjectFormFieldErrors((prev) => ({
-            ...prev,
-            address_waze_url: buildProjectFieldErrorCopy(
-              "address_waze_url",
-              locale,
-            ),
-          }));
-        }
-      }
-      setProjectSubmitError(
-        readableApiError(
-          e,
-          locale,
-          copy(
-            "Unable to save project settings.",
-            "Не удалось сохранить настройки проекта.",
-            "לא ניתן לשמור את הגדרות הפרויקט.",
-          ),
-        ),
-      );
-    } finally {
-      setProjectSubmitting(false);
     }
   };
 
@@ -12361,664 +11817,18 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      <Dialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen}>
-        <DialogContent className="max-w-[920px]">
-          <DialogHeader>
-            <DialogTitle>
-              {projectDialogMode === "create"
-                ? copy("Create project", "Создать проект", "צור פרויקט")
-                : copy("Edit project", "Редактировать проект", "ערוך פרויקט")}
-            </DialogTitle>
-            <DialogDescription>
-              {copy(
-                "Keep one structured project record: core data, site address and developer contact for fast field actions.",
-                "Держите одну структурированную карточку проекта: основная информация, адрес объекта и контакт застройщика для быстрых полевых действий.",
-                "שמור כרטיס פרויקט אחד ומסודר: נתוני בסיס, כתובת האתר ואיש קשר של היזם לפעולות מהירות בשטח.",
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          <Accordion
-            type="multiple"
-            defaultValue={["main", "address", "contact"]}
-            className="w-full"
-          >
-            <AccordionItem value="main">
-              <AccordionTrigger className="text-start">
-                {copy("Main information", "Основная информация", "מידע בסיסי")}
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-code">
-                      {copy("Project code", "Код проекта", "קוד פרויקט")}
-                    </Label>
-                    <Input
-                      id="project-form-code"
-                      value={projectForm.code}
-                      onChange={(event) =>
-                        setProjectForm((prev) => ({
-                          ...prev,
-                          code: event.target.value,
-                        }))
-                      }
-                      placeholder="PRJ-001"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-name">
-                      {copy("Project name", "Название проекта", "שם הפרויקט")}
-                    </Label>
-                    <Input
-                      id="project-form-name"
-                      value={projectForm.name}
-                      onChange={(event) =>
-                        setProjectForm((prev) => ({
-                          ...prev,
-                          name: event.target.value,
-                        }))
-                      }
-                      placeholder={copy(
-                        "Ashdod Tower A",
-                        "Ашдод Тауэр A",
-                        "מגדל אשדוד A",
-                      )}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-start">
-                      {copy(
-                        "Planned start",
-                        "Плановая дата начала",
-                        "תאריך התחלה מתוכנן",
-                      )}
-                    </Label>
-                    <Input
-                      id="project-form-start"
-                      type="date"
-                      value={projectForm.planned_start_date}
-                      onChange={(event) =>
-                        setProjectForm((prev) => ({
-                          ...prev,
-                          planned_start_date: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-end">
-                      {copy(
-                        "Planned finish",
-                        "Плановая дата завершения",
-                        "תאריך סיום מתוכנן",
-                      )}
-                    </Label>
-                    <Input
-                      id="project-form-end"
-                      type="date"
-                      value={projectForm.planned_end_date}
-                      onChange={(event) =>
-                        setProjectForm((prev) => ({
-                          ...prev,
-                          planned_end_date: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="project-form-lifecycle">
-                      {copy("Lifecycle status", "Статус объекта", "סטטוס הפרויקט")}
-                    </Label>
-                    <Select
-                      value={projectForm.lifecycle_status}
-                      onValueChange={(value) =>
-                        updateProjectFormField(
-                          "lifecycle_status",
-                          value as ProjectLifecycleStatus,
-                        )
-                      }
-                    >
-                      <SelectTrigger id="project-form-lifecycle">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {([
-                          "PLANNED",
-                          "ACTIVE",
-                          "ON_HOLD",
-                          "COMPLETED",
-                          "CANCELLED",
-                        ] as ProjectLifecycleStatus[]).map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {tokenLabel(status)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="address">
-              <AccordionTrigger className="text-start">
-                {copy("Site address", "Адрес объекта", "כתובת האתר")}
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="project-form-address-search">
-                      {copy(
-                        "Address search / fallback",
-                        "Поиск адреса / запасное поле",
-                        "חיפוש כתובת / שדה חלופי",
-                      )}
-                    </Label>
-                    <Input
-                      id="project-form-address-search"
-                      value={projectForm.address}
-                      onChange={(event) =>
-                        updateProjectFormField("address", event.target.value)
-                      }
-                      placeholder={copy(
-                        "Street, building, city",
-                        "Улица, дом, город",
-                        "רחוב, בניין, עיר",
-                      )}
-                    />
-                    {loadingProjectAddressSuggestions ||
-                    projectAddressSuggestions.length > 0 ? (
-                      <div className="rounded-lg border border-border bg-surface-subtle p-3">
-                        <div className={projectsMetricLabelClass}>
-                          {loadingProjectAddressSuggestions
-                            ? copy(
-                                "Searching address",
-                                "Ищем адрес",
-                                "מחפש כתובת",
-                              )
-                            : copy(
-                                "Address suggestions",
-                                "Подсказки адреса",
-                                "הצעות כתובת",
-                              )}
-                        </div>
-                        {projectAddressSuggestions.length > 0 ? (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {projectAddressSuggestions.map((suggestion) => (
-                              <button
-                                key={suggestion.key}
-                                type="button"
-                                onClick={() =>
-                                  applyProjectAddressSuggestion(suggestion)
-                                }
-                                className="inline-flex min-h-9 items-center rounded-full border border-border bg-surface px-3 text-start text-[12px] font-medium text-text transition-colors hover:bg-surface"
-                              >
-                                {suggestion.label}
-                              </button>
-                            ))}
-                          </div>
-                        ) : loadingProjectAddressSuggestions ? (
-                          <div className="mt-3 text-sm text-text-secondary">
-                            {copy(
-                              "Checking geocoder suggestions…",
-                              "Проверяем подсказки геокодера…",
-                              "בודק הצעות ממנוע הכתובות…",
-                            )}
-                          </div>
-                        ) : (
-                          <div className="mt-3 text-sm text-text-secondary">
-                            {copy(
-                              "No suggestions found yet. Continue typing or fill the fields manually.",
-                              "Подсказки пока не найдены. Продолжайте ввод или заполните поля вручную.",
-                              "עדיין לא נמצאו הצעות. המשך להקליד או מלא את השדות ידנית.",
-                            )}
-                          </div>
-                        )}
-                        <div className="mt-2 text-xs leading-5 text-text-secondary">
-                          {copy(
-                            "Choose a suggestion to autofill street, building, city and entrance. Coordinates arrive with the selected suggestion when available.",
-                            "Выберите подсказку, чтобы автозаполнить улицу, дом, город и подъезд. Координаты приходят вместе с выбранной подсказкой, если они определены.",
-                            "בחר הצעה כדי למלא אוטומטית רחוב, בניין, עיר וכניסה. קואורדינטות מגיעות יחד עם ההצעה שנבחרה כאשר הן זמינות.",
-                          )}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-street">
-                      {copy("Street", "Улица", "רחוב")}
-                    </Label>
-                    <Input
-                      id="project-form-street"
-                      value={projectForm.address_street}
-                      onChange={(event) =>
-                        updateProjectFormField(
-                          "address_street",
-                          event.target.value,
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-building">
-                      {copy("Building", "Дом", "בניין")}
-                    </Label>
-                    <Input
-                      id="project-form-building"
-                      value={projectForm.address_building}
-                      onChange={(event) =>
-                        updateProjectFormField(
-                          "address_building",
-                          event.target.value,
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-city">
-                      {copy("City", "Город", "עיר")}
-                    </Label>
-                    <Input
-                      id="project-form-city"
-                      value={projectForm.address_city}
-                      onChange={(event) =>
-                        updateProjectFormField(
-                          "address_city",
-                          event.target.value,
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-entrance">
-                      {copy("Entrance", "Подъезд / вход", "כניסה")}
-                    </Label>
-                    <Input
-                      id="project-form-entrance"
-                      value={projectForm.address_entrance}
-                      onChange={(event) =>
-                        updateProjectFormField(
-                          "address_entrance",
-                          event.target.value,
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-lat">{copy("Latitude", "Широта", "קו רוחב")}</Label>
-                    <Input
-                      id="project-form-lat"
-                      value={projectForm.address_lat}
-                      onChange={(event) =>
-                        updateProjectFormField(
-                          "address_lat",
-                          event.target.value,
-                        )
-                      }
-                      placeholder="31.2456789"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-lng">{copy("Longitude", "Долгота", "קו אורך")}</Label>
-                    <Input
-                      id="project-form-lng"
-                      value={projectForm.address_lng}
-                      onChange={(event) =>
-                        updateProjectFormField(
-                          "address_lng",
-                          event.target.value,
-                        )
-                      }
-                      placeholder="34.7912345"
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="project-form-waze">
-                      {copy(
-                        "Waze URL override",
-                        "Ссылка Waze вручную",
-                        "קישור Waze ידני",
-                      )}
-                    </Label>
-                    <Input
-                      id="project-form-waze"
-                      value={projectForm.address_waze_url}
-                      onChange={(event) =>
-                        updateProjectFormField(
-                          "address_waze_url",
-                          event.target.value,
-                        )
-                      }
-                      placeholder="https://www.waze.com/ul?..."
-                    />
-                    {projectFormFieldErrors.address_waze_url ? (
-                      <div className="text-xs text-destructive">
-                        {projectFormFieldErrors.address_waze_url}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-                  <div className="flex flex-wrap content-start items-start gap-2">
-                    <a
-                      href={draftWazeLink || undefined}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-disabled={!draftWazeLink}
-                      className={cn(
-                        "inline-flex min-h-9 items-center gap-2 rounded-full border px-3 text-[12px] font-medium transition-colors",
-                        draftWazeLink
-                          ? "border-border-strong bg-surface text-text hover:bg-surface-subtle"
-                          : "cursor-not-allowed border-dashed border-border bg-surface-subtle text-text-secondary",
-                      )}
-                    >
-                      <MapPinned className="h-4 w-4" aria-hidden="true" />
-                      {copy("Test Waze", "Проверить Waze", "בדוק Waze")}
-                    </a>
-                    <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2 text-xs text-text-secondary">
-                      {buildDraftProjectAddress(projectForm) ||
-                        copy(
-                          "No address yet",
-                          "Адрес пока не заполнен",
-                          "הכתובת עדיין לא מולאה",
-                        )}
-                    </div>
-                  </div>
-                  <div className="overflow-hidden rounded-lg border border-border bg-surface text-sm">
-                    {buildDraftMapPreviewUrl(projectForm) ? (
-                      <div className="border-b border-border bg-surface-subtle p-2">
-                        <iframe
-                          title={copy(
-                            "Map preview",
-                            "Предпросмотр карты",
-                            "תצוגה מקדימה של המפה",
-                          )}
-                          src={
-                            buildDraftMapPreviewUrl(projectForm) || undefined
-                          }
-                          className="h-36 w-full rounded-lg border border-border bg-surface"
-                          loading="lazy"
-                          referrerPolicy="no-referrer-when-downgrade"
-                        />
-                      </div>
-                    ) : null}
-                    <div className="px-4 py-4">
-                      <div className={projectsMetricLabelClass}>
-                        {copy(
-                          "Route preview",
-                          "Предпросмотр маршрута",
-                          "תצוגת מסלול",
-                        )}
-                      </div>
-                      <div className="mt-3 font-medium text-text">
-                        {buildDraftProjectAddress(projectForm) ||
-                          copy(
-                            "Awaiting address",
-                            "Ждём адрес",
-                            "ממתין לכתובת",
-                          )}
-                      </div>
-                      <div className="mt-2 text-xs leading-5 text-text-secondary">
-                        {projectForm.address_lat.trim() &&
-                        projectForm.address_lng.trim()
-                          ? `${copy("Coordinates", "Координаты", "קואורדינטות")}: ${projectForm.address_lat}, ${projectForm.address_lng}`
-                          : copy(
-                              "No coordinates yet. Choose an address suggestion or fill them manually.",
-                              "Координаты пока не заполнены. Выберите подсказку адреса или заполните их вручную.",
-                              "עדיין אין קואורדינטות. בחר הצעת כתובת או מלא ידנית.",
-                            )}
-                      </div>
-                      <div className="mt-3 text-xs text-text-secondary">
-                        {draftWazeLink
-                          ? copy(
-                              "Waze link is ready for a quick field check.",
-                              "Ссылка Waze готова для быстрой полевой проверки.",
-                              "קישור Waze מוכן לבדיקה מהירה בשטח.",
-                            )
-                          : copy(
-                              "Fill address data to unlock navigation.",
-                              "Заполните адрес, чтобы включить навигацию.",
-                              "מלא נתוני כתובת כדי לפתוח ניווט.",
-                            )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="contact">
-              <AccordionTrigger className="text-start">
-                {copy(
-                  "Developer contact",
-                  "Контакты застройщика",
-                  "אנשי קשר של היזם",
-                )}
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-dev-company">
-                      {copy(
-                        "Developer company",
-                        "Компания застройщика",
-                        "חברת יזם",
-                      )}
-                    </Label>
-                    <Input
-                      id="project-form-dev-company"
-                      value={projectForm.developer_company}
-                      onChange={(event) =>
-                        updateProjectFormField(
-                          "developer_company",
-                          event.target.value,
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-contact-name">
-                      {copy("Contact name", "Имя ответственного", "שם איש קשר")}
-                    </Label>
-                    <Input
-                      id="project-form-contact-name"
-                      value={projectForm.contact_name}
-                      onChange={(event) =>
-                        updateProjectFormField(
-                          "contact_name",
-                          event.target.value,
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-phone">
-                      {copy("Primary phone", "Основной телефон", "טלפון ראשי")}
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <div className="inline-flex h-10 items-center rounded-lg border border-border bg-surface-subtle px-3 text-xs font-medium text-text-secondary">
-                        +972
-                      </div>
-                      <Input
-                        id="project-form-phone"
-                        value={projectForm.contact_phone}
-                        onChange={(event) =>
-                          updateProjectFormField(
-                            "contact_phone",
-                            formatProjectPhoneInput(event.target.value),
-                          )
-                        }
-                        placeholder="+972501234567"
-                      />
-                    </div>
-                    {projectFormFieldErrors.contact_phone ? (
-                      <div className="text-xs text-destructive">
-                        {projectFormFieldErrors.contact_phone}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-phone-alt">
-                      {copy("Alt phone", "Доп. телефон", "טלפון נוסף")}
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <div className="inline-flex h-10 items-center rounded-lg border border-border bg-surface-subtle px-3 text-xs font-medium text-text-secondary">
-                        +972
-                      </div>
-                      <Input
-                        id="project-form-phone-alt"
-                        value={projectForm.developer_phone_alt}
-                        onChange={(event) =>
-                          updateProjectFormField(
-                            "developer_phone_alt",
-                            formatProjectPhoneInput(event.target.value),
-                          )
-                        }
-                        placeholder="+972501234568"
-                      />
-                    </div>
-                    {projectFormFieldErrors.developer_phone_alt ? (
-                      <div className="text-xs text-destructive">
-                        {projectFormFieldErrors.developer_phone_alt}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-whatsapp">WhatsApp</Label>
-                    <div className="flex items-center gap-2">
-                      <div className="inline-flex h-10 items-center rounded-lg border border-border bg-surface-subtle px-3 text-xs font-medium text-text-secondary">
-                        +972
-                      </div>
-                      <Input
-                        id="project-form-whatsapp"
-                        value={projectForm.developer_whatsapp}
-                        onChange={(event) =>
-                          updateProjectFormField(
-                            "developer_whatsapp",
-                            formatProjectPhoneInput(event.target.value),
-                          )
-                        }
-                        placeholder="+972501234569"
-                      />
-                    </div>
-                    {projectFormFieldErrors.developer_whatsapp ? (
-                      <div className="text-xs text-destructive">
-                        {projectFormFieldErrors.developer_whatsapp}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-form-email">{copy("Email", "Эл. почта", "דוא״ל")}</Label>
-                    <Input
-                      id="project-form-email"
-                      type="email"
-                      value={projectForm.contact_email}
-                      onChange={(event) =>
-                        updateProjectFormField(
-                          "contact_email",
-                          event.target.value,
-                        )
-                      }
-                      placeholder="contact@example.com"
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="project-form-notes">
-                      {copy("Notes", "Заметки", "הערות")}
-                    </Label>
-                    <textarea
-                      id="project-form-notes"
-                      value={projectForm.developer_notes}
-                      onChange={(event) =>
-                        updateProjectFormField(
-                          "developer_notes",
-                          event.target.value,
-                        )
-                      }
-                      className="control-textarea min-h-[110px] w-full"
-                      placeholder={copy(
-                        "Access rules, gate, working hours, site notes",
-                        "Пропуск, ворота, режим работы, заметки по объекту",
-                        "כללי כניסה, שער, שעות עבודה, הערות אתר",
-                      )}
-                    />
-                  </div>
-                </div>
-                <div className="mt-4 flex flex-wrap content-start items-start gap-2">
-                  <a
-                    href={draftWhatsappLink || undefined}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-disabled={!draftWhatsappLink}
-                    className={cn(
-                      "inline-flex min-h-9 items-center gap-2 rounded-full border px-3 text-[12px] font-medium transition-colors",
-                      draftWhatsappLink
-                        ? "border-border-strong bg-surface text-text hover:bg-surface-subtle"
-                        : "cursor-not-allowed border-dashed border-border bg-surface-subtle text-text-secondary",
-                    )}
-                  >
-                    <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                    {copy(
-                      "Test WhatsApp",
-                      "Проверить WhatsApp",
-                      "בדוק WhatsApp",
-                    )}
-                  </a>
-                  <a
-                    href={draftCallLink || undefined}
-                    aria-disabled={!draftCallLink}
-                    className={cn(
-                      "inline-flex min-h-9 items-center gap-2 rounded-full border px-3 text-[12px] font-medium transition-colors",
-                      draftCallLink
-                        ? "border-border-strong bg-surface text-text hover:bg-surface-subtle"
-                        : "cursor-not-allowed border-dashed border-border bg-surface-subtle text-text-secondary",
-                    )}
-                  >
-                    <Phone className="h-4 w-4" aria-hidden="true" />
-                    {copy("Test call", "Проверить звонок", "בדוק שיחה")}
-                  </a>
-                  {!projectForm.contact_name.trim() &&
-                  !projectForm.contact_phone.trim() &&
-                  !projectForm.developer_whatsapp.trim() ? (
-                    <div className="rounded-lg border border-status-warning-border bg-status-warning-bg px-3 py-2 text-xs text-status-warning-fg">
-                      {copy(
-                        "Add contacts to unlock quick field actions.",
-                        "Добавьте контакты, чтобы включить быстрые полевые действия.",
-                        "הוסף אנשי קשר כדי להפעיל פעולות שטח מהירות.",
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-
-          {projectSubmitError && (
-            <div role="alert" className="rounded-lg border border-status-problem-border bg-status-problem-bg px-3 py-2 text-sm text-status-problem-fg">
-              {projectSubmitError}
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setProjectDialogOpen(false)}
-              disabled={projectSubmitting}
-            >
-              {copy("Cancel", "Отмена", "ביטול")}
-            </Button>
-            <Button
-              onClick={() => void handleProjectSubmit()}
-              disabled={projectSubmitting}
-            >
-              {projectSubmitting
-                ? copy("Saving...", "Сохраняем...", "שומר...")
-                : projectDialogMode === "create"
-                  ? copy("Create project", "Создать проект", "צור פרויקט")
-                  : copy("Save changes", "Сохранить изменения", "שמור שינויים")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProjectDialog
+        key={projectDialogSession}
+        open={projectDialogOpen}
+        onOpenChange={setProjectDialogOpen}
+        mode={projectDialogMode}
+        initialForm={projectDialogInitialForm}
+        projectId={selectedProjectId}
+        canManage={canManageProjects}
+        tokenLabel={tokenLabel}
+        onCreated={handleProjectCreated}
+        onUpdated={handleProjectUpdated}
+      />
 
       <Dialog open={urgencyDialogOpen} onOpenChange={setUrgencyDialogOpen}>
         <DialogContent className="max-w-[760px]">
