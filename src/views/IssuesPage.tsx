@@ -444,11 +444,7 @@ export default function IssuesPage() {
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось сохранить workflow."
-            : locale === "he"
-              ? "לא ניתן לשמור את ה-workflow."
-              : "Failed to save workflow",
+          copy("Failed to save workflow", "Не удалось сохранить workflow.", "לא ניתן לשמור את ה-workflow."),
         ),
       );
     },
@@ -532,11 +528,7 @@ export default function IssuesPage() {
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось открыть медиа проблемы."
-            : locale === "he"
-              ? "לא ניתן לפתוח את המדיה של התקלה."
-              : "Failed to open issue media",
+          copy("Failed to open issue media", "Не удалось открыть медиа проблемы.", "לא ניתן לפתוח את המדיה של התקלה."),
         ),
       );
     },
@@ -826,11 +818,7 @@ export default function IssuesPage() {
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось применить массовое обновление."
-            : locale === "he"
-              ? "לא ניתן להחיל עדכון מרוכז."
-              : "Failed to apply bulk update",
+          copy("Failed to apply bulk update", "Не удалось применить массовое обновление.", "לא ניתן להחיל עדכון מרוכז."),
         ),
       );
     },
@@ -1347,11 +1335,7 @@ export default function IssuesPage() {
               <div className="space-y-3">
                 <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2 text-[12px]">
                   <div className="text-text-secondary">
-                    {locale === "ru"
-                      ? "\u0412\u044b\u0431\u0440\u0430\u043d\u043d\u0430\u044f \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0430"
-                      : locale === "he"
-                        ? "\u05d4\u05ea\u05e7\u05dc\u05d4 \u05e9\u05e0\u05d1\u05d7\u05e8\u05d4"
-                        : "Selected issue"}
+                    {copy("Selected issue", "\u0412\u044b\u0431\u0440\u0430\u043d\u043d\u0430\u044f \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0430", "\u05d4\u05ea\u05e7\u05dc\u05d4 \u05e9\u05e0\u05d1\u05d7\u05e8\u05d4")}
                   </div>
                   <div className="font-medium mt-0.5">
                     {selectedIssue.door_unit_label} / {selectedIssue.project_id}
@@ -1362,11 +1346,7 @@ export default function IssuesPage() {
                   <div className="space-y-2 rounded-lg border border-border bg-surface-subtle p-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-[12px] font-medium text-text">
-                        {locale === "ru"
-                          ? "Комментарии"
-                          : locale === "he"
-                            ? "הערות"
-                            : "Comments"}
+                        {copy("Comments", "Комментарии", "הערות")}
                       </div>
                       <div className="text-[11px] text-text-secondary tabular-nums">
                         {(issueCommentsQuery.data || []).length}
@@ -1374,11 +1354,7 @@ export default function IssuesPage() {
                     </div>
                     {issueCommentsQuery.isLoading ? (
                       <div className="text-[12px] text-text-secondary">
-                        {locale === "ru"
-                          ? "Загружаем комментарии..."
-                          : locale === "he"
-                            ? "טוען הערות..."
-                            : "Loading comments..."}
+                        {copy("Loading comments...", "Загружаем комментарии...", "טוען הערות...")}
                       </div>
                     ) : issueCommentsQuery.isError ? (
                       <InlineNotice
@@ -1425,11 +1401,7 @@ export default function IssuesPage() {
                       </div>
                     ) : (
                       <div className="text-[12px] text-text-secondary">
-                        {locale === "ru"
-                          ? "Комментариев пока нет."
-                          : locale === "he"
-                            ? "עדיין אין הערות."
-                            : "No comments yet."}
+                        {copy("No comments yet.", "Комментариев пока нет.", "עדיין אין הערות.")}
                       </div>
                     )}
                   </div>
@@ -1437,11 +1409,7 @@ export default function IssuesPage() {
                   <div className="space-y-2 rounded-lg border border-border bg-surface-subtle p-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-[12px] font-medium text-text">
-                        {locale === "ru"
-                          ? "Медиа"
-                          : locale === "he"
-                            ? "מדיה"
-                            : "Media"}
+                        {copy("Media", "Медиа", "מדיה")}
                       </div>
                       <button
                         type="button"
@@ -1449,33 +1417,17 @@ export default function IssuesPage() {
                         className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-surface px-3 text-[11px] font-medium transition-colors hover:bg-surface-sunken"
                       >
                         {issueMediaOpen
-                          ? locale === "ru"
-                            ? "Скрыть"
-                            : locale === "he"
-                              ? "הסתר"
-                              : "Hide"
-                          : locale === "ru"
-                            ? "Показать"
-                            : locale === "he"
-                              ? "הצג"
-                              : "Show"}
+                          ? copy("Hide", "Скрыть", "הסתר")
+                          : copy("Show", "Показать", "הצג")}
                       </button>
                     </div>
                     {!issueMediaOpen ? (
                       <div className="text-[12px] text-text-secondary">
-                        {locale === "ru"
-                          ? "Открой медиа, чтобы увидеть вложения по проблеме."
-                          : locale === "he"
-                            ? "פתח מדיה כדי לראות קבצים מצורפים לבעיה."
-                            : "Open media to inspect issue attachments."}
+                        {copy("Open media to inspect issue attachments.", "Открой медиа, чтобы увидеть вложения по проблеме.", "פתח מדיה כדי לראות קבצים מצורפים לבעיה.")}
                       </div>
                     ) : issueMediaQuery.isLoading ? (
                       <div className="text-[12px] text-text-secondary">
-                        {locale === "ru"
-                          ? "Загружаем медиа..."
-                          : locale === "he"
-                            ? "טוען מדיה..."
-                            : "Loading media..."}
+                        {copy("Loading media...", "Загружаем медиа...", "טוען מדיה...")}
                       </div>
                     ) : issueMediaQuery.isError ? (
                       <InlineNotice
@@ -1535,27 +1487,15 @@ export default function IssuesPage() {
                                 className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-surface px-3 text-[11px] font-medium transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 {openMediaMutation.isPending
-                                  ? locale === "ru"
-                                    ? "Открываем..."
-                                    : locale === "he"
-                                      ? "פותח..."
-                                      : "Opening..."
-                                  : locale === "ru"
-                                    ? "Открыть"
-                                    : locale === "he"
-                                      ? "פתח"
-                                      : "Open"}
+                                  ? copy("Opening...", "Открываем...", "פותח...")
+                                  : copy("Open", "Открыть", "פתח")}
                               </button>
                             </div>
                           ))}
                       </div>
                     ) : (
                       <div className="text-[12px] text-text-secondary">
-                        {locale === "ru"
-                          ? "Вложений пока нет."
-                          : locale === "he"
-                            ? "עדיין אין קבצים מצורפים."
-                            : "No media yet."}
+                        {copy("No media yet.", "Вложений пока нет.", "עדיין אין קבצים מצורפים.")}
                       </div>
                     )}
                   </div>

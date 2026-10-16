@@ -1718,11 +1718,7 @@ export default function OperationsPage() {
         message: readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось повторно запустить импорт."
-            : locale === "he"
-              ? "לא ניתן להפעיל מחדש את ריצת הייבוא."
-              : "Failed to retry import run",
+          copy("Failed to retry import run", "Не удалось повторно запустить импорт.", "לא ניתן להפעיל מחדש את ריצת הייבוא."),
         ),
       });
     } finally {
@@ -1758,11 +1754,7 @@ export default function OperationsPage() {
         message: readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось повторно отправить элемент outbox."
-            : locale === "he"
-              ? "לא ניתן לנסות שוב פריט outbox."
-              : "Failed to retry outbox item",
+          copy("Failed to retry outbox item", "Не удалось повторно отправить элемент outbox.", "לא ניתן לנסות שוב פריט outbox."),
         ),
       });
     } finally {
@@ -1841,11 +1833,7 @@ export default function OperationsPage() {
         message: readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось повторить проблемные импорты."
-            : locale === "he"
-              ? "לא ניתן לנסות שוב את הייבואים הדורשים טיפול."
-              : "Failed to retry actionable imports",
+          copy("Failed to retry actionable imports", "Не удалось повторить проблемные импорты.", "לא ניתן לנסות שוב את הייבואים הדורשים טיפול."),
         ),
       });
     } finally {
@@ -1895,11 +1883,7 @@ export default function OperationsPage() {
         message: readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось выполнить сверку проблемных проектов."
-            : locale === "he"
-              ? "לא ניתן לבצע התאמה לפרויקטים הדורשים טיפול."
-              : "Failed to reconcile actionable projects",
+          copy("Failed to reconcile actionable projects", "Не удалось выполнить сверку проблемных проектов.", "לא ניתן לבצע התאמה לפרויקטים הדורשים טיפול."),
         ),
       });
     } finally {
@@ -1949,11 +1933,7 @@ export default function OperationsPage() {
         message: readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось повторить проблемные доставки."
-            : locale === "he"
-              ? "לא ניתן לנסות שוב את המשלוחים הדורשים טיפול."
-              : "Failed to retry actionable delivery",
+          copy("Failed to retry actionable delivery", "Не удалось повторить проблемные доставки.", "לא ניתן לנסות שוב את המשלוחים הדורשים טיפול."),
         ),
       });
     } finally {

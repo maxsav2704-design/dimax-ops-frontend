@@ -1,6 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { pickLocale } from "@/lib/locale";
 
 type DoorMatrixTileProps = {
   marking: string;
@@ -18,7 +19,7 @@ type DoorMatrixTileProps = {
 
 export function DoorMatrixTile({ marking, status, tone, inspectLabel, context, focused, selected, hasIssues, testId, onInspect, onToggleSelection }: DoorMatrixTileProps) {
   const { locale } = useI18n();
-  const selectLabel = locale === "ru" ? "Выбрать дверь" : locale === "he" ? "בחר דלת" : "Select door";
+  const selectLabel = pickLocale(locale, "Select door", "Выбрать дверь", "בחר דלת");
 
   return (
     <div className="dmx-door-tile min-w-0" data-focused={focused} data-selected={selected}>

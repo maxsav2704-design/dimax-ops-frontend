@@ -16,6 +16,7 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { InlineNotice } from "@/components/dimax";
+import { pickLocale } from "@/lib/locale";
 import { CalendarScheduleSurface } from "@/components/calendar/CalendarScheduleSurface";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -351,7 +352,7 @@ function localizedEventCount(count: number, locale?: "en" | "ru" | "he"): string
 
 function localizedBusyDays(count: number, locale?: "en" | "ru" | "he"): string {
   if (count <= 0) {
-    return locale === "ru" ? "нет задач" : locale === "he" ? "אין משימות" : "no tasks";
+    return pickLocale(locale ?? "en", "no tasks", "нет задач", "אין משימות");
   }
   if (locale === "ru") {
     return `занят ${count} ${ruPlural(count, "день", "дня", "дней")}`;
@@ -502,11 +503,7 @@ export default function CalendarPage() {
       setIsCreateOpen(false);
       setForm(makeDefaultForm(periodStartDate));
       setActionNotice(
-        locale === "ru"
-          ? "Событие создано."
-          : locale === "he"
-            ? "האירוע נוצר."
-            : "Event created.",
+        copy("Event created.", "Событие создано.", "האירוע נוצר."),
       );
       await queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
     },
@@ -538,11 +535,7 @@ export default function CalendarPage() {
       setIsEditOpen(false);
       setEditingEvent(null);
       setActionNotice(
-        locale === "ru"
-          ? "Событие обновлено."
-          : locale === "he"
-            ? "האירוע עודכן."
-            : "Event updated.",
+        copy("Event updated.", "Событие обновлено.", "האירוע עודכן."),
       );
       await queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
     },
@@ -563,11 +556,7 @@ export default function CalendarPage() {
         setIsInfoFrameOpen(false);
       }
       setActionNotice(
-        locale === "ru"
-          ? "Событие удалено."
-          : locale === "he"
-            ? "האירוע נמחק."
-            : "Event deleted.",
+        copy("Event deleted.", "Событие удалено.", "האירוע נמחק."),
       );
       await queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
     },

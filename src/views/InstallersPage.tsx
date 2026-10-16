@@ -461,7 +461,7 @@ export default function InstallersPage() {
         body: JSON.stringify(toPayload(form)),
       }),
     onSuccess: async () => {
-      setNotice("Installer created.");
+      setNotice(copy("Installer created.", "Монтажник создан.", "המתקין נוצר."));
       setActionError(null);
       setIsCreateOpen(false);
       setForm(emptyForm());
@@ -473,11 +473,7 @@ export default function InstallersPage() {
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось создать монтажника."
-            : locale === "he"
-              ? "לא ניתן ליצור מתקין."
-              : "Failed to create installer.",
+          copy("Failed to create installer.", "Не удалось создать монтажника.", "לא ניתן ליצור מתקין."),
         ),
       );
     },
@@ -497,7 +493,7 @@ export default function InstallersPage() {
       );
     },
     onSuccess: async () => {
-      setNotice("Installer profile updated.");
+      setNotice(copy("Installer profile updated.", "Профиль монтажника обновлён.", "פרופיל המתקין עודכן."));
       setActionError(null);
       await queryClient.invalidateQueries({ queryKey: ["installers"] });
     },
@@ -507,11 +503,7 @@ export default function InstallersPage() {
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось обновить монтажника."
-            : locale === "he"
-              ? "לא ניתן לעדכן את המתקין."
-              : "Failed to update installer.",
+          copy("Failed to update installer.", "Не удалось обновить монтажника.", "לא ניתן לעדכן את המתקין."),
         ),
       );
     },
@@ -523,7 +515,7 @@ export default function InstallersPage() {
         method: "DELETE",
       }),
     onSuccess: async () => {
-      setNotice("Installer deleted.");
+      setNotice(copy("Installer deleted.", "Монтажник удалён.", "המתקין נמחק."));
       setActionError(null);
       await queryClient.invalidateQueries({ queryKey: ["installers"] });
     },
@@ -533,11 +525,7 @@ export default function InstallersPage() {
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось удалить монтажника."
-            : locale === "he"
-              ? "לא ניתן למחוק את המתקין."
-              : "Failed to delete installer.",
+          copy("Failed to delete installer.", "Не удалось удалить монтажника.", "לא ניתן למחוק את המתקין."),
         ),
       );
     },
@@ -557,7 +545,7 @@ export default function InstallersPage() {
       );
     },
     onSuccess: async (installer) => {
-      setNotice("Installer user link updated.");
+      setNotice(copy("Installer user link updated.", "Связь монтажника с пользователем обновлена.", "קישור המשתמש של המתקין עודכן."));
       setActionError(null);
       setEditingInstaller(installer);
       await queryClient.invalidateQueries({ queryKey: ["installers"] });
@@ -568,11 +556,7 @@ export default function InstallersPage() {
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось связать пользователя с монтажником."
-            : locale === "he"
-              ? "לא ניתן לקשר משתמש למתקין."
-              : "Failed to link installer user.",
+          copy("Failed to link installer user.", "Не удалось связать пользователя с монтажником.", "לא ניתן לקשר משתמש למתקין."),
         ),
       );
     },
@@ -591,7 +575,7 @@ export default function InstallersPage() {
       );
     },
     onSuccess: async (installer) => {
-      setNotice("Installer user link removed.");
+      setNotice(copy("Installer user link removed.", "Связь монтажника с пользователем удалена.", "קישור המשתמש של המתקין הוסר."));
       setActionError(null);
       setEditingInstaller(installer);
       setLinkUserId("");
@@ -603,11 +587,7 @@ export default function InstallersPage() {
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось отвязать пользователя от монтажника."
-            : locale === "he"
-              ? "לא ניתן לנתק את המשתמש מהמתקין."
-              : "Failed to unlink installer user.",
+          copy("Failed to unlink installer user.", "Не удалось отвязать пользователя от монтажника.", "לא ניתן לנתק את המשתמש מהמתקין."),
         ),
       );
     },
@@ -628,7 +608,7 @@ export default function InstallersPage() {
       }));
     },
     onSuccess: async () => {
-      setNotice("Installer rate added.");
+      setNotice(copy("Installer rate added.", "Ставка монтажника добавлена.", "תעריף המתקין נוסף."));
       setActionError(null);
       setNewRatePrice("");
       await queryClient.invalidateQueries({
@@ -641,11 +621,7 @@ export default function InstallersPage() {
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось добавить ставку монтажника."
-            : locale === "he"
-              ? "לא ניתן להוסיף תעריף למתקין."
-              : "Failed to add installer rate.",
+          copy("Failed to add installer rate.", "Не удалось добавить ставку монтажника.", "לא ניתן להוסיף תעריף למתקין."),
         ),
       );
     },
@@ -658,7 +634,7 @@ export default function InstallersPage() {
         body: JSON.stringify({ price: rateDrafts[rateId] }),
       })),
     onSuccess: async () => {
-      setNotice("Installer rate updated.");
+      setNotice(copy("Installer rate updated.", "Ставка монтажника обновлена.", "תעריף המתקין עודכן."));
       setActionError(null);
       await queryClient.invalidateQueries({
         queryKey: ["installer-rates", editingInstaller?.id],
@@ -670,11 +646,7 @@ export default function InstallersPage() {
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось обновить ставку монтажника."
-            : locale === "he"
-              ? "לא ניתן לעדכן את תעריף המתקין."
-              : "Failed to update installer rate.",
+          copy("Failed to update installer rate.", "Не удалось обновить ставку монтажника.", "לא ניתן לעדכן את תעריף המתקין."),
         ),
       );
     },
@@ -686,7 +658,7 @@ export default function InstallersPage() {
         method: "DELETE",
       })),
     onSuccess: async () => {
-      setNotice("Installer rate deleted.");
+      setNotice(copy("Installer rate deleted.", "Ставка монтажника удалена.", "תעריף המתקין נמחק."));
       setActionError(null);
       await queryClient.invalidateQueries({
         queryKey: ["installer-rates", editingInstaller?.id],
@@ -698,11 +670,7 @@ export default function InstallersPage() {
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось удалить ставку монтажника."
-            : locale === "he"
-              ? "לא ניתן למחוק את תעריף המתקין."
-              : "Failed to delete installer rate.",
+          copy("Failed to delete installer rate.", "Не удалось удалить ставку монтажника.", "לא ניתן למחוק את תעריף המתקין."),
         ),
       );
     },

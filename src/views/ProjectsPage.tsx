@@ -4990,11 +4990,7 @@ export default function ProjectsPage() {
             </div>
             <details className="mb-3 border-b border-border-subtle pb-3" open={bulkSelectedProjectIds.length > 0 || deepLinkedFailedCount > 0}>
               <summary className="cursor-pointer py-1 text-[12px] font-medium text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--dmx-link)]">
-                {locale === "ru"
-                  ? "\u041c\u0430\u0441\u0441\u043e\u0432\u044b\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f"
-                  : locale === "he"
-                    ? "\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05e8\u05d5\u05d1\u05d5\u05ea"
-                    : "Batch actions"}
+                {copy("Batch actions", "\u041c\u0430\u0441\u0441\u043e\u0432\u044b\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f", "\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05e8\u05d5\u05d1\u05d5\u05ea")}
                 {bulkSelectedProjectIds.length > 0 ? ` (${bulkSelectedProjectIds.length})` : ""}
               </summary>
               <div className="mt-3 space-y-3">

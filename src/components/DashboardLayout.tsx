@@ -7,6 +7,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { logoutSession } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { pickLocale } from "@/lib/locale";
 interface DashboardLayoutProps {
   children: ReactNode;
 }
@@ -48,7 +49,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const session = useAuthSession();
   const { locale } = useI18n();
   const signOutLabel =
-    locale === "ru" ? "Выйти" : locale === "he" ? "התנתק" : "Sign out";
+    pickLocale(locale, "Sign out", "Выйти", "התנתק");
   return (
     <div className="dmx-app-frame">
       <div className="dmx-app-shell">

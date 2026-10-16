@@ -210,7 +210,7 @@ function JournalEditor({ id }: { id: string }) {
     else router.push("/journal");
   };
   const date = (value: string | null) => value ? new Intl.DateTimeFormat(
-    locale === "ru" ? "ru-RU" : locale === "he" ? "he-IL" : "en-GB",
+    copy("en-GB", "ru-RU", "he-IL"),
     { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jerusalem" },
   ).format(new Date(value)) : "-";
 

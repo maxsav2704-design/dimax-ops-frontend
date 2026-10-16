@@ -17,10 +17,10 @@ export type IssueExposureCoverage = {
 };
 
 export function UnpricedExposureNotice({ count }: { count?: number }) {
-  const { locale } = useI18n();
+  const copy = useCopy();
   if (!count) return null;
   return <p className="mt-1 text-xs text-status-warning-fg">
-    {locale === "ru" ? "Двери без подтверждённой ставки" : locale === "he" ? "דלתות ללא תעריף מאושר" : "Doors without a confirmed rate"}: {count}.
+    {copy("Doors without a confirmed rate", "Двери без подтверждённой ставки", "דלתות ללא תעריף מאושר")}: {count}.
   </p>;
 }
 

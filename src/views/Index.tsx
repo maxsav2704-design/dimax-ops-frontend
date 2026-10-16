@@ -15,6 +15,7 @@ import { apiFetch } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { countNoun, type PluralSpec } from "@/lib/plural";
 import { cn } from "@/lib/utils";
+import { pickLocale } from "@/lib/locale";
 
 // Count nouns for the KPI detail lines: Russian needs one/few/many forms
 // ("1 дверь осталась", "2 двери осталось", "5 дверей осталось").
@@ -312,8 +313,8 @@ function dashboardToneClasses(tone: DashboardV24Tone) {
 function DashboardV24KpiTile({ item }: { item: DashboardV24Kpi }) {
   const { locale } = useI18n();
   const tone = dashboardToneClasses(item.ready ? item.tone : "neutral");
-  const unavailable = locale === "ru" ? "Нет данных" : locale === "he" ? "אין נתונים" : "Unavailable";
-  const loading = locale === "ru" ? "Загрузка" : locale === "he" ? "טוען" : "Loading";
+  const unavailable = pickLocale(locale, "Unavailable", "Нет данных", "אין נתונים");
+  const loading = pickLocale(locale, "Loading", "Загрузка", "טוען");
   const isLoading = item.pending && !item.ready;
 
   return (
@@ -442,17 +443,9 @@ const Index = () => {
     now.toISOString();
   const refreshLabel = hhmm(refreshSource, locale);
   const dashboardTitle =
-    locale === "ru"
-      ? "Главная"
-      : locale === "he"
-        ? "ראשי"
-        : "Home";
+    pickLocale(locale, "Home", "Главная", "ראשי");
   const dashboardSubtitle =
-    locale === "ru"
-      ? "Что происходит на объектах и что требует вашего внимания сегодня."
-      : locale === "he"
-        ? "מה קורה בפרויקטים ומה דורש את תשומת לבך היום."
-        : "What is happening on site and what needs your attention today.";
+    pickLocale(locale, "What is happening on site and what needs your attention today.", "Что происходит на объектах и что требует вашего внимания сегодня.", "מה קורה בפרויקטים ומה דורש את תשומת לבך היום.");
   const dashboardKpis: DashboardV24Kpi[] = [
     {
       label: copy.kpi.activeProjects,

@@ -24,6 +24,7 @@ import {
 import { readableApiError } from "@/lib/api-error-display";
 import { getOrCreateDeviceId } from "@/lib/device-id";
 import { useI18n } from "@/lib/i18n";
+import { pickLocale } from "@/lib/locale";
 
 type LoginResponse = {
   access_token: string;
@@ -97,23 +98,11 @@ export default function LoginPage() {
   const [accessNotice, setAccessNotice] = useState<string | null>(null);
   const canSubmit = Boolean(companyId.trim() && email.trim() && password);
   const suiteBadgeLabel =
-    locale === "ru"
-      ? "\u0421\u0438\u0441\u0442\u0435\u043c\u0430"
-      : locale === "he"
-        ? "\u05DE\u05E2\u05E8\u05DB\u05EA"
-        : "Suite";
+    pickLocale(locale, "Suite", "\u0421\u0438\u0441\u0442\u0435\u043c\u0430", "\u05DE\u05E2\u05E8\u05DB\u05EA");
   const accessLinkLabel =
-    locale === "ru"
-      ? "\u041D\u0443\u0436\u0435\u043D \u0434\u043E\u0441\u0442\u0443\u043F?"
-      : locale === "he"
-        ? "\u05E6\u05E8\u05D9\u05DA \u05D2\u05D9\u05E9\u05D4?"
-        : "Need access?";
+    pickLocale(locale, "Need access?", "\u041D\u0443\u0436\u0435\u043D \u0434\u043E\u0441\u0442\u0443\u043F?", "\u05E6\u05E8\u05D9\u05DA \u05D2\u05D9\u05E9\u05D4?");
   const systemsStatusLabel =
-    locale === "ru"
-      ? "\u0421\u0438\u0441\u0442\u0435\u043C\u044B \u0440\u0430\u0431\u043E\u0442\u0430\u044E\u0442"
-      : locale === "he"
-        ? "\u05DB\u05DC \u05D4\u05DE\u05E2\u05E8\u05DB\u05D5\u05EA \u05E4\u05E2\u05D9\u05DC\u05D5\u05EA"
-        : "All systems operational";
+    pickLocale(locale, "All systems operational", "\u0421\u0438\u0441\u0442\u0435\u043C\u044B \u0440\u0430\u0431\u043E\u0442\u0430\u044E\u0442", "\u05DB\u05DC \u05D4\u05DE\u05E2\u05E8\u05DB\u05D5\u05EA \u05E4\u05E2\u05D9\u05DC\u05D5\u05EA");
 
   useEffect(() => {
     const disableGuard = enableLoginPageInteractivityGuard();

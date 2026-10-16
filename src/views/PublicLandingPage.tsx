@@ -17,6 +17,7 @@ import {
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { pickLocale } from "@/lib/locale";
 
 function landingPanelClass(extra?: string): string {
   return cn("rounded-lg border border-border bg-surface", extra);
@@ -26,7 +27,7 @@ export default function PublicLandingPage() {
   const { locale, t } = useI18n();
   const lt = (key: string) => t(key);
   const installerSurfaceValue =
-    locale === "ru" ? "Веб" : locale === "he" ? "ווב" : "Web";
+    pickLocale(locale, "Web", "Веб", "ווב");
   const pillars = [
     {
       icon: ShieldCheck,

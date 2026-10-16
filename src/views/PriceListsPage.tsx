@@ -25,6 +25,7 @@ import { useI18n } from "@/lib/i18n";
 import { formatLocaleDateTime, formatLocaleMoney } from "@/lib/formatting";
 import { cn } from "@/lib/utils";
 import { PRICE_API, PRICE_PAGE_SIZE, invitationStatus, type FactoryContact, type PriceDetail, type PricePage, type InvitationPage } from "@/lib/factory-prices";
+import { pickLocale } from "@/lib/locale";
 
 function Badge({ status, t }: { status: "DRAFT" | "CONFIRMED" | "CANCELLED" | "REVOKED" | "PENDING" | "EXPIRED" | "SUPERSEDED"; t: PriceCopy }) {
   return <span className={cn("inline-block max-w-full rounded-md border px-2 py-1 text-xs leading-4",
@@ -106,8 +107,8 @@ function PriceWorkspace({ writable, owner }: { writable: boolean; owner: boolean
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
             <div className="flex flex-wrap items-center gap-3"><h2 className="text-lg font-semibold">{t.version} {row.version}</h2><Badge status={row.status} t={t} />
               {pricing.state && <span className="text-xs text-text-secondary">{pricing.state.active_price?.price_list_id === row.id
-                ? locale === "ru" ? "Действующая версия" : locale === "he" ? "הגרסה בתוקף" : "Currently effective"
-                : locale === "ru" ? "Не действует сейчас" : locale === "he" ? "אינה בתוקף כעת" : "Not currently effective"}</span>}
+                ? pickLocale(locale, "Currently effective", "Действующая версия", "הגרסה בתוקף")
+                : pickLocale(locale, "Not currently effective", "Не действует сейчас", "אינה בתוקף כעת")}</span>}
             </div>
             {writable && row.status === "DRAFT" && <div className="flex flex-wrap gap-2">
               {row.version === latest && <Button variant="outline" onClick={() => setAction({ kind: "invite", list: row, contact: contact.data ?? undefined })} disabled={!fresh || !contact.data || contact.isError || contact.isFetching}><Link2 className="me-2 size-4" />{t.invite}</Button>}

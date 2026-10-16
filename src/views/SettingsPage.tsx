@@ -20,6 +20,7 @@ import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { canAccessAdminModule } from "@/lib/admin-access";
 import { useI18n, useCopy } from "@/lib/i18n";
+import { isLocale, pickLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 type CompanySettings = {
   id: string;
@@ -83,17 +84,10 @@ function formatDate(value: string, locale?: string): string {
   return date.toLocaleString(locale);
 }
 function BoolBadge({ value, locale }: { value: boolean; locale?: string }) {
+  const badgeLocale = isLocale(locale) ? locale : "en";
   const label = value
-    ? locale === "ru"
-      ? "Включено"
-      : locale === "he"
-        ? "פעיל"
-        : "Enabled"
-    : locale === "ru"
-      ? "Отключено"
-      : locale === "he"
-        ? "כבוי"
-        : "Disabled";
+    ? pickLocale(badgeLocale, "Enabled", "Включено", "פעיל")
+    : pickLocale(badgeLocale, "Disabled", "Отключено", "כבוי");
   return (
     <span
       className={cn(
@@ -174,11 +168,7 @@ export default function SettingsPage() {
       setFeedback({
         tone: "success",
         message:
-          locale === "ru"
-            ? "Данные компании сохранены."
-            : locale === "he"
-              ? "פרטי החברה נשמרו."
-              : "Company details saved.",
+          copy("Company details saved.", "Данные компании сохранены.", "פרטי החברה נשמרו."),
       });
       await queryClient.invalidateQueries({ queryKey: ["settings-company"] });
     },

@@ -430,11 +430,7 @@ export default function JournalPage() {
           readableApiError(
             error,
             locale,
-            locale === "ru"
-              ? "Не удалось загрузить центр коммуникаций."
-              : locale === "he"
-                ? "לא ניתן לטעון את מרכז התקשורת."
-                : "Failed to load communications center",
+            copy("Failed to load communications center", "Не удалось загрузить центр коммуникаций.", "לא ניתן לטעון את מרכז התקשורת."),
           ),
         );
       } finally {
@@ -449,7 +445,7 @@ export default function JournalPage() {
     return () => {
       alive = false;
     };
-  }, [canManage, locale, refreshTick, statusFilter]);
+  }, [canManage, copy, locale, refreshTick, statusFilter]);
 
   useEffect(() => {
     let alive = true;
@@ -479,11 +475,7 @@ export default function JournalPage() {
           readableApiError(
             error,
             locale,
-            locale === "ru"
-              ? "Не удалось загрузить выбранный журнал."
-              : locale === "he"
-                ? "לא ניתן לטעון את היומן שנבחר."
-                : "Failed to load selected journal",
+            copy("Failed to load selected journal", "Не удалось загрузить выбранный журнал.", "לא ניתן לטעון את היומן שנבחר."),
           ),
         );
         setSelectedJournal(null);
@@ -499,7 +491,7 @@ export default function JournalPage() {
     return () => {
       alive = false;
     };
-  }, [locale, selectedJournalId, refreshTick]);
+  }, [copy, locale, selectedJournalId, refreshTick]);
 
   useEffect(() => {
     if (!canManage) {
@@ -537,11 +529,7 @@ export default function JournalPage() {
           readableApiError(
             error,
             locale,
-            locale === "ru"
-              ? "Не удалось загрузить журнал доставок."
-              : locale === "he"
-                ? "לא ניתן לטעון את יומן המשלוחים."
-                : "Failed to load delivery log",
+            copy("Failed to load delivery log", "Не удалось загрузить журнал доставок.", "לא ניתן לטעון את יומן המשלוחים."),
           ),
         );
       } finally {
@@ -556,7 +544,7 @@ export default function JournalPage() {
     return () => {
       alive = false;
     };
-  }, [canManage, locale, selectedJournalId, refreshTick]);
+  }, [canManage, copy, locale, selectedJournalId, refreshTick]);
 
   const journalsWithProject = useMemo(() => {
     const projectById = new Map(
@@ -663,11 +651,7 @@ export default function JournalPage() {
         message: readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось создать черновик журнала."
-            : locale === "he"
-              ? "לא ניתן ליצור טיוטת יומן."
-              : "Failed to create journal draft",
+          copy("Failed to create journal draft", "Не удалось создать черновик журнала.", "לא ניתן ליצור טיוטת יומן."),
         ),
       });
     } finally {
@@ -702,11 +686,7 @@ export default function JournalPage() {
         message: readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось отметить журнал как готовый."
-            : locale === "he"
-              ? "לא ניתן לסמן את היומן כמוכן."
-              : "Failed to mark journal ready",
+          copy("Failed to mark journal ready", "Не удалось отметить журнал как готовый.", "לא ניתן לסמן את היומן כמוכן."),
         ),
       });
     } finally {
@@ -740,11 +720,7 @@ export default function JournalPage() {
         message: readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось экспортировать PDF."
-            : locale === "he"
-              ? "לא ניתן לייצא PDF."
-              : "Failed to export PDF",
+          copy("Failed to export PDF", "Не удалось экспортировать PDF.", "לא ניתן לייצא PDF."),
         ),
       });
     } finally {
@@ -833,11 +809,7 @@ export default function JournalPage() {
         message: readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось поставить отправку журнала в очередь."
-            : locale === "he"
-              ? "לא ניתן להכניס את שליחת היומן לתור."
-              : "Failed to queue journal send",
+          copy("Failed to queue journal send", "Не удалось поставить отправку журнала в очередь.", "לא ניתן להכניס את שליחת היומן לתור."),
         ),
       });
     } finally {
@@ -874,11 +846,7 @@ export default function JournalPage() {
         message: readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось повторно отправить элемент outbox."
-            : locale === "he"
-              ? "לא ניתן לנסות שוב פריט outbox."
-              : "Failed to retry outbox item",
+          copy("Failed to retry outbox item", "Не удалось повторно отправить элемент outbox.", "לא ניתן לנסות שוב פריט outbox."),
         ),
       });
     } finally {
@@ -922,11 +890,7 @@ export default function JournalPage() {
         message: readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось построить предпросмотр шаблона."
-            : locale === "he"
-              ? "לא ניתן ליצור תצוגה מקדימה לתבנית."
-              : "Failed to render template preview",
+          copy("Failed to render template preview", "Не удалось построить предпросмотр шаблона.", "לא ניתן ליצור תצוגה מקדימה לתבנית."),
         ),
       });
     } finally {
@@ -1008,11 +972,7 @@ export default function JournalPage() {
         message: readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось сохранить шаблон."
-            : locale === "he"
-              ? "לא ניתן לשמור את התבנית."
-              : "Failed to save template",
+          copy("Failed to save template", "Не удалось сохранить шаблон.", "לא ניתן לשמור את התבנית."),
         ),
       });
     } finally {
@@ -1052,11 +1012,7 @@ export default function JournalPage() {
         message: readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось удалить шаблон."
-            : locale === "he"
-              ? "לא ניתן למחוק את התבנית."
-              : "Failed to delete template",
+          copy("Failed to delete template", "Не удалось удалить шаблон.", "לא ניתן למחוק את התבנית."),
         ),
       });
     } finally {
@@ -1753,7 +1709,7 @@ export default function JournalPage() {
                           {outboxSummary?.by_delivery_status?.DELIVERED ?? 0}
                         </span>
                         <span>
-                          {locale === "ru" ? "Ожидает" : locale === "he" ? "ממתין" : "Pending"}:{" "}
+                          {copy("Pending", "Ожидает", "ממתין")}:{" "}
                           {outboxSummary?.by_delivery_status?.PENDING ?? 0}
                         </span>
                         <span>

@@ -265,11 +265,7 @@ export default function InstallerProjectPage({
     }
   };
   const shortOnlyThis =
-    locale === "ru"
-      ? "\u0422\u043e\u043b\u044c\u043a\u043e \u044d\u0442\u0430"
-      : locale === "he"
-        ? "\u05e8\u05e7 \u05d6\u05d5"
-        : "Only this";
+    copy("Only this", "\u0422\u043e\u043b\u044c\u043a\u043e \u044d\u0442\u0430", "\u05e8\u05e7 \u05d6\u05d5");
   const queryClient = useQueryClient();
   const [selectedReasonId, setSelectedReasonId] = useState("");
   const [notInstalledComment, setNotInstalledComment] = useState("");
@@ -585,11 +581,7 @@ export default function InstallerProjectPage({
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось отметить установку."
-            : locale === "he"
-              ? "לא ניתן לסמן את ההתקנה."
-              : "Install action failed.",
+          copy("Install action failed.", "Не удалось отметить установку.", "לא ניתן לסמן את ההתקנה."),
         ),
       );
     },
@@ -621,11 +613,7 @@ export default function InstallerProjectPage({
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось отметить дверь как неустановленную."
-            : locale === "he"
-              ? "לא ניתן לסמן את הדלת כלא מותקנת."
-              : "Not-installed action failed.",
+          copy("Not-installed action failed.", "Не удалось отметить дверь как неустановленную.", "לא ניתן לסמן את הדלת כלא מותקנת."),
         ),
       );
     },
@@ -660,11 +648,7 @@ export default function InstallerProjectPage({
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось сохранить факт по допработе."
-            : locale === "he"
-              ? "לא ניתן לשמור דיווח על עבודה נוספת."
-              : "Add-on fact action failed.",
+          copy("Add-on fact action failed.", "Не удалось сохранить факт по допработе.", "לא ניתן לשמור דיווח על עבודה נוספת."),
         ),
       );
     },

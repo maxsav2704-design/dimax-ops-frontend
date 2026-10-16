@@ -178,7 +178,7 @@ export default function LibraryPage() {
         }),
       }),
     onSuccess: async () => {
-      setMessage("Library product created.");
+      setMessage(copy("Library product created.", "Товар библиотеки создан.", "מוצר הספרייה נוצר."));
       setErrorMessage(null);
       setForm(emptyForm());
       setIsCreateOpen(false);
@@ -190,11 +190,7 @@ export default function LibraryPage() {
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось создать товар в библиотеке."
-            : locale === "he"
-              ? "לא ניתן ליצור פריט בספרייה."
-              : "Failed to create library product.",
+          copy("Failed to create library product.", "Не удалось создать товар в библиотеке.", "לא ניתן ליצור פריט בספרייה."),
         ),
       );
     },
@@ -216,7 +212,7 @@ export default function LibraryPage() {
       );
     },
     onSuccess: async () => {
-      setMessage("Library product updated.");
+      setMessage(copy("Library product updated.", "Товар библиотеки обновлён.", "מוצר הספרייה עודכן."));
       setErrorMessage(null);
       setIsEditOpen(false);
       setEditingItem(null);
@@ -228,11 +224,7 @@ export default function LibraryPage() {
         readableApiError(
           error,
           locale,
-          locale === "ru"
-            ? "Не удалось обновить товар в библиотеке."
-            : locale === "he"
-              ? "לא ניתן לעדכן פריט בספרייה."
-              : "Failed to update library product.",
+          copy("Failed to update library product.", "Не удалось обновить товар в библиотеке.", "לא ניתן לעדכן פריט בספרייה."),
         ),
       );
     },
@@ -423,11 +415,7 @@ export default function LibraryPage() {
               readableApiError(
                 listQuery.error,
                 locale,
-                locale === "ru"
-                  ? "Не удалось загрузить библиотеку."
-                  : locale === "he"
-                    ? "לא ניתן לטעון את הספרייה."
-                    : "Failed to load library.",
+                copy("Failed to load library.", "Не удалось загрузить библиотеку.", "לא ניתן לטעון את הספרייה."),
               )}
           </InlineNotice>
         )}{" "}
