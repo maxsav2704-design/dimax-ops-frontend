@@ -214,9 +214,12 @@ export async function fetchInstallerWorkspace(params: {
           params.tasksFromIso
         )}&ends_at=${encodeURIComponent(params.tasksToIso)}`
       ),
-      safeOptionalFetch<InstallerIssuesResponse>("/api/v1/installer/issues"),
-      fetchInstallerEarningsSummary(),
-      fetchInstallerSyncQueue(),
+      // Optional panels must not sink the whole workspace: a failure here
+      // renders as "no data" on the home screen, while the dedicated earnings
+      // and sync-queue pages call these fetchers directly and show the error.
+      safeOptionalFetch<InstallerIssuesResponse>("/api/v1/installer/issues").catch(() => null),
+      fetchInstallerEarningsSummary().catch(() => null),
+      fetchInstallerSyncQueue().catch(() => null),
     ]);
 
   return {
