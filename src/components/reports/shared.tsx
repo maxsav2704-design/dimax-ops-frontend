@@ -4,6 +4,7 @@ import { useCallback } from "react";
 
 import { useCopy, useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { readableApiError } from "@/lib/api-error-display";
 import { apiDownload } from "@/lib/api";
 import { formatLocaleDateTime as formatLocalizedDateTime, formatLocaleNumber as formatLocalizedNumber, formatLocalePercent as formatLocalizedPercent } from "@/lib/formatting";
 import { Star } from "lucide-react";
@@ -410,7 +411,10 @@ export function formatReportDateTime(value: string): string {
   return formatLocalizedDateTime(value);
 }
 
-/** Catalog text (`t`), report overrides (`tt`) and inline tri-lingual copy for a section. */
+/**
+ * Catalog text (`t`), report overrides (`tt`), inline tri-lingual copy, the
+ * localized API error reader and the sort-option label mapper for a section.
+ */
 export function useReportsText() {
   const { locale, t } = useI18n();
   const copy = useCopy();
@@ -418,7 +422,38 @@ export function useReportsText() {
     (key: string) => reportsOverrides[locale]?.[key] ?? t(key),
     [locale, t],
   );
-  return { locale, t, tt, copy };
+  const readError = useCallback(
+    (error: unknown, fallback: string) => readableApiError(error, locale, fallback),
+    [locale],
+  );
+  const optionLabel = useCallback(
+    (label: string) => {
+      switch (label) {
+        case "Profit":
+          return copy("Profit", "Прибыль", "רווח");
+        case "Margin %":
+          return copy("Margin %", "Маржа %", "מרווח %");
+        case "Installed Doors":
+          return copy("Installed Doors", "Смонтированные двери", "דלתות מותקנות");
+        case "Profit / Door":
+          return copy("Profit / Door", "Прибыль / дверь", "רווח / דלת");
+        case "Open Issues":
+          return copy("Open Issues", "Открытые проблемы", "תקלות פתוחות");
+        case "Total Doors":
+          return copy("Total Doors", "Всего дверей", 'סה"כ דלתות');
+        case "Not Installed":
+          return copy("Not Installed", "Не смонтировано", "לא הותקן");
+        case "Planned Revenue":
+          return copy("Planned Revenue", "Плановая выручка", "הכנסה מתוכננת");
+        case "Installed Revenue":
+          return copy("Installed Revenue", "Выручка по монтажу", "הכנסה מותקנת");
+        default:
+          return label;
+      }
+    },
+    [copy],
+  );
+  return { locale, t, tt, copy, readError, optionLabel };
 }
 
 // ---- moved verbatim from ReportsPage.tsx (module level) ----
