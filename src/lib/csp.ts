@@ -6,7 +6,9 @@
 //
 // Origins that are not 'self':
 // - the API (NEXT_PUBLIC_API_BASE_URL): XHR/fetch, media URLs and images;
-// - Google Fonts: src/index.css imports Rubik and JetBrains Mono from there.
+// - Google Fonts: src/index.css imports Rubik and JetBrains Mono from there;
+// - OpenStreetMap: the project dialog embeds its map preview in an iframe
+//   (frame-src; default-src 'self' blocked it before).
 // Inline style *attributes* (React `style={}`) cannot carry a nonce, hence
 // 'unsafe-inline' for styles only; scripts stay strict.
 
@@ -20,6 +22,7 @@ export type CspOptions = {
 
 const GOOGLE_FONTS_CSS = "https://fonts.googleapis.com";
 const GOOGLE_FONTS_FILES = "https://fonts.gstatic.com";
+const OPENSTREETMAP_EMBED = "https://www.openstreetmap.org";
 
 export function originOf(url: string, fallback: string): string {
   try {
@@ -60,6 +63,7 @@ export function buildContentSecurityPolicy({ nonce, apiOrigin, isDev }: CspOptio
     ["media-src", ["'self'", "blob:", "data:", "https:", ...api]],
     ["connect-src", ["'self'", ...api, ...(isDev ? ["ws://127.0.0.1:*", "ws://localhost:*", "http://127.0.0.1:*", "http://localhost:*"] : [])]],
     ["worker-src", ["'self'", "blob:"]],
+    ["frame-src", ["'self'", OPENSTREETMAP_EMBED]],
     ["manifest-src", ["'self'"]],
     ["object-src", ["'none'"]],
     ["base-uri", ["'self'"]],

@@ -33,6 +33,12 @@ describe("buildContentSecurityPolicy", () => {
     expect(dev).not.toContain("upgrade-insecure-requests");
   });
 
+  it("lets the project dialog embed its OpenStreetMap preview and nothing else in frames", () => {
+    // Regression: default-src 'self' blocked the map iframe once the nonce CSP shipped.
+    expect(directive(prod, "frame-src")).toBe("frame-src 'self' https://www.openstreetmap.org");
+    expect(directive(dev, "frame-src")).toBe("frame-src 'self' https://www.openstreetmap.org");
+  });
+
   it("allows both loopback spellings of a local API origin, and only the given origin for real hosts", () => {
     expect(apiOrigins("http://127.0.0.1:8000")).toEqual(["http://localhost:8000", "http://127.0.0.1:8000"]);
     expect(apiOrigins("http://localhost:8000")).toEqual(["http://localhost:8000", "http://127.0.0.1:8000"]);
