@@ -3295,7 +3295,7 @@ export default function ProjectsPage() {
       </div>
 
       <ProjectDialog
-        key={projectDialogSession}
+        key={`project-dialog-${projectDialogSession}`}
         open={projectDialogOpen}
         onOpenChange={setProjectDialogOpen}
         mode={projectDialogMode}
@@ -3308,7 +3308,7 @@ export default function ProjectsPage() {
       />
 
       <ManualDoorDialog
-        key={manualDoorSession}
+        key={`manual-door-${manualDoorSession}`}
         open={manualDoorDialogOpen}
         onOpenChange={setManualDoorDialogOpen}
         initialForm={manualDoorInitialForm}

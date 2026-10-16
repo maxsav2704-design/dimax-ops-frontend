@@ -4364,4 +4364,20 @@ describe("ProjectsPage", () => {
     expect(screen.getAllByTestId(/^project-door-row-/)).toHaveLength(120);
     expect(screen.queryByTestId("project-door-ledger-more")).not.toBeInTheDocument();
   }, 30000);
+
+  it("mounts the project and manual-door dialogs with distinct React keys", async () => {
+    // Regression: both dialogs are remounted per open through a session counter; both
+    // counters start at 0, so a bare `key={session}` gave two siblings the same key.
+    const errorSpy = vi.spyOn(console, "error");
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [{ id: "project-1", name: "Tower", status: "ACTIVE" }] };
+      if (path === "/api/v1/admin/projects/project-1") return { id: "project-1", name: "Tower", issues_open: [] };
+      if (path.includes("/doors/layout")) return { project_id: "project-1", total_doors: 0, buckets: [] };
+      return { items: [], total: 0 };
+    });
+    render(<ProjectsPage />, { wrapper: Providers });
+    await screen.findAllByText("Tower");
+    const duplicateKey = errorSpy.mock.calls.find((call) => String(call[0]).includes("same key"));
+    expect(duplicateKey).toBeUndefined();
+  }, 30000);
 });
