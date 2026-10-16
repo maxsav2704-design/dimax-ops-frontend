@@ -3,8 +3,11 @@
 import { useCallback } from "react";
 
 import { useCopy, useI18n, type Locale } from "@/lib/i18n";
-import { formatLocaleDateTime as formatLocalizedDateTime } from "@/lib/formatting";
 import { cn } from "@/lib/utils";
+import { apiDownload } from "@/lib/api";
+import { formatLocaleDateTime as formatLocalizedDateTime, formatLocaleNumber as formatLocalizedNumber, formatLocalePercent as formatLocalizedPercent } from "@/lib/formatting";
+import { Star } from "lucide-react";
+import type { InstallerMatrixSortBy, InstallerProjectSortBy, InstallersSortBy, OrderNumbersSortBy, ReportsDashboardTone, ReportsFocus, ReportsInsight, ReportsLibraryGroup, ReportsOpsPreset, ReportsPreset, ReportsScopedContext, SortDir } from "./types";
 
 // Shared by ReportsPage and its section components (src/components/reports/*).
 // Moved out of the page verbatim while the page is split into sections.
@@ -417,3 +420,508 @@ export function useReportsText() {
   );
   return { locale, t, tt, copy };
 }
+
+// ---- moved verbatim from ReportsPage.tsx (module level) ----
+
+export const LIVE_REPORT_REFRESH_MS = 30_000;
+
+export const STANDARD_REPORT_REFRESH_MS = 5 * 60_000;
+
+export const PAGE_SIZE = 20;
+
+export const KPI_PAGE_SIZE = 20;
+
+export const FAILED_OUTBOX_LIMIT = 8;
+
+export const AUDIT_PREVIEW_LIMIT = 8;
+
+export const AUDIT_EXPORT_LIMIT = 10000;
+
+export const KPI_EXPORT_LIMIT = 5000;
+
+export const ISSUES_ANALYTICS_DAYS = 30;
+
+export const PROJECT_MARGIN_LIMIT = 5;
+
+export const INSTALLER_MATRIX_LIMIT = 8;
+
+export const INSTALLER_PROJECT_LIMIT = 10;
+
+export const RISK_CONCENTRATION_LIMIT = 5;
+
+export const REPORTS_PRESETS_STORAGE_KEY = "dimax_reports_presets_v1";
+
+export const REPORTS_FOCUS_IDS: Record<ReportsFocus, string> = {
+  operations: "reports-operations-center",
+  delivery: "reports-delivery-risk",
+  issues: "reports-issues-analytics",
+};
+
+export function getReportsFocusCopy(
+  t: (key: string) => string,
+): Record<ReportsFocus, { title: string; description: string }> {
+  return {
+    operations: {
+      title: t("reports.operationsFocusTitle"),
+      description: t("reports.operationsFocusDescription"),
+    },
+    delivery: {
+      title: t("reports.deliveryFocusTitle"),
+      description: t("reports.deliveryFocusDescription"),
+    },
+    issues: {
+      title: t("reports.issuesFocusTitle"),
+      description: t("reports.issuesFocusDescription"),
+    },
+  };
+}
+
+export function getReportsOpsPresetCopy(
+  t: (key: string) => string,
+): Record<
+  ReportsOpsPreset,
+  { title: string; description: string; slaHistoryDays: number }
+> {
+  return {
+    "failed-imports": {
+      title: t("reports.failedImportsPresetTitle"),
+      description: t("reports.failedImportsPresetDescription"),
+      slaHistoryDays: 7,
+    },
+    "delivery-risk": {
+      title: t("reports.deliveryRiskPresetTitle"),
+      description: t("reports.deliveryRiskPresetDescription"),
+      slaHistoryDays: 7,
+    },
+    "issue-pressure": {
+      title: t("reports.issuePressurePresetTitle"),
+      description: t("reports.issuePressurePresetDescription"),
+      slaHistoryDays: 14,
+    },
+  };
+}
+
+export function parseReportsFocus(value: string | null): ReportsFocus | null {
+  if (value === "operations" || value === "delivery" || value === "issues") {
+    return value;
+  }
+  return null;
+}
+
+export function parseReportsOpsPreset(value: string | null): ReportsOpsPreset | null {
+  if (
+    value === "failed-imports" ||
+    value === "delivery-risk" ||
+    value === "issue-pressure"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+export function getReportsFocusTargetId(
+  focus: ReportsFocus | null,
+  scope: ReportsScopedContext,
+): string | null {
+  if (scope.projectId) {
+    return "reports-project-plan-fact";
+  }
+  if (scope.outboxId) {
+    return "reports-failed-outbox";
+  }
+  if (scope.deliveryChannel || scope.webhookProvider) {
+    return "reports-delivery-scope";
+  }
+  if (scope.installerId) {
+    return "reports-installers-kpi";
+  }
+  if (!focus) {
+    return null;
+  }
+  return REPORTS_FOCUS_IDS[focus];
+}
+
+export const AUDIT_ENTITY_OPTIONS = [
+  "door_type",
+  "reason",
+  "company",
+  "project",
+  "sync_state",
+] as const;
+
+export const AUDIT_ACTION_OPTIONS = [
+  "DOOR_TYPE_CREATE",
+  "DOOR_TYPE_UPDATE",
+  "DOOR_TYPE_DELETE",
+  "REASON_CREATE",
+  "REASON_UPDATE",
+  "REASON_DELETE",
+  "SETTINGS_COMPANY_UPDATE",
+  "PROJECT_DOORS_IMPORT_ANALYZE",
+  "PROJECT_DOORS_IMPORT_APPLY",
+  "PROJECT_DOORS_IMPORT_RETRY",
+  "PROJECT_DOORS_IMPORT_RETRY_BULK",
+  "SYNC_STATE_RESET",
+] as const;
+
+export const ISSUE_AUDIT_ACTION_OPTIONS = [
+  "ISSUE_STATUS_UPDATE",
+  "ISSUE_WORKFLOW_UPDATE",
+  "ISSUE_WORKFLOW_BULK_UPDATE",
+] as const;
+
+export const SLA_HISTORY_DAYS_OPTIONS = [7, 30] as const;
+
+export const SORT_DIR_OPTIONS: Array<{ value: SortDir; label: string }> = [
+  { value: "desc", label: "Desc" },
+  { value: "asc", label: "Asc" },
+];
+
+export const INSTALLERS_SORT_OPTIONS: Array<{
+  value: InstallersSortBy;
+  label: string;
+}> = [
+  { value: "installed_doors", label: "Installed Doors" },
+  { value: "payroll_total", label: "Payroll" },
+  { value: "revenue_total", label: "Revenue" },
+  { value: "profit_total", label: "Profit" },
+  { value: "installer_name", label: "Installer Name" },
+];
+
+export const INSTALLER_MATRIX_SORT_OPTIONS: Array<{
+  value: InstallerMatrixSortBy;
+  label: string;
+}> = [
+  { value: "profit_total", label: "Profit" },
+  { value: "margin_pct", label: "Margin %" },
+  { value: "installed_doors", label: "Installed Doors" },
+  { value: "avg_profit_per_door", label: "Profit / Door" },
+  { value: "open_issues", label: "Open Issues" },
+];
+
+export const INSTALLER_PROJECT_SORT_OPTIONS: Array<{
+  value: InstallerProjectSortBy;
+  label: string;
+}> = [
+  { value: "profit_total", label: "Profit" },
+  { value: "margin_pct", label: "Margin %" },
+  { value: "installed_doors", label: "Installed Doors" },
+  { value: "avg_profit_per_door", label: "Profit / Door" },
+  { value: "open_issues", label: "Open Issues" },
+];
+
+export const ORDER_NUMBERS_SORT_OPTIONS: Array<{
+  value: OrderNumbersSortBy;
+  label: string;
+}> = [
+  { value: "total_doors", label: "Total Doors" },
+  { value: "installed_doors", label: "Installed Doors" },
+  { value: "not_installed_doors", label: "Not Installed" },
+  { value: "planned_revenue_total", label: "Planned Revenue" },
+  { value: "installed_revenue_total", label: "Installed Revenue" },
+  { value: "payroll_total", label: "Payroll" },
+  { value: "profit_total", label: "Profit" },
+  { value: "missing_rates_installed_doors", label: "Missing Rates" },
+  { value: "order_number", label: "Order Number" },
+];
+
+export const SLA_STATUS_CLASS: Record<string, string> = {
+  OK: "border-status-ok-border bg-status-ok-bg text-status-ok-fg",
+  WARN: "border-status-warning-border bg-status-warning-bg text-status-warning-fg",
+  DANGER:
+    "border-status-problem-border bg-status-problem-bg text-status-problem-fg",
+};
+
+export function installerPerformanceBandClass(band: string): string {
+  if (band === "INCOMPLETE") {
+    return "text-text-secondary bg-surface-subtle border-border";
+  }
+  if (band === "STRONG") {
+    return "text-status-ok-fg bg-status-ok-bg border-status-ok-border";
+  }
+  if (band === "RISK") {
+    return "text-status-problem-fg bg-status-problem-bg border-status-problem-border";
+  }
+  return "text-status-warning-fg bg-status-warning-bg border-status-warning-border";
+}
+
+export function reportsNoticeClass(
+  tone: "success" | "error" | "warning" | "accent" | "muted",
+): string {
+  if (tone === "success") {
+    return "rounded-lg border border-status-ok-border bg-status-ok-bg px-4 py-3 text-[13px] text-status-ok-fg";
+  }
+  if (tone === "error") {
+    return "rounded-lg border border-status-problem-border bg-status-problem-bg px-4 py-3 text-[13px] text-status-problem-fg";
+  }
+  if (tone === "warning") {
+    return "rounded-lg border border-status-warning-border bg-status-warning-bg px-4 py-3 text-[13px] text-status-warning-fg";
+  }
+  if (tone === "accent") {
+    return "rounded-lg border border-accent bg-[var(--dmx-accent-tint)] px-4 py-3 text-[13px] text-text";
+  }
+  return "rounded-lg border border-border bg-surface px-4 py-3 text-[13px] text-text-secondary";
+}
+
+export function formatDateTime(value: string): string {
+  return formatLocalizedDateTime(value);
+}
+
+export function metricLabel(metric: string | null): string {
+  if (!metric) {
+    return "unknown";
+  }
+  return metric.replaceAll("_", " ");
+}
+
+export function compactMap(map: Record<string, number> | undefined): string {
+  if (!map || Object.keys(map).length === 0) {
+    return "n/a";
+  }
+  return Object.entries(map)
+    .map(([k, v]) => `${k}: ${v}`)
+    .join(" | ");
+}
+
+export function buildOperationsHref(params: {
+  actionable?: boolean;
+  deliveryChannel?: string;
+  webhookProvider?: string;
+}): string {
+  const query = new URLSearchParams();
+  if (params.actionable) {
+    query.set("actionable", "1");
+  }
+  if (params.deliveryChannel) {
+    query.set("delivery_channel", params.deliveryChannel);
+  }
+  if (params.webhookProvider) {
+    query.set("webhook_provider", params.webhookProvider);
+  }
+  const value = query.toString();
+  return value ? `/operations?${value}` : "/operations";
+}
+
+export function formatAmount(value: number | null | undefined): string {
+  if (value === null) return "-";
+  return formatLocalizedNumber(value ?? 0, undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+export function formatPercent(value: number | null | undefined): string {
+  if (value === null) return "-";
+  return formatLocalizedPercent(value ?? 0);
+}
+
+export function formatCount(value: number | string | null | undefined): string {
+  return formatLocalizedNumber(value ?? 0, undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+}
+
+export function toReportNumber(value: number | string | null | undefined): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function reportsDashboardToneClasses(tone: ReportsDashboardTone) {
+  if (tone === "red") {
+    return {
+      accent: "bg-status-problem-fg",
+      border: "before:bg-status-problem-fg",
+      icon: "bg-status-problem-bg text-status-problem-fg",
+      text: "text-status-problem-fg",
+      badge: "bg-status-problem-bg text-status-problem-fg",
+    };
+  }
+  if (tone === "orange") {
+    return {
+      accent: "bg-status-warning-fg",
+      border: "before:bg-status-warning-fg",
+      icon: "bg-status-warning-bg text-status-warning-fg",
+      text: "text-status-warning-fg",
+      badge: "bg-status-warning-bg text-status-warning-fg",
+    };
+  }
+  if (tone === "green") {
+    return {
+      accent: "bg-status-ok-fg",
+      border: "before:bg-status-ok-fg",
+      icon: "bg-status-ok-bg text-status-ok-fg",
+      text: "text-status-ok-fg",
+      badge: "bg-status-ok-bg text-status-ok-fg",
+    };
+  }
+  if (tone === "blue") {
+    return {
+      accent: "bg-link",
+      border: "before:bg-link",
+      icon: "bg-blue-50 text-link",
+      text: "text-link",
+      badge: "bg-blue-50 text-link",
+    };
+  }
+  return {
+    accent: "bg-border-strong",
+    border: "before:bg-border-strong",
+    icon: "bg-surface-subtle text-text-secondary",
+    text: "text-text",
+    badge: "bg-surface-subtle text-text-secondary",
+  };
+}
+
+
+
+
+
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+export async function downloadCsvExport(
+  pathWithQuery: string,
+  fallbackFilename: string,
+): Promise<void> {
+  const response = await apiDownload(pathWithQuery, {
+    method: "GET",
+    credentials: "include",
+  });
+  const blob = await response.blob();
+  const disposition = response.headers.get("content-disposition") || "";
+  const match = disposition.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] || fallbackFilename;
+  downloadBlob(blob, filename);
+}
+
+export function auditDateFromValue(value: string): string | null {
+  if (!value) {
+    return null;
+  }
+  return new Date(`${value}T00:00:00`).toISOString();
+}
+
+export function auditDateToValue(value: string): string | null {
+  if (!value) {
+    return null;
+  }
+  return new Date(`${value}T23:59:59.999`).toISOString();
+}
+
+export function buildAuditParams({
+  entityType,
+  entityId,
+  action,
+  dateFrom,
+  dateTo,
+  limit,
+  offset,
+}: {
+  entityType: string;
+  entityId?: string;
+  action: string;
+  dateFrom: string;
+  dateTo: string;
+  limit: number;
+  offset: number;
+}): string {
+  const params = new URLSearchParams();
+  params.set("limit", String(limit));
+  params.set("offset", String(offset));
+  if (entityType) {
+    params.set("entity_type", entityType);
+  }
+  if (entityId) {
+    params.set("issue_id", entityId);
+  }
+  if (action) {
+    params.set("action", action);
+  }
+  const from = auditDateFromValue(dateFrom);
+  const to = auditDateToValue(dateTo);
+  if (from) {
+    params.set("date_from", from);
+  }
+  if (to) {
+    params.set("date_to", to);
+  }
+  return params.toString();
+}
+
+export function changedFieldKeys(
+  before: Record<string, unknown> | null | undefined,
+  after: Record<string, unknown> | null | undefined,
+): string[] {
+  const beforeObj = before || {};
+  const afterObj = after || {};
+  const keys = new Set<string>([
+    ...Object.keys(beforeObj),
+    ...Object.keys(afterObj),
+  ]);
+  const changed: string[] = [];
+  for (const key of keys) {
+    const left = JSON.stringify(beforeObj[key] ?? null);
+    const right = JSON.stringify(afterObj[key] ?? null);
+    if (left !== right) {
+      changed.push(key);
+    }
+  }
+  changed.sort((a, b) => a.localeCompare(b, "en"));
+  return changed;
+}
+
+export function prettyJson(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "{}";
+  }
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+export function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
+export function readReportsPresets(): ReportsPreset[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  try {
+    const raw = window.localStorage.getItem(REPORTS_PRESETS_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function writeReportsPresets(presets: ReportsPreset[]): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(
+    REPORTS_PRESETS_STORAGE_KEY,
+    JSON.stringify(presets),
+  );
+}
+
