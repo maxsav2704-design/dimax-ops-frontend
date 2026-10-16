@@ -18,6 +18,7 @@ This repository now exposes two GitHub Actions gates:
 - `npm run test:security-headers` — `next.config.mjs` headers
 - `npm run test:type-scale` — `text-[Npx]` ratchet against `scripts/type-scale-baseline.json`
 - `npm run test:i18n-helpers` — no hand-rolled `(en, ru, he)` helpers; use `useCopy()` / `pickLocale()`
+- `npm run test:a11y-controls` — every `<input>` / `<select>` / `<textarea>` has a programmatic name (aria-label, id + htmlFor, or a wrapping `<label>`); `npm run lint` also enforces the `jsx-a11y` recommended rules as errors
 - `npm run test:coverage-contract` — every Vitest and Playwright file is discovered
 - `npm run test` — Vitest in batches (`scripts/run-vitest-gate.mjs`)
 - `npm run build`
