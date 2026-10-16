@@ -23,6 +23,8 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
 import { DataStateNotice } from "@/components/DataStateNotice";
+import { useQuery } from "@tanstack/react-query";
+
 import { useReferenceList } from "@/hooks/use-reference-list";
 import { useCompanyPricingState } from "@/hooks/use-company-pricing-state";
 import { CompanyPriceStatus } from "@/components/prices/CompanyPriceStatus";
@@ -1575,18 +1577,94 @@ export default function ProjectsPage() {
     "Справочник недоступен. Повторите его загрузку.",
     "נתוני הקטלוג אינם זמינים. יש לטעון אותם שוב.",
   );
-  const [projectAddonPlan, setProjectAddonPlan] = useState<
-    ProjectAddonPlanItem[]
-  >([]);
-  const [urgencySurcharges, setUrgencySurcharges] = useState<
-    UrgencySurchargeItem[]
-  >([]);
   const [projectDocuments, setProjectDocuments] = useState<
     DocumentGenerationDTO[]
   >([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null,
   );
+
+  // Financial sections of the selected project live in react-query: keyed by
+  // project, only when rates are visible, cached across selections.
+  const financialsEnabled = Boolean(selectedProjectId) && canViewProjectRates;
+  const projectPlanFactQuery = useQuery({
+    queryKey: ["projects", "plan-fact", selectedProjectId],
+    queryFn: async () => {
+      const response = await apiFetch<ProjectPlanFactResponse>(
+        `/api/v1/admin/reports/project-plan-fact/${selectedProjectId}`,
+      );
+      return response && typeof response.project_id === "string" ? response : null;
+    },
+    enabled: financialsEnabled,
+    retry: false,
+  });
+  const projectRiskQuery = useQuery({
+    queryKey: ["projects", "risk-drilldown", selectedProjectId],
+    queryFn: async () => {
+      const response = await apiFetch<ProjectRiskDrilldownResponse>(
+        `/api/v1/admin/reports/project-risk-drilldown/${selectedProjectId}?limit=5`,
+      );
+      return response && typeof response.project_id === "string" ? response : null;
+    },
+    enabled: financialsEnabled,
+    retry: false,
+  });
+  const projectAddonPlanQuery = useQuery({
+    queryKey: ["projects", "addon-plan", selectedProjectId],
+    queryFn: async () => {
+      const response = await apiFetch<
+        ProjectAddonPlanItem[] | { items?: ProjectAddonPlanItem[] }
+      >(`/api/v1/admin/projects/${selectedProjectId}/addons/plan`);
+      return Array.isArray(response) ? response : response.items || [];
+    },
+    enabled: financialsEnabled,
+    retry: false,
+  });
+  const urgencySurchargesQuery = useQuery({
+    queryKey: ["projects", "urgency-surcharges", selectedProjectId],
+    queryFn: async () => {
+      const response = await apiFetch<
+        UrgencySurchargeItem[] | { items?: UrgencySurchargeItem[] }
+      >(`/api/v1/admin/projects/${selectedProjectId}/urgency-surcharges`);
+      return Array.isArray(response) ? response : response.items || [];
+    },
+    enabled: financialsEnabled,
+    retry: false,
+  });
+  const projectPlanFact = financialsEnabled ? (projectPlanFactQuery.data ?? null) : null;
+  const projectRisk = financialsEnabled ? (projectRiskQuery.data ?? null) : null;
+  const projectAddonPlan = useMemo(
+    () => (financialsEnabled ? (projectAddonPlanQuery.data ?? []) : []),
+    [financialsEnabled, projectAddonPlanQuery.data],
+  );
+  const urgencySurcharges = useMemo(
+    () => (financialsEnabled ? (urgencySurchargesQuery.data ?? []) : []),
+    [financialsEnabled, urgencySurchargesQuery.data],
+  );
+  const loadingProjectPlanFact = projectPlanFactQuery.isFetching;
+  const loadingProjectRisk = projectRiskQuery.isFetching;
+  const loadingProjectAddonPlan = projectAddonPlanQuery.isFetching;
+  const loadingUrgencySurcharges = urgencySurchargesQuery.isFetching;
+
+  // Same names as the former loaders so call sites stay untouched; refetch()
+  // ignores `enabled`, hence the guard.
+  const refetchPlanFact = projectPlanFactQuery.refetch;
+  const refetchRisk = projectRiskQuery.refetch;
+  const refetchAddonPlan = projectAddonPlanQuery.refetch;
+  const refetchUrgency = urgencySurchargesQuery.refetch;
+  const loadProjectPlanFact = useCallback(async (_projectId: string) => {
+    if (financialsEnabled) await refetchPlanFact();
+  }, [financialsEnabled, refetchPlanFact]);
+  const loadProjectRisk = useCallback(async (_projectId: string) => {
+    if (financialsEnabled) await refetchRisk();
+  }, [financialsEnabled, refetchRisk]);
+  const loadProjectAddonPlan = useCallback(async (_projectId: string) => {
+    if (financialsEnabled) await refetchAddonPlan();
+  }, [financialsEnabled, refetchAddonPlan]);
+  const loadUrgencySurcharges = useCallback(async (_projectId: string) => {
+    if (financialsEnabled) await refetchUrgency();
+  }, [financialsEnabled, refetchUrgency]);
+
   const pricing = useCompanyPricingState(canViewProjectRates && Boolean(selectedProjectId));
   const factoryPricing = pricing.state?.mode === "FACTORY";
   const pricingKnown = Boolean(pricing.state) && !pricing.error;
@@ -1600,24 +1678,15 @@ export default function ProjectsPage() {
   const [projectDetails, setProjectDetails] =
     useState<ProjectDetailsResponse | null>(null);
   const [layout, setLayout] = useState<ProjectDoorsLayoutResponse | null>(null);
-  const [projectPlanFact, setProjectPlanFact] =
-    useState<ProjectPlanFactResponse | null>(null);
-  const [projectRisk, setProjectRisk] =
-    useState<ProjectRiskDrilldownResponse | null>(null);
   const [search, setSearch] = useState("");
   const [projectStatusFilter, setProjectStatusFilter] =
     useState<ProjectStatusFilter>("ALL");
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [projectsLoaded, setProjectsLoaded] = useState(false);
   const [projectsLoadError, setProjectsLoadError] = useState(false);
-  const [loadingProjectAddonPlan, setLoadingProjectAddonPlan] = useState(false);
-  const [loadingUrgencySurcharges, setLoadingUrgencySurcharges] =
-    useState(false);
   const [loadingProjectDocuments, setLoadingProjectDocuments] = useState(false);
   const [loadingProjectDetails, setLoadingProjectDetails] = useState(false);
   const [loadingLayout, setLoadingLayout] = useState(false);
-  const [loadingProjectPlanFact, setLoadingProjectPlanFact] = useState(false);
-  const [loadingProjectRisk, setLoadingProjectRisk] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sectionLoadErrors, setSectionLoadErrors] = useState<
     Partial<Record<ProjectSectionKey, boolean>>
@@ -2885,98 +2954,6 @@ export default function ProjectsPage() {
     }
   }, [locale, t]);
 
-  const loadProjectPlanFact = useCallback(async (projectId: string) => {
-    if (!canViewProjectRates) {
-      setProjectPlanFact(null);
-      setLoadingProjectPlanFact(false);
-      return;
-    }
-    setLoadingProjectPlanFact(true);
-    clearSectionError("planFact");
-    try {
-      const response = await apiFetch<ProjectPlanFactResponse>(
-        `/api/v1/admin/reports/project-plan-fact/${projectId}`,
-      );
-      setProjectPlanFact(
-        response && typeof response.project_id === "string" ? response : null,
-      );
-    } catch {
-      failSection("planFact");
-      setProjectPlanFact(null);
-    } finally {
-      setLoadingProjectPlanFact(false);
-    }
-  }, [canViewProjectRates, clearSectionError, failSection]);
-
-  const loadProjectRisk = useCallback(async (projectId: string) => {
-    if (!canViewProjectRates) {
-      setProjectRisk(null);
-      setLoadingProjectRisk(false);
-      return;
-    }
-    setLoadingProjectRisk(true);
-    clearSectionError("risk");
-    try {
-      const response = await apiFetch<ProjectRiskDrilldownResponse>(
-        `/api/v1/admin/reports/project-risk-drilldown/${projectId}?limit=5`,
-      );
-      setProjectRisk(
-        response && typeof response.project_id === "string" ? response : null,
-      );
-    } catch {
-      failSection("risk");
-      setProjectRisk(null);
-    } finally {
-      setLoadingProjectRisk(false);
-    }
-  }, [canViewProjectRates, clearSectionError, failSection]);
-
-  const loadProjectAddonPlan = useCallback(async (projectId: string) => {
-    if (!canViewProjectRates) {
-      setProjectAddonPlan([]);
-      setLoadingProjectAddonPlan(false);
-      return;
-    }
-    setLoadingProjectAddonPlan(true);
-    clearSectionError("addonPlan");
-    try {
-      const response = await apiFetch<
-        ProjectAddonPlanItem[] | { items?: ProjectAddonPlanItem[] }
-      >(`/api/v1/admin/projects/${projectId}/addons/plan`);
-      setProjectAddonPlan(
-        Array.isArray(response) ? response : response.items || [],
-      );
-    } catch {
-      failSection("addonPlan");
-      setProjectAddonPlan([]);
-    } finally {
-      setLoadingProjectAddonPlan(false);
-    }
-  }, [canViewProjectRates, clearSectionError, failSection]);
-
-  const loadUrgencySurcharges = useCallback(async (projectId: string) => {
-    if (!canViewProjectRates) {
-      setUrgencySurcharges([]);
-      setLoadingUrgencySurcharges(false);
-      return;
-    }
-    setLoadingUrgencySurcharges(true);
-    clearSectionError("urgency");
-    try {
-      const response = await apiFetch<
-        UrgencySurchargeItem[] | { items?: UrgencySurchargeItem[] }
-      >(`/api/v1/admin/projects/${projectId}/urgency-surcharges`);
-      setUrgencySurcharges(
-        Array.isArray(response) ? response : response.items || [],
-      );
-    } catch {
-      failSection("urgency");
-      setUrgencySurcharges([]);
-    } finally {
-      setLoadingUrgencySurcharges(false);
-    }
-  }, [canViewProjectRates, clearSectionError, failSection]);
-
   const refreshSelectedProjectOperationalData = async (projectId: string) => {
     await Promise.all([
       loadProjects(),
@@ -3099,6 +3076,7 @@ export default function ProjectsPage() {
     key: ProjectSectionKey;
     label: string;
     loading: boolean;
+    failed?: boolean;
     reload: () => Promise<void> | void;
   }> = [
     {
@@ -3115,24 +3093,28 @@ export default function ProjectsPage() {
     },
     {
       key: "planFact",
+      failed: projectPlanFactQuery.isError,
       label: copy("Plan / fact", "План / факт", "תכנון / ביצוע"),
       loading: loadingProjectPlanFact,
       reload: () => (selectedProjectId ? loadProjectPlanFact(selectedProjectId) : undefined),
     },
     {
       key: "risk",
+      failed: projectRiskQuery.isError,
       label: copy("Project risk", "Риски проекта", "סיכוני הפרויקט"),
       loading: loadingProjectRisk,
       reload: () => (selectedProjectId ? loadProjectRisk(selectedProjectId) : undefined),
     },
     {
       key: "addonPlan",
+      failed: projectAddonPlanQuery.isError,
       label: copy("Additional work plan", "План допработ", "תכנית עבודות נוספות"),
       loading: loadingProjectAddonPlan,
       reload: () => (selectedProjectId ? loadProjectAddonPlan(selectedProjectId) : undefined),
     },
     {
       key: "urgency",
+      failed: urgencySurchargesQuery.isError,
       label: copy("Urgency surcharges", "Надбавки за срочность", "תוספות דחיפות"),
       loading: loadingUrgencySurcharges,
       reload: () => (selectedProjectId ? loadUrgencySurcharges(selectedProjectId) : undefined),
@@ -3165,7 +3147,9 @@ export default function ProjectsPage() {
       reload: loadFailedQueue,
     },
   ];
-  const failedProjectSections = projectSections.filter((section) => sectionLoadErrors[section.key]);
+  const failedProjectSections = projectSections.filter(
+    (section) => section.failed ?? Boolean(sectionLoadErrors[section.key]),
+  );
 
   useEffect(() => {
     void loadProjects();
@@ -3348,39 +3332,20 @@ export default function ProjectsPage() {
     if (selectedProjectId) {
       void loadProjectDetails(selectedProjectId);
       void loadLayout(selectedProjectId);
-      if (canViewProjectRates) {
-        void loadProjectPlanFact(selectedProjectId);
-        void loadProjectRisk(selectedProjectId);
-        void loadProjectAddonPlan(selectedProjectId);
-        void loadUrgencySurcharges(selectedProjectId);
-      } else {
-        setProjectPlanFact(null);
-        setProjectRisk(null);
-        setProjectAddonPlan([]);
-        setUrgencySurcharges([]);
-      }
+      // Financial sections are react-query: they follow selectedProjectId on their own.
       void loadImportHistory(selectedProjectId);
       void loadProjectDocuments(selectedProjectId);
     } else {
       setProjectDetails(null);
-      setProjectPlanFact(null);
-      setProjectRisk(null);
-      setProjectAddonPlan([]);
-      setUrgencySurcharges([]);
       setImportHistory([]);
       setProjectDocuments([]);
       setFocusedImportRunDetails(null);
     }
   }, [
-    canViewProjectRates,
     loadImportHistory,
     loadLayout,
-    loadProjectAddonPlan,
     loadProjectDetails,
     loadProjectDocuments,
-    loadProjectPlanFact,
-    loadProjectRisk,
-    loadUrgencySurcharges,
     selectedProjectId,
   ]);
 
