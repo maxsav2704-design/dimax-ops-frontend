@@ -10,7 +10,8 @@ test("every route answers with the baseline security headers", async () => {
   const byKey = Object.fromEntries(rules[0].headers.map((header) => [header.key, header.value]));
   assert.equal(byKey["X-Content-Type-Options"], "nosniff");
   assert.equal(byKey["X-Frame-Options"], "DENY");
-  assert.match(byKey["Content-Security-Policy"], /frame-ancestors 'none'/);
+  // The CSP is per request (nonce) and lives in proxy.ts; it must not also be a static header.
+  assert.equal(byKey["Content-Security-Policy"], undefined);
   assert.equal(byKey["Referrer-Policy"], "strict-origin-when-cross-origin");
   assert.match(byKey["Permissions-Policy"], /camera=\(\)/);
   assert.deepEqual(rules[0].headers, securityHeaders);
