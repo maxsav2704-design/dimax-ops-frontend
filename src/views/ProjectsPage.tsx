@@ -9087,6 +9087,7 @@ export default function ProjectsPage() {
                           <th className="text-start px-2 py-2 font-medium">
                             <input
                               type="checkbox"
+                              aria-label={copy("Select all failed runs on this page", "Выбрать все сбойные запуски на странице", "בחר את כל ההרצות שנכשלו בעמוד")}
                               checked={allFailedPageSelected}
                               onChange={(e) =>
                                 toggleSelectAllFailedQueuePage(e.target.checked)
@@ -9141,6 +9142,7 @@ export default function ProjectsPage() {
                               <td className="px-2 py-1.5">
                                 <input
                                   type="checkbox"
+                                  aria-label={copy("Select failed run {name}", "Выбрать сбойный запуск {name}", "בחר הרצה שנכשלה {name}").replace("{name}", item.project_name)}
                                   checked={selectedFailedRunIds.includes(
                                     item.run_id,
                                   )}
@@ -11789,7 +11791,7 @@ export default function ProjectsPage() {
                         </div>
                       ) : (
                         filteredMatrixRows.map((row) => (
-                          <article
+                          <div
                             key={row.door_id}
                             data-testid={`project-door-row-${row.door_id}`}
                             role="button"
@@ -11892,7 +11894,7 @@ export default function ProjectsPage() {
                               {t("projects.blockers")}:{" "}
                               <LtrText>{String(row.issue_count)}</LtrText>
                             </div>
-                          </article>
+                          </div>
                         ))
                       )}
                     </div>
@@ -12024,6 +12026,7 @@ export default function ProjectsPage() {
                                 <td className="px-2 py-1.5">
                                   <button
                                     type="button"
+                                    aria-label={copy("Open door {door}", "Открыть дверь {door}", "פתח דלת {door}").replace("{door}", row.door_marking)}
                                     onClick={(event) => {
                                       event.stopPropagation();
                                       setFocusedDoorId(row.door_id);

@@ -1297,10 +1297,10 @@ export default function JournalPage() {
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-lg font-semibold text-text">
+                          <h2 className="text-lg font-semibold text-text">
                             {selectedJournal.title ||
                               t("journal.untitledJournal")}
-                          </h3>
+                          </h2>
                           <span
                             className={cn(
                               "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
@@ -1432,9 +1432,9 @@ export default function JournalPage() {
                   <div className="surface-subtle p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-sm font-semibold text-text">
+                        <h2 className="text-sm font-semibold text-text">
                           {t("journal.templates")}
-                        </h3>
+                        </h2>
                         <p className="mt-1 text-[12px] text-text-secondary">
                           {t("journal.templatesDescription")}
                         </p>
@@ -1506,9 +1506,9 @@ export default function JournalPage() {
                   <div className="surface-subtle p-4">
                     <div className="mb-3 flex items-center justify-between">
                       <div>
-                        <h3 className="text-sm font-semibold text-text">
+                        <h2 className="text-sm font-semibold text-text">
                           {t("journal.deliveryChannels")}
-                        </h3>
+                        </h2>
                         <p className="mt-1 text-[12px] text-text-secondary">
                           {t("journal.deliveryChannelsDescription")}
                         </p>
@@ -1821,9 +1821,9 @@ export default function JournalPage() {
                     className="h-4 w-4 text-text-secondary"
                     strokeWidth={1.8}
                   />
-                  <h3 className="text-sm font-semibold text-text">
+                  <h2 className="text-sm font-semibold text-text">
                     {t("journal.integrationSnapshot")}
-                  </h3>
+                  </h2>
                 </div>
                 {integrations ? (
                   <div className="space-y-2">

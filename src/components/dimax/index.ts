@@ -12,3 +12,4 @@ export {
   type PillButtonVariant,
 } from "./PillButton";
 export { WidgetCard } from "./WidgetCard";
+export { MAIN_CONTENT_ID, SkipToContent } from "./SkipToContent";

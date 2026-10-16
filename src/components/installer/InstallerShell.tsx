@@ -12,6 +12,7 @@ import {
 import type { ReactNode } from "react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { logoutSession } from "@/lib/api";
+import { MAIN_CONTENT_ID, SkipToContent } from "@/components/dimax/SkipToContent";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 export function InstallerShell({ children }: { children: ReactNode }) {
@@ -53,6 +54,7 @@ export function InstallerShell({ children }: { children: ReactNode }) {
   ];
   return (
     <div className="min-h-screen overflow-x-hidden bg-canvas text-text">
+      <SkipToContent />
       {" "}
       <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 px-3 py-3 lg:flex-row lg:px-4">
         {" "}
@@ -123,7 +125,7 @@ export function InstallerShell({ children }: { children: ReactNode }) {
             </button>{" "}
           </div>{" "}
         </aside>{" "}
-        <main className="motion-page w-full min-w-0 max-w-full flex-1">
+        <main id={MAIN_CONTENT_ID} tabIndex={-1} className="motion-page w-full min-w-0 max-w-full flex-1 outline-none">
           {" "}
           {children}{" "}
         </main>{" "}

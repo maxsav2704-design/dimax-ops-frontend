@@ -744,14 +744,14 @@ export default function SettingsPage() {
               </div>{" "}
               <div className="surface-subtle mt-5 px-4 py-4">
                 {" "}
-                <h3 className="panel-title mb-3">
+                <h2 className="panel-title mb-3">
                   {" "}
                   {copy(
                     "Provider test send",
                     "Тестовая отправка провайдеров",
                     "שליחת בדיקה לספקים",
                   )}{" "}
-                </h3>{" "}
+                </h2>{" "}
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   {" "}
                   <div className="flex min-h-[184px] flex-col rounded-lg border border-border bg-surface px-3 py-3">

@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { LogOut, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "./AppSidebar";
+import { MAIN_CONTENT_ID, SkipToContent } from "@/components/dimax/SkipToContent";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { logoutSession } from "@/lib/api";
@@ -52,6 +53,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     pickLocale(locale, "Sign out", "Выйти", "התנתק");
   return (
     <div className="dmx-app-frame">
+      <SkipToContent />
       <div className="dmx-app-shell">
         <header className="dmx-topbar">
           <div className="dmx-brand-pill">DIMAX</div>
@@ -85,7 +87,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="dmx-shell-grid">
           <AppSidebar />
           <main
-            className="dmx-main-scroll min-w-0 bg-canvas"
+            id={MAIN_CONTENT_ID}
+            tabIndex={-1}
+            className="dmx-main-scroll min-w-0 bg-canvas outline-none"
             data-admin-scroll
           >
             <div className="min-h-full min-w-0">{children}</div>
