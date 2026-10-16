@@ -88,3 +88,10 @@ export function chunkIds(values: string[], size: number): string[][] {
 
 export const FAILED_QUEUE_PAGE_SIZE = 10;
 // Door ledger rows rendered at once; "Show more" reveals the next page.
+
+export function compareNatural(valueA: string, valueB: string): number {
+  return valueA.localeCompare(valueB, "en", {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
