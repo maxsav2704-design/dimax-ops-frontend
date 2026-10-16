@@ -19,7 +19,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
-import { EmptyState, TableSkeleton } from "@/components/dimax";
+import { EmptyState, InlineNotice, TableSkeleton } from "@/components/dimax";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -285,30 +285,24 @@ function buildWorkflowPatch(
   return payload;
 }
 
-async function safeFetchIssueComments(
+// Failures propagate to the query so the panel can show an error instead of
+// pretending the issue has no comments / attachments.
+async function fetchIssueComments(
   issueId: string,
 ): Promise<AdminIssueComment[]> {
-  try {
-    const response = await apiFetch<AdminIssueCommentsResponse>(
-      `/api/v1/admin/issues/${issueId}/comments`,
-    );
-    return response.items || [];
-  } catch {
-    return [];
-  }
+  const response = await apiFetch<AdminIssueCommentsResponse>(
+    `/api/v1/admin/issues/${issueId}/comments`,
+  );
+  return response.items || [];
 }
 
-async function safeFetchIssueMedia(
+async function fetchIssueMedia(
   issueId: string,
 ): Promise<AdminIssueMediaAsset[]> {
-  try {
-    const response = await apiFetch<AdminIssueMediaResponse>(
-      `/api/v1/admin/issues/${issueId}/media`,
-    );
-    return response.items || [];
-  } catch {
-    return [];
-  }
+  const response = await apiFetch<AdminIssueMediaResponse>(
+    `/api/v1/admin/issues/${issueId}/media`,
+  );
+  return response.items || [];
 }
 
 async function fetchIssueMediaUrl(mediaId: string): Promise<string> {
@@ -517,14 +511,14 @@ export default function IssuesPage() {
 
   const issueCommentsQuery = useQuery({
     queryKey: ["admin-issue-comments", selectedIssueId],
-    queryFn: () => safeFetchIssueComments(selectedIssueId as string),
+    queryFn: () => fetchIssueComments(selectedIssueId as string),
     enabled: !!selectedIssueId,
     staleTime: 30_000,
   });
 
   const issueMediaQuery = useQuery({
     queryKey: ["admin-issue-media", selectedIssueId],
-    queryFn: () => safeFetchIssueMedia(selectedIssueId as string),
+    queryFn: () => fetchIssueMedia(selectedIssueId as string),
     enabled: !!selectedIssueId && issueMediaOpen,
     staleTime: 30_000,
   });
@@ -1393,6 +1387,27 @@ export default function IssuesPage() {
                             ? "טוען הערות..."
                             : "Loading comments..."}
                       </div>
+                    ) : issueCommentsQuery.isError ? (
+                      <InlineNotice
+                        tone="error"
+                        action={
+                          <button
+                            type="button"
+                            className="dmx-secondary-action min-h-8 px-3 py-1 text-[11.5px]"
+                            onClick={() => {
+                              void issueCommentsQuery.refetch();
+                            }}
+                          >
+                            {t("common.retry")}
+                          </button>
+                        }
+                      >
+                        {copy(
+                          "Could not load comments.",
+                          "Не удалось загрузить комментарии.",
+                          "לא ניתן לטעון את ההערות.",
+                        )}
+                      </InlineNotice>
                     ) : issueCommentsQuery.data &&
                       issueCommentsQuery.data.length > 0 ? (
                       <div className="space-y-2">
@@ -1469,6 +1484,27 @@ export default function IssuesPage() {
                             ? "טוען מדיה..."
                             : "Loading media..."}
                       </div>
+                    ) : issueMediaQuery.isError ? (
+                      <InlineNotice
+                        tone="error"
+                        action={
+                          <button
+                            type="button"
+                            className="dmx-secondary-action min-h-8 px-3 py-1 text-[11.5px]"
+                            onClick={() => {
+                              void issueMediaQuery.refetch();
+                            }}
+                          >
+                            {t("common.retry")}
+                          </button>
+                        }
+                      >
+                        {copy(
+                          "Could not load media.",
+                          "Не удалось загрузить медиа.",
+                          "לא ניתן לטעון את המדיה.",
+                        )}
+                      </InlineNotice>
                     ) : issueMediaQuery.data &&
                       issueMediaQuery.data.length > 0 ? (
                       <div className="space-y-2">

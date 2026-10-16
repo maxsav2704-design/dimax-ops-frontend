@@ -1444,6 +1444,20 @@ function chunkIds(values: string[], size: number): string[][] {
   return chunks;
 }
 
+// Lazily loaded panels of the selected project. A failed load is recorded
+// here and rendered as a retryable notice instead of an empty panel.
+type ProjectSectionKey =
+  | "mappingProfiles"
+  | "details"
+  | "planFact"
+  | "risk"
+  | "addonPlan"
+  | "urgency"
+  | "documents"
+  | "importHistory"
+  | "importRunDetails"
+  | "failedQueue";
+
 export default function ProjectsPage() {
   const { locale, t } = useI18n();
   const formatMoney = (value: string | number | null | undefined): string => {
@@ -1605,6 +1619,15 @@ export default function ProjectsPage() {
   const [loadingProjectPlanFact, setLoadingProjectPlanFact] = useState(false);
   const [loadingProjectRisk, setLoadingProjectRisk] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sectionLoadErrors, setSectionLoadErrors] = useState<
+    Partial<Record<ProjectSectionKey, boolean>>
+  >({});
+  const clearSectionError = useCallback((key: ProjectSectionKey) => {
+    setSectionLoadErrors((prev) => (prev[key] ? { ...prev, [key]: false } : prev));
+  }, []);
+  const failSection = useCallback((key: ProjectSectionKey) => {
+    setSectionLoadErrors((prev) => ({ ...prev, [key]: true }));
+  }, []);
   const [projectFlowNotice, setProjectFlowNotice] = useState<string | null>(
     null,
   );
@@ -2799,6 +2822,7 @@ export default function ProjectsPage() {
 
   const loadMappingProfiles = useCallback(async () => {
     setLoadingMappingProfiles(true);
+    clearSectionError("mappingProfiles");
     try {
       const response = await apiFetch<ImportMappingProfilesResponse>(
         "/api/v1/admin/projects/import-mapping-profiles",
@@ -2821,26 +2845,29 @@ export default function ProjectsPage() {
         return currentProfile;
       });
     } catch {
+      failSection("mappingProfiles");
       setMappingProfiles([]);
       setMappingProfile("auto_v1");
     } finally {
       setLoadingMappingProfiles(false);
     }
-  }, []);
+  }, [clearSectionError, failSection]);
 
-  const loadProjectDetails = async (projectId: string) => {
+  const loadProjectDetails = useCallback(async (projectId: string) => {
     setLoadingProjectDetails(true);
+    clearSectionError("details");
     try {
       const response = await apiFetch<ProjectDetailsResponse>(
         `/api/v1/admin/projects/${projectId}`,
       );
       setProjectDetails(response || null);
     } catch {
+      failSection("details");
       setProjectDetails(null);
     } finally {
       setLoadingProjectDetails(false);
     }
-  };
+  }, [clearSectionError, failSection]);
 
   const loadLayout = useCallback(async (projectId: string) => {
     setLoadingLayout(true);
@@ -2865,6 +2892,7 @@ export default function ProjectsPage() {
       return;
     }
     setLoadingProjectPlanFact(true);
+    clearSectionError("planFact");
     try {
       const response = await apiFetch<ProjectPlanFactResponse>(
         `/api/v1/admin/reports/project-plan-fact/${projectId}`,
@@ -2873,11 +2901,12 @@ export default function ProjectsPage() {
         response && typeof response.project_id === "string" ? response : null,
       );
     } catch {
+      failSection("planFact");
       setProjectPlanFact(null);
     } finally {
       setLoadingProjectPlanFact(false);
     }
-  }, [canViewProjectRates]);
+  }, [canViewProjectRates, clearSectionError, failSection]);
 
   const loadProjectRisk = useCallback(async (projectId: string) => {
     if (!canViewProjectRates) {
@@ -2886,6 +2915,7 @@ export default function ProjectsPage() {
       return;
     }
     setLoadingProjectRisk(true);
+    clearSectionError("risk");
     try {
       const response = await apiFetch<ProjectRiskDrilldownResponse>(
         `/api/v1/admin/reports/project-risk-drilldown/${projectId}?limit=5`,
@@ -2894,11 +2924,12 @@ export default function ProjectsPage() {
         response && typeof response.project_id === "string" ? response : null,
       );
     } catch {
+      failSection("risk");
       setProjectRisk(null);
     } finally {
       setLoadingProjectRisk(false);
     }
-  }, [canViewProjectRates]);
+  }, [canViewProjectRates, clearSectionError, failSection]);
 
   const loadProjectAddonPlan = useCallback(async (projectId: string) => {
     if (!canViewProjectRates) {
@@ -2907,6 +2938,7 @@ export default function ProjectsPage() {
       return;
     }
     setLoadingProjectAddonPlan(true);
+    clearSectionError("addonPlan");
     try {
       const response = await apiFetch<
         ProjectAddonPlanItem[] | { items?: ProjectAddonPlanItem[] }
@@ -2915,11 +2947,12 @@ export default function ProjectsPage() {
         Array.isArray(response) ? response : response.items || [],
       );
     } catch {
+      failSection("addonPlan");
       setProjectAddonPlan([]);
     } finally {
       setLoadingProjectAddonPlan(false);
     }
-  }, [canViewProjectRates]);
+  }, [canViewProjectRates, clearSectionError, failSection]);
 
   const loadUrgencySurcharges = useCallback(async (projectId: string) => {
     if (!canViewProjectRates) {
@@ -2928,6 +2961,7 @@ export default function ProjectsPage() {
       return;
     }
     setLoadingUrgencySurcharges(true);
+    clearSectionError("urgency");
     try {
       const response = await apiFetch<
         UrgencySurchargeItem[] | { items?: UrgencySurchargeItem[] }
@@ -2936,11 +2970,12 @@ export default function ProjectsPage() {
         Array.isArray(response) ? response : response.items || [],
       );
     } catch {
+      failSection("urgency");
       setUrgencySurcharges([]);
     } finally {
       setLoadingUrgencySurcharges(false);
     }
-  }, [canViewProjectRates]);
+  }, [canViewProjectRates, clearSectionError, failSection]);
 
   const refreshSelectedProjectOperationalData = async (projectId: string) => {
     await Promise.all([
@@ -2956,8 +2991,9 @@ export default function ProjectsPage() {
     ]);
   };
 
-  const loadProjectDocuments = async (projectId: string) => {
+  const loadProjectDocuments = useCallback(async (projectId: string) => {
     setLoadingProjectDocuments(true);
+    clearSectionError("documents");
     try {
       const params = new URLSearchParams();
       params.set("project_id", projectId);
@@ -2967,14 +3003,16 @@ export default function ProjectsPage() {
       );
       setProjectDocuments(response.items || []);
     } catch {
+      failSection("documents");
       setProjectDocuments([]);
     } finally {
       setLoadingProjectDocuments(false);
     }
-  };
+  }, [clearSectionError, failSection]);
 
   const loadImportHistory = useCallback(async (projectId: string) => {
     setLoadingImportHistory(true);
+    clearSectionError("importHistory");
     try {
       const params = new URLSearchParams();
       params.set("limit", "30");
@@ -2999,28 +3037,32 @@ export default function ProjectsPage() {
         });
       }
     } catch {
+      failSection("importHistory");
       setImportHistory([]);
     } finally {
       setLoadingImportHistory(false);
     }
-  }, [deepLinkFailedIds, deepLinkOnlyFailed, importHistoryModeFilter]);
+  }, [clearSectionError, deepLinkFailedIds, deepLinkOnlyFailed, failSection, importHistoryModeFilter]);
 
-  const loadImportRunDetails = async (projectId: string, runId: string) => {
+  const loadImportRunDetails = useCallback(async (projectId: string, runId: string) => {
     setLoadingImportRunDetails(true);
+    clearSectionError("importRunDetails");
     try {
       const response = await apiFetch<ProjectImportRunDetails>(
         `/api/v1/admin/projects/${projectId}/doors/import-runs/${runId}`,
       );
       setFocusedImportRunDetails(response);
     } catch {
+      failSection("importRunDetails");
       setFocusedImportRunDetails(null);
     } finally {
       setLoadingImportRunDetails(false);
     }
-  };
+  }, [clearSectionError, failSection]);
 
   const loadFailedQueue = useCallback(async () => {
     setLoadingFailedQueue(true);
+    clearSectionError("failedQueue");
     try {
       const params = new URLSearchParams();
       params.set("limit", String(FAILED_QUEUE_PAGE_SIZE));
@@ -3041,6 +3083,7 @@ export default function ProjectsPage() {
       const ids = new Set(safe.items.map((x) => x.run_id));
       setSelectedFailedRunIds((prev) => prev.filter((id) => ids.has(id)));
     } catch {
+      failSection("failedQueue");
       setFailedQueue({
         items: [],
         total: 0,
@@ -3050,7 +3093,79 @@ export default function ProjectsPage() {
     } finally {
       setLoadingFailedQueue(false);
     }
-  }, [failedQueueOffset, failedQueueOnlySelectedProject, selectedProjectId]);
+  }, [clearSectionError, failSection, failedQueueOffset, failedQueueOnlySelectedProject, selectedProjectId]);
+
+  const projectSections: Array<{
+    key: ProjectSectionKey;
+    label: string;
+    loading: boolean;
+    reload: () => Promise<void> | void;
+  }> = [
+    {
+      key: "mappingProfiles",
+      label: copy("Import mapping profiles", "Профили сопоставления импорта", "פרופילי מיפוי ייבוא"),
+      loading: loadingMappingProfiles,
+      reload: loadMappingProfiles,
+    },
+    {
+      key: "details",
+      label: copy("Project details", "Детали проекта", "פרטי הפרויקט"),
+      loading: loadingProjectDetails,
+      reload: () => (selectedProjectId ? loadProjectDetails(selectedProjectId) : undefined),
+    },
+    {
+      key: "planFact",
+      label: copy("Plan / fact", "План / факт", "תכנון / ביצוע"),
+      loading: loadingProjectPlanFact,
+      reload: () => (selectedProjectId ? loadProjectPlanFact(selectedProjectId) : undefined),
+    },
+    {
+      key: "risk",
+      label: copy("Project risk", "Риски проекта", "סיכוני הפרויקט"),
+      loading: loadingProjectRisk,
+      reload: () => (selectedProjectId ? loadProjectRisk(selectedProjectId) : undefined),
+    },
+    {
+      key: "addonPlan",
+      label: copy("Additional work plan", "План допработ", "תכנית עבודות נוספות"),
+      loading: loadingProjectAddonPlan,
+      reload: () => (selectedProjectId ? loadProjectAddonPlan(selectedProjectId) : undefined),
+    },
+    {
+      key: "urgency",
+      label: copy("Urgency surcharges", "Надбавки за срочность", "תוספות דחיפות"),
+      loading: loadingUrgencySurcharges,
+      reload: () => (selectedProjectId ? loadUrgencySurcharges(selectedProjectId) : undefined),
+    },
+    {
+      key: "documents",
+      label: copy("Project documents", "Документы проекта", "מסמכי הפרויקט"),
+      loading: loadingProjectDocuments,
+      reload: () => (selectedProjectId ? loadProjectDocuments(selectedProjectId) : undefined),
+    },
+    {
+      key: "importHistory",
+      label: copy("Import history", "История импорта", "היסטוריית ייבוא"),
+      loading: loadingImportHistory,
+      reload: () => (selectedProjectId ? loadImportHistory(selectedProjectId) : undefined),
+    },
+    {
+      key: "importRunDetails",
+      label: copy("Import run details", "Детали запуска импорта", "פרטי הרצת הייבוא"),
+      loading: loadingImportRunDetails,
+      reload: () =>
+        selectedProjectId && focusedImportRunId
+          ? loadImportRunDetails(selectedProjectId, focusedImportRunId)
+          : undefined,
+    },
+    {
+      key: "failedQueue",
+      label: copy("Failed import queue", "Очередь сбойных импортов", "תור ייבואים שנכשלו"),
+      loading: loadingFailedQueue,
+      reload: loadFailedQueue,
+    },
+  ];
+  const failedProjectSections = projectSections.filter((section) => sectionLoadErrors[section.key]);
 
   useEffect(() => {
     void loadProjects();
@@ -3261,6 +3376,8 @@ export default function ProjectsPage() {
     loadImportHistory,
     loadLayout,
     loadProjectAddonPlan,
+    loadProjectDetails,
+    loadProjectDocuments,
     loadProjectPlanFact,
     loadProjectRisk,
     loadUrgencySurcharges,
@@ -3325,7 +3442,7 @@ export default function ProjectsPage() {
     if (selectedProjectId) {
       void loadImportRunDetails(selectedProjectId, focusedImportRunId);
     }
-  }, [focusedImportRunId, importHistory, selectedProjectId]);
+  }, [focusedImportRunId, importHistory, loadImportRunDetails, selectedProjectId]);
 
   const handleDownloadImportTemplate = async () => {
     if (!canManageProjectImports) return;
@@ -4837,6 +4954,15 @@ export default function ProjectsPage() {
             {references.filter((reference) => reference.data.error).map(({ key, label, data }) => (
               <DataStateNotice key={key} label={label} state={data.loaded ? "stale" : "error"}
                 retrying={data.loading} onRetry={() => { void data.reload(); }} />
+            ))}
+          </section>
+        )}
+
+        {failedProjectSections.length > 0 && (
+          <section aria-label={copy("Project data", "Данные проекта", "נתוני הפרויקט")} className="mb-4 space-y-2">
+            {failedProjectSections.map((section) => (
+              <DataStateNotice key={section.key} label={section.label} state="error"
+                retrying={section.loading} onRetry={() => { void section.reload(); }} />
             ))}
           </section>
         )}

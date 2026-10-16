@@ -482,5 +482,40 @@ describe("IssuesPage", () => {
       );
     });
   }, 15000);
+  it("shows a retryable error when issue comments fail to load instead of an empty list", async () => {
+    let commentsDown = true;
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/api/v1/admin/installers")) return [];
+      if (path === "/api/v1/admin/issues?limit=200") {
+        return {
+          items: [
+            {
+              id: "issue-1", company_id: "company-1", door_id: "door-1", project_id: "project-1",
+              door_unit_label: "A-101", status: "OPEN", workflow_state: "NEW", priority: "P2",
+              owner_user_id: null, due_at: null, is_overdue: false, title: "Install blocked",
+              details: "Client requested delay", created_at: "2026-02-20T10:00:00Z", updated_at: "2026-02-22T10:00:00Z",
+            },
+          ],
+        };
+      }
+      if (path === "/api/v1/admin/issues/issue-1/comments") {
+        if (commentsDown) throw new TypeError("Failed to fetch");
+        return { items: [{ id: "comment-1", body: "Back online.", author_name: "Dispatcher One", created_at: "2026-02-22T12:00:00Z" }] };
+      }
+      return {};
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <IssuesPage />
+      </QueryClientProvider>
+    );
+    expect(await screen.findByText("Install blocked")).toBeInTheDocument();
+    const notice = await screen.findByRole("alert", {}, { timeout: 5000 });
+    expect(notice).toHaveTextContent("Could not load comments.");
+    expect(screen.queryByText("No comments yet.")).not.toBeInTheDocument();
+    commentsDown = false;
+    fireEvent.click(within(notice).getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("Back online.", {}, { timeout: 5000 })).toBeInTheDocument();
+  });
 });
-

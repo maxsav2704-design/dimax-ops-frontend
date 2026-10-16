@@ -4310,4 +4310,24 @@ describe("ProjectsPage", () => {
     expect(await screen.findByText("Enter a valid http or https Waze link.")).toBeInTheDocument();
   }, 25000);
 
+  it("shows a retryable notice when a project section fails to load instead of an empty panel", async () => {
+    let documentsDown = true;
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [{ id: "project-1", name: "Tower", status: "ACTIVE" }] };
+      if (path === "/api/v1/admin/projects/project-1") return { id: "project-1", name: "Tower", issues_open: [] };
+      if (path.includes("/doors/layout")) return { project_id: "project-1", total_doors: 0, buckets: [] };
+      if (path.startsWith("/api/v1/admin/documents/generated?")) {
+        if (documentsDown) throw new TypeError("Failed to fetch");
+        return { items: [] };
+      }
+      return { items: [], total: 0 };
+    });
+    render(<ProjectsPage />);
+    const notice = await screen.findByRole("alert", {}, { timeout: 5000 });
+    expect(notice).toHaveTextContent("Project documents");
+    documentsDown = false;
+    fireEvent.click(within(notice).getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    expect(apiFetchMock.mock.calls.filter(([path]) => String(path).startsWith("/api/v1/admin/documents/generated?")).length).toBeGreaterThanOrEqual(2);
+  });
 });
