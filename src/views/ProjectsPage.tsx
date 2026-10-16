@@ -1,5 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -25,7 +24,6 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 
 
-
 import { DataStateNotice } from "@/components/DataStateNotice";
 
 
@@ -46,9 +44,16 @@ import { DoorMatrixTile } from "@/components/projects/DoorMatrixTile";
 
 import { ProjectDialog } from "@/components/projects/ProjectDialog";
 
+import { ProjectSettingsCard } from "@/components/projects/ProjectSettingsCard";
+
+import type { ProjectDetailsResponse, ProjectListItem, ProjectOpenIssue } from "@/components/projects/project-types";
+
+
 import { ProjectFinancialScreen } from "@/components/projects/ProjectFinancialScreen";
 
+
 import type { ProjectPlanFactResponse, ProjectRiskDrilldownResponse } from "@/components/projects/financial-types";
+
 
 import { formatPct } from "@/components/projects/shared";
 
@@ -86,11 +91,9 @@ import type { DoorType, ImportColumnsDiagnostics, ImportResult, ImportMappingPro
 import { safeDownloadFilename, downloadImportErrorsCsv } from "@/components/projects/import-download";
 
 
-import { emptyProjectForm, normalizeDraftPhone, projectsMetricLabelClass } from "@/components/projects/project-form";
+import { emptyProjectForm, projectsMetricLabelClass } from "@/components/projects/project-form";
 
-
-import type { ProjectFormState, ProjectLifecycleStatus } from "@/components/projects/project-form";
-
+import type { ProjectFormState } from "@/components/projects/project-form";
 
 import {
   Breadcrumbs,
@@ -100,13 +103,6 @@ import {
   WidgetCard,
 } from "@/components/dimax";
 
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 
 import { Button } from "@/components/ui/button";
@@ -205,18 +201,6 @@ function projectsPanelClass(extra?: string): string {
   return cn("rounded-lg border border-border bg-surface", extra);
 }
 
-type ProjectHealthStatus = "NORMAL" | "AT_RISK" | "BLOCKED";
-
-type ProjectListItem = {
-  id: string;
-  name: string;
-  code?: string | null;
-  address: string;
-  status: string;
-  lifecycle_status?: ProjectLifecycleStatus;
-  health_status?: ProjectHealthStatus;
-};
-
 type ProjectStatusFilter = "ALL" | "ACTIVE" | "PROBLEM" | "COMPLETED" | "ARCHIVED";
 
 const PROJECT_COMPLETED_STATUSES = new Set([
@@ -290,65 +274,6 @@ function projectMatchesStatusFilter(
   }
   return true;
 }
-
-type ProjectOpenIssue = {
-  id: string;
-  door_id: string;
-  status: string;
-  title: string | null;
-  details: string | null;
-};
-
-type ProjectDetailsResponse = {
-  id?: string;
-  name?: string;
-  code?: string | null;
-  address?: string;
-  address_details?: {
-    street?: string | null;
-    building?: string | null;
-    city?: string | null;
-    entrance?: string | null;
-    lat?: string | number | null;
-    lng?: string | number | null;
-    waze_url?: string | null;
-    waze_deep_link?: string | null;
-  } | null;
-  planned_start_date?: string | null;
-  planned_end_date?: string | null;
-  status?: string;
-  lifecycle_status?: ProjectLifecycleStatus;
-  health_status?: ProjectHealthStatus;
-  developer?: {
-    name?: string | null;
-    contact_name?: string | null;
-    phone?: string | null;
-    phone_alt?: string | null;
-    whatsapp?: string | null;
-    email?: string | null;
-    notes?: string | null;
-    whatsapp_deep_link?: string | null;
-    call_deep_link?: string | null;
-  } | null;
-  developer_company?: string | null;
-  contact_name?: string | null;
-  contact_phone?: string | null;
-  contact_email?: string | null;
-  developer_phone_alt?: string | null;
-  developer_whatsapp?: string | null;
-  developer_notes?: string | null;
-  address_street?: string | null;
-  address_building?: string | null;
-  address_city?: string | null;
-  address_entrance?: string | null;
-  address_lat?: string | number | null;
-  address_lng?: string | number | null;
-  address_waze_url?: string | null;
-  waze_deep_link?: string | null;
-  whatsapp_deep_link?: string | null;
-  call_deep_link?: string | null;
-  issues_open?: ProjectOpenIssue[];
-};
 
 type ReasonItem = {
   id: string;
@@ -465,25 +390,6 @@ function emptyManualDoorForm(): ManualDoorFormState {
     assigned_installer_id: "",
     planned_install_date: "",
   };
-}
-
-function formatReadablePhone(value: string | null | undefined): string {
-  const normalized = normalizeDraftPhone(value || "");
-  if (!normalized) {
-    return value?.trim() || "?";
-  }
-  if (normalized.startsWith("+972") && normalized.length === 13) {
-    return `+972 ${normalized.slice(4, 6)}-${normalized.slice(6, 9)}-${normalized.slice(9)}`;
-  }
-  return normalized;
-}
-
-async function copyTextToClipboard(value: string): Promise<boolean> {
-  if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
-    return false;
-  }
-  await navigator.clipboard.writeText(value);
-  return true;
 }
 
 function projectFormFromDetails(
@@ -1026,7 +932,6 @@ export default function ProjectsPage() {
   const [projectActionHint, setProjectActionHint] = useState<string | null>(
     null,
   );
-  const quickActionCopyTimeoutRef = useRef<number | null>(null);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [projectDialogMode, setProjectDialogMode] = useState<"create" | "edit">(
     "create",
@@ -3164,46 +3069,6 @@ export default function ProjectsPage() {
     }
   };
 
-  const clearProjectPhoneCopyTimer = () => {
-    if (quickActionCopyTimeoutRef.current != null) {
-      window.clearTimeout(quickActionCopyTimeoutRef.current);
-      quickActionCopyTimeoutRef.current = null;
-    }
-  };
-
-  const copyProjectPhone = async (value: string | null | undefined) => {
-    const normalized = normalizeDraftPhone(value || "");
-    if (!normalized) {
-      showProjectActionHint(
-        copy(
-          "Add a primary phone to unlock direct calling.",
-          "Добавьте основной телефон, чтобы включить прямой звонок.",
-          "הוסף טלפון ראשי כדי לפתוח חיוג ישיר.",
-        ),
-      );
-      return;
-    }
-    const copied = await copyTextToClipboard(normalized);
-    if (copied) {
-      setProjectActionHint(null);
-      setProjectFlowNotice(
-        copy(
-          "Phone number copied.",
-          "Номер телефона скопирован.",
-          "מספר הטלפון הועתק.",
-        ),
-      );
-    }
-  };
-
-  const scheduleProjectPhoneCopy = (value: string | null | undefined) => {
-    clearProjectPhoneCopyTimer();
-    quickActionCopyTimeoutRef.current = window.setTimeout(() => {
-      void copyProjectPhone(value);
-      quickActionCopyTimeoutRef.current = null;
-    }, 700);
-  };
-
   // UrgencySurchargesCard saved a surcharge: refresh the financial views and,
   // for an order-scoped one, focus the matrix on that order (as before the split).
   const handleUrgencySaved = async (projectId: string, orderNumber: string | null) => {
@@ -5127,386 +4992,16 @@ export default function ProjectsPage() {
                   </aside>
                 </div>
 
-                <WidgetCard
-                  title={copy(
-                    "Project settings",
-                    "Настройки проекта",
-                    "הגדרות פרויקט",
-                  )}
-                  headerMeta={
-                    <LtrText as="span">
-                      {selectedProjectCode}
-                    </LtrText>
-                  }
-                >
-                  <div className="space-y-4">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="max-w-3xl min-w-0">
-                      <h3 className="line-clamp-2 text-[15px] font-semibold leading-tight text-text">
-                        {projectDetails?.code
-                          ? `${projectDetails.code} - ${selectedProject.name}`
-                          : selectedProject.name}
-                      </h3>
-                      <p className="mt-2 text-[12px] leading-6 text-text-secondary">
-                        {projectDetails?.address ||
-                          copy(
-                            "Add the site address and developer contact to unlock Waze, WhatsApp and direct calling.",
-                            "Добавьте адрес объекта и контакт застройщика, чтобы включить Waze, WhatsApp и прямой звонок.",
-                            "הוסף כתובת אתר ואיש קשר של היזם כדי להפעיל Waze, WhatsApp וחיוג ישיר.",
-                          )}
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-text-secondary">
-                        {projectDetails?.planned_start_date ? (
-                          <span className="metric-chip">
-                            {copy("Start", "Старт", "התחלה")}{" "}
-                            <LtrText>
-                              {projectDetails.planned_start_date}
-                            </LtrText>
-                          </span>
-                        ) : null}
-                        {projectDetails?.planned_end_date ? (
-                          <span className="metric-chip">
-                            {copy("Finish", "Финиш", "סיום")}{" "}
-                            <LtrText>{projectDetails.planned_end_date}</LtrText>
-                          </span>
-                        ) : null}
-                        <span className="metric-chip">
-                          {copy("Contact", "Контакт", "איש קשר")}{" "}
-                          {projectDetails?.contact_name ||
-                            copy("missing", "не заполнен", "חסר")}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap gap-2 lg:justify-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={openEditProjectDialog}
-                        disabled={!canManageProjects}
-                        className="gap-2"
-                      >
-                        <PencilLine aria-hidden="true" className="h-4 w-4" />
-                        {copy(
-                          "Edit project",
-                          "Редактировать проект",
-                          "ערוך פרויקט",
-                        )}
-                      </Button>
-                      <div className="hidden md:flex md:flex-wrap md:gap-2">
-                        {projectDetails?.waze_deep_link ? (
-                          <Button
-                            asChild
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                          >
-                            <a
-                              href={projectDetails.waze_deep_link}
-                              target="_blank"
-                              rel="noreferrer"
-                              title={projectDetails.address || ""}
-                            >
-                              <MapPinned
-                                aria-hidden="true"
-                                className="h-4 w-4"
-                              />
-                              Waze
-                            </a>
-                          </Button>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              showProjectActionHint(
-                                copy(
-                                  "Add address in project settings to unlock Waze.",
-                                  "Добавьте адрес в настройках проекта, чтобы включить Waze.",
-                                  "הוסף כתובת בהגדרות הפרויקט כדי לפתוח את Waze.",
-                                ),
-                              )
-                            }
-                            className="gap-2 border-dashed border-border bg-surface-subtle text-text-secondary hover:bg-surface"
-                          >
-                            <MapPinned aria-hidden="true" className="h-4 w-4" />
-                            Waze
-                          </Button>
-                        )}
-                        {projectDetails?.whatsapp_deep_link ? (
-                          <Button
-                            asChild
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                          >
-                            <a
-                              href={projectDetails.whatsapp_deep_link}
-                              target="_blank"
-                              rel="noreferrer"
-                              title={[
-                                projectDetails.contact_name,
-                                projectDetails.developer_whatsapp ||
-                                  projectDetails.contact_phone,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            >
-                              <MessageCircle
-                                aria-hidden="true"
-                                className="h-4 w-4"
-                              />
-                              WhatsApp
-                            </a>
-                          </Button>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              showProjectActionHint(
-                                copy(
-                                  "Add a contact phone or WhatsApp number to unlock WhatsApp.",
-                                  "Добавьте телефон контакта или номер WhatsApp, чтобы включить WhatsApp.",
-                                  "הוסף טלפון איש קשר או מספר WhatsApp כדי לפתוח את WhatsApp.",
-                                ),
-                              )
-                            }
-                            className="gap-2 border-dashed border-border bg-surface-subtle text-text-secondary hover:bg-surface"
-                          >
-                            <MessageCircle
-                              aria-hidden="true"
-                              className="h-4 w-4"
-                            />
-                            WhatsApp
-                          </Button>
-                        )}
-                        {projectDetails?.call_deep_link ? (
-                          <Button
-                            asChild
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                          >
-                            <a
-                              href={projectDetails.call_deep_link}
-                              title={projectDetails.contact_phone || ""}
-                            >
-                              <Phone aria-hidden="true" className="h-4 w-4" />
-                              {copy("Call", "Позвонить", "התקשר")}
-                            </a>
-                          </Button>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              showProjectActionHint(
-                                copy(
-                                  "Add a primary phone in project settings to unlock calling.",
-                                  "Добавьте основной телефон в настройках проекта, чтобы включить звонок.",
-                                  "הוסף טלפון ראשי בהגדרות הפרויקט כדי לפתוח חיוג.",
-                                ),
-                              )
-                            }
-                            className="gap-2 border-dashed border-border bg-surface-subtle text-text-secondary hover:bg-surface"
-                          >
-                            <Phone aria-hidden="true" className="h-4 w-4" />
-                            {copy("Call", "Позвонить", "התקשר")}
-                          </Button>
-                        )}
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="gap-2 md:hidden"
-                          >
-                            {copy("Actions", "Действия", "פעולות")}
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="w-56 md:hidden"
-                        >
-                          {projectDetails?.waze_deep_link ? (
-                            <DropdownMenuItem asChild className="gap-2">
-                              <a
-                                href={projectDetails.waze_deep_link}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                <MapPinned className="h-4 w-4" />
-                                Waze
-                              </a>
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              className="gap-2"
-                              onSelect={() =>
-                                showProjectActionHint(
-                                  copy(
-                                    "Add address in project settings to unlock Waze.",
-                                    "Добавьте адрес в настройках проекта, чтобы включить Waze.",
-                                    "הוסף כתובת בהגדרות הפרויקט כדי לפתוח את Waze.",
-                                  ),
-                                )
-                              }
-                            >
-                              <MapPinned className="h-4 w-4" />
-                              Waze
-                            </DropdownMenuItem>
-                          )}
-                          {projectDetails?.whatsapp_deep_link ? (
-                            <DropdownMenuItem asChild className="gap-2">
-                              <a
-                                href={projectDetails.whatsapp_deep_link}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                <MessageCircle className="h-4 w-4" />
-                                WhatsApp
-                              </a>
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              className="gap-2"
-                              onSelect={() =>
-                                showProjectActionHint(
-                                  copy(
-                                    "Add a contact phone or WhatsApp number to unlock WhatsApp.",
-                                    "Добавьте телефон контакта или номер WhatsApp, чтобы включить WhatsApp.",
-                                    "הוסף טלפון איש קשר או מספר WhatsApp כדי לפתוח את WhatsApp.",
-                                  ),
-                                )
-                              }
-                            >
-                              <MessageCircle className="h-4 w-4" />
-                              WhatsApp
-                            </DropdownMenuItem>
-                          )}
-                          {projectDetails?.call_deep_link ? (
-                            <DropdownMenuItem asChild className="gap-2">
-                              <a href={projectDetails.call_deep_link}>
-                                <Phone className="h-4 w-4" />
-                                {copy("Call", "Позвонить", "התקשר")}
-                              </a>
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              className="gap-2"
-                              onSelect={() =>
-                                showProjectActionHint(
-                                  copy(
-                                    "Add a primary phone in project settings to unlock calling.",
-                                    "Добавьте основной телефон в настройках проекта, чтобы включить звонок.",
-                                    "הוסף טלפון ראשי בהגדרות הפרויקט כדי לפתוח חיוג.",
-                                  ),
-                                )
-                              }
-                            >
-                              <Phone className="h-4 w-4" />
-                              {copy("Call", "Позвонить", "התקשר")}
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      {projectDetails?.contact_phone ? (
-                        <button
-                          type="button"
-                          title={copy(
-                            "Click or hold to copy the number",
-                            "Нажмите или удерживайте, чтобы скопировать номер",
-                            "לחץ או החזק כדי להעתיק את המספר",
-                          )}
-                          onClick={() =>
-                            void copyProjectPhone(projectDetails.contact_phone)
-                          }
-                          onContextMenu={(event) => {
-                            event.preventDefault();
-                            void copyProjectPhone(projectDetails.contact_phone);
-                          }}
-                          onPointerDown={() =>
-                            scheduleProjectPhoneCopy(
-                              projectDetails.contact_phone,
-                            )
-                          }
-                          onPointerUp={clearProjectPhoneCopyTimer}
-                          onPointerLeave={clearProjectPhoneCopyTimer}
-                          className="hidden min-h-8 items-center rounded-full border border-border-strong bg-surface px-3 text-[12px] font-medium text-text transition-colors hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 md:inline-flex"
-                        >
-                          <LtrText>
-                            {formatReadablePhone(projectDetails.contact_phone)}
-                          </LtrText>
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 text-[12px] text-text-secondary md:grid-cols-2 xl:grid-cols-4">
-                    <div className="min-w-0 rounded-lg border border-border bg-surface px-4 py-3">
-                      <div className={projectsMetricLabelClass}>
-                        {copy("Developer", "Застройщик", "יזם")}
-                      </div>
-                      <div className="mt-1 truncate font-medium text-text">
-                        {projectDetails?.developer_company || "-"}
-                      </div>
-                    </div>
-                    <div className="min-w-0 rounded-lg border border-border bg-surface px-4 py-3">
-                      <div className={projectsMetricLabelClass}>
-                        {copy("Contact", "Контакт", "איש קשר")}
-                      </div>
-                      <div className="mt-1 truncate font-medium text-text">
-                        {projectDetails?.contact_name || "-"}
-                      </div>
-                      <div className="mt-1 text-text-secondary">
-                        {projectDetails?.contact_phone ? (
-                          <LtrText>
-                            {formatReadablePhone(projectDetails.contact_phone)}
-                          </LtrText>
-                        ) : (
-                          "-"
-                        )}
-                      </div>
-                    </div>
-                    <div className="min-w-0 rounded-lg border border-border bg-surface px-4 py-3">
-                      <div className={projectsMetricLabelClass}>WhatsApp</div>
-                      <div className="mt-1 font-medium text-text">
-                        {projectDetails?.developer_whatsapp ||
-                        projectDetails?.contact_phone ? (
-                          <LtrText>
-                            {formatReadablePhone(
-                              projectDetails?.developer_whatsapp ||
-                                projectDetails?.contact_phone,
-                            )}
-                          </LtrText>
-                        ) : (
-                          "-"
-                        )}
-                      </div>
-                      <div className="mt-1 truncate text-text-secondary">
-                        {projectDetails?.contact_email ? (
-                          <LtrText>{projectDetails.contact_email}</LtrText>
-                        ) : (
-                          "-"
-                        )}
-                      </div>
-                    </div>
-                    <div className="min-w-0 rounded-lg border border-border bg-surface px-4 py-3">
-                      <div className={projectsMetricLabelClass}>
-                        {copy("Notes", "Заметки", "הערות")}
-                      </div>
-                      <div className="mt-1 line-clamp-3 break-words text-text-secondary">
-                        {projectDetails?.developer_notes || "-"}
-                      </div>
-                    </div>
-                  </div>
-                  </div>
-                </WidgetCard>
+                <ProjectSettingsCard
+                  details={projectDetails}
+                  project={selectedProject}
+                  projectCode={selectedProjectCode}
+                  canManage={canManageProjects}
+                  onEdit={openEditProjectDialog}
+                  onActionHint={showProjectActionHint}
+                  onActionHintChange={setProjectActionHint}
+                  onNotice={setProjectFlowNotice}
+                />
 
                 <ProjectDocumentsCard
                   projectId={selectedProjectId}

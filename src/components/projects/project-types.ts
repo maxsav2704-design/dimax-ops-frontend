@@ -1,0 +1,74 @@
+// Moved verbatim from ProjectsPage.tsx (monolith split).
+
+import { type ProjectLifecycleStatus } from "@/components/projects/project-form";
+
+export type ProjectListItem = {
+  id: string;
+  name: string;
+  code?: string | null;
+  address: string;
+  status: string;
+  lifecycle_status?: ProjectLifecycleStatus;
+  health_status?: ProjectHealthStatus;
+};
+
+export type ProjectDetailsResponse = {
+  id?: string;
+  name?: string;
+  code?: string | null;
+  address?: string;
+  address_details?: {
+    street?: string | null;
+    building?: string | null;
+    city?: string | null;
+    entrance?: string | null;
+    lat?: string | number | null;
+    lng?: string | number | null;
+    waze_url?: string | null;
+    waze_deep_link?: string | null;
+  } | null;
+  planned_start_date?: string | null;
+  planned_end_date?: string | null;
+  status?: string;
+  lifecycle_status?: ProjectLifecycleStatus;
+  health_status?: ProjectHealthStatus;
+  developer?: {
+    name?: string | null;
+    contact_name?: string | null;
+    phone?: string | null;
+    phone_alt?: string | null;
+    whatsapp?: string | null;
+    email?: string | null;
+    notes?: string | null;
+    whatsapp_deep_link?: string | null;
+    call_deep_link?: string | null;
+  } | null;
+  developer_company?: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  contact_email?: string | null;
+  developer_phone_alt?: string | null;
+  developer_whatsapp?: string | null;
+  developer_notes?: string | null;
+  address_street?: string | null;
+  address_building?: string | null;
+  address_city?: string | null;
+  address_entrance?: string | null;
+  address_lat?: string | number | null;
+  address_lng?: string | number | null;
+  address_waze_url?: string | null;
+  waze_deep_link?: string | null;
+  whatsapp_deep_link?: string | null;
+  call_deep_link?: string | null;
+  issues_open?: ProjectOpenIssue[];
+};
+
+export type ProjectHealthStatus = "NORMAL" | "AT_RISK" | "BLOCKED";
+
+export type ProjectOpenIssue = {
+  id: string;
+  door_id: string;
+  status: string;
+  title: string | null;
+  details: string | null;
+};
