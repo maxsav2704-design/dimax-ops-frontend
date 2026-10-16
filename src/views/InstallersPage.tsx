@@ -873,6 +873,7 @@ export default function InstallersPage() {
           <div className="relative flex-1 min-w-[240px]">
             <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
             <input
+              aria-label={t("installers.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("installers.searchPlaceholder")}
@@ -1080,6 +1081,7 @@ export default function InstallersPage() {
               )}
               <div className="flex flex-wrap items-center gap-2">
                 <input
+                  aria-label={copy("User UUID for link", "UUID пользователя", "UUID משתמש")}
                   value={linkUserId}
                   disabled={!canManageInstallers}
                   onChange={(e) => setLinkUserId(e.target.value)}
@@ -1130,6 +1132,7 @@ export default function InstallersPage() {
                   <CompanyPriceStatus {...pricing} onOpen={() => router.push("/price-lists")} />
                   {!factoryPrices && <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_140px_130px]">
                     <select
+                      aria-label={copy("Door type for the new rate", "Тип двери для новой ставки", "סוג דלת לתעריף החדש")}
                       value={newRateDoorTypeId}
                       disabled={!canManageRates}
                       onChange={(e) => setNewRateDoorTypeId(e.target.value)}
@@ -1142,6 +1145,7 @@ export default function InstallersPage() {
                       ))}
                     </select>
                     <input
+                      aria-label={copy("Price", "Цена", "מחיר")}
                       value={newRatePrice}
                       disabled={!canManageRates}
                       onChange={(e) => setNewRatePrice(e.target.value)}
@@ -1187,6 +1191,7 @@ export default function InstallersPage() {
                               : rate.door_type_id}
                           </div>
                           {factoryPrices ? <span className="text-sm tabular-nums">{rate.price} ILS</span> : <input
+                            aria-label={copy("Rate for {door}", "Ставка для {door}", "תעריף עבור {door}").replace("{door}", doorType ? `${doorType.code} - ${doorType.name}` : rate.door_type_id)}
                             value={rateDrafts[rate.id] ?? String(rate.price)}
                             disabled={!canManageRates}
                             onChange={(e) =>

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -111,6 +111,7 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const { locale } = useI18n();
   const copy = useCopy();
+  const companyNameId = useId();
   const [companyName, setCompanyName] = useState("");
   const [emailTestRecipient, setEmailTestRecipient] =
     useState("ops@example.com");
@@ -412,10 +413,11 @@ export default function SettingsPage() {
                 {" "}
                 <div className="field-stack">
                   {" "}
-                  <label className="field-label">
+                  <label className="field-label" htmlFor={companyNameId}>
                     {copy("Company name", "Название компании", "שם החברה")}
                   </label>{" "}
                   <input
+                    id={companyNameId}
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
                     disabled={!canManageSettings}

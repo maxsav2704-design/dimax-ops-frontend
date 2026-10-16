@@ -1358,6 +1358,7 @@ export default function InstallerProjectPage({
                     {t("installerProject.showIssueDoors")}{" "}
                   </button>{" "}
                   <input
+                    aria-label={t("installerProject.issueSearchPlaceholder")}
                     value={issueSearch}
                     onChange={(event) => setIssueSearch(event.target.value)}
                     placeholder={t("installerProject.issueSearchPlaceholder")}

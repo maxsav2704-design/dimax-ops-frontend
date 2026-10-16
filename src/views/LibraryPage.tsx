@@ -372,6 +372,11 @@ export default function LibraryPage() {
               {" "}
               <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />{" "}
               <Input
+                aria-label={copy(
+                  "Search SKU, localized name, install type or manufacturer...",
+                  "Поиск по SKU, названию, типу монтажа или производителю...",
+                  "חיפוש לפי SKU, שם, סוג התקנה או יצרן...",
+                )}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={copy(

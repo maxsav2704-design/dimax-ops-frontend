@@ -872,6 +872,7 @@ export default function DocumentsPage() {
             <div className="relative min-w-0 flex-1 sm:min-w-[260px]">
               <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
               <Input
+                aria-label={copy("Search templates...", "Поиск шаблонов...", "חיפוש תבניות...")}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={copy("Search templates...", "Поиск шаблонов...", "חיפוש תבניות...")}

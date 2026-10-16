@@ -7218,6 +7218,7 @@ export default function ReportsPage() {
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               <select
+                aria-label={copy("Installers: sort by", "Монтажники: сортировать по", "מתקינים: מיון לפי")}
                 value={installersSortBy}
                 onChange={(e) => {
                   setInstallersSortBy(e.target.value as InstallersSortBy);
@@ -7232,6 +7233,7 @@ export default function ReportsPage() {
                 ))}
               </select>
               <select
+                aria-label={copy("Installers: sort direction", "Монтажники: направление сортировки", "מתקינים: כיוון מיון")}
                 value={installersSortDir}
                 onChange={(e) => {
                   setInstallersSortDir(e.target.value as SortDir);
@@ -7913,6 +7915,11 @@ export default function ReportsPage() {
                 ))}
               </select>
               <input
+                aria-label={copy(
+                  "Search order…",
+                  "Поиск заказа…",
+                  "חפש הזמנה…",
+                )}
                 value={orderNumbersQuery}
                 onChange={(e) => {
                   setOrderNumbersQuery(e.target.value);
@@ -7926,6 +7933,7 @@ export default function ReportsPage() {
                 className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] xl:w-auto xl:max-w-[220px]"
               />
               <select
+                aria-label={copy("Orders: sort by", "Заказы: сортировать по", "הזמנות: מיון לפי")}
                 value={orderNumbersSortBy}
                 onChange={(e) => {
                   setOrderNumbersSortBy(e.target.value as OrderNumbersSortBy);
@@ -7940,6 +7948,7 @@ export default function ReportsPage() {
                 ))}
               </select>
               <select
+                aria-label={copy("Orders: sort direction", "Заказы: направление сортировки", "הזמנות: כיוון מיון")}
                 value={orderNumbersSortDir}
                 onChange={(e) => {
                   setOrderNumbersSortDir(e.target.value as SortDir);
@@ -8715,6 +8724,7 @@ export default function ReportsPage() {
           </div>
           <div className="px-4 py-3 border-b border-border grid gap-2 md:grid-cols-[180px_220px_150px_150px_auto] items-center">
             <select
+              aria-label={copy("Catalog audit: entity type", "Аудит справочников: тип сущности", "ביקורת קטלוג: סוג ישות")}
               value={auditEntityType}
               onChange={(e) => {
                 setAuditEntityType(e.target.value);
@@ -8732,6 +8742,7 @@ export default function ReportsPage() {
               ))}
             </select>
             <select
+              aria-label={copy("Catalog audit: action", "Аудит справочников: действие", "ביקורת קטלוג: פעולה")}
               value={auditAction}
               onChange={(e) => {
                 setAuditAction(e.target.value);
@@ -8749,6 +8760,7 @@ export default function ReportsPage() {
               ))}
             </select>
             <input
+              aria-label={copy("Catalog audit: date from", "Аудит справочников: дата с", "ביקורת קטלוג: מתאריך")}
               value={auditDateFrom}
               onChange={(e) => {
                 setAuditDateFrom(e.target.value);
@@ -8758,6 +8770,7 @@ export default function ReportsPage() {
               className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px]"
             />
             <input
+              aria-label={copy("Catalog audit: date to", "Аудит справочников: дата по", "ביקורת קטלוג: עד תאריך")}
               value={auditDateTo}
               onChange={(e) => {
                 setAuditDateTo(e.target.value);
@@ -8883,6 +8896,7 @@ export default function ReportsPage() {
           </div>
           <div className="px-4 py-3 border-b border-border grid gap-2 md:grid-cols-[220px_240px_150px_150px_auto] items-center">
             <select
+              aria-label={copy("Issue audit: action", "Аудит проблем: действие", "ביקורת תקלות: פעולה")}
               value={issueAuditAction}
               onChange={(e) => {
                 setIssueAuditAction(e.target.value);
@@ -8900,6 +8914,7 @@ export default function ReportsPage() {
               ))}
             </select>
             <input
+              aria-label={copy("Issue UUID", "UUID проблемы", "UUID תקלה")}
               value={issueAuditIssueId}
               onChange={(e) => {
                 setIssueAuditIssueId(e.target.value);
@@ -8909,6 +8924,7 @@ export default function ReportsPage() {
               className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px]"
             />
             <input
+              aria-label={copy("Issue audit: date from", "Аудит проблем: дата с", "ביקורת תקלות: מתאריך")}
               value={issueAuditDateFrom}
               onChange={(e) => {
                 setIssueAuditDateFrom(e.target.value);
@@ -8918,6 +8934,7 @@ export default function ReportsPage() {
               className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-2 text-[13px]"
             />
             <input
+              aria-label={copy("Issue audit: date to", "Аудит проблем: дата по", "ביקורת תקלות: עד תאריך")}
               value={issueAuditDateTo}
               onChange={(e) => {
                 setIssueAuditDateTo(e.target.value);

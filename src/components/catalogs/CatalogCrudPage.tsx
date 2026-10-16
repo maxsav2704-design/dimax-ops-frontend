@@ -433,6 +433,7 @@ export function CatalogCrudPage({
                   <Plus className="h-3.5 w-3.5" /> {copy("Add", "Добавить", "הוסף")} {entityLabel}{" "}
                 </button>{" "}
                 <input
+                  aria-label={copy("Import catalog file", "Файл импорта справочника", "קובץ ייבוא קטלוג")}
                   ref={fileInputRef}
                   type="file"
                   disabled={!canImportCatalog}
@@ -477,6 +478,11 @@ export function CatalogCrudPage({
               {" "}
               <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />{" "}
               <Input
+                aria-label={copy(
+                  `Search ${entityLabel.toLowerCase()}...`,
+                  "Поиск по справочнику...",
+                  "חיפוש בקטלוג...",
+                )}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={copy(

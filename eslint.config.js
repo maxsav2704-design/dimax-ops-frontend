@@ -39,22 +39,17 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      // Accessibility: the recommended set as warnings first (block 3 of the
-      // admin audit); rules move to "error" once their count reaches zero.
-      ...Object.fromEntries(
-        Object.entries(jsxA11y.flatConfigs.recommended.rules).map(([rule, level]) => [
-          rule,
-          Array.isArray(level) ? ["warn", ...level.slice(1)] : "warn",
-        ]),
-      ),
+      // Accessibility: the recommended set as errors (block 3 of the admin
+      // audit brought the count to zero on 2026-10-16).
+      ...jsxA11y.flatConfigs.recommended.rules,
       // Deprecated in jsx-a11y and superseded by label-has-associated-control,
       // which accepts a nested control; keeping both would flag every
       // <label>text<Input/></label> pair twice.
       "jsx-a11y/label-has-for": "off",
       // Our labels and buttons nest their text two or three wrappers deep
       // (icon + title + meta); the text is there, so look that deep.
-      "jsx-a11y/label-has-associated-control": ["warn", { ...a11yRuleOptions("jsx-a11y/label-has-associated-control"), depth: 3 }],
-      "jsx-a11y/control-has-associated-label": ["warn", { ...a11yRuleOptions("jsx-a11y/control-has-associated-label"), depth: 3 }],
+      "jsx-a11y/label-has-associated-control": ["error", { ...a11yRuleOptions("jsx-a11y/label-has-associated-control"), depth: 3 }],
+      "jsx-a11y/control-has-associated-label": ["error", { ...a11yRuleOptions("jsx-a11y/control-has-associated-label"), depth: 3 }],
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
     },
