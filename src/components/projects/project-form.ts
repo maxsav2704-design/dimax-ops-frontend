@@ -227,8 +227,14 @@ export function formatProjectPhoneInput(raw: string): string {
 }
 
 export function buildDraftMapPreviewUrl(form: ProjectFormState): string | null {
-  const lat = Number(form.address_lat.trim());
-  const lng = Number(form.address_lng.trim());
+  const latText = form.address_lat.trim();
+  const lngText = form.address_lng.trim();
+  // Number("") is 0, which used to draw a map of 0°,0° for an empty address.
+  if (!latText || !lngText) {
+    return null;
+  }
+  const lat = Number(latText);
+  const lng = Number(lngText);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return null;
   }
