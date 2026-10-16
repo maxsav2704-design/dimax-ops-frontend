@@ -1681,15 +1681,6 @@ export default function ProjectsPage() {
   const [projectsLoadError, setProjectsLoadError] = useState(false);
   const [loadingLayout, setLoadingLayout] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sectionLoadErrors, setSectionLoadErrors] = useState<
-    Partial<Record<ProjectSectionKey, boolean>>
-  >({});
-  const clearSectionError = useCallback((key: ProjectSectionKey) => {
-    setSectionLoadErrors((prev) => (prev[key] ? { ...prev, [key]: false } : prev));
-  }, []);
-  const failSection = useCallback((key: ProjectSectionKey) => {
-    setSectionLoadErrors((prev) => ({ ...prev, [key]: true }));
-  }, []);
   const [projectFlowNotice, setProjectFlowNotice] = useState<string | null>(
     null,
   );
@@ -1745,10 +1736,6 @@ export default function ProjectsPage() {
   const [analysisReady, setAnalysisReady] = useState(false);
   const [allowPartialImport, setAllowPartialImport] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [importHistory, setImportHistory] = useState<ProjectImportRunItem[]>(
-    [],
-  );
-  const [loadingImportHistory, setLoadingImportHistory] = useState(false);
   const [importHistoryModeFilter, setImportHistoryModeFilter] = useState("all");
   const [importHistoryStatusFilter, setImportHistoryStatusFilter] =
     useState("all");
@@ -1905,9 +1892,6 @@ export default function ProjectsPage() {
   const [focusedImportRunId, setFocusedImportRunId] = useState<string | null>(
     null,
   );
-  const [focusedImportRunDetails, setFocusedImportRunDetails] =
-    useState<ProjectImportRunDetails | null>(null);
-  const [loadingImportRunDetails, setLoadingImportRunDetails] = useState(false);
   const [deepLinkApplied, setDeepLinkApplied] = useState(false);
   const [deepLinkProjectMissing, setDeepLinkProjectMissing] = useState(false);
   const [projectAddressSuggestions, setProjectAddressSuggestions] = useState<
@@ -1966,6 +1950,61 @@ export default function ProjectsPage() {
     [searchParams],
   );
   const deepLinkOnlyFailed = searchParams?.get("only_failed_runs") === "1";
+
+  // Import history and the focused run on react-query, keyed by project / filter / run.
+  const importHistoryQuery = useQuery({
+    queryKey: ["projects", "import-history", selectedProjectId, importHistoryModeFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("limit", "30");
+      params.set("offset", "0");
+      if (importHistoryModeFilter !== "all") {
+        params.set("mode", importHistoryModeFilter);
+      }
+      const response = await apiFetch<ProjectImportRunsResponse>(
+        `/api/v1/admin/projects/${selectedProjectId}/doors/import-history?${params.toString()}`,
+      );
+      return response.items || [];
+    },
+    enabled: Boolean(selectedProjectId),
+    retry: false,
+  });
+  const importRunDetailsQuery = useQuery({
+    queryKey: ["projects", "import-run", selectedProjectId, focusedImportRunId],
+    queryFn: () =>
+      apiFetch<ProjectImportRunDetails>(
+        `/api/v1/admin/projects/${selectedProjectId}/doors/import-runs/${focusedImportRunId}`,
+      ),
+    enabled: Boolean(selectedProjectId && focusedImportRunId),
+    retry: false,
+  });
+  const importHistory = useMemo(
+    () => (selectedProjectId ? (importHistoryQuery.data ?? []) : []),
+    [importHistoryQuery.data, selectedProjectId],
+  );
+  const focusedImportRunDetails =
+    selectedProjectId && focusedImportRunId ? (importRunDetailsQuery.data ?? null) : null;
+  const loadingImportHistory = importHistoryQuery.isFetching;
+  const loadingImportRunDetails = importRunDetailsQuery.isFetching;
+  const refetchImportHistory = importHistoryQuery.refetch;
+  const refetchImportRunDetails = importRunDetailsQuery.refetch;
+  const loadImportHistory = useCallback(async (_projectId: string) => {
+    if (selectedProjectId) await refetchImportHistory();
+  }, [refetchImportHistory, selectedProjectId]);
+  const loadImportRunDetails = useCallback(async (_projectId: string, _runId: string) => {
+    if (selectedProjectId && focusedImportRunId) await refetchImportRunDetails();
+  }, [focusedImportRunId, refetchImportRunDetails, selectedProjectId]);
+
+  // Deep link into failed runs: focus the first failed/partial run once history is in.
+  useEffect(() => {
+    const items = importHistoryQuery.data;
+    if (!items || (!deepLinkOnlyFailed && deepLinkFailedIds.length === 0)) return;
+    setFocusedImportRunId((currentRunId) => {
+      if (currentRunId) return currentRunId;
+      const failed = items.find((item) => item.status === "FAILED" || item.status === "PARTIAL");
+      return failed?.id || currentRunId;
+    });
+  }, [deepLinkFailedIds, deepLinkOnlyFailed, importHistoryQuery.data]);
   const [deepLinkDoorFlowApplied, setDeepLinkDoorFlowApplied] = useState(false);
   const failedQueueCanPrev = failedQueueOffset > 0;
   const failedQueueCanNext =
@@ -3022,62 +3061,14 @@ export default function ProjectsPage() {
   };
 
 
-  const loadImportHistory = useCallback(async (projectId: string) => {
-    setLoadingImportHistory(true);
-    clearSectionError("importHistory");
-    try {
-      const params = new URLSearchParams();
-      params.set("limit", "30");
-      params.set("offset", "0");
-      if (importHistoryModeFilter !== "all") {
-        params.set("mode", importHistoryModeFilter);
-      }
-      const response = await apiFetch<ProjectImportRunsResponse>(
-        `/api/v1/admin/projects/${projectId}/doors/import-history?${params.toString()}`,
-      );
-      const items = response.items || [];
-      setImportHistory(items);
-      if (deepLinkOnlyFailed || deepLinkFailedIds.length > 0) {
-        setFocusedImportRunId((currentRunId) => {
-          if (currentRunId) {
-            return currentRunId;
-          }
-          const failed = items.find(
-            (item) => item.status === "FAILED" || item.status === "PARTIAL",
-          );
-          return failed?.id || currentRunId;
-        });
-      }
-    } catch {
-      failSection("importHistory");
-      setImportHistory([]);
-    } finally {
-      setLoadingImportHistory(false);
-    }
-  }, [clearSectionError, deepLinkFailedIds, deepLinkOnlyFailed, failSection, importHistoryModeFilter]);
 
-  const loadImportRunDetails = useCallback(async (projectId: string, runId: string) => {
-    setLoadingImportRunDetails(true);
-    clearSectionError("importRunDetails");
-    try {
-      const response = await apiFetch<ProjectImportRunDetails>(
-        `/api/v1/admin/projects/${projectId}/doors/import-runs/${runId}`,
-      );
-      setFocusedImportRunDetails(response);
-    } catch {
-      failSection("importRunDetails");
-      setFocusedImportRunDetails(null);
-    } finally {
-      setLoadingImportRunDetails(false);
-    }
-  }, [clearSectionError, failSection]);
 
 
   const projectSections: Array<{
     key: ProjectSectionKey;
     label: string;
     loading: boolean;
-    failed?: boolean;
+    failed: boolean;
     reload: () => Promise<void> | void;
   }> = [
     {
@@ -3131,12 +3122,14 @@ export default function ProjectsPage() {
     },
     {
       key: "importHistory",
+      failed: importHistoryQuery.isError,
       label: copy("Import history", "История импорта", "היסטוריית ייבוא"),
       loading: loadingImportHistory,
       reload: () => (selectedProjectId ? loadImportHistory(selectedProjectId) : undefined),
     },
     {
       key: "importRunDetails",
+      failed: importRunDetailsQuery.isError,
       label: copy("Import run details", "Детали запуска импорта", "פרטי הרצת הייבוא"),
       loading: loadingImportRunDetails,
       reload: () =>
@@ -3152,9 +3145,7 @@ export default function ProjectsPage() {
       reload: loadFailedQueue,
     },
   ];
-  const failedProjectSections = projectSections.filter(
-    (section) => section.failed ?? Boolean(sectionLoadErrors[section.key]),
-  );
+  const failedProjectSections = projectSections.filter((section) => section.failed);
 
   useEffect(() => {
     void loadProjects();
@@ -3333,16 +3324,12 @@ export default function ProjectsPage() {
   ]);
 
   useEffect(() => {
+    // Every other panel is a react-query entry keyed by selectedProjectId;
+    // the door layout is the last hand-rolled loader.
     if (selectedProjectId) {
-      // Details, documents and financial sections are react-query entries keyed
-      // by selectedProjectId; only the hand-rolled loaders remain here.
       void loadLayout(selectedProjectId);
-      void loadImportHistory(selectedProjectId);
-    } else {
-      setImportHistory([]);
-      setFocusedImportRunDetails(null);
     }
-  }, [loadImportHistory, loadLayout, selectedProjectId]);
+  }, [loadLayout, selectedProjectId]);
 
   useEffect(() => {
     setSelectedDoorIds([]);
@@ -3377,7 +3364,6 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     if (!focusedImportRunId) {
-      setFocusedImportRunDetails(null);
       return;
     }
     const candidates = [
@@ -3388,17 +3374,12 @@ export default function ProjectsPage() {
       candidates.find((element) => element.getClientRects().length > 0) ||
       candidates[0] ||
       null;
+    // The run details query follows focusedImportRunId on its own.
     if (!node || typeof node.scrollIntoView !== "function") {
-      if (selectedProjectId) {
-        void loadImportRunDetails(selectedProjectId, focusedImportRunId);
-      }
       return;
     }
     node.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (selectedProjectId) {
-      void loadImportRunDetails(selectedProjectId, focusedImportRunId);
-    }
-  }, [focusedImportRunId, importHistory, loadImportRunDetails, selectedProjectId]);
+  }, [focusedImportRunId, importHistory]);
 
   const handleDownloadImportTemplate = async () => {
     if (!canManageProjectImports) return;
@@ -3719,7 +3700,6 @@ export default function ProjectsPage() {
     setImportHistoryModeFilter("all");
     setImportHistoryStatusFilter("all");
     setFocusedImportRunId(runId);
-    setFocusedImportRunDetails(null);
     if (selectedProjectId === projectId) {
       void loadImportHistory(projectId);
       return;
@@ -5116,9 +5096,7 @@ export default function ProjectsPage() {
                         setSelectedProjectId(project.id);
                         setImportResult(null);
                         setAnalysisReady(false);
-                        setImportHistory([]);
                         setFocusedImportRunId(null);
-                        setFocusedImportRunDetails(null);
                       }}
                       className={cn(
                         "flex min-h-[96px] w-full min-w-0 flex-col justify-between rounded-lg border px-3 py-3 text-start transition-colors duration-150",
