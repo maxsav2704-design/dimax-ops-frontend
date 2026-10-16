@@ -1,4 +1,5 @@
 // Moved verbatim from ProjectsPage.tsx (monolith split).
+import { cn } from "@/lib/utils";
 import { type ProjectOpenIssue } from "@/components/projects/project-types";
 import { normalizeDraftPhone } from "@/components/projects/project-form";
 
@@ -94,4 +95,8 @@ export function compareNatural(valueA: string, valueB: string): number {
     numeric: true,
     sensitivity: "base",
   });
+}
+
+export function projectsPanelClass(extra?: string): string {
+  return cn("rounded-lg border border-border bg-surface", extra);
 }

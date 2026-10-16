@@ -35,3 +35,10 @@ export type InstallerListItem = {
   status: string;
   is_active: boolean;
 };
+
+export type ReasonItem = {
+  id: string;
+  code: string;
+  name: string;
+  is_active: boolean;
+};
