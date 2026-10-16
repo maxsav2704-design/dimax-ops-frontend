@@ -1,4 +1,5 @@
 // Door import responses (analyze / import runs, mapping profiles).
+import { type ProjectImportRunItem } from "@/components/projects/project-types";
 // Moved verbatim from ProjectsPage.tsx (monolith split, Projects step 2).
 
 export type DoorType = {
@@ -119,4 +120,11 @@ export type LatestImportReviewItem = {
   errors_count: number;
   last_error?: string | null;
   retry_available: boolean;
+};
+
+export type ProjectImportRunDetails = ProjectImportRunItem & {
+  errors: Array<{ row: number; message: string }>;
+  diagnostics?: ImportColumnsDiagnostics | null;
+  would_import?: number;
+  would_skip?: number;
 };
