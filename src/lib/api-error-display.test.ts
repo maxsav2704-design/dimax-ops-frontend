@@ -60,6 +60,14 @@ describe("api-error-display", () => {
     expect(readableApiError(error, "he", "fallback")).toBe("מזהה החברה, האימייל או הסיסמה שגויים.");
   });
 
+  it("maps a malformed response to localized copy", () => {
+    const error = new ApiError(200, "Unexpected response shape from /api/v1/auth/me", {
+      error: { code: "INVALID_RESPONSE", message: "Unexpected response shape", meta: { path: "/api/v1/auth/me" } },
+    });
+    expect(readableApiError(error, "ru", "fallback")).toContain("неожиданном формате");
+    expect(readableApiError(error, "he", "fallback")).toContain("לא צפוי");
+  });
+
   it("maps conflict codes to readable labels", () => {
     expect(readableConflictCode("CONFLICT_ASSIGNMENT_CHANGED", "en")).toBe("Assignment changed");
     expect(readableConflictCode("CONFLICT_INVALID_TRANSITION", "ru")).toBe("Недопустимый переход");

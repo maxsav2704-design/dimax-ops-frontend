@@ -36,6 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiDownload, apiFetch } from "@/lib/api";
+import { earningsLedgerResponseSchema } from "@/lib/api-schemas";
 import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions, canViewRates } from "@/lib/admin-access";
 import { useI18n } from "@/lib/i18n";
@@ -353,7 +354,7 @@ export default function EarningsLedgerPage() {
 
   const ledgerQuery = useQuery({
     queryKey: ["earnings-ledger", ledgerPath],
-    queryFn: () => apiFetch<EarningsLedgerResponse>(ledgerPath),
+    queryFn: () => apiFetch<EarningsLedgerResponse>(ledgerPath, undefined, { schema: earningsLedgerResponseSchema }),
     enabled: ledgerEnabled,
     refetchInterval: 30_000,
   });

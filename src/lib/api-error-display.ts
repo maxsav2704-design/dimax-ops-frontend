@@ -39,6 +39,11 @@ const ERROR_COPY: Record<string, LocalizedTriple> = {
     ru: "Неверный ID компании, электронная почта или пароль.",
     he: "מזהה החברה, האימייל או הסיסמה שגויים.",
   },
+  INVALID_RESPONSE: {
+    en: "The server returned data in an unexpected format. Refresh the page; if it repeats, contact the office.",
+    ru: "Сервер вернул данные в неожиданном формате. Обновите страницу; если повторяется, сообщите в офис.",
+    he: "השרת החזיר נתונים בפורמט לא צפוי. רעננו את העמוד; אם זה חוזר, פנו למשרד.",
+  },
   AUTH_REQUIRED: {
     en: "Your session expired. Sign in again to continue.",
     ru: "Сессия истекла. Войди снова, чтобы продолжить.",

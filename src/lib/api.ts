@@ -183,7 +183,26 @@ async function ensureAuthorizedResponse(path: string, init?: RequestInit): Promi
   return response;
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+/** Minimal structural contract satisfied by zod schemas (and anything with parse()). */
+export type ResponseSchema<T> = { parse(value: unknown): T };
+
+export type ApiFetchOptions<T> = {
+  /**
+   * Validates the JSON body before it reaches the caller. A mismatch becomes an
+   * ApiError with code INVALID_RESPONSE instead of an undefined-property crash
+   * somewhere in the UI. Opt-in per endpoint.
+   */
+  schema?: ResponseSchema<T>;
+};
+
+function describeSchemaIssues(error: unknown): unknown {
+  if (typeof error === "object" && error !== null && "issues" in error) {
+    return (error as { issues: unknown }).issues;
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
+export async function apiFetch<T>(path: string, init?: RequestInit, options?: ApiFetchOptions<T>): Promise<T> {
   const response = await ensureAuthorizedResponse(path, init);
 
   if (!response.ok) {
@@ -202,7 +221,21 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  const payload = (await response.json()) as unknown;
+  if (!options?.schema) {
+    return payload as T;
+  }
+  try {
+    return options.schema.parse(payload);
+  } catch (error) {
+    throw new ApiError(response.status, `Unexpected response shape from ${path}`, {
+      error: {
+        code: "INVALID_RESPONSE",
+        message: `Unexpected response shape from ${path}`,
+        meta: { path, issues: describeSchemaIssues(error) },
+      },
+    });
+  }
 }
 
 export async function apiDownload(path: string, init?: RequestInit): Promise<Response> {

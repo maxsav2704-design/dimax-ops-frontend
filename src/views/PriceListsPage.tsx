@@ -18,6 +18,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { useCompanyPricingState } from "@/hooks/use-company-pricing-state";
 import { CompanyPriceStatus } from "@/components/prices/CompanyPriceStatus";
 import { apiFetch } from "@/lib/api";
+import { priceDetailSchema, pricePageSchema } from "@/lib/api-schemas";
 import { canAccessAdminModule, canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { onAuthChanged } from "@/lib/auth-session";
 import { useI18n } from "@/lib/i18n";
@@ -55,9 +56,9 @@ function PriceWorkspace({ writable, owner }: { writable: boolean; owner: boolean
   const [historyOffset, setHistoryOffset] = useState(0);
   const [now, setNow] = useState(Date.now);
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(timer); }, []);
-  const lists = useQuery({ queryKey: ["price-lists", offset], queryFn: ({ signal }) => apiFetch<PricePage>(`${PRICE_API}?limit=${PRICE_PAGE_SIZE}&offset=${offset}`, { signal }) });
+  const lists = useQuery({ queryKey: ["price-lists", offset], queryFn: ({ signal }) => apiFetch<PricePage>(`${PRICE_API}?limit=${PRICE_PAGE_SIZE}&offset=${offset}`, { signal }, { schema: pricePageSchema }) });
   const selectedId = selected ?? (offset === 0 ? pricing.state?.active_price?.price_list_id : undefined) ?? lists.data?.items[0]?.id;
-  const detail = useQuery({ queryKey: ["price-detail", selectedId], enabled: !!selectedId, queryFn: ({ signal }) => apiFetch<PriceDetail>(`${PRICE_API}/${selectedId}`, { signal }) });
+  const detail = useQuery({ queryKey: ["price-detail", selectedId], enabled: !!selectedId, queryFn: ({ signal }) => apiFetch<PriceDetail>(`${PRICE_API}/${selectedId}`, { signal }, { schema: priceDetailSchema }) });
   const history = useQuery({ queryKey: ["price-history", selectedId, historyOffset], enabled: !!selectedId,
     queryFn: ({ signal }) => apiFetch<InvitationPage>(`${PRICE_API}/${selectedId}/approvals?limit=${PRICE_PAGE_SIZE}&offset=${historyOffset}`, { signal }),
     refetchInterval: 30_000,

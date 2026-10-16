@@ -5,6 +5,7 @@ import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-quer
 
 import { apiFetch } from "@/lib/api";
 import { normalizeAuthSession, onAuthChanged, type AuthSession } from "@/lib/auth-session";
+import { authMeSchema } from "@/lib/api-schemas";
 import { queryKeys } from "@/lib/query-keys";
 
 export type AuthMeResponse = {
@@ -19,7 +20,9 @@ export type AuthMeResponse = {
 export const AUTH_SESSION_STALE_MS = 60_000;
 
 export async function loadAuthSession(): Promise<AuthSession | null> {
-  const response = await apiFetch<AuthMeResponse>("/api/v1/auth/me");
+  // The schema only guarantees the shape; normalizeAuthSession decides what the
+  // role and scope values mean (unknown values fall back to "no session").
+  const response = await apiFetch("/api/v1/auth/me", undefined, { schema: authMeSchema });
   return normalizeAuthSession(response);
 }
 

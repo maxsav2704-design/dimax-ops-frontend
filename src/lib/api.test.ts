@@ -74,6 +74,27 @@ describe("apiFetch", () => {
     vi.unstubAllGlobals();
   });
 
+  it("validates the body against an optional schema and reports INVALID_RESPONSE on mismatch", async () => {
+    getAccessTokenMock.mockReturnValue("token");
+    const schema = {
+      parse(value: unknown) {
+        if (typeof value === "object" && value !== null && typeof (value as { ok?: unknown }).ok === "boolean") {
+          return value as { ok: boolean };
+        }
+        throw Object.assign(new Error("not ok"), { issues: [{ path: ["ok"], message: "Required" }] });
+      },
+    };
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ ok: true })));
+    await expect(apiFetch<{ ok: boolean }>("/api/v1/test", undefined, { schema })).resolves.toEqual({ ok: true });
+
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ something: "else" })));
+    const failure = await apiFetch<{ ok: boolean }>("/api/v1/test", undefined, { schema }).catch((error) => error);
+    expect(failure).toBeInstanceOf(ApiError);
+    expect(failure.status).toBe(200);
+    expect(failure.code).toBe("INVALID_RESPONSE");
+    expect(failure.meta).toMatchObject({ path: "/api/v1/test", issues: [{ path: ["ok"], message: "Required" }] });
+  });
+
   it("sets application/json content type for json requests", async () => {
     getAccessTokenMock.mockReturnValue(null);
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
