@@ -117,11 +117,19 @@ export type InstallerWorkspaceData = {
   source: "workspace-endpoint" | "composed-fallback";
 };
 
+// Statuses that mean "this optional endpoint has nothing for you": the feature
+// is absent (404/501) or not granted to this role (403). Everything else
+// (network, auth, server errors) must surface instead of rendering as empty.
+const OPTIONAL_ENDPOINT_ABSENT_STATUSES = new Set([403, 404, 501]);
+
 async function safeOptionalFetch<T>(path: string): Promise<T | null> {
   try {
     return await apiFetch<T>(path);
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof ApiError && OPTIONAL_ENDPOINT_ABSENT_STATUSES.has(error.status)) {
+      return null;
+    }
+    throw error;
   }
 }
 
