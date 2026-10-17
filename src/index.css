@@ -499,6 +499,13 @@
     position: static;
     margin-inline-start: auto;
   }
+  /* Command palette: top-anchored sheet, no padding (the list manages its own). */
+  .dmx-palette {
+    @apply fixed inset-x-4 top-[12vh] z-[60] mx-auto w-auto max-w-xl translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-xl p-0;
+    left: 1rem;
+    right: 1rem;
+  }
+  .dmx-palette > button[class*="absolute"] { display: none; }
   .dmx-drawer-sheet {
     @apply fixed inset-y-0 start-0 z-[60] h-full max-h-none w-[280px] max-w-[85vw] translate-x-0 translate-y-0 rounded-none border-0 border-e border-border bg-surface p-0 pt-10;
     left: auto;

@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
-import { LogOut, Menu, ShieldCheck } from "lucide-react";
+import { LogOut, Menu, Search, ShieldCheck } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar } from "./AppSidebar";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { CommandPalette } from "@/components/CommandPalette";
+import { isPaletteShortcut } from "@/lib/command-palette-logic";
 import { MAIN_CONTENT_ID, SkipToContent } from "@/components/dimax/SkipToContent";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -61,6 +63,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   useEffect(() => {
     setDrawerOpen(false);
   }, [pathname]);
+  // Command palette: Ctrl/Cmd+K anywhere in the admin, or the search button in the topbar.
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const searchLabel = pickLocale(locale, "Search (Ctrl+K)", "Поиск (Ctrl+K)", "חיפוש (Ctrl+K)");
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isPaletteShortcut(event)) return;
+      event.preventDefault();
+      setPaletteOpen((current) => !current);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
   return (
     <div className="dmx-app-frame">
       <SkipToContent />
@@ -80,6 +94,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             DIMAX GROUP
           </div>
           <div className="ms-auto flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              aria-label={searchLabel}
+              title={searchLabel}
+              onClick={() => setPaletteOpen(true)}
+              className="flex h-7 items-center gap-2 rounded-full border border-border bg-surface px-2.5 text-11 text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text"
+            >
+              <Search className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
+              <kbd className="hidden font-sans text-11 sm:inline">Ctrl K</kbd>
+            </button>
             <LanguageSwitcher compact />
             <div className="hidden items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-medium uppercase text-text-secondary md:inline-flex">
               <ShieldCheck
@@ -103,6 +127,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </button>
           </div>
         </header>
+        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
         <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
           <DialogContent className="dmx-drawer-sheet" closeLabel={closeLabel} data-testid="dmx-drawer">
             <DialogTitle className="sr-only">{navigationLabel}</DialogTitle>
