@@ -44,8 +44,8 @@ export function KpiTile({
   const loadingText = copy("Loading", "Загрузка", "טוען");
   const content = (
     <>
-      <div className="flex items-start justify-between gap-3">
-        <span className="type-caption min-w-0">{label}</span>
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+        <span className="type-caption min-w-0 flex-1 basis-28">{label}</span>
         {pending ? <Skeleton className="h-4 w-12 shrink-0 rounded-full" /> : status ? (
           <span className="shrink-0 rounded-full bg-surface-sunken px-2 py-0.5 text-11 font-medium text-text-secondary">{status}</span>
         ) : null}
