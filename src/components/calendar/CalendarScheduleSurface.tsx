@@ -427,7 +427,7 @@ export function CalendarScheduleSurface(props: Props) {
             title={copy("Previous period", "Предыдущий период", "התקופה הקודמת")}
             className="ms-1 flex h-9 w-9 items-center justify-center rounded-md text-text-secondary hover:bg-surface hover:text-text"
           >
-            <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+            <ChevronLeft aria-hidden="true" className="h-4 w-4 rtl:rotate-180" />
           </button>
           <button
             type="button"
@@ -443,7 +443,7 @@ export function CalendarScheduleSurface(props: Props) {
             title={copy("Next period", "Следующий период", "התקופה הבאה")}
             className="flex h-9 w-9 items-center justify-center rounded-md text-text-secondary hover:bg-surface hover:text-text"
           >
-            <ChevronRight aria-hidden="true" className="h-4 w-4" />
+            <ChevronRight aria-hidden="true" className="h-4 w-4 rtl:rotate-180" />
           </button>
           <span className="hidden text-[12px] font-medium tabular-nums text-text-secondary xl:inline">
             {periodLabel}
@@ -529,7 +529,7 @@ export function CalendarScheduleSurface(props: Props) {
           >
             <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
             {activeFilterCount > 0 ? (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-text px-1 text-[9px] font-semibold text-white">
+              <span className="absolute -end-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-text px-1 text-[9px] font-semibold text-white">
                 {activeFilterCount}
               </span>
             ) : null}
@@ -589,7 +589,7 @@ export function CalendarScheduleSurface(props: Props) {
                 title={copy("Previous month", "Предыдущий месяц", "החודש הקודם")}
                 className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-surface-sunken hover:text-text"
               >
-                <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+                <ChevronLeft aria-hidden="true" className="h-4 w-4 rtl:rotate-180" />
               </button>
               <div className="text-[13px] font-semibold capitalize text-text">{monthTitle}</div>
               <button
@@ -607,7 +607,7 @@ export function CalendarScheduleSurface(props: Props) {
                 title={copy("Next month", "Следующий месяц", "החודש הבא")}
                 className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-surface-sunken hover:text-text"
               >
-                <ChevronRight aria-hidden="true" className="h-4 w-4" />
+                <ChevronRight aria-hidden="true" className="h-4 w-4 rtl:rotate-180" />
               </button>
             </div>
             <div className="grid grid-cols-7 gap-y-1 text-center">

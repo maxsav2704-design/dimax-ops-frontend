@@ -424,7 +424,7 @@ export function DispatcherBoard({
                     </div>
                   </div>
                   <ArrowRight
-                    className="h-4 w-4 shrink-0 text-text-tertiary transition-transform group-hover:translate-x-0.5 group-hover:text-text"
+                    className="h-4 w-4 shrink-0 text-text-tertiary transition-transform group-hover:translate-x-0.5 group-hover:text-text rtl:rotate-180 rtl:group-hover:-translate-x-0.5"
                     strokeWidth={1.8}
                   />
                 </button>

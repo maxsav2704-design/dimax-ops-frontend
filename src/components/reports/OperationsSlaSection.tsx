@@ -125,7 +125,7 @@ export function OperationsSlaSection({ query, historyQuery, historyDays, onHisto
                     {playbook.title}
                     <span
                       className={cn(
-                        "ml-2 inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold",
+                        "ms-2 inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold",
                         SLA_STATUS_CLASS[playbook.severity] ||
                           "text-text-secondary bg-surface-subtle border-border",
                       )}

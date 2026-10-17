@@ -116,7 +116,7 @@ export default function InstallerEarningsPage() {
           </div>
           <div className="toolbar-row">
             <Link href="/installer" className={earningsSmallActionClass}>
-              <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+              <ArrowLeft aria-hidden="true" className="h-4 w-4 rtl:rotate-180" />
               {copy(
                 "Back to workspace",
                 "Назад в рабочее место",

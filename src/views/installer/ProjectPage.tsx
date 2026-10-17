@@ -626,6 +626,7 @@ export default function InstallerProjectPage({
       addonTypeId: string;
       qtyDone: string;
       comment: string;
+      clientEventId: string;
     }) =>
       apiFetch<{ ok: boolean }>(
         `/api/v1/installer/addons/projects/${projectId}/facts`,
@@ -635,6 +636,8 @@ export default function InstallerProjectPage({
             addon_type_id: payload.addonTypeId,
             qty_done: payload.qtyDone,
             comment: payload.comment || null,
+            // Idempotency key: a retry of the same upload must not record a second fact.
+            client_event_id: payload.clientEventId,
           }),
         },
       ),
@@ -762,7 +765,7 @@ export default function InstallerProjectPage({
               className="inline-flex items-center gap-2 text-sm text-text-secondary transition-colors hover:text-text"
             >
               {" "}
-              <ArrowLeft className="h-4 w-4" />{" "}
+              <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{" "}
               {t("installerProject.backToWorkspace")}{" "}
             </Link>{" "}
             <div className="page-eyebrow mt-4">
@@ -1296,6 +1299,7 @@ export default function InstallerProjectPage({
                     addonTypeId: activeAddonTypeId,
                     qtyDone: addonQtyDone.trim(),
                     comment: addonComment.trim(),
+                    clientEventId: crypto.randomUUID(),
                   });
                 }}
                 className="dmx-primary-action h-10 disabled:cursor-not-allowed disabled:opacity-60"

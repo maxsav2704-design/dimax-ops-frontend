@@ -94,7 +94,7 @@ export function ImportHistoryPanel({
         <div className="flex flex-col gap-2 border-b border-border bg-surface-subtle px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-[12px] font-semibold text-text">
             {t("projects.importHistory")}
-            <span className="ml-2 text-text-secondary">
+            <span className="ms-2 text-text-secondary">
               {filteredImportHistory.length} /{" "}
               {importHistory.length}
             </span>
@@ -627,7 +627,7 @@ export function ImportHistoryPanel({
                     className="h-7 w-full justify-center px-2 text-[11px] sm:w-auto"
                   >
                     <Download
-                      className="mr-1.5 h-3.5 w-3.5"
+                      className="me-1.5 h-3.5 w-3.5"
                       aria-hidden="true"
                     />
                     {copy(

@@ -126,7 +126,7 @@ export function SavedReportViewCard({
         toneClasses.border,
       )}
     >
-      <div className="pl-2">
+      <div className="ps-2">
         <div className="flex items-center justify-between gap-2">
           <div className="truncate text-11 font-medium text-text-secondary">
             {eyebrow}

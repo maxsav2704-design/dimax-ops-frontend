@@ -992,7 +992,7 @@ function RecoveryHealthTile({
         toneClasses.border,
       )}
     >
-      <div className="flex items-start justify-between gap-3 pl-2">
+      <div className="flex items-start justify-between gap-3 ps-2">
         <div className="min-w-0">
           <div className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">
             {label}
@@ -1014,18 +1014,18 @@ function RecoveryHealthTile({
       </div>
       <div
         className={cn(
-          "mt-4 truncate pl-2 text-[24px] font-semibold leading-none text-text",
+          "mt-4 truncate ps-2 text-[24px] font-semibold leading-none text-text",
           tone !== "neutral" ? toneClasses.value : "",
         )}
       >
         {value}
         {unit ? (
-          <span className="ml-1 text-[11px] font-medium text-text-tertiary">
+          <span className="ms-1 text-[11px] font-medium text-text-tertiary">
             {unit}
           </span>
         ) : null}
       </div>
-      <div className="mt-3 truncate pl-2 text-[11px] text-text-secondary">
+      <div className="mt-3 truncate ps-2 text-[11px] text-text-secondary">
         {detail}
       </div>
     </div>
@@ -2427,7 +2427,7 @@ export default function OperationsPage() {
                       )}
                     >
                       {label}{" "}
-                      <span className="ml-1 text-[10px] opacity-75">
+                      <span className="ms-1 text-[10px] opacity-75">
                         {count}
                       </span>
                     </span>

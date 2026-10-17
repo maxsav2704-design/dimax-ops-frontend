@@ -1298,7 +1298,7 @@ export default function CalendarPage() {
         if (!open) closeEventDialog();
       }}>
           <DialogContent aria-describedby={undefined} className="w-[calc(100vw-2rem)] max-w-[720px] max-h-[calc(100dvh-2rem)]">
-            <div className="pr-6">
+            <div className="pe-6">
               <DialogTitle className="text-[16px] font-semibold">
                 {isEditOpen
                   ? copy("Edit Event", "Изменить событие", "ערוך אירוע")

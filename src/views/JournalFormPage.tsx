@@ -221,7 +221,7 @@ function JournalEditor({ id }: { id: string }) {
           <button type="button" onClick={goBack} disabled={Boolean(busy)}
             aria-label={copy("Back to journal", "Назад к журналу", "חזרה ליומן")}
             className="dmx-secondary-action h-9 w-9 shrink-0 p-0">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
           </button>
           <div className="min-w-0">
             <h1 className="dmx-page-title">{copy("Project handoff", "Сдача выполненных работ", "מסירת עבודות")}</h1>

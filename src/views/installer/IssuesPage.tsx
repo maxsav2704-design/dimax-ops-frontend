@@ -409,7 +409,7 @@ export default function InstallerIssuesPage() {
             {" "}
             <Link href="/installer" className={issuesSmallActionClass}>
               {" "}
-              <ArrowLeft aria-hidden="true" className="h-4 w-4" />{" "}
+              <ArrowLeft aria-hidden="true" className="h-4 w-4 rtl:rotate-180" />{" "}
               {copy(
                 "Back to workspace",
                 "Назад в рабочее место",

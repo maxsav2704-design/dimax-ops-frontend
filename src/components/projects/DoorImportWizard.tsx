@@ -213,7 +213,7 @@ export function DoorImportWizard({
           className="h-8 w-full justify-center px-2 text-[12px] sm:w-auto"
         >
           <Download
-            className="mr-1.5 h-3.5 w-3.5"
+            className="me-1.5 h-3.5 w-3.5"
             aria-hidden="true"
           />
           {downloadingImportTemplate
@@ -236,7 +236,7 @@ export function DoorImportWizard({
       <div className="mt-3 flex flex-wrap gap-2">
         <label className="relative flex h-10 min-w-0 basis-52 grow cursor-pointer items-center rounded-lg border border-dashed border-border bg-surface px-3 text-[13px] text-text-secondary transition-colors hover:border-border-strong focus-within:ring-2 focus-within:ring-accent/35">
           <FileSpreadsheet
-            className="w-4 h-4 mr-2 shrink-0"
+            className="w-4 h-4 me-2 shrink-0"
             aria-hidden="true"
           />
           <span className="truncate">
@@ -645,7 +645,7 @@ export function DoorImportWizard({
                   className="h-7 w-full justify-center border-status-problem-border bg-surface px-2 text-[11px] text-status-problem-fg sm:w-auto"
                 >
                   <Download
-                    className="mr-1.5 h-3.5 w-3.5"
+                    className="me-1.5 h-3.5 w-3.5"
                     aria-hidden="true"
                   />
                   {copy(
