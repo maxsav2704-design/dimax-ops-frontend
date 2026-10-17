@@ -1,28 +1,32 @@
 import { type HTMLAttributes, type ReactNode } from "react";
 
+import { cn } from "@/lib/utils";
+
+import type { KpiTone } from "./kpi-logic";
+
 export type KpiBarColor = "yellow" | "orange" | "red" | "green" | "blue";
 
 type KpiCardProps = HTMLAttributes<HTMLDivElement> & {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
+  /** Legacy bar colour; mapped onto the shared tile tones (R3: yellow and blue are not statuses). */
   barColor?: KpiBarColor;
   emphasis?: "default" | "problem";
   href?: string;
 };
 
-const barColorClassName: Record<KpiBarColor, string> = {
-  yellow: "bg-kpi-yellow",
-  orange: "bg-kpi-orange",
-  red: "bg-kpi-red",
-  green: "bg-kpi-green",
-  blue: "bg-kpi-blue",
+const toneForBar: Record<KpiBarColor, KpiTone> = {
+  yellow: "neutral",
+  blue: "neutral",
+  green: "ok",
+  orange: "warn",
+  red: "bad",
 };
 
-function cx(...classes: Array<string | undefined | false>): string {
-  return classes.filter(Boolean).join(" ");
-}
-
+// Fact tile kept for the pages that still pass a bar colour: it renders on the
+// shared .kpi-tile chrome, so every KPI in the admin shares one look and the
+// colour means a state, not a decoration (premium visual, 2026-10-17).
 export function KpiCard({
   label,
   value,
@@ -33,51 +37,23 @@ export function KpiCard({
   className,
   ...props
 }: KpiCardProps) {
-  const actualBarColor = emphasis === "problem" ? "red" : barColor;
+  const tone: KpiTone = emphasis === "problem" ? "bad" : toneForBar[barColor];
   const content = (
     <>
-      <div
-        aria-hidden="true"
-        className={cx(
-          "absolute inset-y-2.5 start-0 w-[3px] rounded-e-sm",
-          barColorClassName[actualBarColor],
-        )}
-      />
-      <div className="ps-2">
-        <div className="mb-1 truncate text-12 text-text-secondary">
-          {label}
-        </div>
-        <div
-          className={cx(
-            "truncate text-24 font-medium leading-tight tabular-nums",
-            emphasis === "problem" ? "text-status-problem-fg" : "text-text",
-          )}
-        >
-          {value}
-        </div>
-        {hint ? (
-          <div className="mt-1 truncate text-11 text-text-secondary">
-            {hint}
-          </div>
-        ) : null}
-      </div>
+      <span className="type-caption truncate">{label}</span>
+      <span className="kpi-tile-value truncate">{value}</span>
+      {hint ? <span className="type-caption truncate">{hint}</span> : null}
     </>
   );
-  const containerClassName = cx(
-    "relative overflow-hidden rounded-lg border bg-surface p-4",
-    emphasis === "problem"
-      ? "border-status-problem-border"
-      : "border-border",
-    href &&
-      "cursor-pointer transition-colors duration-fast ease-standard hover:border-border-strong",
-    className,
-  );
+  const containerClassName = cn("kpi-tile", className);
 
   if (href) {
     return (
       <a
         href={href}
         className={containerClassName}
+        data-tone={tone}
+        data-interactive="true"
         {...(props as HTMLAttributes<HTMLAnchorElement>)}
       >
         {content}
@@ -86,7 +62,7 @@ export function KpiCard({
   }
 
   return (
-    <div className={containerClassName} {...props}>
+    <div className={containerClassName} data-tone={tone} {...props}>
       {content}
     </div>
   );
