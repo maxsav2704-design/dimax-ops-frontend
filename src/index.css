@@ -6,16 +6,17 @@
 
 @layer base {
   :root {
-    --dmx-bg-canvas: #f4f4f6;
+    /* Neutrals carry a faint warm bias so the brand yellow sits naturally (premium visual, 2026-10-17). */
+    --dmx-bg-canvas: #f5f4f0;
     --dmx-bg-surface: #ffffff;
-    --dmx-bg-surface-subtle: #fafafb;
-    --dmx-bg-surface-sunken: #f0f0f2;
-    --dmx-border: #e5e5e7;
-    --dmx-border-strong: #cfcfd2;
-    --dmx-border-subtle: #efeff1;
-    --dmx-text: #1a1a1a;
-    --dmx-text-secondary: #6b6b6f;
-    --dmx-text-tertiary: #a5a5a9;
+    --dmx-bg-surface-subtle: #faf9f6;
+    --dmx-bg-surface-sunken: #eeede8;
+    --dmx-border: #e3e1da;
+    --dmx-border-strong: #cfccc2;
+    --dmx-border-subtle: #efeee9;
+    --dmx-text: #17160f;
+    --dmx-text-secondary: #6a6861;
+    --dmx-text-tertiary: #a3a098;
     --dmx-text-inverse: #ffffff;
     --dmx-accent: #ffc83a;
     --dmx-accent-hover: #f5bc2f;
@@ -107,8 +108,8 @@
     --dmx-z-modal: 50;
     --dmx-z-toast: 60;
 
-    --background: 240 10% 96%;
-    --foreground: 0 0% 10%;
+    --background: 48 20% 95%;
+    --foreground: 48 21% 7%;
 
     --card: 0 0% 100%;
     --card-foreground: 0 0% 10%;
@@ -119,11 +120,11 @@
     --primary: 43 100% 61%;
     --primary-foreground: 0 0% 10%;
 
-    --secondary: 240 6% 94%;
+    --secondary: 50 13% 92%;
     --secondary-foreground: 0 0% 10%;
 
-    --muted: 240 6% 94%;
-    --muted-foreground: 240 2% 43%;
+    --muted: 50 13% 92%;
+    --muted-foreground: 47 4% 40%;
 
     --accent: 43 100% 61%;
     --accent-foreground: 0 0% 10%;
@@ -137,8 +138,8 @@
     --warning: 30 100% 33%;
     --warning-foreground: 0 0% 10%;
 
-    --border: 240 4% 90%;
-    --input: 240 4% 90%;
+    --border: 47 11% 87%;
+    --input: 47 11% 87%;
     --ring: 43 100% 61%;
 
     --radius: 0.5rem;
@@ -1414,4 +1415,50 @@
     unicode-bidi: isolate;
   }
   .data-table-sticky thead th { @apply sticky top-0 z-sticky; }
+
+  /* Premium visual (2026-10-17): state-driven primitives shared by every section. */
+  .data-table-compact tbody td { @apply py-1; }
+  .data-table-compact thead th { @apply py-1.5; }
+  /* E1 attention stripe: the row's first cell carries the level computed from data. */
+  .data-table tbody tr[data-attention] > td:first-child { border-inline-start: 3px solid transparent; }
+  .data-table tbody tr[data-attention="3"] > td:first-child { border-inline-start-color: var(--dmx-status-problem-fg); }
+  .data-table tbody tr[data-attention="2"] > td:first-child { border-inline-start-color: var(--dmx-status-warning-fg); }
+  .data-table tbody tr[data-attention="1"] > td:first-child { border-inline-start-color: var(--dmx-border-strong); }
+  /* E2 linked highlighting: every occurrence of the hovered or focused entity. */
+  [data-entity] { @apply rounded-sm transition-colors duration-fast ease-standard; }
+  [data-entity].is-linked { background-color: var(--dmx-accent-tint) !important; box-shadow: inset 0 0 0 1px var(--dmx-accent); }
+  /* E3 condensed header: a 48 px bar that keeps the title, status and the primary action. */
+  .dmx-condensed-bar {
+    @apply pointer-events-none sticky top-0 z-sticky -mx-1 mb-3 flex h-12 items-center gap-3 rounded-lg border border-border px-3 opacity-0;
+    background: color-mix(in srgb, var(--dmx-bg-surface) 92%, transparent);
+    backdrop-filter: blur(8px);
+    transform: translateY(-8px);
+    transition: transform var(--dmx-duration-base) var(--dmx-easing-standard), opacity var(--dmx-duration-base) var(--dmx-easing-standard);
+  }
+  .dmx-condensed-bar[data-on="true"] { @apply pointer-events-auto opacity-100; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .dmx-condensed-bar { transition: none; } }
+  /* E4 KPI tile: tone from thresholds, delta and a 14-point sparkline. */
+  .kpi-tile { @apply relative grid gap-1.5 rounded-lg border border-border bg-surface px-4 py-3 text-start transition-colors duration-fast ease-standard; }
+  .kpi-tile[data-interactive="true"] { @apply cursor-pointer hover:border-border-strong; }
+  .kpi-tile[aria-pressed="true"] { border-color: var(--dmx-accent); box-shadow: 0 0 0 2px var(--dmx-accent-tint); }
+  .kpi-tile::before { content: ""; position: absolute; inset-inline-start: 0; top: 14px; bottom: 14px; width: 3px; border-start-end-radius: 3px; border-end-end-radius: 3px; background: var(--dmx-border-strong); }
+  .kpi-tile[data-tone="ok"]::before { background: var(--dmx-status-ok-fg); }
+  .kpi-tile[data-tone="warn"]::before { background: var(--dmx-status-warning-fg); }
+  .kpi-tile[data-tone="bad"]::before { background: var(--dmx-status-problem-fg); }
+  .kpi-tile[data-tone="warn"] .kpi-tile-value { color: var(--dmx-status-warning-fg); }
+  .kpi-tile[data-tone="bad"] .kpi-tile-value { color: var(--dmx-status-problem-fg); }
+  .kpi-tile-value { @apply font-mono text-24 font-semibold leading-none tabular-nums text-text; direction: ltr; unicode-bidi: isolate; }
+  .kpi-tile-spark { @apply block h-8 w-full; }
+  .kpi-tile-spark .spark-area { fill: var(--dmx-bg-surface-sunken); }
+  .kpi-tile-spark .spark-line { fill: none; stroke: var(--dmx-text-tertiary); stroke-width: 1.5; }
+  .kpi-tile-spark .spark-end { fill: var(--dmx-text); }
+  /* E5 removable filter chip in a toolbar. */
+  .filter-chip { @apply inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-12 font-medium text-text; background: var(--dmx-accent-tint); border-color: var(--dmx-accent); }
+  /* E8 freshness. */
+  .freshness { @apply inline-flex items-center gap-1.5 text-12 text-text-secondary; }
+  .freshness::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: var(--dmx-status-ok-fg); }
+  .freshness[data-state="stale"] { color: var(--dmx-status-warning-fg); }
+  .freshness[data-state="stale"]::before { background: var(--dmx-status-warning-fg); }
+  .freshness[data-state="offline"] { color: var(--dmx-status-problem-fg); }
+  .freshness[data-state="offline"]::before { background: var(--dmx-status-problem-fg); }
 }
