@@ -15,7 +15,7 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { COMPANY_CURRENCY, EmptyState, InlineNotice, TableSkeleton } from "@/components/dimax";
-import { formatLocaleMoney } from "@/lib/formatting";
+import { formatLocaleMoney, formatLocaleNumber } from "@/lib/formatting";
 import {
   Dialog,
   DialogContent,
@@ -113,6 +113,12 @@ function formatMoney(value: string | number | null | undefined): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+// Quantity is a count of doors or units, never money.
+function formatQuantity(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "—";
+  return formatLocaleNumber(Number(value), undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 function formatDateTime(value: string): string {
@@ -939,7 +945,7 @@ export default function EarningsLedgerPage() {
                           {copy("Qty", "Кол-во", "כמות")}
                         </div>
                         <div className="mt-1 text-13 font-medium text-text tabular-nums">
-                          {formatMoney(item.quantity)}
+                          {formatQuantity(item.quantity)}
                         </div>
                       </div>
                       <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
@@ -1096,7 +1102,7 @@ export default function EarningsLedgerPage() {
                         </details>}
                       </TableCell>
                       <TableCell className="text-end tabular-nums">
-                        {formatMoney(item.quantity)}
+                        {formatQuantity(item.quantity)}
                       </TableCell>
                       <TableCell className="text-end tabular-nums">
                         {formatMoney(item.rate_snapshot)}

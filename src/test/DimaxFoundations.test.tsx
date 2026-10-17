@@ -63,10 +63,10 @@ describe("DIMAX foundation components", () => {
       />,
     );
 
-    expect(screen.getByText("Doors installed").closest("div")).toHaveClass(
-      "text-text-secondary",
-    );
-    expect(screen.getByText("28 / 42")).toHaveClass("text-24", "text-text");
+    // Since the KpiCard retrofit (054c2a6) the label is the tile caption.
+    expect(screen.getByText("Doors installed")).toHaveClass("type-caption");
+    expect(screen.getByText("Doors installed").closest("div")).toHaveClass("kpi-tile");
+    expect(screen.getByText("28 / 42")).toHaveClass("kpi-tile-value");
   });
 
   it("renders DIMAX widget cards with metric rows", () => {

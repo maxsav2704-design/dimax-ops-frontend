@@ -1054,7 +1054,7 @@ export default function IssuesPage() {
               <option value="all">{tt("issues.allStatuses")}</option>
               {STATUS_OPTIONS.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {statusLabel(option)}
                 </option>
               ))}
             </select>
@@ -1069,7 +1069,7 @@ export default function IssuesPage() {
               <option value="all">{tt("issues.allWorkflowStates")}</option>
               {WORKFLOW_OPTIONS.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {workflowLabel(option)}
                 </option>
               ))}
             </select>
