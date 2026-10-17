@@ -1520,6 +1520,17 @@
   .dmx-rail-installed { background: var(--dmx-status-ok-fg); }
   .dmx-rail-assigned { background: var(--dmx-status-progress-fg); }
   .dmx-rail-unassigned { background: var(--dmx-border-strong); }
+  /* Fact strip: one line of facts under a header; wraps on narrow screens. */
+  .dmx-facts { @apply m-0 flex flex-wrap items-start gap-x-6 gap-y-3 border-t border-border-subtle bg-surface-subtle px-4 py-3; }
+  .dmx-fact { @apply grid min-w-[7.5rem] gap-1; }
+  .dmx-fact-value { @apply m-0 flex items-center gap-2; }
+  .dmx-fact-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--dmx-border-strong); flex: none; }
+  .dmx-fact[data-tone="ok"] .dmx-fact-dot { background: var(--dmx-status-ok-fg); }
+  .dmx-fact[data-tone="warn"] .dmx-fact-dot { background: var(--dmx-status-warning-fg); }
+  .dmx-fact[data-tone="bad"] .dmx-fact-dot { background: var(--dmx-status-problem-fg); }
+  .dmx-fact[data-tone="warn"] .num { color: var(--dmx-status-warning-fg); }
+  .dmx-fact[data-tone="bad"] .num { color: var(--dmx-status-problem-fg); }
+  .dmx-fact-rail { width: 72px; height: 5px; }
   /* E5 removable filter chip in a toolbar. */
   .filter-chip { @apply inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-12 font-medium text-text; background: var(--dmx-accent-tint); border-color: var(--dmx-accent); }
   /* E8 freshness. */

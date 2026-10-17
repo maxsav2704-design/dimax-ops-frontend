@@ -157,7 +157,7 @@ import type { ProjectFormState } from "@/components/projects/project-form";
 
 import {
   Breadcrumbs,
-  KpiTile,
+  FactStrip,
   PillButton,
   WidgetCard,
   resolveKpiTone,
@@ -2813,78 +2813,65 @@ export default function ProjectsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-2.5 border-t border-border-subtle bg-surface-subtle p-3 sm:grid-cols-2 xl:grid-cols-5">
-                    <KpiTile
-                      label={copy("Doors installed", "Дверей установлено", "דלתות הותקנו")}
-                      value={
-                        <LtrText as="span">
-                          {projectInstalledDoors} / {projectTotalDoors || "-"}
-                        </LtrText>
-                      }
-                      detail={<LtrText as="span">{formatPct(projectCompletionPct)}</LtrText>}
-                      tone={projectTotalDoors > 0 && projectInstalledDoors >= projectTotalDoors ? "ok" : "neutral"}
-                    />
-                    <KpiTile
-                      label={copy("Days remaining", "Дней осталось", "ימים נותרו")}
-                      value={projectDeadlineDays === null ? "-" : Math.max(projectDeadlineDays, 0)}
-                      detail={projectDeadlineHint}
-                      tone={
-                        projectDeadlineDays === null
-                          ? "neutral"
-                          : projectDeadlineDays < 0
-                            ? "bad"
-                            : projectDeadlineDays <= 3
-                              ? "warn"
-                              : "ok"
-                      }
-                    />
-                    <KpiTile
-                      label={copy("Open issues", "Открытые проблемы", "בעיות פתוחות")}
-                      value={projectOpenIssues}
-                      detail={
-                        projectBlockedIssues > 0
-                          ? copy(
-                              `${projectBlockedIssues} blocked`,
-                              `${projectBlockedIssues} заблокировано`,
-                              `${projectBlockedIssues} חסומות`,
-                            )
-                          : copy("no blocked issues", "нет блокеров", "אין חסימות")
-                      }
-                      tone={projectBlockedIssues > 0 ? "bad" : resolveKpiTone(projectOpenIssues, { warn: 1, bad: 5 })}
-                    />
-                    <KpiTile
-                      label={copy("Revenue", "Выручка", "הכנסות")}
-                      value={
-                        canViewProjectRates && projectPlanFact
-                          ? formatMoney(projectPlanFact.actual_revenue_total)
-                          : "-"
-                      }
-                      detail={
-                        canViewProjectRates && projectPlanFact
-                          ? `${copy("plan", "план", "תכנון")} ${formatMoney(
-                              projectPlanFact.planned_revenue_total,
-                            )}`
-                          : commercialAccessRestrictedTitle
-                      }
-                      tone="neutral"
-                    />
-                    <KpiTile
-                      label={copy("Margin", "Маржа", "מרווח")}
-                      value={
-                        canViewProjectRates && projectRisk
-                          ? formatPct(projectRisk.summary.actual_margin_pct)
-                          : "-"
-                      }
-                      detail={
-                        canViewProjectRates && projectRisk
-                          ? `${copy("profit", "прибыль", "רווח")} ${formatMoney(
-                              projectRisk.summary.actual_profit_total,
-                            )}`
-                          : commercialAccessRestrictedTitle
-                      }
-                      tone="neutral"
-                    />
-                  </div>
+                  <FactStrip
+                    testId="project-facts"
+                    items={[
+                      {
+                        key: "doors",
+                        label: copy("Doors installed", "Дверей установлено", "דלתות הותקנו"),
+                        value: <LtrText as="span">{projectInstalledDoors} / {projectTotalDoors || "-"}</LtrText>,
+                        detail: <LtrText as="span">{formatPct(projectCompletionPct)}</LtrText>,
+                        tone: projectTotalDoors > 0 && projectInstalledDoors >= projectTotalDoors ? "ok" : "neutral",
+                        rail: { done: projectInstalledDoors, total: projectTotalDoors },
+                      },
+                      {
+                        key: "deadline",
+                        label: copy("Days remaining", "Дней осталось", "ימים נותרו"),
+                        value: projectDeadlineDays === null ? "-" : Math.max(projectDeadlineDays, 0),
+                        detail: projectDeadlineHint,
+                        tone:
+                          projectDeadlineDays === null
+                            ? "neutral"
+                            : projectDeadlineDays < 0
+                              ? "bad"
+                              : projectDeadlineDays <= 3
+                                ? "warn"
+                                : "ok",
+                      },
+                      {
+                        key: "issues",
+                        label: copy("Open issues", "Открытые проблемы", "בעיות פתוחות"),
+                        value: projectOpenIssues,
+                        detail:
+                          projectBlockedIssues > 0
+                            ? copy(
+                                `${projectBlockedIssues} blocked`,
+                                `${projectBlockedIssues} заблокировано`,
+                                `${projectBlockedIssues} חסומות`,
+                              )
+                            : copy("no blocked issues", "нет блокеров", "אין חסימות"),
+                        tone: projectBlockedIssues > 0 ? "bad" : resolveKpiTone(projectOpenIssues, { warn: 1, bad: 5 }),
+                      },
+                      {
+                        key: "revenue",
+                        label: copy("Revenue", "Выручка", "הכנסות"),
+                        value: canViewProjectRates && projectPlanFact ? formatMoney(projectPlanFact.actual_revenue_total) : "-",
+                        detail:
+                          canViewProjectRates && projectPlanFact
+                            ? `${copy("plan", "план", "תכנון")} ${formatMoney(projectPlanFact.planned_revenue_total)}`
+                            : commercialAccessRestrictedTitle,
+                      },
+                      {
+                        key: "margin",
+                        label: copy("Margin", "Маржа", "מרווח"),
+                        value: canViewProjectRates && projectRisk ? formatPct(projectRisk.summary.actual_margin_pct) : "-",
+                        detail:
+                          canViewProjectRates && projectRisk
+                            ? `${copy("profit", "прибыль", "רווח")} ${formatMoney(projectRisk.summary.actual_profit_total)}`
+                            : commercialAccessRestrictedTitle,
+                      },
+                    ]}
+                  />
                 </div>
 
                 <DoorCommandBar

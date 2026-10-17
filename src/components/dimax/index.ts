@@ -24,4 +24,5 @@ export { CONDENSE_SCROLL_PX, useScrolledPast } from "./useScrolledPast";
 export { useAnimatedNumber } from "./useAnimatedNumber";
 export { useLastVisitSnapshot } from "./useLastVisitSnapshot";
 export { FilterChip } from "./FilterChip";
+export { FactStrip, type FactItem } from "./FactStrip";
 export { ConfirmActionDialog } from "./ConfirmActionDialog";
