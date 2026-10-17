@@ -27,7 +27,7 @@ import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { PriceConflictReviewDialog } from "@/components/operations/PriceConflictReviewDialog";
 import {
   InlineNotice,
-  KpiCard as DimaxKpiCard,
+  KpiTile,
   MetricRow,
   WidgetCard,
 } from "@/components/dimax";
@@ -2237,7 +2237,7 @@ export default function OperationsPage() {
               status={
                   <span
                     className={cn(
-                      "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11.5px] font-medium",
+                      "inline-flex items-center gap-2 rounded-full px-3 py-1 text-12 font-medium",
                       operationToneClasses(recoveryStatusTone).status,
                     )}
                   >
@@ -3204,30 +3204,28 @@ export default function OperationsPage() {
           }
         >
           <div className="grid gap-3 md:grid-cols-4">
-            <DimaxKpiCard
+            <KpiTile
               label={tt("operations.received")}
               value={webhookSummary?.total_received ?? 0}
-              barColor="blue"
+              tone="neutral"
             />
-            <DimaxKpiCard
+            <KpiTile
               label={tt("operations.duplicates")}
               value={webhookSummary?.duplicate_total ?? 0}
-              barColor="orange"
+              metric={webhookSummary?.duplicate_total ?? 0}
+              thresholds={{ warn: 1, bad: 20 }}
             />
-            <DimaxKpiCard
+            <KpiTile
               label={tt("operations.unmatched")}
               value={webhookSummary?.unmatched_total ?? 0}
-              barColor="orange"
+              metric={webhookSummary?.unmatched_total ?? 0}
+              thresholds={{ warn: 1, bad: 20 }}
             />
-            <DimaxKpiCard
+            <KpiTile
               label={tt("operations.providerFailed")}
               value={webhookSummary?.provider_failed_total ?? 0}
-              barColor="red"
-              emphasis={
-                (webhookSummary?.provider_failed_total ?? 0) > 0
-                  ? "problem"
-                  : "default"
-              }
+              metric={webhookSummary?.provider_failed_total ?? 0}
+              thresholds={{ warn: 1, bad: 5 }}
             />
           </div>
           <div className="mt-4 space-y-2">
@@ -3317,26 +3315,27 @@ export default function OperationsPage() {
             updatedLabel={formatDateTime(lastBatchResult.createdAt)}
           >
             <div className="grid gap-3 md:grid-cols-4">
-              <DimaxKpiCard
+              <KpiTile
                 label={t("operations.success")}
                 value={lastBatchResult.successful}
-                barColor="green"
+                tone="ok"
               />
-              <DimaxKpiCard
+              <KpiTile
                 label={t("operations.failed")}
                 value={lastBatchResult.failed}
-                barColor="red"
-                emphasis={lastBatchResult.failed > 0 ? "problem" : "default"}
+                metric={lastBatchResult.failed}
+                thresholds={{ warn: 1, bad: 1 }}
               />
-              <DimaxKpiCard
+              <KpiTile
                 label={t("operations.skipped")}
                 value={lastBatchResult.skipped}
-                barColor="orange"
+                metric={lastBatchResult.skipped}
+                thresholds={{ warn: 1, bad: Number.POSITIVE_INFINITY }}
               />
-              <DimaxKpiCard
+              <KpiTile
                 label={t("operations.scope")}
                 value={lastBatchResult.scope}
-                barColor="blue"
+                tone="neutral"
               />
             </div>
             <div className="mt-4 space-y-2">
