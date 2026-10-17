@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
-import { KpiCard as DimaxKpiCard } from "@/components/dimax";
+import { KpiTile } from "@/components/dimax";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -451,23 +451,23 @@ export function CatalogCrudPage({
         </section>{" "}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {" "}
-          <DimaxKpiCard
+          <KpiTile
             label={copy("Total", "Всего", "סה״כ")}
             value={metrics.total}
-            hint={copy("Rows matching current filters", "Строки по текущим фильтрам", "שורות לפי המסננים הנוכחיים")}
-            barColor="blue"
+            detail={copy("Rows matching current filters", "Строки по текущим фильтрам", "שורות לפי המסננים הנוכחיים")}
+            tone="neutral"
           />{" "}
-          <DimaxKpiCard
+          <KpiTile
             label={copy("Active", "Активные", "פעילים")}
             value={metrics.active}
-            hint={copy("Available in active DIMAX flows", "Доступны в рабочих процессах DIMAX", "זמינים בתהליכי העבודה של DIMAX")}
-            barColor="green"
+            detail={copy("Available in active DIMAX flows", "Доступны в рабочих процессах DIMAX", "זמינים בתהליכי העבודה של DIMAX")}
+            tone="ok"
           />{" "}
-          <DimaxKpiCard
+          <KpiTile
             label={copy("Inactive", "Неактивные", "לא פעילים")}
             value={metrics.inactive}
-            hint={copy("Kept for history and reporting", "Сохранены для истории и отчётов", "נשמרו להיסטוריה ולדוחות")}
-            barColor="orange"
+            detail={copy("Kept for history and reporting", "Сохранены для истории и отчётов", "נשמרו להיסטוריה ולדוחות")}
+            tone="neutral"
           />{" "}
         </div>{" "}
         <section className="toolbar-panel page-stack-tight">

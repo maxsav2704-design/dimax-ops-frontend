@@ -157,9 +157,10 @@ import type { ProjectFormState } from "@/components/projects/project-form";
 
 import {
   Breadcrumbs,
-  KpiCard as DimaxKpiCard,
+  KpiTile,
   PillButton,
   WidgetCard,
+  resolveKpiTone,
   useScrolledPast,
 } from "@/components/dimax";
 
@@ -2813,51 +2814,34 @@ export default function ProjectsPage() {
                   </div>
 
                   <div className="grid grid-cols-1 gap-2.5 border-t border-border-subtle bg-surface-subtle p-3 sm:grid-cols-2 xl:grid-cols-5">
-                    <DimaxKpiCard
-                      label={copy(
-                        "Doors installed",
-                        "Дверей установлено",
-                        "דלתות הותקנו",
-                      )}
+                    <KpiTile
+                      label={copy("Doors installed", "Дверей установлено", "דלתות הותקנו")}
                       value={
                         <LtrText as="span">
                           {projectInstalledDoors} / {projectTotalDoors || "-"}
                         </LtrText>
                       }
-                      hint={<LtrText as="span">{formatPct(projectCompletionPct)}</LtrText>}
-                      barColor="green"
+                      detail={<LtrText as="span">{formatPct(projectCompletionPct)}</LtrText>}
+                      tone={projectTotalDoors > 0 && projectInstalledDoors >= projectTotalDoors ? "ok" : "neutral"}
                     />
-                    <DimaxKpiCard
-                      label={copy(
-                        "Days remaining",
-                        "Дней осталось",
-                        "ימים נותרו",
-                      )}
-                      value={
+                    <KpiTile
+                      label={copy("Days remaining", "Дней осталось", "ימים נותרו")}
+                      value={projectDeadlineDays === null ? "-" : Math.max(projectDeadlineDays, 0)}
+                      detail={projectDeadlineHint}
+                      tone={
                         projectDeadlineDays === null
-                          ? "-"
-                          : Math.max(projectDeadlineDays, 0)
-                      }
-                      hint={projectDeadlineHint}
-                      barColor={
-                        projectDeadlineDays !== null && projectDeadlineDays < 0
-                          ? "red"
-                          : "blue"
-                      }
-                      emphasis={
-                        projectDeadlineDays !== null && projectDeadlineDays < 0
-                          ? "problem"
-                          : "default"
+                          ? "neutral"
+                          : projectDeadlineDays < 0
+                            ? "bad"
+                            : projectDeadlineDays <= 3
+                              ? "warn"
+                              : "ok"
                       }
                     />
-                    <DimaxKpiCard
-                      label={copy(
-                        "Open issues",
-                        "Открытые проблемы",
-                        "בעיות פתוחות",
-                      )}
+                    <KpiTile
+                      label={copy("Open issues", "Открытые проблемы", "בעיות פתוחות")}
                       value={projectOpenIssues}
-                      hint={
+                      detail={
                         projectBlockedIssues > 0
                           ? copy(
                               `${projectBlockedIssues} blocked`,
@@ -2866,42 +2850,39 @@ export default function ProjectsPage() {
                             )
                           : copy("no blocked issues", "нет блокеров", "אין חסימות")
                       }
-                      barColor={projectOpenIssues > 0 ? "orange" : "green"}
-                      emphasis={
-                        projectBlockedIssues > 0 ? "problem" : "default"
-                      }
+                      tone={projectBlockedIssues > 0 ? "bad" : resolveKpiTone(projectOpenIssues, { warn: 1, bad: 5 })}
                     />
-                    <DimaxKpiCard
+                    <KpiTile
                       label={copy("Revenue", "Выручка", "הכנסות")}
                       value={
                         canViewProjectRates && projectPlanFact
                           ? formatMoney(projectPlanFact.actual_revenue_total)
                           : "-"
                       }
-                      hint={
+                      detail={
                         canViewProjectRates && projectPlanFact
                           ? `${copy("plan", "план", "תכנון")} ${formatMoney(
                               projectPlanFact.planned_revenue_total,
                             )}`
                           : commercialAccessRestrictedTitle
                       }
-                      barColor="yellow"
+                      tone="neutral"
                     />
-                    <DimaxKpiCard
+                    <KpiTile
                       label={copy("Margin", "Маржа", "מרווח")}
                       value={
                         canViewProjectRates && projectRisk
                           ? formatPct(projectRisk.summary.actual_margin_pct)
                           : "-"
                       }
-                      hint={
+                      detail={
                         canViewProjectRates && projectRisk
                           ? `${copy("profit", "прибыль", "רווח")} ${formatMoney(
                               projectRisk.summary.actual_profit_total,
                             )}`
                           : commercialAccessRestrictedTitle
                       }
-                      barColor="green"
+                      tone="neutral"
                     />
                   </div>
                 </div>
