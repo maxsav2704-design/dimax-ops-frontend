@@ -267,8 +267,9 @@ export default function InstallerProjectPage({
   const shortOnlyThis =
     copy("Only this", "\u0422\u043e\u043b\u044c\u043a\u043e \u044d\u0442\u0430", "\u05e8\u05e7 \u05d6\u05d5");
   const queryClient = useQueryClient();
-  const [selectedReasonId, setSelectedReasonId] = useState("");
-  const [notInstalledComment, setNotInstalledComment] = useState("");
+  // One reason and comment per door: nothing is pre-selected, nothing carries over to the next door.
+  const [reasonByDoor, setReasonByDoor] = useState<Record<string, string>>({});
+  const [commentByDoor, setCommentByDoor] = useState<Record<string, string>>({});
   const [selectedAddonTypeId, setSelectedAddonTypeId] = useState("");
   const [addonQtyDone, setAddonQtyDone] = useState("1");
   const [addonComment, setAddonComment] = useState("");
@@ -602,8 +603,10 @@ export default function InstallerProjectPage({
           }),
         },
       ),
-    onSuccess: async () => {
+    onSuccess: async (_result, payload) => {
       setActionError(null);
+      setReasonByDoor((prev) => { const next = { ...prev }; delete next[payload.doorId]; return next; });
+      setCommentByDoor((prev) => { const next = { ...prev }; delete next[payload.doorId]; return next; });
       await queryClient.invalidateQueries({
         queryKey: ["installer-project-details", projectId],
       });
@@ -657,7 +660,6 @@ export default function InstallerProjectPage({
     installMutation.isPending ||
     notInstalledMutation.isPending ||
     addonMutation.isPending;
-  const activeReasonId = selectedReasonId || reasons[0]?.id || "";
   const activeAddonTypeId = selectedAddonTypeId || addonTypes[0]?.id || "";
   const activeDoorFilterCount = [
     orderFilter !== "ALL",
@@ -1701,16 +1703,20 @@ export default function InstallerProjectPage({
                         {" "}
                         <select
                           aria-label={`${copy("Reason", "Причина", "סיבה")} ${door.unit_label}`}
-                          value={activeReasonId}
+                          value={reasonByDoor[door.id] ?? ""}
                           onChange={(event) =>
-                            setSelectedReasonId(event.target.value)
+                            setReasonByDoor((prev) => ({ ...prev, [door.id]: event.target.value }))
                           }
                           className="control-input h-9 text-xs"
                         >
                           {" "}
-                          {reasons.length === 0 && (
+                          {reasons.length === 0 ? (
                             <option value="">
                               {pt("installerProject.noReasons")}
+                            </option>
+                          ) : (
+                            <option value="">
+                              {copy("Choose a reason…", "Выберите причину…", "בחר סיבה…")}
                             </option>
                           )}{" "}
                           {reasons.map((reason) => (
@@ -1723,9 +1729,9 @@ export default function InstallerProjectPage({
                         <input
                           aria-label={`${t("installerProject.commentForNotInstalled")} ${door.unit_label}`}
                           autoComplete="off"
-                          value={notInstalledComment}
+                          value={commentByDoor[door.id] ?? ""}
                           onChange={(event) =>
-                            setNotInstalledComment(event.target.value)
+                            setCommentByDoor((prev) => ({ ...prev, [door.id]: event.target.value }))
                           }
                           className="control-input h-9 text-xs"
                           placeholder={t(
@@ -1745,13 +1751,13 @@ export default function InstallerProjectPage({
                         <button
                           type="button"
                           disabled={
-                            pendingAction || door.is_locked || !activeReasonId
+                            pendingAction || door.is_locked || !reasonByDoor[door.id]
                           }
                           onClick={() =>
                             notInstalledMutation.mutate({
                               doorId: door.id,
-                              reasonId: activeReasonId,
-                              comment: notInstalledComment.trim(),
+                              reasonId: reasonByDoor[door.id],
+                              comment: (commentByDoor[door.id] ?? "").trim(),
                             })
                           }
                           className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-status-problem-border bg-status-problem-bg px-3 text-xs font-medium text-status-problem-fg transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"

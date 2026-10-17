@@ -107,7 +107,9 @@ function normalizeItems<T>(response: ListResponse<T>): T[] {
 
 // App locale (not the browser's) and the company currency, like every other money value.
 function formatMoney(value: string | number | null | undefined): string {
-  return formatLocaleMoney(value ?? 0, COMPANY_CURRENCY, undefined, {
+  // A missing rate or amount is shown as a gap, never as 0.00 (the server never invents a price).
+  if (value === null || value === undefined || value === "") return "\u2014";
+  return formatLocaleMoney(value, COMPANY_CURRENCY, undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -426,12 +428,15 @@ export default function EarningsLedgerPage() {
   });
 
   const items = ledgerQuery.data?.items || [];
+  const entryTypeLabel = (value: string) =>
+    value === "ORIGINAL" ? copy("Original", "Исходная", "מקור")
+      : value === "REVERSAL" ? copy("Reversal", "Сторно", "ביטול")
+        : value === "CORRECTION" ? copy("Correction", "Корректировка", "תיקון")
+          : value;
+  const workKindLabel = (value: string) =>
+    value === "DOOR" ? copy("Door", "Дверь", "דלת") : value === "ADDON" ? copy("Addon", "Допработа", "עבודה נוספת") : value;
   const canPrev = offset > 0;
   const canNext = offset + LEDGER_PAGE_SIZE < (ledgerQuery.data?.total || 0);
-  const totalAmount = items.reduce(
-    (sum, item) => sum + Number(item.amount_snapshot || 0),
-    0,
-  );
   const parsedNewRate = Number(newRate);
   const hasValidNewRate =
     newRate.trim() !== "" &&
@@ -566,10 +571,6 @@ export default function EarningsLedgerPage() {
                   {copy("Rows", "Строк", "שורות")}{" "}
                   {ledgerQuery.data?.total ?? 0}
                 </span>
-                <span className="dmx-week-pill">
-                  {copy("Visible amount", "Сумма на экране", "סכום מוצג")}{" "}
-                  {formatMoney(totalAmount)}
-                </span>
               </div>
             </div>
             <div className="surface-subtle min-w-[280px] max-w-lg p-4 sm:p-5">
@@ -581,7 +582,7 @@ export default function EarningsLedgerPage() {
                   <div className="mt-1 text-sm font-semibold text-text">
                     {entryType === "all"
                       ? copy("All entries", "Все записи", "כל הרשומות")
-                      : entryType}
+                      : entryTypeLabel(entryType)}
                   </div>
                 </div>
                 <div className="rounded-lg border border-border bg-surface px-3 py-3">
@@ -591,7 +592,7 @@ export default function EarningsLedgerPage() {
                   <div className="mt-1 text-sm font-semibold text-text">
                     {workKind === "all"
                       ? copy("Door + addon", "Двери + допы", "דלת + תוספות")
-                      : workKind}
+                      : workKindLabel(workKind)}
                   </div>
                 </div>
               </div>
@@ -749,9 +750,9 @@ export default function EarningsLedgerPage() {
               <option value="all">
                 {copy("All entries", "Все записи", "כל הרשומות")}
               </option>
-              <option value="ORIGINAL">{copy("ORIGINAL", "ИСХОДНАЯ", "מקור")}</option>
-              <option value="REVERSAL">{copy("REVERSAL", "СТОРНО", "ביטול")}</option>
-              <option value="CORRECTION">{copy("CORRECTION", "КОРРЕКТИРОВКА", "תיקון")}</option>
+              <option value="ORIGINAL">{copy("Original", "Исходная", "מקור")}</option>
+              <option value="REVERSAL">{copy("Reversal", "Сторно", "ביטול")}</option>
+              <option value="CORRECTION">{copy("Correction", "Корректировка", "תיקון")}</option>
             </select>
             <select
               aria-label={copy(
@@ -769,8 +770,8 @@ export default function EarningsLedgerPage() {
               <option value="all">
                 {copy("Door + addon", "Двери + допы", "דלת + תוספות")}
               </option>
-              <option value="DOOR">{copy("DOOR", "ДВЕРЬ", "דלת")}</option>
-              <option value="ADDON">{copy("ADDON", "ДОПРАБОТА", "עבודה נוספת")}</option>
+              <option value="DOOR">{copy("Door", "Дверь", "דלת")}</option>
+              <option value="ADDON">{copy("Addon", "Допработа", "עבודה נוספת")}</option>
             </select>
             <div className="field-stack min-w-[160px]">
               <label
@@ -887,10 +888,10 @@ export default function EarningsLedgerPage() {
                               entryTone(item.entry_type),
                             )}
                           >
-                            {item.entry_type}
+                            {entryTypeLabel(item.entry_type)}
                           </span>
                           <span className="inline-flex rounded-full bg-surface-sunken px-2 py-1 text-[10.5px] font-medium leading-none text-text-secondary">
-                            {item.work_kind}
+                            {workKindLabel(item.work_kind)}
                           </span>
                         </div>
                         <div className="mt-2 truncate text-13 font-semibold text-text">
@@ -1061,10 +1062,10 @@ export default function EarningsLedgerPage() {
                             entryTone(item.entry_type),
                           )}
                         >
-                          {item.entry_type}
+                          {entryTypeLabel(item.entry_type)}
                         </span>
                         <div className="mt-1 text-11 text-text-secondary">
-                          {item.work_kind}
+                          {workKindLabel(item.work_kind)}
                         </div>
                       </TableCell>
                       <TableCell className="font-medium text-text">
@@ -1179,6 +1180,15 @@ export default function EarningsLedgerPage() {
               )}
             </DialogDescription>
           </DialogHeader>
+          {correctionMutation.isError ? (
+            <InlineNotice tone="error">
+              {readableApiError(
+                correctionMutation.error,
+                locale,
+                copy("Correction was not saved.", "Коррекция не сохранена.", "התיקון לא נשמר."),
+              )}
+            </InlineNotice>
+          ) : null}
           <div className="grid gap-4">
             <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3 text-13">
               <div className="font-medium text-text">

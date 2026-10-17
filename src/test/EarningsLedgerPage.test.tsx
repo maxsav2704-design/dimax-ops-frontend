@@ -223,7 +223,7 @@ describe("EarningsLedgerPage", () => {
     expect(screen.getAllByText("Separate factory approval").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Factory adjustment agreement").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Installer added offline").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("REVERSAL").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Reversal").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Admin rollback").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getAllByRole("button", { name: /correct/i })[0]);

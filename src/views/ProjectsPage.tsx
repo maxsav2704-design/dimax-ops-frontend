@@ -1988,6 +1988,12 @@ export default function ProjectsPage() {
       );
       await refreshSelectedProjectOperationalData(selectedProjectId);
     } catch (e) {
+      // The server may have refused a stale state (409): show the real door first, then the error.
+      try {
+        await refreshSelectedProjectOperationalData(selectedProjectId);
+      } catch {
+        /* the action error below is the one to show */
+      }
       setError(
         readableApiError(
           e,
@@ -2079,6 +2085,12 @@ export default function ProjectsPage() {
       );
       await refreshSelectedProjectOperationalData(selectedProjectId);
     } catch (e) {
+      // The server may have refused a stale state (409): show the real door first, then the error.
+      try {
+        await refreshSelectedProjectOperationalData(selectedProjectId);
+      } catch {
+        /* the action error below is the one to show */
+      }
       setError(
         readableApiError(
           e,

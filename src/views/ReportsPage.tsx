@@ -174,6 +174,7 @@ export default function ReportsPage() {
   const [selectedPresetId, setSelectedPresetId] = useState("");
   const [presetNotice, setPresetNotice] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const activeFocus = parseReportsFocus(searchParams?.get("focus") || null);
   const activeOpsPreset = parseReportsOpsPreset(
     searchParams?.get("ops_preset") || null,
@@ -592,7 +593,12 @@ export default function ReportsPage() {
           body: JSON.stringify({}),
         },
       ),
+    onError: (error) => {
+      setActionNotice(null);
+      setActionError(readableApiError(error, locale, copy("Failed to mark alerts as read.", "Не удалось отметить алерты прочитанными.", "סימון ההתראות כנקראו נכשל.")));
+    },
     onSuccess: async () => {
+      setActionError(null);
       setActionNotice(
         copy(
           "Alerts marked as read.",
@@ -613,7 +619,12 @@ export default function ReportsPage() {
         method: "POST",
         body: JSON.stringify({ reason: "manual retry from reports" }),
       }),
+    onError: (error) => {
+      setActionNotice(null);
+      setActionError(readableApiError(error, locale, copy("Delivery retry failed.", "Повтор доставки не запущен.", "ניסיון המשלוח נכשל.")));
+    },
     onSuccess: async () => {
+      setActionError(null);
       setActionNotice(
         copy(
           "Delivery retry started and reports were refreshed.",
@@ -1766,6 +1777,7 @@ export default function ReportsPage() {
         )}
         {exportErrorMessage && <InlineNotice tone="error">{exportErrorMessage}</InlineNotice>}
         {actionNotice && <InlineNotice tone="success">{actionNotice}</InlineNotice>}
+        {actionError && <InlineNotice tone="error">{actionError}</InlineNotice>}
         {presetNotice && (
           <div className={reportsNoticeClass("muted")}>{presetNotice}</div>
         )}

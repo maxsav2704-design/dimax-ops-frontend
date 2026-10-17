@@ -1308,6 +1308,13 @@ export default function IssuesPage() {
                       >
                         {copy("Edit", "Редактировать", "ערוך")}
                       </button>
+                      <a
+                        href={`/projects?project_id=${issue.project_id}&focus_section=doors`}
+                        className="mt-0.5 inline-flex h-8 items-center justify-center rounded-full border border-border bg-surface px-2 text-[11.5px] font-medium text-text-secondary hover:bg-surface-subtle hover:text-text"
+                        title={copy("Open the project doors", "Открыть двери объекта", "פתח את דלתות הפרויקט")}
+                      >
+                        {copy("Project", "Объект", "פרויקט")}
+                      </a>
                     </div>
                   );
                 })}

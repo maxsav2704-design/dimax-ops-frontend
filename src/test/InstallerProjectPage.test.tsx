@@ -133,10 +133,15 @@ describe("InstallerProjectPage", () => {
 
     expect(await screen.findByText("Project One")).toBeInTheDocument();
 
+    // Nothing is pre-selected: the button stays disabled until the installer picks a reason.
+    const notInstalledButton = screen.getAllByRole("button", { name: "Not installed" })[0];
+    expect(notInstalledButton).toBeDisabled();
+    fireEvent.change(screen.getAllByLabelText(/^Reason /)[0], { target: { value: "reason-1" } });
     fireEvent.change(screen.getAllByPlaceholderText("Comment for NOT_INSTALLED")[0], {
       target: { value: "Need crane access" },
     });
-    fireEvent.click(screen.getAllByRole("button", { name: "Not installed" })[0]);
+    expect(notInstalledButton).not.toBeDisabled();
+    fireEvent.click(notInstalledButton);
 
     await waitFor(() => {
       const calls = apiFetchMock.mock.calls as Array<[string, RequestInit | undefined]>;

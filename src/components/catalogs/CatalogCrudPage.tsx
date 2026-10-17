@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
-import { KpiTile } from "@/components/dimax";
+import { ConfirmActionDialog, KpiTile } from "@/components/dimax";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -188,6 +188,9 @@ export function CatalogCrudPage({
     "all" | "active" | "inactive"
   >("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Deleting a catalog entry is a one-click hard delete on the server: confirm first.
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; code: string } | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -568,7 +571,7 @@ export function CatalogCrudPage({
               type="button"
               className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-status-problem-border bg-status-problem-bg px-3.5 text-12 font-medium leading-none text-status-problem-fg transition-colors duration-150 hover:bg-status-problem-bg disabled:cursor-not-allowed disabled:opacity-60"
               disabled={!canManageCatalog || selectedCount === 0 || bulkMutation.isPending}
-              onClick={() => bulkMutation.mutate("delete")}
+              onClick={() => setBulkDeleteOpen(true)}
             >
               {" "}
               {copy("Delete", "Удалить", "מחק")}{" "}
@@ -686,7 +689,7 @@ export function CatalogCrudPage({
                     </button>{" "}
                     <button
                       type="button"
-                      onClick={() => deleteMutation.mutate(item.id)}
+                      onClick={() => setDeleteTarget({ id: item.id, code: item.code })}
                       className="inline-flex h-8 items-center justify-center gap-2 rounded-full border border-status-problem-border bg-status-problem-bg px-2.5 text-12 font-medium leading-none text-status-problem-fg transition-colors duration-150 hover:bg-status-problem-bg disabled:cursor-not-allowed disabled:opacity-60"
                       disabled={!canManageCatalog || deleteMutation.isPending}
                       aria-label={copy(`Delete ${item.code} card`, `Удалить ${item.code}`, `מחיקת ${item.code}`)}
@@ -777,7 +780,7 @@ export function CatalogCrudPage({
                           </button>
                           <button
                             type="button"
-                            onClick={() => deleteMutation.mutate(item.id)}
+                            onClick={() => setDeleteTarget({ id: item.id, code: item.code })}
                             className="inline-flex h-8 items-center justify-center gap-2 rounded-full border border-status-problem-border bg-status-problem-bg px-2.5 text-12 font-medium leading-none text-status-problem-fg transition-colors duration-150 hover:bg-status-problem-bg disabled:cursor-not-allowed disabled:opacity-60"
                             disabled={!canManageCatalog || deleteMutation.isPending}
                             aria-label={copy(`Delete ${item.code}`, `Удалить ${item.code}`, `מחיקת ${item.code}`)}
@@ -955,6 +958,49 @@ export function CatalogCrudPage({
           </DialogFooter>{" "}
         </DialogContent>{" "}
       </Dialog>{" "}
+      <ConfirmActionDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        testId="catalog-delete-confirm"
+        tone="danger"
+        busy={deleteMutation.isPending}
+        title={copy(`Delete ${deleteTarget?.code ?? ""}`, `Удалить ${deleteTarget?.code ?? ""}`, `מחיקת ${deleteTarget?.code ?? ""}`)}
+        changes={copy(
+          "The entry is removed from the catalog and from the pickers.",
+          "Запись исчезнет из справочника и из списков выбора.",
+          "הרשומה תוסר מהקטלוג ומרשימות הבחירה.",
+        )}
+        keeps={copy(
+          "Doors and records that already reference it keep their history.",
+          "Двери и записи, где она уже использована, сохраняют историю.",
+          "דלתות ורשומות שכבר משתמשות בה שומרות על ההיסטוריה.",
+        )}
+        confirmLabel={copy("Delete", "Удалить", "מחק")}
+        onConfirm={() => {
+          const target = deleteTarget;
+          setDeleteTarget(null);
+          if (target) deleteMutation.mutate(target.id);
+        }}
+      />
+      <ConfirmActionDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        testId="catalog-bulk-delete-confirm"
+        tone="danger"
+        busy={bulkMutation.isPending}
+        title={copy(`Delete ${selectedCount} entries`, `Удалить записей: ${selectedCount}`, `מחיקת ${selectedCount} רשומות`)}
+        changes={copy(
+          "The selected entries are removed from the catalog and from the pickers.",
+          "Выбранные записи исчезнут из справочника и из списков выбора.",
+          "הרשומות שנבחרו יוסרו מהקטלוג ומרשימות הבחירה.",
+        )}
+        reviewLabel={copy("I checked the selection", "Я проверил(а) выбор", "בדקתי את הבחירה")}
+        confirmLabel={copy("Delete", "Удалить", "מחק")}
+        onConfirm={() => {
+          setBulkDeleteOpen(false);
+          bulkMutation.mutate("delete");
+        }}
+      />
     </DashboardLayout>
   );
 }

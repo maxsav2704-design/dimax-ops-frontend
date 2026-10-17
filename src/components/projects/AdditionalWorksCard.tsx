@@ -378,9 +378,7 @@ export function AdditionalWorksCard({
                         {copy("Client", "Клиент", "לקוח")}
                       </div>
                       <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
-                        {formatMoney(
-                          Number(item.client_price) || 0,
-                        )}
+                        {item.client_price == null || item.client_price === "" ? "\u2014" : formatMoney(Number(item.client_price))}
                       </div>
                     </div>
                     <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
@@ -489,9 +487,7 @@ export function AdditionalWorksCard({
                         {item.qty_planned}
                       </td>
                       <td className="px-3 py-2.5 text-end tabular-nums">
-                        {formatMoney(
-                          Number(item.client_price) || 0,
-                        )}
+                        {item.client_price == null || item.client_price === "" ? "\u2014" : formatMoney(Number(item.client_price))}
                       </td>
                       <td className="px-3 py-2.5 text-end tabular-nums">
                         {addonPlanRate(item) == null ? missingAddonPrice : formatMoney(Number(addonPlanRate(item)))}

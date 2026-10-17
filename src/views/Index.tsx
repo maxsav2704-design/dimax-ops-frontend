@@ -12,6 +12,7 @@ import { DispatcherBoard, type DispatcherProjectFilter } from "@/components/dash
 import { NextSchedule } from "@/components/dashboard/NextSchedule";
 import { apiFetch } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { countNoun, type PluralSpec } from "@/lib/plural";
 import { pickLocale } from "@/lib/locale";
 
@@ -148,7 +149,8 @@ function localeCode(locale: "en" | "ru" | "he"): string {
 }
 
 function formatCurrency(value: string, locale: "en" | "ru" | "he"): string {
-  const num = decimalToNumber(value);
+  const num = Number.parseFloat(value);
+  if (!Number.isFinite(num)) return "\u2014";
   return `${num.toLocaleString(localeCode(locale), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -156,7 +158,8 @@ function formatCurrency(value: string, locale: "en" | "ru" | "he"): string {
 }
 
 function formatCompactCurrency(value: string, locale: "en" | "ru" | "he"): string {
-  const num = decimalToNumber(value);
+  const num = Number.parseFloat(value);
+  if (!Number.isFinite(num)) return "\u2014";
   if (Math.abs(num) >= 1000) {
     return `${Math.round(num / 1000).toLocaleString(localeCode(locale))}k ${COMPANY_CURRENCY}`;
   }
@@ -262,6 +265,8 @@ type DashboardKpi = {
   tone?: KpiTone;
   /** E5: the tile toggles this filter on the dispatcher board. */
   filter?: DispatcherProjectFilter;
+  /** Not rendered for this session (e.g. money without the rates capability). */
+  hidden?: boolean;
   /** Previous-period value and the sparkline series (E4). */
   previous?: number | null;
   deltaLabel?: string;
@@ -296,6 +301,7 @@ function DashboardKpiTile({ item, selected, onSelect }: { item: DashboardKpi; se
 const Index = () => {
   const router = useRouter();
   const { locale } = useI18n();
+  const session = useAuthSession();
   const copy = getDashboardCopy(locale);
   const labels = dashboardActionLabels(locale);
   const [openedAt] = useState(() => new Date());
@@ -442,10 +448,12 @@ const Index = () => {
     },
     {
       label: copy.kpi.revenue,
-      value: kpi ? formatCompactCurrency(kpi.revenue_total, locale) : `0 ${COMPANY_CURRENCY}`,
+      value: kpi ? formatCompactCurrency(kpi.revenue_total, locale) : "\u2014",
       detail: kpi
         ? `${copy.kpi.payroll}: ${formatCurrency(kpi.payroll_total, locale)}`
-        : `${copy.kpi.payroll}: 0.00 ${COMPANY_CURRENCY}`,
+        : `${copy.kpi.payroll}: \u2014`,
+      // Money is only for sessions with the rates capability.
+      hidden: session?.can_view_rates === false,
       ready: !!dashboard,
       pending: dashboardQuery.isPending,
       status: labels.week,
@@ -517,7 +525,7 @@ const Index = () => {
           ) : null)}
 
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
-            {dashboardKpis.map((item) => (
+            {dashboardKpis.filter((item) => !item.hidden).map((item) => (
               <DashboardKpiTile
                 key={item.label}
                 item={item}

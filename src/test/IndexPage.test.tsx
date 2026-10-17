@@ -172,7 +172,7 @@ describe("Index dashboard", () => {
     expect(calendar.searchParams.get("ends_at")).toBe(new Date(refreshedAt.getTime() + 7 * 86_400_000).toISOString());
     await waitFor(() => expect(screen.getAllByTestId("dashboard-kpi")[1]).toHaveTextContent("3"));
     expect(screen.getByText("Payroll: 750.00 ILS")).toBeInTheDocument();
-    expect(subject.queryClient.getQueryCache().getAll()).toHaveLength(3);
+    expect(subject.queryClient.getQueryCache().getAll()).toHaveLength(4); // dashboard queries + the auth session (the rates capability gates the money tile)
   });
 
   it("renders DIMAX dashboard v2.4 shell with live business sections", async () => {
