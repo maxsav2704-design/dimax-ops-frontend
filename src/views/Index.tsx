@@ -45,6 +45,8 @@ type ReportsDashboardResponse = {
     problem_projects: number;
     missing_rates_installed_doors: number;
     missing_addon_plans_done: number;
+    /** Effective installations per day, oldest first (14 days); drives the sparkline. */
+    installed_series_14d?: number[];
   };
   sync_health: {
     counts?: {
@@ -260,6 +262,10 @@ type DashboardKpi = {
   tone?: KpiTone;
   /** E5: the tile toggles this filter on the dispatcher board. */
   filter?: DispatcherProjectFilter;
+  /** Previous-period value and the sparkline series (E4). */
+  previous?: number | null;
+  deltaLabel?: string;
+  series?: number[];
 };
 
 function DashboardKpiTile({ item, selected, onSelect }: { item: DashboardKpi; selected?: boolean; onSelect?: () => void }) {
@@ -272,6 +278,9 @@ function DashboardKpiTile({ item, selected, onSelect }: { item: DashboardKpi; se
       label={item.label}
       value={item.ready ? item.value : "—"}
       metric={item.ready ? item.metric : null}
+      previous={item.ready ? item.previous : null}
+      deltaLabel={item.deltaLabel}
+      series={item.ready ? item.series : undefined}
       thresholds={item.thresholds}
       tone={item.ready ? item.tone : "neutral"}
       status={item.ready ? item.status : unavailable}
@@ -362,6 +371,9 @@ const Index = () => {
     pickLocale(locale, "Home", "Главная", "ראשי");
   const dashboardSubtitle =
     pickLocale(locale, "What is happening on site and what needs your attention today.", "Что происходит на объектах и что требует вашего внимания сегодня.", "מה קורה בפרויקטים ומה דורש את תשומת לבך היום.");
+  // The 14-day series ends at period_to: the first seven days are the previous week.
+  const installedSeries = kpi?.installed_series_14d && kpi.installed_series_14d.length === 14 ? kpi.installed_series_14d : undefined;
+  const installedPreviousWeek = installedSeries ? installedSeries.slice(0, 7).reduce((sum, value) => sum + value, 0) : null;
   const dashboardKpis: DashboardKpi[] = [
     {
       label: copy.kpi.activeProjects,
@@ -380,6 +392,10 @@ const Index = () => {
       pending: dashboardQuery.isPending,
       status: labels.week,
       tone: "ok",
+      metric: kpi?.installed_doors ?? null,
+      previous: installedPreviousWeek,
+      deltaLabel: pickLocale(locale, "vs previous week", "к прошлой неделе", "לעומת השבוע הקודם"),
+      series: installedSeries,
     },
     {
       label: copy.dispatcher.metrics.issues,

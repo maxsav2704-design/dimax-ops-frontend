@@ -360,4 +360,22 @@ describe("Index dashboard", () => {
     expect(screen.getByText("Quiet Project")).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-freshness")).toHaveAttribute("data-state", "fresh");
   });
+
+  it("draws the installed sparkline and the delta against the previous week from the 14-day series (E4)", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const response = emptyDashboardResponse(path);
+      if ("kpi" in response && response.kpi) {
+        response.kpi.installed_doors = 14;
+        (response.kpi as Record<string, unknown>).installed_series_14d = [1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2];
+      }
+      return response;
+    });
+    renderSubject();
+    await screen.findByText("All clear");
+    const installedTile = screen.getAllByTestId("dashboard-kpi")[1];
+    expect(installedTile).toHaveTextContent("14");
+    expect(within(installedTile).getByTestId("dashboard-kpi-delta")).toHaveTextContent("+7 vs previous week");
+    expect(within(installedTile).getByTestId("dashboard-kpi-spark")).toBeInTheDocument();
+    expect(within(screen.getAllByTestId("dashboard-kpi")[0]).queryByTestId("dashboard-kpi-spark")).not.toBeInTheDocument();
+  });
 });
