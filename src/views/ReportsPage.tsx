@@ -24,7 +24,7 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
-import { COMPANY_CURRENCY, InlineNotice } from "@/components/dimax";
+import { COMPANY_CURRENCY, InlineNotice, useEntityHighlight } from "@/components/dimax";
 import { queryKeys } from "@/lib/query-keys";
 import { ProjectPricingNotice, type ProjectPricingCoverage } from "@/components/prices/ProjectPricingNotice";
 import { ProjectMarginBasis, ProjectMarginNotice } from "@/components/prices/ProjectMarginNotice";
@@ -109,6 +109,8 @@ export default function ReportsPage() {
     }
   };
   const reportsFocusCopy = getReportsFocusCopy(t);
+  // E2: an installer hovered in one report lights up in every other table of the page.
+  useEntityHighlight();
   const reportsOpsPresetCopy = useMemo(() => getReportsOpsPresetCopy(t), [t]);
   const router = useRouter();
   const searchParams = useSearchParams();

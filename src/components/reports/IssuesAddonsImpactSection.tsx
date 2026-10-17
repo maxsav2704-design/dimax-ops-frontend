@@ -179,7 +179,7 @@ export function IssuesAddonsImpactSection({ query }: IssuesAddonsImpactSectionPr
           </div>
 
           <div className="hidden overflow-auto rounded-lg border border-border bg-surface-subtle md:block">
-            <table className="w-full text-[12px]">
+            <table className="data-table">
               <thead className="bg-surface-subtle text-text-secondary">
                 <tr>
                   <th className="text-start px-3 py-2 font-medium">
@@ -258,7 +258,7 @@ export function IssuesAddonsImpactSection({ query }: IssuesAddonsImpactSectionPr
                   ))
                 )}
               </div>
-              <table className="hidden w-full text-[12px] md:table">
+              <table className="data-table hidden md:table">
                 <thead className="bg-surface-subtle text-text-secondary">
                   <tr>
                     <th className="text-start px-3 py-2 font-medium">
@@ -356,7 +356,7 @@ export function IssuesAddonsImpactSection({ query }: IssuesAddonsImpactSectionPr
                   ))
                 )}
               </div>
-              <table className="hidden w-full text-[12px] md:table">
+              <table className="data-table hidden md:table">
                 <thead className="bg-surface-subtle text-text-secondary">
                   <tr>
                     <th className="text-start px-3 py-2 font-medium">

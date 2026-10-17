@@ -304,7 +304,7 @@ export function InstallerDetailsSection({ query, directoryQuery, options, instal
                     ))
                   )}
                 </div>
-                <table className="hidden w-full text-[12px] md:table">
+                <table className="data-table hidden md:table">
                   <thead className="bg-surface-subtle text-text-secondary">
                     <tr>
                       <th className="text-start px-3 py-2 font-medium">
@@ -428,7 +428,7 @@ export function InstallerDetailsSection({ query, directoryQuery, options, instal
                     ))
                   )}
                 </div>
-                <table className="hidden w-full text-[12px] md:table">
+                <table className="data-table hidden md:table">
                   <thead className="bg-surface-subtle text-text-secondary">
                     <tr>
                       <th className="text-start px-3 py-2 font-medium">

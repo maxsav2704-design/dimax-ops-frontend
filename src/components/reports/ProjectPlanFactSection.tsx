@@ -438,7 +438,7 @@ export function ProjectPlanFactSection({ planFactQuery, addonPlanQuery, urgencyS
             </div>
 
             <div className="hidden overflow-auto rounded-lg border border-border md:block">
-              <table className="w-full text-[13px]">
+              <table className="data-table">
                 <thead className="bg-surface-subtle text-text-secondary">
                   <tr>
                     <th className="text-start px-3 py-2 font-medium">
@@ -579,7 +579,7 @@ export function ProjectPlanFactSection({ planFactQuery, addonPlanQuery, urgencyS
                   )}
                 </div>
                 <div className="mt-3 hidden overflow-auto rounded-lg border border-border md:block">
-                  <table className="min-w-[520px] w-full text-[12px] leading-5">
+                  <table className="data-table min-w-[520px]">
                     <thead className="bg-surface-subtle text-text-secondary">
                       <tr>
                         <th className="px-3 py-2.5 text-start font-medium">
@@ -772,7 +772,7 @@ export function ProjectPlanFactSection({ planFactQuery, addonPlanQuery, urgencyS
                   )}
                 </div>
                 <div className="mt-3 hidden overflow-auto rounded-lg border border-border md:block">
-                  <table className="min-w-[520px] w-full text-[12px] leading-5">
+                  <table className="data-table min-w-[520px]">
                     <thead className="bg-surface-subtle text-text-secondary">
                       <tr>
                         <th className="px-3 py-2.5 text-start font-medium">

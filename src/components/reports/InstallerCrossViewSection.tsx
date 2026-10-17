@@ -1,6 +1,7 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
+import { entityKey } from "@/components/dimax";
 import { InstallerFinancialBand, InstallerFinancialBasis, InstallerFinancialNotice } from "@/components/prices/InstallerFinancialNotice";
 import { installerFinancialDataRisk } from "@/lib/installer-financials";
 import { cn } from "@/lib/utils";
@@ -187,7 +188,7 @@ export function InstallerCrossViewSection({ query, sortBy, sortDir, onSortByChan
             ))}
           </div>
           <div className="hidden overflow-auto md:block">
-            <table className="w-full text-[12px]">
+            <table className="data-table">
               <thead className="bg-surface-subtle text-text-secondary">
                 <tr>
                   <th className="text-start px-3 py-2 font-medium">
@@ -229,6 +230,7 @@ export function InstallerCrossViewSection({ query, sortBy, sortDir, onSortByChan
                   );
                   return (
                     <tr
+                      data-entity={entityKey("installer", item.installer_id)}
                       key={item.installer_id}
                       className="border-t border-border"
                     >

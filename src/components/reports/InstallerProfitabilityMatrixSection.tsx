@@ -1,6 +1,7 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
+import { entityKey } from "@/components/dimax";
 import { InstallerFinancialBand, InstallerFinancialBasis, InstallerFinancialNotice } from "@/components/prices/InstallerFinancialNotice";
 import { IssueExposureBasis } from "@/components/prices/IssueExposureBasis";
 import { OrderFinancialBasis } from "@/components/prices/OrderFinancialBasis";
@@ -196,7 +197,7 @@ export function InstallerProfitabilityMatrixSection({ query }: InstallerProfitab
                   ))
                 )}
               </div>
-              <table className="hidden w-full text-[12px] md:table">
+              <table className="data-table hidden md:table">
                 <thead className="bg-surface-subtle text-text-secondary">
                   <tr>
                     <th className="text-start px-3 py-2 font-medium">
@@ -305,7 +306,7 @@ export function InstallerProfitabilityMatrixSection({ query }: InstallerProfitab
                   ))
                 )}
               </div>
-              <table className="hidden w-full text-[12px] md:table">
+              <table className="data-table hidden md:table">
                 <thead className="bg-surface-subtle text-text-secondary">
                   <tr>
                     <th className="text-start px-3 py-2 font-medium">
@@ -421,7 +422,7 @@ export function InstallerProfitabilityMatrixSection({ query }: InstallerProfitab
                   ))
                 )}
               </div>
-              <table className="hidden w-full text-[12px] md:table">
+              <table className="data-table hidden md:table">
                 <thead className="bg-surface-subtle text-text-secondary">
                   <tr>
                     <th className="text-start px-3 py-2 font-medium">
@@ -455,6 +456,7 @@ export function InstallerProfitabilityMatrixSection({ query }: InstallerProfitab
                       );
                       return (
                         <tr
+                          data-entity={entityKey("installer", item.installer_id)}
                           key={item.installer_id}
                           className="border-t border-border"
                         >

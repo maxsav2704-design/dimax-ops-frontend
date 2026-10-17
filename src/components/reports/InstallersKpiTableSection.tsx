@@ -1,6 +1,7 @@
 "use client";
 
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
+import { entityKey } from "@/components/dimax";
 import { InstallerFinancialBasis, InstallerFinancialNotice } from "@/components/prices/InstallerFinancialNotice";
 import { installerFinancialDataRisk } from "@/lib/installer-financials";
 
@@ -134,7 +135,7 @@ export function InstallersKpiTableSection({ query, items, sortBy, sortDir, onSor
       {!query.isLoading &&
         !query.isError &&
         items.map((item) => (
-          <div key={item.installer_id} className="border-t border-border">
+          <div key={item.installer_id} data-entity={entityKey("installer", item.installer_id)} className="border-t border-border">
             <article className="px-4 py-3 md:hidden">
               <div className="text-[13px] font-semibold leading-5 text-text">
                 {item.installer_name}

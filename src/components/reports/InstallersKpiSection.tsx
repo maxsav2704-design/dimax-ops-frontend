@@ -190,7 +190,7 @@ export function InstallersKpiSection({ query, sortBy, sortDir, onSortByChange, o
             ))}
           </div>
           <div className="hidden overflow-auto md:block">
-            <table className="w-full text-[12px]">
+            <table className="data-table">
               <thead className="bg-surface-subtle text-text-secondary">
                 <tr>
                   <th className="text-start px-3 py-2 font-medium">
