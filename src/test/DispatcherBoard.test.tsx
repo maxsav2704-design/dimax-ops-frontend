@@ -141,4 +141,65 @@ describe("DispatcherBoard", () => {
     expect(screen.getByText("מה דורש טיפול")).toBeInTheDocument();
     expect(screen.getByText("אין שיבוצים דחופים.")).toBeInTheDocument();
   });
+
+  it("filters projects from a pressed summary item and clears through the chip (E5, E1)", () => {
+    const base = {
+      address: "Ashdod", project_status: "ACTIVE", dispatch_status: "READY", contact_name: null,
+      total_doors: 10, installed_doors: 5, pending_doors: 5, assigned_open_doors: 5, completion_pct: 50,
+      next_visit_at: null, next_visit_title: null, recommended_installers: [],
+    };
+    render(
+      <LanguageProvider>
+        <DispatcherBoard
+          summary={{
+            total_projects: 2, total_doors: 20, installed_doors: 10, pending_doors: 10, projects_needing_dispatch: 1,
+            open_issues: 2, blocked_issues: 1, unassigned_doors: 3, available_installers: 1, busy_installers: 1, scheduled_visits_7d: 0,
+          }}
+          projects={[
+            { ...base, project_id: "p-hot", project_name: "Hot Project", unassigned_doors: 3, open_issues: 2, blocked_issues: 1 },
+            { ...base, project_id: "p-quiet", project_name: "Quiet Project", unassigned_doors: 0, open_issues: 0, blocked_issues: 0 },
+          ]}
+          installers={[]}
+          projectFilter={null}
+          onToggleFilter={() => {}}
+        />
+      </LanguageProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Open project: Hot Project" })).toHaveAttribute("data-attention", "3");
+    expect(screen.getByRole("button", { name: "Open project: Quiet Project" })).not.toHaveAttribute("data-attention");
+    expect(screen.getByRole("button", { name: /Doors without installer/ })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByTestId("dispatcher-filter")).not.toBeInTheDocument();
+  });
+
+  it("shows only matching projects while a filter is active", () => {
+    const onToggleFilter = vi.fn();
+    const base = {
+      address: "Ashdod", project_status: "ACTIVE", dispatch_status: "READY", contact_name: null,
+      total_doors: 10, installed_doors: 5, pending_doors: 5, assigned_open_doors: 5, completion_pct: 50,
+      next_visit_at: null, next_visit_title: null, recommended_installers: [],
+    };
+    render(
+      <LanguageProvider>
+        <DispatcherBoard
+          summary={{
+            total_projects: 2, total_doors: 20, installed_doors: 10, pending_doors: 10, projects_needing_dispatch: 1,
+            open_issues: 2, blocked_issues: 1, unassigned_doors: 3, available_installers: 1, busy_installers: 1, scheduled_visits_7d: 0,
+          }}
+          projects={[
+            { ...base, project_id: "p-hot", project_name: "Hot Project", unassigned_doors: 3, open_issues: 2, blocked_issues: 1 },
+            { ...base, project_id: "p-quiet", project_name: "Quiet Project", unassigned_doors: 0, open_issues: 0, blocked_issues: 0 },
+          ]}
+          installers={[]}
+          projectFilter="unassigned"
+          onToggleFilter={onToggleFilter}
+        />
+      </LanguageProvider>,
+    );
+    expect(screen.getByText("Hot Project")).toBeInTheDocument();
+    expect(screen.queryByText("Quiet Project")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Doors without installer/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("dispatcher-filter")).toHaveTextContent("Doors without installer");
+    fireEvent.click(screen.getByRole("button", { name: "Remove filter" }));
+    expect(onToggleFilter).toHaveBeenCalledWith("unassigned");
+  });
 });

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import { getDashboardCopy } from "@/components/dashboard/copy";
+import { attentionAttr, attentionLevel, entityKey, FilterChip } from "@/components/dimax";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -70,8 +71,13 @@ type DispatcherInstaller = {
   next_event_title: string | null;
 };
 
+/** E5: the filter a tile or summary item applies to the project list. */
+export type DispatcherProjectFilter = "issues" | "unassigned";
+
 interface DispatcherBoardProps {
   summary: DispatcherSummary;
+  projectFilter?: DispatcherProjectFilter | null;
+  onToggleFilter?: (filter: DispatcherProjectFilter) => void;
   projects: DispatcherProject[];
   installers: DispatcherInstaller[];
   onOpenProject?: (projectId: string) => void;
@@ -193,6 +199,8 @@ export function DispatcherBoard({
   summary,
   projects,
   installers,
+  projectFilter = null,
+  onToggleFilter,
   onOpenProject,
   onOpenProjects,
   onOpenInstallers,
@@ -202,7 +210,10 @@ export function DispatcherBoard({
   const actions = getDashboardCopy(locale).dispatcher;
   const copy = boardCopy(locale);
   const localeCode = locale === "he" ? "he-IL" : locale === "ru" ? "ru-RU" : "en-US";
-  const visibleProjects = projects.slice(0, 4);
+  const matchesFilter = (project: DispatcherProject) =>
+    projectFilter === "issues" ? project.open_issues > 0 : projectFilter === "unassigned" ? project.unassigned_doors > 0 : true;
+  const visibleProjects = projects.filter(matchesFilter).slice(0, 4);
+  const filterLabel = projectFilter === "issues" ? copy.summaryProblems : projectFilter === "unassigned" ? copy.summaryDoors : null;
   const visibleInstallers = installers
     .filter((installer) => installer.availability_band === "AVAILABLE")
     .slice(0, 4);
@@ -232,6 +243,7 @@ export function DispatcherBoard({
       value: summary.unassigned_doors,
       icon: DoorOpen,
       tone: "text-text bg-surface-sunken",
+      filter: "unassigned" as const,
     },
     {
       label: copy.summaryProblems,
@@ -241,6 +253,7 @@ export function DispatcherBoard({
         summary.open_issues > 0
           ? "text-status-problem-fg bg-status-problem-bg"
           : "text-status-ok-fg bg-status-ok-bg",
+      filter: "issues" as const,
     },
     {
       label: copy.summaryInstallers,
@@ -257,8 +270,8 @@ export function DispatcherBoard({
     >
       <div className="flex flex-col gap-3 border-b border-border-subtle px-4 py-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h2 className="text-[15px] font-semibold text-text">{copy.title}</h2>
-          <p className="mt-1 max-w-3xl text-[12px] leading-5 text-text-secondary">
+          <h2 className="type-section">{copy.title}</h2>
+          <p className="mt-1 max-w-3xl text-12 leading-5 text-text-secondary">
             {copy.description}
           </p>
         </div>
@@ -274,32 +287,57 @@ export function DispatcherBoard({
       </div>
 
       <div className="grid grid-cols-2 gap-px bg-border-subtle lg:grid-cols-4">
-        {summaryItems.map((item) => (
-          <div key={item.label} className="flex items-center gap-3 bg-surface px-4 py-3">
-            <span
+        {summaryItems.map((item) => {
+          const filterable = "filter" in item && !!item.filter && !!onToggleFilter;
+          const pressed = filterable && projectFilter === item.filter;
+          const body = (
+            <>
+              <span
+                className={cn(
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
+                  item.tone,
+                )}
+              >
+                <item.icon className="h-4 w-4" strokeWidth={1.8} />
+              </span>
+              <div className="min-w-0">
+                <div className="num text-18 font-semibold leading-none text-text">
+                  {item.value}
+                </div>
+                <div className="mt-1 truncate text-11 text-text-secondary">
+                  {item.label}
+                </div>
+              </div>
+            </>
+          );
+          return filterable ? (
+            <button
+              key={item.label}
+              type="button"
+              aria-pressed={pressed}
+              onClick={() => onToggleFilter?.(item.filter as DispatcherProjectFilter)}
               className={cn(
-                "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
-                item.tone,
+                "flex items-center gap-3 bg-surface px-4 py-3 text-start transition-colors duration-fast ease-standard hover:bg-surface-subtle",
+                pressed && "bg-[var(--dmx-accent-tint)] hover:bg-[var(--dmx-accent-tint)]",
               )}
             >
-              <item.icon className="h-4 w-4" strokeWidth={1.8} />
-            </span>
-            <div className="min-w-0">
-              <div className="text-[18px] font-semibold leading-none tabular-nums text-text">
-                {item.value}
-              </div>
-              <div className="mt-1 truncate text-[10.5px] text-text-secondary">
-                {item.label}
-              </div>
+              {body}
+            </button>
+          ) : (
+            <div key={item.label} className="flex items-center gap-3 bg-surface px-4 py-3">
+              {body}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 gap-4 border-t border-border-subtle p-4 xl:grid-cols-5">
         <div className="xl:col-span-3">
-          <div className="mb-2.5 text-[12px] font-semibold text-text">
-            {copy.projects}
+          <div className="mb-2.5 flex flex-wrap items-center gap-2 text-12 font-semibold text-text">
+            <span>{copy.projects}</span>
+            {projectFilter && filterLabel ? (
+              <FilterChip testId="dispatcher-filter" onRemove={() => onToggleFilter?.(projectFilter)}>{filterLabel}</FilterChip>
+            ) : null}
           </div>
           <div className="space-y-2">
             {visibleProjects.length > 0 ? (
@@ -308,22 +346,28 @@ export function DispatcherBoard({
                   key={project.project_id}
                   type="button"
                   onClick={() => onOpenProject?.(project.project_id)}
-                  className="group flex w-full items-center gap-3 rounded-md border border-border bg-surface-subtle px-3 py-2.5 text-start transition-colors hover:border-border-strong hover:bg-surface"
+                  data-entity={entityKey("project", project.project_id)}
+                  {...attentionAttr(attentionLevel({
+                    blocked: project.blocked_issues > 0,
+                    issues: project.open_issues > 0,
+                    unassigned: project.unassigned_doors > 0,
+                  }))}
+                  className="attn-stripe group flex w-full items-center gap-3 rounded-md border border-border bg-surface-subtle px-3 py-2.5 text-start transition-colors hover:border-border-strong hover:bg-surface"
                   aria-label={`${copy.openProject}: ${project.project_name}`}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate text-[13px] font-semibold text-text">
+                      <span className="truncate text-13 font-semibold text-text">
                         {project.project_name}
                       </span>
-                      <span className="rounded-full bg-status-warning-bg px-2 py-0.5 text-[10px] font-medium text-status-warning-fg">
+                      <span className="rounded-full bg-status-warning-bg px-2 py-0.5 text-11 font-medium text-status-warning-fg">
                         {formatStatus(project.dispatch_status, copy, "project")}
                       </span>
                     </div>
-                    <div className="mt-0.5 truncate text-[11px] text-text-secondary">
+                    <div className="mt-0.5 truncate text-11 text-text-secondary">
                       {project.address || "—"}
                     </div>
-                    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[10.5px] text-text-secondary">
+                    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-11 text-text-secondary">
                       <span>
                         <b className="font-semibold text-text">{project.unassigned_doors}</b>{" "}
                         {copy.unassignedDoors}
@@ -344,7 +388,7 @@ export function DispatcherBoard({
                 </button>
               ))
             ) : (
-              <div className="rounded-md border border-dashed border-border px-4 py-6 text-center text-[12px] text-text-secondary">
+              <div className="rounded-md border border-dashed border-border px-4 py-6 text-center text-12 text-text-secondary">
                 {copy.projectsEmpty}
               </div>
             )}
@@ -353,11 +397,11 @@ export function DispatcherBoard({
 
         <div className="xl:col-span-2">
           <div className="mb-2.5 flex items-center justify-between gap-3">
-            <div className="text-[12px] font-semibold text-text">{copy.installers}</div>
+            <div className="text-12 font-semibold text-text">{copy.installers}</div>
             <button
               type="button"
               onClick={onOpenInstallers}
-              className="text-[11px] font-medium text-link hover:underline"
+              className="text-11 font-medium text-link hover:underline"
             >
               {actions.openInstallers}
             </button>
@@ -367,27 +411,28 @@ export function DispatcherBoard({
               visibleInstallers.map((installer) => (
                 <div
                   key={installer.installer_id}
+                  data-entity={entityKey("installer", installer.installer_id)}
                   className="rounded-md border border-border bg-surface-subtle px-3 py-2.5"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="truncate text-[13px] font-semibold text-text">
+                    <span className="truncate text-13 font-semibold text-text">
                       {installer.installer_name}
                     </span>
-                    <span className="shrink-0 rounded-full bg-status-ok-bg px-2 py-0.5 text-[10px] font-medium text-status-ok-fg">
+                    <span className="shrink-0 rounded-full bg-status-ok-bg px-2 py-0.5 text-11 font-medium text-status-ok-fg">
                       {formatStatus(installer.availability_band, copy, "installer")}
                     </span>
                   </div>
-                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[10.5px] text-text-secondary">
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-11 text-text-secondary">
                     <span>{installer.assigned_open_doors} {copy.openDoors}</span>
                     <span>{installer.active_projects} {copy.activeProjects}</span>
                   </div>
-                  <div className="mt-1 truncate text-[10.5px] text-text-secondary">
+                  <div className="mt-1 truncate text-11 text-text-secondary">
                     {copy.nextVisit}: {installer.next_event_title || formatDateTime(installer.next_event_at)}
                   </div>
                 </div>
               ))
             ) : (
-              <div className="rounded-md border border-dashed border-border px-4 py-6 text-center text-[12px] text-text-secondary">
+              <div className="rounded-md border border-dashed border-border px-4 py-6 text-center text-12 text-text-secondary">
                 {copy.installersEmpty}
               </div>
             )}

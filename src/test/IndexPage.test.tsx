@@ -323,4 +323,41 @@ describe("Index dashboard", () => {
     expect(screen.getByTestId("dispatcher-board")).toBeInTheDocument();
     expect(screen.getByText("Door installation")).toBeInTheDocument();
   });
+
+  it("the issues tile filters the dispatcher board and the chip clears it (E4, E5)", async () => {
+    const project = {
+      address: "Ashdod", project_status: "ACTIVE", dispatch_status: "READY", contact_name: null,
+      total_doors: 10, installed_doors: 5, pending_doors: 5, assigned_open_doors: 5, completion_pct: 50,
+      next_visit_at: null, next_visit_title: null, recommended_installers: [],
+    };
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("dispatcher-board?")) return {
+        generated_at: "2026-10-17T10:00:00Z",
+        summary: {
+          total_projects: 2, total_doors: 20, installed_doors: 10, pending_doors: 10, projects_needing_dispatch: 1,
+          open_issues: 2, blocked_issues: 0, unassigned_doors: 0, available_installers: 1, busy_installers: 1, scheduled_visits_7d: 0,
+        },
+        projects: [
+          { ...project, project_id: "p-hot", project_name: "Hot Project", unassigned_doors: 0, open_issues: 2, blocked_issues: 0 },
+          { ...project, project_id: "p-quiet", project_name: "Quiet Project", unassigned_doors: 0, open_issues: 0, blocked_issues: 0 },
+        ],
+        installers: [],
+      };
+      return emptyDashboardResponse(path);
+    });
+    renderSubject();
+    await screen.findByText("Quiet Project");
+    const issuesTile = screen.getAllByTestId("dashboard-kpi")[2];
+    expect(issuesTile).toHaveAttribute("data-tone", "warn");
+    expect(issuesTile).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(issuesTile);
+    expect(issuesTile).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByText("Quiet Project")).not.toBeInTheDocument();
+    expect(screen.getByText("Hot Project")).toBeInTheDocument();
+    expect(screen.getByTestId("dispatcher-filter")).toHaveTextContent("Open issues");
+    fireEvent.click(screen.getByRole("button", { name: "Remove filter" }));
+    expect(issuesTile).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("Quiet Project")).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-freshness")).toHaveAttribute("data-state", "fresh");
+  });
 });

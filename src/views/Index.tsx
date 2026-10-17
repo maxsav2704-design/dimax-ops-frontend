@@ -6,15 +6,13 @@ import { AlertTriangle, CalendarDays, Plus } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DataStateNotice } from "@/components/DataStateNotice";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
-import { CardSkeleton, COMPANY_CURRENCY, TableSkeleton } from "@/components/dimax";
-import { Skeleton } from "@/components/ui/skeleton";
+import { CardSkeleton, COMPANY_CURRENCY, FreshnessBadge, KpiTile, TableSkeleton, useEntityHighlight, type KpiThresholds, type KpiTone } from "@/components/dimax";
 import { getDashboardCopy } from "@/components/dashboard/copy";
-import { DispatcherBoard } from "@/components/dashboard/DispatcherBoard";
+import { DispatcherBoard, type DispatcherProjectFilter } from "@/components/dashboard/DispatcherBoard";
 import { NextSchedule } from "@/components/dashboard/NextSchedule";
 import { apiFetch } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { countNoun, type PluralSpec } from "@/lib/plural";
-import { cn } from "@/lib/utils";
 import { pickLocale } from "@/lib/locale";
 
 // Count nouns for the KPI detail lines: Russian needs one/few/many forms
@@ -249,128 +247,40 @@ function dashboardActionLabels(locale: "en" | "ru" | "he") {
   };
 }
 
-type DashboardV24Tone = "blue" | "green" | "neutral" | "orange" | "red" | "yellow";
-
-type DashboardV24Kpi = {
-  detail: string;
+type DashboardKpi = {
   label: string;
+  value: string | number;
+  detail: string;
   ready: boolean;
   pending: boolean;
   status: string;
-  tone: DashboardV24Tone;
-  value: string | number;
+  /** E4: the tone is computed from the metric and its thresholds unless `tone` is explicit. */
+  metric?: number | null;
+  thresholds?: KpiThresholds;
+  tone?: KpiTone;
+  /** E5: the tile toggles this filter on the dispatcher board. */
+  filter?: DispatcherProjectFilter;
 };
 
-function dashboardToneClasses(tone: DashboardV24Tone) {
-  if (tone === "red") {
-    return {
-      bar: "before:bg-status-problem-fg",
-      status: "bg-status-problem-bg text-status-problem-fg",
-      value: "text-status-problem-fg",
-      progress: "bg-status-problem-fg",
-    };
-  }
-  if (tone === "orange") {
-    return {
-      bar: "before:bg-status-warning-fg",
-      status: "bg-status-warning-bg text-status-warning-fg",
-      value: "text-status-warning-fg",
-      progress: "bg-status-warning-fg",
-    };
-  }
-  if (tone === "yellow") {
-    return {
-      bar: "before:bg-accent",
-      status: "bg-accent/20 text-text",
-      value: "text-text",
-      progress: "bg-accent",
-    };
-  }
-  if (tone === "green") {
-    return {
-      bar: "before:bg-status-ok-fg",
-      status: "bg-status-ok-bg text-status-ok-fg",
-      value: "text-status-ok-fg",
-      progress: "bg-status-ok-fg",
-    };
-  }
-  if (tone === "blue") {
-    return {
-      bar: "before:bg-link",
-      status: "bg-blue-50 text-link",
-      value: "text-link",
-      progress: "bg-link",
-    };
-  }
-  return {
-    bar: "before:bg-border-strong",
-    status: "bg-surface-subtle text-text-secondary",
-    value: "text-text",
-    progress: "bg-border-strong",
-  };
-}
-
-function DashboardV24KpiTile({ item }: { item: DashboardV24Kpi }) {
+function DashboardKpiTile({ item, selected, onSelect }: { item: DashboardKpi; selected?: boolean; onSelect?: () => void }) {
   const { locale } = useI18n();
-  const tone = dashboardToneClasses(item.ready ? item.tone : "neutral");
   const unavailable = pickLocale(locale, "Unavailable", "Нет данных", "אין נתונים");
-  const loading = pickLocale(locale, "Loading", "Загрузка", "טוען");
-  const isLoading = item.pending && !item.ready;
-
+  const pending = item.pending && !item.ready;
   return (
-    <div
-      data-testid="dashboard-kpi"
-      aria-busy={item.pending}
-      className={cn(
-        "relative min-h-[128px] overflow-hidden rounded-lg border border-border bg-surface px-4 py-3 before:absolute before:inset-y-3 before:left-0 before:w-[3px] before:rounded-r-full",
-        tone.bar,
-      )}
-    >
-      <div className="pl-2">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-h-8 text-[10.5px] font-semibold leading-4 text-text-secondary">
-            {item.label}
-          </div>
-          {isLoading ? (
-            <Skeleton className="h-4 w-14 shrink-0 rounded-full" />
-          ) : (
-            <span
-              className={cn(
-                "shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-semibold",
-                tone.status,
-              )}
-            >
-              {item.ready ? item.status : unavailable}
-            </span>
-          )}
-        </div>
-        {isLoading ? (
-          // Same box as the value line so the tile does not jump when data lands.
-          <Skeleton className="mt-2 h-6 w-16" />
-        ) : (
-          <div
-            className={cn(
-              "mt-2 text-[24px] font-semibold leading-none tabular-nums",
-              tone.value,
-            )}
-          >
-            {item.ready ? item.value : "—"}
-          </div>
-        )}
-        <div className="mt-3 line-clamp-2 min-h-8 text-[10.5px] leading-4 text-text-secondary">
-          {isLoading ? (
-            <>
-              <Skeleton className="mt-0.5 h-3 w-3/4" />
-              <span className="sr-only">{loading}</span>
-            </>
-          ) : item.ready ? (
-            item.detail
-          ) : (
-            unavailable
-          )}
-        </div>
-      </div>
-    </div>
+    <KpiTile
+      testId="dashboard-kpi"
+      label={item.label}
+      value={item.ready ? item.value : "—"}
+      metric={item.ready ? item.metric : null}
+      thresholds={item.thresholds}
+      tone={item.ready ? item.tone : "neutral"}
+      status={item.ready ? item.status : unavailable}
+      detail={item.ready ? item.detail : unavailable}
+      pending={pending}
+      selected={selected}
+      onSelect={onSelect}
+      className="min-h-[120px]"
+    />
   );
 }
 
@@ -380,6 +290,10 @@ const Index = () => {
   const copy = getDashboardCopy(locale);
   const labels = dashboardActionLabels(locale);
   const [openedAt] = useState(() => new Date());
+  const [projectFilter, setProjectFilter] = useState<DispatcherProjectFilter | null>(null);
+  const toggleProjectFilter = (filter: DispatcherProjectFilter) =>
+    setProjectFilter((current) => (current === filter ? null : filter));
+  useEntityHighlight();
 
   const dashboardQuery = useQuery({
     queryKey: ["dashboard-reports"],
@@ -437,16 +351,18 @@ const Index = () => {
     day: "numeric",
     month: "short",
   });
-  const refreshSource =
-    dispatcherBoardQuery.data?.generated_at ||
-    dashboard?.kpi.period_to ||
-    now.toISOString();
-  const refreshLabel = hhmm(refreshSource, locale);
+  const refreshedAt = Math.max(dashboardQuery.dataUpdatedAt, dispatcherBoardQuery.dataUpdatedAt, nextScheduleQuery.dataUpdatedAt) || null;
+  const refreshing = dashboardQuery.isFetching || dispatcherBoardQuery.isFetching || nextScheduleQuery.isFetching;
+  const refreshAll = () => {
+    void dashboardQuery.refetch();
+    void dispatcherBoardQuery.refetch();
+    void nextScheduleQuery.refetch();
+  };
   const dashboardTitle =
     pickLocale(locale, "Home", "Главная", "ראשי");
   const dashboardSubtitle =
     pickLocale(locale, "What is happening on site and what needs your attention today.", "Что происходит на объектах и что требует вашего внимания сегодня.", "מה קורה בפרויקטים ומה דורש את תשומת לבך היום.");
-  const dashboardKpis: DashboardV24Kpi[] = [
+  const dashboardKpis: DashboardKpi[] = [
     {
       label: copy.kpi.activeProjects,
       value: dashboard?.limits.projects.current ?? 0,
@@ -454,7 +370,7 @@ const Index = () => {
       ready: !!dashboard,
       pending: dashboardQuery.isPending,
       status: labels.active,
-      tone: "yellow",
+      tone: "neutral",
     },
     {
       label: labels.installed7d,
@@ -463,7 +379,7 @@ const Index = () => {
       ready: !!dashboard,
       pending: dashboardQuery.isPending,
       status: labels.week,
-      tone: "green",
+      tone: "ok",
     },
     {
       label: copy.dispatcher.metrics.issues,
@@ -473,7 +389,9 @@ const Index = () => {
       pending: dispatcherBoardQuery.isPending,
       status:
         openIssues > 0 ? labels.needsAttention : labels.everythingFine,
-      tone: openIssues > 0 ? "red" : "green",
+      metric: openIssues,
+      thresholds: { warn: 1, bad: 5 },
+      filter: "issues",
     },
     {
       label: labels.freeInstallers,
@@ -482,7 +400,8 @@ const Index = () => {
       ready: !!dispatcherSummary,
       pending: dispatcherBoardQuery.isPending,
       status: labels.availableNow,
-      tone: teamUtilization > 85 ? "orange" : "blue",
+      metric: availableInstallers,
+      tone: availableInstallers === 0 ? "bad" : teamUtilization > 85 ? "warn" : "ok",
     },
     {
       label: copy.kpi.revenue,
@@ -493,7 +412,7 @@ const Index = () => {
       ready: !!dashboard,
       pending: dashboardQuery.isPending,
       status: labels.week,
-      tone: "green",
+      tone: "neutral",
     },
   ];
 
@@ -518,7 +437,7 @@ const Index = () => {
             title={dashboardTitle}
             badge={`${labels.today} · ${todayLabel}`}
             subtitle={dashboardSubtitle}
-            meta={<span>{labels.lastRefresh}: {dashboard || dispatcherSummary ? refreshLabel : "—"}</span>}
+            meta={refreshedAt ? <FreshnessBadge testId="dashboard-freshness" updatedAt={refreshedAt} onRefresh={refreshAll} refreshing={refreshing} /> : null}
             actions={
               <>
                 <button
@@ -562,7 +481,12 @@ const Index = () => {
 
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
             {dashboardKpis.map((item) => (
-              <DashboardV24KpiTile key={item.label} item={item} />
+              <DashboardKpiTile
+                key={item.label}
+                item={item}
+                selected={!!item.filter && projectFilter === item.filter}
+                onSelect={item.filter ? () => toggleProjectFilter(item.filter as DispatcherProjectFilter) : undefined}
+              />
             ))}
           </div>
         </section>
@@ -575,6 +499,8 @@ const Index = () => {
             summary={dispatcherBoardQuery.data.summary}
             projects={dispatcherBoardQuery.data.projects}
             installers={dispatcherBoardQuery.data.installers}
+            projectFilter={projectFilter}
+            onToggleFilter={toggleProjectFilter}
             onOpenProject={(projectId) =>
               router.push(`/projects?project_id=${projectId}`)
             }

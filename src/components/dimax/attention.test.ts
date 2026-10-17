@@ -8,6 +8,7 @@ describe("attention ranking (E1)", () => {
     expect(attentionLevel({ unassigned: true })).toBe(1);
     expect(attentionLevel({ stale: true, unassigned: true })).toBe(1);
     expect(attentionLevel({ missingPrice: true, unassigned: true })).toBe(2);
+    expect(attentionLevel({ issues: true })).toBe(2);
     expect(attentionLevel({ overdue: true, missingPrice: true })).toBe(3);
     expect(attentionLevel({ blocked: true })).toBe(3);
   });

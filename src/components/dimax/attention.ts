@@ -10,6 +10,8 @@ export type AttentionFlags = {
   blocked?: boolean;
   /** Work without a confirmed price. */
   missingPrice?: boolean;
+  /** Open issues on the item. */
+  issues?: boolean;
   /** No installer assigned. */
   unassigned?: boolean;
   /** Data older than a day. */
@@ -20,6 +22,7 @@ const WEIGHTS: Record<keyof AttentionFlags, AttentionLevel> = {
   overdue: 3,
   blocked: 3,
   missingPrice: 2,
+  issues: 2,
   unassigned: 1,
   stale: 1,
 };

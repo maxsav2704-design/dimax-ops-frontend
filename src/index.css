@@ -1424,6 +1424,10 @@
   .data-table tbody tr[data-attention="3"] > td:first-child { border-inline-start-color: var(--dmx-status-problem-fg); }
   .data-table tbody tr[data-attention="2"] > td:first-child { border-inline-start-color: var(--dmx-status-warning-fg); }
   .data-table tbody tr[data-attention="1"] > td:first-child { border-inline-start-color: var(--dmx-border-strong); }
+  .attn-stripe { border-inline-start-width: 3px; border-inline-start-color: transparent; }
+  .attn-stripe[data-attention="3"] { border-inline-start-color: var(--dmx-status-problem-fg); }
+  .attn-stripe[data-attention="2"] { border-inline-start-color: var(--dmx-status-warning-fg); }
+  .attn-stripe[data-attention="1"] { border-inline-start-color: var(--dmx-border-strong); }
   /* E2 linked highlighting: every occurrence of the hovered or focused entity. */
   [data-entity] { @apply rounded-sm transition-colors duration-fast ease-standard; }
   [data-entity].is-linked { background-color: var(--dmx-accent-tint) !important; box-shadow: inset 0 0 0 1px var(--dmx-accent); }
