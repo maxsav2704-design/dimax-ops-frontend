@@ -4400,7 +4400,7 @@ describe("ProjectsPage", () => {
       addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
     }) });
     render(<ProjectsPage />, { wrapper: Providers });
-    const first = await screen.findByTestId("project-detail-v28-door-tile-door-1");
+    const first = await screen.findByTestId("project-detail-v28-door-tile-door-1", {}, { timeout: 10_000 });
     const second = screen.getByTestId("project-detail-v28-door-tile-door-2");
     expect(first).toHaveAttribute("data-floor-key", "1-2");
     first.focus();

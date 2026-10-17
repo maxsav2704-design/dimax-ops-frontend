@@ -1448,8 +1448,10 @@
   [data-entity] { @apply rounded-sm transition-colors duration-fast ease-standard; }
   [data-entity].is-linked { background-color: var(--dmx-accent-tint) !important; box-shadow: inset 0 0 0 1px var(--dmx-accent); }
   /* E3 condensed header: a 48 px bar that keeps the title, status and the primary action. */
+  /* The sticky wrapper has no height, so the hidden bar takes no space; the bar overlays the content when on. */
+  .dmx-condensed { @apply sticky top-0 z-sticky h-0; }
   .dmx-condensed-bar {
-    @apply pointer-events-none sticky top-0 z-sticky -mx-1 mb-3 flex h-12 items-center gap-3 rounded-lg border border-border px-3 opacity-0;
+    @apply pointer-events-none absolute inset-x-0 top-0 flex h-12 items-center gap-3 rounded-lg border border-border px-3 opacity-0;
     background: color-mix(in srgb, var(--dmx-bg-surface) 92%, transparent);
     backdrop-filter: blur(8px);
     transform: translateY(-8px);

@@ -31,11 +31,13 @@ export function DimaxPageHeader({ eyebrow, breadcrumbs, title, badge, status, su
   return (
     <>
       {wantsCondensed ? (
-        <div className="dmx-condensed-bar" data-on={condensed ? "true" : "false"} aria-hidden={!condensed} data-testid="dmx-condensed-bar">
-          <span className="truncate text-14 font-medium text-text">{title}</span>
-          {status ?? null}
-          <span className="flex-1" />
-          {condensedAction}
+        <div className="dmx-condensed">
+          <div className="dmx-condensed-bar" data-on={condensed ? "true" : "false"} aria-hidden={!condensed} data-testid="dmx-condensed-bar">
+            <span className="truncate text-14 font-medium text-text">{title}</span>
+            {status ?? null}
+            <span className="flex-1" />
+            {condensedAction}
+          </div>
         </div>
       ) : null}
       <section className="dmx-page-header">

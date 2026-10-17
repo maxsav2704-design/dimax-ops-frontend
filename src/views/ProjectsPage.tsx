@@ -2603,6 +2603,7 @@ export default function ProjectsPage() {
           >
             {selectedProject ? (
               <>
+                <div className="dmx-condensed">
                 <div
                   className="dmx-condensed-bar"
                   data-on={projectBarCondensed ? "true" : "false"}
@@ -2623,6 +2624,7 @@ export default function ProjectsPage() {
                   >
                     {copy("Doors", "Двери", "דלתות")}
                   </button>
+                </div>
                 </div>
                 <div
                   className={projectsPanelClass("overflow-hidden")}
