@@ -5,6 +5,7 @@ import { useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 import { resolveKpiTone, sparklineGeometry, type KpiThresholds, type KpiTone } from "./kpi-logic";
+import { useAnimatedNumber } from "./useAnimatedNumber";
 
 // E4 threshold tile: the tone is computed from the metric and its thresholds
 // (see kpi-logic.ts), so colour changes only when a threshold is crossed.
@@ -56,7 +57,7 @@ export function KpiTile({
           <span className="sr-only">{loadingText}</span>
         </>
       ) : (
-        <span className="kpi-tile-value">{value}</span>
+        <span className="kpi-tile-value">{typeof value === "number" ? <AnimatedValue value={value} /> : value}</span>
       )}
       {!pending && delta != null ? (
         <span className="num text-12 text-text-secondary" data-testid={testId ? `${testId}-delta` : undefined}>
@@ -89,4 +90,9 @@ export function KpiTile({
     );
   }
   return <div {...shared}>{content}</div>;
+}
+
+function AnimatedValue({ value }: { value: number }) {
+  const shown = useAnimatedNumber(value);
+  return <>{shown}</>;
 }

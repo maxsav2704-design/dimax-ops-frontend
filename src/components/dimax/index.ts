@@ -21,5 +21,6 @@ export { entityKey, useEntityHighlight } from "./useEntityHighlight";
 export { FreshnessBadge } from "./FreshnessBadge";
 export { DEFAULT_STALE_AFTER_MS, resolveFreshness, type FreshnessState } from "./freshness";
 export { CONDENSE_SCROLL_PX, useScrolledPast } from "./useScrolledPast";
+export { useAnimatedNumber } from "./useAnimatedNumber";
 export { FilterChip } from "./FilterChip";
 export { ConfirmActionDialog } from "./ConfirmActionDialog";
