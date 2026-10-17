@@ -4420,6 +4420,13 @@ describe("ProjectsPage", () => {
     expect(table).toHaveClass("data-table-compact");
     expect(window.localStorage.getItem("dmx.projects.ledger.density")).toBe("compact");
 
+    // Two doors: cards by default; "Rows" switches both grids and is remembered.
+    expect(first.parentElement).toHaveAttribute("data-density", "cards");
+    fireEvent.click(screen.getByRole("button", { name: "Rows" }));
+    expect(screen.getByTestId("project-detail-v28-door-tile-door-1").parentElement).toHaveAttribute("data-density", "rows");
+    expect(window.localStorage.getItem("dmx.projects.matrix.density")).toBe("rows");
+    fireEvent.click(screen.getByRole("button", { name: "Cards" }));
+
     const bar = screen.getByTestId("project-condensed-bar");
     expect(bar).toHaveAttribute("data-on", "false");
     Object.defineProperty(window, "scrollY", { configurable: true, writable: true, value: 300 });

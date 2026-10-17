@@ -3,11 +3,12 @@
 import { type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { PillButton } from "@/components/dimax";
-import { DoorMatrixTile } from "@/components/projects/DoorMatrixTile";
+import { DoorMatrixTile, DoorRowsHeader } from "@/components/projects/DoorMatrixTile";
 import { ProjectSideWidgets } from "@/components/projects/ProjectSideWidgets";
 import { type ProjectAddonPlanItem } from "@/components/projects/catalog-types";
 import { type DocumentGenerationDTO } from "@/components/projects/document-shared";
-import { matrixCompletionPct, matrixDoorTileLabel, matrixDoorTileTone, matrixProgressTone, moveMatrixFocus } from "@/components/projects/door-workspace/matrix-shared";
+import { matrixCompletionPct, matrixDoorState, matrixDoorTileLabel, matrixDoorTileTone, matrixProgressTone, moveMatrixFocus } from "@/components/projects/door-workspace/matrix-shared";
+import { useMatrixDensity } from "@/components/projects/door-workspace/useMatrixDensity";
 import { useDoorWorkspace } from "@/components/projects/door-workspace/useDoorWorkspace";
 import { type ProjectPlanFactResponse, type ProjectRiskDrilldownResponse } from "@/components/projects/financial-types";
 import { projectsMetricLabelClass } from "@/components/projects/project-form";
@@ -112,6 +113,7 @@ export function DoorCommandBar({
     setSelectedDoorIds,
     toggleDoorSelection,
   } = workspace;
+  const [matrixDensity, setMatrixDensity] = useMatrixDensity(projectDoorTotals.totalDoors);
 
   return (
     <div
@@ -283,6 +285,26 @@ export function DoorCommandBar({
               >
                 {copy("Table", "Таблица", "טבלה")}
               </button>
+            </div>
+            <div
+              className="inline-flex h-9 items-center rounded-full border border-border bg-surface p-0.5"
+              role="group"
+              aria-label={copy("Matrix density", "Плотность матрицы", "צפיפות המטריצה")}
+            >
+              {(["rows", "cards"] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={matrixDensity === option}
+                  onClick={() => setMatrixDensity(option)}
+                  className={cn(
+                    "h-7 rounded-full px-3 text-12 font-medium transition-colors",
+                    matrixDensity === option ? "bg-text text-text-inverse" : "text-text-secondary hover:text-text",
+                  )}
+                >
+                  {option === "rows" ? copy("Rows", "Строки", "שורות") : copy("Cards", "Карточки", "כרטיסים")}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -546,7 +568,8 @@ export function DoorCommandBar({
                       </div>
                     </div>
                     <div className="pe-4 ps-5 py-3">
-                      <div className="grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-2">
+                      {matrixDensity === "rows" ? <DoorRowsHeader /> : null}
+                      <div className={matrixDensity === "rows" ? "dmx-door-rows" : "grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-2"}>
                         {floorDoors.map((door) => (
                           <DoorMatrixTile
                             key={`${floor.house_number}-${floor.floor_label}-${door.door_id}-top`}
@@ -564,6 +587,9 @@ export function DoorCommandBar({
                             floorKey={`${floor.house_number}-${floor.floor_label}`}
                             fillStep={floorIndex}
                             onKeyDown={handleTileKeyDown}
+                            density={matrixDensity}
+                            model={door.door_type_label}
+                            state={matrixDoorState(door)}
                           />
                         ))}
                       </div>

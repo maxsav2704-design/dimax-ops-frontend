@@ -3,7 +3,7 @@
 import { type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { MetricRow, PillButton } from "@/components/dimax";
-import { DoorMatrixTile } from "@/components/projects/DoorMatrixTile";
+import { DoorMatrixTile, DoorRowsHeader } from "@/components/projects/DoorMatrixTile";
 import { type InstallerListItem } from "@/components/projects/catalog-types";
 import { useDoorWorkspace } from "@/components/projects/door-workspace/useDoorWorkspace";
 import { projectsMetricLabelClass } from "@/components/projects/project-form";
@@ -17,7 +17,8 @@ import { AlertCircle, CheckCircle2, FilterX, UserPlus } from "lucide-react";
 import { useCopy, useI18n } from "@/lib/i18n";
 
 import type { ReasonItem } from "@/components/projects/catalog-types";
-import { matrixCompletionPct, matrixDoorTileLabel, matrixDoorTileTone, matrixProgressTone, moveMatrixFocus } from "@/components/projects/door-workspace/matrix-shared";
+import { matrixCompletionPct, matrixDoorState, matrixDoorTileLabel, matrixDoorTileTone, matrixProgressTone, moveMatrixFocus } from "@/components/projects/door-workspace/matrix-shared";
+import { useMatrixDensity } from "@/components/projects/door-workspace/useMatrixDensity";
 import { projectsPanelClass } from "@/components/projects/shared";
 
 type DoorMatrixProps = {
@@ -135,6 +136,8 @@ export function DoorMatrix({
     toggleDoorSelection,
     toggleFilteredDoorSelection,
   } = workspace;
+  // Rows for large projects, cards for small ones; chosen in the command bar, remembered per browser.
+  const [matrixDensity] = useMatrixDensity(projectDoorTotals.totalDoors);
 
   return (
     <div
@@ -1158,7 +1161,8 @@ export function DoorMatrix({
                           {copy("locations", "локаций", "מיקומים")}
                         </span>
                       </div>
-                      <div className="grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-2">
+                      {matrixDensity === "rows" ? <DoorRowsHeader /> : null}
+                      <div className={matrixDensity === "rows" ? "dmx-door-rows" : "grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-2"}>
                         {floorDoors.map(({ apartment, cell, door }) => (
                           <DoorMatrixTile
                                 key={`${house.house_number}-${floor.floor_label}-${apartment.apartment_number}-${cell.location_code}-${door.door_id}-tile`}
@@ -1188,6 +1192,9 @@ export function DoorMatrix({
                                 floorKey={`${house.house_number}-${floor.floor_label}`}
                                 fillStep={floorIndex}
                                 onKeyDown={handleMatrixKeyDown}
+                                density={matrixDensity}
+                                model={door.door_type_label}
+                                state={matrixDoorState(door)}
                           />
                         ))}
                       </div>

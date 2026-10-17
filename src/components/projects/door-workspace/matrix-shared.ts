@@ -104,3 +104,27 @@ export function moveMatrixFocus(event: KeyboardEvent<HTMLButtonElement>, rtl: bo
   next.element.focus();
   return true;
 }
+
+export type MatrixDoorState = "problem" | "installed" | "progress" | "blocked" | "cancelled" | "open";
+
+/** The door's state word, the single source for colours in both tile densities. */
+export function matrixDoorState(row: Pick<MatrixRow, "status" | "issue_count">): MatrixDoorState {
+  const normalized = row.status.trim().toUpperCase();
+  if (row.issue_count > 0) return "problem";
+  if (["INSTALLED", "DONE", "COMPLETED"].includes(normalized)) return "installed";
+  if (["IN_PROGRESS", "ASSIGNED", "ACTIVE"].includes(normalized)) return "progress";
+  if (["BLOCKED", "LOCKED"].includes(normalized)) return "blocked";
+  if (["CANCELLED", "CANCELED"].includes(normalized)) return "cancelled";
+  return "open";
+}
+
+
+export type MatrixDensity = "rows" | "cards";
+export const MATRIX_DENSITY_STORAGE_KEY = "dmx.projects.matrix.density";
+export const MATRIX_ROWS_DEFAULT_FROM = 25;
+
+/** Large projects open as compact rows (one door per line); a stored choice wins over the default. */
+export function defaultMatrixDensity(totalDoors: number, stored: string | null): MatrixDensity {
+  if (stored === "rows" || stored === "cards") return stored;
+  return totalDoors >= MATRIX_ROWS_DEFAULT_FROM ? "rows" : "cards";
+}
