@@ -348,6 +348,21 @@ export default function IssuesPage() {
     string | null
   >(null);
   const [form, setForm] = useState<WorkflowFormState>(emptyForm());
+  const statusLabel = (value: IssueStatus) =>
+    value === "OPEN" ? copy("Open", "Открыта", "פתוחה") : copy("Closed", "Закрыта", "סגורה");
+  const workflowLabel = (value: IssueWorkflowState) =>
+    value === "NEW" ? copy("New", "Новая", "חדשה")
+      : value === "TRIAGED" ? copy("Triaged", "Разобрана", "סווגה")
+        : value === "IN_PROGRESS" ? copy("In progress", "В работе", "בטיפול")
+          : value === "BLOCKED" ? copy("Blocked", "Заблокирована", "חסומה")
+            : value === "RESOLVED" ? copy("Resolved", "Решена", "נפתרה")
+              : value === "CLOSED" ? copy("Closed", "Закрыта", "סגורה")
+                : value;
+  const priorityLabel = (value: IssuePriority) =>
+    value === "P1" ? copy("P1 · urgent", "P1 · срочно", "P1 · דחוף")
+      : value === "P2" ? copy("P2 · high", "P2 · высокий", "P2 · גבוה")
+        : value === "P3" ? copy("P3 · normal", "P3 · обычный", "P3 · רגיל")
+          : copy("P4 · low", "P4 · низкий", "P4 · נמוך");
   const [bulkConfirm, setBulkConfirm] = useState<Record<string, unknown> | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [saveNote, setSaveNote] = useState<string | null>(null);
@@ -1523,7 +1538,7 @@ export default function IssuesPage() {
                   >
                     {STATUS_OPTIONS.map((option) => (
                       <option key={option} value={option}>
-                        {option}
+                        {statusLabel(option)}
                       </option>
                     ))}
                   </select>
@@ -1541,7 +1556,7 @@ export default function IssuesPage() {
                   >
                     {PRIORITY_OPTIONS.map((option) => (
                       <option key={option} value={option}>
-                        {option}
+                        {priorityLabel(option)}
                       </option>
                     ))}
                   </select>
@@ -1561,7 +1576,7 @@ export default function IssuesPage() {
                 >
                   {WORKFLOW_OPTIONS.map((option) => (
                     <option key={option} value={option}>
-                      {option}
+                      {workflowLabel(option)}
                     </option>
                   ))}
                 </select>

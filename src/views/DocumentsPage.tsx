@@ -1000,8 +1000,8 @@ export default function DocumentsPage() {
                             }
                             title={
                               template.is_active
-                                ? "Archive template"
-                                : "Restore template"
+                                ? copy("Archive template", "Архивировать шаблон", "העברת תבנית לארכיון")
+                                : copy("Restore template", "Восстановить шаблон", "שחזור תבנית")
                             }
                           >
                             {template.is_active ? (

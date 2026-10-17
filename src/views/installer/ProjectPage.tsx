@@ -558,13 +558,13 @@ export default function InstallerProjectPage({
             ? "locked"
             : "ready",
         label: issueDoorIds.has(door.id)
-          ? "Issue"
+          ? copy("Issue", "Проблема", "תקלה")
           : door.is_locked
-            ? "Locked"
-            : "Not installed",
+            ? copy("Locked", "Заблокирована", "נעולה")
+            : copy("Not installed", "Не установлена", "לא הותקנה"),
         quickSearchValue: door.unit_label,
       }));
-  }, [filteredDoors, issueDoorIds]);
+  }, [filteredDoors, issueDoorIds, copy]);
   const installMutation = useMutation({
     mutationFn: (doorId: string) =>
       apiFetch<DoorActionResponse>(

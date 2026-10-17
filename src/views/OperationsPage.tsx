@@ -760,10 +760,10 @@ function syncRecoveryAuditInstallerLabel(
   );
 }
 
-function syncRecoveryAuditReasonLabel(reason: string | null): string {
-  if (reason === "admin_cold_resync") return "Cold resync";
-  if (reason === "admin_legacy_reset") return "Legacy reset";
-  return reason || "No reason supplied";
+function syncRecoveryAuditReasonLabel(reason: string | null, copy: (en: string, ru: string, he: string) => string): string {
+  if (reason === "admin_cold_resync") return copy("Cold resync", "Холодная пересинхронизация", "סנכרון מלא מחדש");
+  if (reason === "admin_legacy_reset") return copy("Legacy reset", "Сброс старой очереди", "איפוס תור ישן");
+  return reason || copy("No reason supplied", "Причина не указана", "לא צוינה סיבה");
 }
 
 function extractBatchProjectIds(
@@ -1945,30 +1945,46 @@ export default function OperationsPage() {
 
   function batchActionLabel(): string {
     if (pendingBatchAction === "retry") {
-      return "Retry actionable imports";
+      return copy("Retry actionable imports", "Повторить проблемные импорты", "ניסיון חוזר לייבואים הדורשים טיפול");
     }
     if (pendingBatchAction === "outbox-retry") {
       return pendingOutboxChannel
-        ? `Retry actionable ${pendingOutboxChannel} delivery failures`
-        : "Retry actionable delivery failures";
+        ? copy(`Retry actionable ${pendingOutboxChannel} delivery failures`, `Повторить проблемные доставки ${pendingOutboxChannel}`, `ניסיון חוזר למשלוחי ${pendingOutboxChannel} שנכשלו`)
+        : copy("Retry actionable delivery failures", "Повторить проблемные доставки", "ניסיון חוזר למשלוחים שנכשלו");
     }
     if (pendingBatchAction === "reconcile") {
-      return "Reconcile actionable projects";
+      return copy("Reconcile actionable projects", "Сверить проблемные объекты", "התאמת פרויקטים הדורשים טיפול");
     }
     return "";
   }
 
   function batchActionDescription(): string {
     if (pendingBatchAction === "retry") {
-      return `This will retry ${actionableFailedImports.length} actionable import runs across ${actionableImportProjectIds.length} projects.`;
+      return copy(
+        `This will retry ${actionableFailedImports.length} actionable import runs across ${actionableImportProjectIds.length} projects.`,
+        `Будут повторены ${actionableFailedImports.length} проблемных импортов по ${actionableImportProjectIds.length} объектам.`,
+        `יבוצע ניסיון חוזר ל-${actionableFailedImports.length} ייבואים ב-${actionableImportProjectIds.length} פרויקטים.`,
+      );
     }
     if (pendingBatchAction === "outbox-retry") {
       return pendingOutboxChannel
-        ? `This will retry ${outboxRetryScope.length} failed ${pendingOutboxChannel} outbox messages and write recovery audit entries.`
-        : `This will retry ${outboxRetryScope.length} failed outbox messages and write recovery audit entries.`;
+        ? copy(
+            `This will retry ${outboxRetryScope.length} failed ${pendingOutboxChannel} outbox messages and write recovery audit entries.`,
+            `Будут повторены ${outboxRetryScope.length} неудачных сообщений ${pendingOutboxChannel} с записью в аудит.`,
+            `יבוצע ניסיון חוזר ל-${outboxRetryScope.length} הודעות ${pendingOutboxChannel} שנכשלו עם רישום ביומן הביקורת.`,
+          )
+        : copy(
+            `This will retry ${outboxRetryScope.length} failed outbox messages and write recovery audit entries.`,
+            `Будут повторены ${outboxRetryScope.length} неудачных сообщений с записью в аудит.`,
+            `יבוצע ניסיון חוזר ל-${outboxRetryScope.length} הודעות שנכשלו עם רישום ביומן הביקורת.`,
+          );
     }
     if (pendingBatchAction === "reconcile") {
-      return `This will reconcile latest failed import state for ${actionableImportProjectIds.length} actionable projects.`;
+      return copy(
+        `This will reconcile latest failed import state for ${actionableImportProjectIds.length} actionable projects.`,
+        `Будет сверено состояние последних неудачных импортов для ${actionableImportProjectIds.length} объектов.`,
+        `יבוצע תיאום של מצב הייבוא האחרון שנכשל עבור ${actionableImportProjectIds.length} פרויקטים.`,
+      );
     }
     return "";
   }
@@ -2636,7 +2652,7 @@ export default function OperationsPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="truncate font-medium text-text">
-                            {item.source_filename || "Manual import"} ·{" "}
+                            {item.source_filename || copy("Manual import", "Ручной импорт", "ייבוא ידני")} ·{" "}
                             {item.project_name}
                           </div>
                           <div className="mt-1 grid grid-cols-2 gap-1 text-[10.5px] text-text-secondary sm:grid-cols-4">
@@ -3096,7 +3112,7 @@ export default function OperationsPage() {
                           {syncRecoveryAuditInstallerLabel(item)}
                         </div>
                         <div className="mt-1 text-xs text-text-secondary">
-                          {syncRecoveryAuditReasonLabel(item.reason)} {copy("| cursor", "| курсор", "| הסמן")}{" "}
+                          {syncRecoveryAuditReasonLabel(item.reason, copy)} {copy("| cursor", "| курсор", "| הסמן")}{" "}
                           {beforeCursor ?? "unknown"} -&gt;{" "}
                           {afterCursor ?? "unknown"}
                         </div>
@@ -3364,8 +3380,8 @@ export default function OperationsPage() {
                     </div>
                     <div className="mt-1 text-xs text-text-secondary">
                       {lastBatchResult.action === "outbox-retry"
-                        ? `status ${item.status} | channel ${item.item?.channel || "n/a"} | delivery ${item.item?.delivery_status || "n/a"}`
-                        : `status ${item.status} | imported ${item.imported} | skipped ${item.skipped} | errors ${item.errors_count}`}
+                        ? `${copy("status", "статус", "סטטוס")} ${item.status} | ${copy("channel", "канал", "ערוץ")} ${item.item?.channel || "-"} | ${copy("delivery", "доставка", "משלוח")} ${item.item?.delivery_status || "-"}`
+                        : `${copy("status", "статус", "סטטוס")} ${item.status} | ${copy("imported", "импортировано", "יובאו")} ${item.imported} | ${copy("skipped", "пропущено", "דולגו")} ${item.skipped} | ${copy("errors", "ошибок", "שגיאות")} ${item.errors_count}`}
                     </div>
                     {lastBatchResult.action === "outbox-retry" ? (
                       item.error ? (

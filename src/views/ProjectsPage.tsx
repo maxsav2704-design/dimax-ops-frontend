@@ -985,7 +985,7 @@ export default function ProjectsPage() {
       { floor: string; total: number; buckets: LayoutBucket[] }
     >();
     for (const bucket of layout.buckets) {
-      const floor = bucket.floor_label || "Unknown floor";
+      const floor = bucket.floor_label || "-";
       const existing = byFloor.get(floor);
       if (existing) {
         existing.total += bucket.total;

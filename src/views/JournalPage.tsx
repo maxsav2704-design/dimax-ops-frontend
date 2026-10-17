@@ -553,10 +553,10 @@ export default function JournalPage() {
     return journals.map((journal) => ({
       ...journal,
       project_name:
-        projectById.get(journal.project_id)?.name ?? "Unknown project",
+        projectById.get(journal.project_id)?.name ?? copy("Unknown project", "Объект не найден", "פרויקט לא ידוע"),
       project_address: projectById.get(journal.project_id)?.address ?? "",
     }));
-  }, [journals, projects]);
+  }, [journals, projects, copy]);
 
   const filteredJournals = useMemo(() => {
     const needle = searchTerm.trim().toLowerCase();

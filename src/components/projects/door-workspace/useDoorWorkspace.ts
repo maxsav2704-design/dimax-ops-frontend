@@ -67,7 +67,7 @@ export function useDoorWorkspace({
           door_id: door.id,
           order_number: door.order_number || bucket.order_number || "-",
           house_number: bucket.house_number || "-",
-          floor_label: bucket.floor_label || "Unknown floor",
+          floor_label: bucket.floor_label || "-",
           apartment_number: door.apartment_number || "-",
           location_code: door.location_code || bucket.location_code || "-",
           door_marking: door.door_marking || bucket.door_marking || "-",

@@ -377,14 +377,14 @@ export default function InstallersPage() {
     canManageInstallers || canViewInstallerRates;
   const privilegedActionHint = canManageInstallers
     ? undefined
-    : "Your access level is read-only in installers";
+    : copy("Your access level is read-only in installers", "Ваш уровень доступа к монтажникам: только чтение", "רמת הגישה שלך למתקינים היא לקריאה בלבד");
   const rateActionHint = canManageRates
     ? undefined
     : !pricing.legacyWritable && canViewInstallerRates
       ? copy("Individual rates require verified legacy pricing.", "Для изменения персональных ставок нужно проверить режим цен.", "שינוי תעריפים אישיים מחייב אימות מצב המחירים.")
     : canViewInstallerRates
-      ? "Rate changes are read-only for your scope"
-      : "Rate access is restricted for your scope";
+      ? copy("Rate changes are read-only for your scope", "Изменение ставок недоступно для вашей роли", "שינוי תעריפים אינו זמין לתפקיד שלך")
+      : copy("Rate access is restricted for your scope", "Доступ к ставкам ограничен для вашей роли", "הגישה לתעריפים מוגבלת לתפקיד שלך");
   const runRateWrite = async <T,>(action: () => Promise<T>): Promise<T> => {
     if (!canManageRates) {
       throw new Error("Installer rate writes require verified legacy pricing and permission.");
@@ -825,7 +825,7 @@ export default function InstallersPage() {
               canManageInstallers
                 ? t("common.manage")
                 : canViewInstallerRates
-                  ? "Rates only"
+                  ? copy("Rates only", "Только ставки", "תעריפים בלבד")
                   : t("common.readOnly")
             }
             hint={search.trim() ? t("common.filtered") : t("common.portfolio")}
