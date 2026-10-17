@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import { normalizeAuthSession, onAuthChanged, type AuthSession } from "@/lib/auth-session";
 import { authMeSchema } from "@/lib/api-schemas";
 import { queryKeys } from "@/lib/query-keys";
@@ -59,5 +59,10 @@ export function useAuthSession(): AuthSession | null {
     });
   }, [queryClient]);
 
+  // A session the server has since rejected is no session: the last good
+  // value must not keep a page alive after the token expired.
+  if (query.isError && query.error instanceof ApiError && (query.error.status === 401 || query.error.status === 403)) {
+    return null;
+  }
   return query.data ?? null;
 }

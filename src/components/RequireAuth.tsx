@@ -13,7 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import type { AuthSession } from "@/lib/auth-session";
+import { onAuthChanged, type AuthSession } from "@/lib/auth-session";
 
 type AuthScope = "admin" | "installer" | "any";
 
@@ -77,6 +77,13 @@ export function RequireAuth({
   } | null>(null);
   const next = pathname || "/";
   const currentAccess = access?.path === next && access.scope === scope ? access : null;
+
+  // A session cleared while on the page (expired token, logout in another
+  // tab) re-runs the check instead of leaving the page up with dead data.
+  useEffect(() => onAuthChanged(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.authMe });
+    setAttempt((value) => value + 1);
+  }), [queryClient]);
 
   useEffect(() => {
     let cancelled = false;

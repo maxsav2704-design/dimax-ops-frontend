@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
 import { RequireAuth } from "@/components/RequireAuth";
 import { ApiError } from "@/lib/api";
+import { clearStoredSession } from "@/lib/auth-session";
 
 const { replaceMock, pathnameMock } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
@@ -179,6 +180,19 @@ describe("RequireAuth", () => {
     expect(screen.queryByText("protected")).not.toBeInTheDocument();
     expect(replaceMock).not.toHaveBeenCalled();
     expect(queryClient.getQueryData(["auth-me"])).toEqual(cachedSession);
+  });
+
+  it("sends the user to login when the session is cleared while the page is open", async () => {
+    apiFetchMock.mockResolvedValueOnce({ role: "ADMIN", admin_scope: "OWNER" });
+    renderSubject();
+    expect(await screen.findByText("protected")).toBeInTheDocument();
+
+    apiFetchMock.mockRejectedValue(new ApiError(401, "expired"));
+    act(() => { clearStoredSession(); });
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith("/login?next=%2Freports&error=auth_required");
+    });
   });
 
   it("recovers on explicit retry without navigating away from the protected URL", async () => {
