@@ -15,7 +15,7 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
-import { InlineNotice } from "@/components/dimax";
+import { InlineNotice, useEntityHighlight } from "@/components/dimax";
 import { pickLocale } from "@/lib/locale";
 import { CalendarScheduleSurface } from "@/components/calendar/CalendarScheduleSurface";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -394,6 +394,8 @@ export default function CalendarPage() {
   const queryClient = useQueryClient();
   const { locale } = useI18n();
   const copy = useCopy();
+  // E2: an installer hovered in the lane list lights up on every event that includes them.
+  useEntityHighlight();
   const [weekStartDate, setWeekStartDate] = useState<Date>(
     new Date(),
   );

@@ -384,6 +384,13 @@ describe("IssuesPage", () => {
     expect(
       await screen.findByText("Your access level has read-only access to issue workflow controls.", {}, { timeout: 5000 })
     ).toBeInTheDocument();
+      // E5: the SLA tile is a toggle for the overdue-only filter.
+      const overdueTile = screen.getByTestId("issues-kpi-overdue");
+      expect(overdueTile).toHaveAttribute("aria-pressed", "false");
+      fireEvent.click(overdueTile);
+      expect(overdueTile).toHaveAttribute("aria-pressed", "true");
+      fireEvent.click(overdueTile);
+      expect(overdueTile).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(screen.getByText("Install blocked"));
     expect(await screen.findByRole("button", { name: "Save Workflow" })).toBeDisabled();
     expect(screen.getByRole("button", { name: /Apply To Filtered/i })).toBeDisabled();

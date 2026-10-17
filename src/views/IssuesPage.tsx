@@ -19,7 +19,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
-import { EmptyState, InlineNotice, TableSkeleton } from "@/components/dimax";
+import { attentionAttr, attentionLevel, EmptyState, InlineNotice, KpiTile, TableSkeleton } from "@/components/dimax";
 import { useI18n, type Locale, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -918,69 +918,36 @@ export default function IssuesPage() {
             />
 
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              {[
-                {
-                  tone: "problem",
-                  label: copy("SLA breached", "Нарушен SLA", "חריגה מ-SLA"),
-                  value: metrics.overdue,
-                  note: `${metrics.p1} ${copy("P1 in current scope", "P1 в текущей области", "P1 בהיקף הנוכחי")}`,
-                },
-                {
-                  tone: "warning",
-                  label: copy("Due today", "Срок сегодня", "לטיפול היום"),
-                  value: metrics.dueToday,
-                  note: copy("within 24h window", "в окне 24 часов", "בחלון של 24 שעות"),
-                },
-                {
-                  tone: "accent",
-                  label: copy("Unassigned", "Не назначено", "ללא שיבוץ"),
-                  value: metrics.unassigned,
-                  note: copy("needs dispatcher triage", "требует разбора диспетчером", "דורש טיפול של מוקד"),
-                },
-                {
-                  tone: "ok",
-                  label: copy("Resolved / week", "Решено за неделю", "נפתרו השבוע"),
-                  value: metrics.resolvedWeek,
-                  note: copy("closed or resolved recently", "закрыто или решено недавно", "נסגרו או נפתרו לאחרונה"),
-                },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className={cn(
-                    "relative overflow-hidden rounded-lg border border-border bg-surface-subtle px-4 py-3",
-                    item.tone === "problem" && "border-status-problem-border",
-                  )}
-                >
-                  <div
-                    aria-hidden="true"
-                    className={cn(
-                      "absolute inset-y-3 start-0 w-[3px] rounded-e-sm",
-                      item.tone === "problem" && "bg-status-problem-fg",
-                      item.tone === "warning" && "bg-status-warning-fg",
-                      item.tone === "accent" && "bg-accent",
-                      item.tone === "ok" && "bg-status-ok-fg",
-                    )}
-                  />
-                  <div className="ps-2">
-                    <div className="truncate text-[10.5px] font-semibold uppercase tracking-[0.04em] text-text-secondary">
-                      {item.label}
-                    </div>
-                    <div
-                      className={cn(
-                        "mt-3 text-[30px] font-semibold leading-none text-text",
-                        item.tone === "problem" && "text-status-problem-fg",
-                        item.tone === "warning" && "text-status-warning-fg",
-                        item.tone === "ok" && "text-status-ok-fg",
-                      )}
-                    >
-                      {item.value}
-                    </div>
-                    <div className="mt-2 truncate text-[12px] text-text-secondary">
-                      {item.note}
-                    </div>
-                  </div>
-                </div>
-              ))}
+              <KpiTile
+                testId="issues-kpi-overdue"
+                label={copy("SLA breached", "Нарушен SLA", "חריגה מ-SLA")}
+                value={metrics.overdue}
+                metric={metrics.overdue}
+                thresholds={{ warn: 1, bad: 5 }}
+                detail={`${metrics.p1} ${copy("P1 in current scope", "P1 в текущей области", "P1 בהיקף הנוכחי")}`}
+                selected={overdueOnly}
+                onSelect={() => setOverdueOnly((value) => !value)}
+              />
+              <KpiTile
+                label={copy("Due today", "Срок сегодня", "לטיפול היום")}
+                value={metrics.dueToday}
+                metric={metrics.dueToday}
+                thresholds={{ warn: 1, bad: Number.POSITIVE_INFINITY }}
+                detail={copy("within 24h window", "в окне 24 часов", "בחלון של 24 שעות")}
+              />
+              <KpiTile
+                label={copy("Unassigned", "Не назначено", "ללא שיבוץ")}
+                value={metrics.unassigned}
+                metric={metrics.unassigned}
+                thresholds={{ warn: 1, bad: 10 }}
+                detail={copy("needs dispatcher triage", "требует разбора диспетчером", "דורש טיפול של מוקד")}
+              />
+              <KpiTile
+                label={copy("Resolved / week", "Решено за неделю", "נפתרו השבוע")}
+                value={metrics.resolvedWeek}
+                tone="ok"
+                detail={copy("closed or resolved recently", "закрыто или решено недавно", "נסגרו או נפתרו לאחרונה")}
+              />
             </div>
           </div>
 
@@ -1191,8 +1158,10 @@ export default function IssuesPage() {
                   return (
                     <div
                       key={issue.id}
+                      data-testid={`issue-row-${issue.id}`}
+                      {...attentionAttr(attentionLevel({ overdue: issue.is_overdue, unassigned: !issue.owner_user_id }))}
                       className={cn(
-                        "grid min-w-[760px] grid-cols-[24px_52px_minmax(0,2fr)_108px_minmax(96px,0.8fr)_112px_64px] gap-2 border-b border-border-subtle px-4 py-3 text-[12px] transition-colors last:border-b-0 hover:bg-surface-subtle",
+                        "attn-stripe grid min-w-[760px] grid-cols-[24px_52px_minmax(0,2fr)_108px_minmax(96px,0.8fr)_112px_64px] gap-2 border-b border-border-subtle px-4 py-3 text-12 transition-colors last:border-b-0 hover:bg-surface-subtle",
                         active && "bg-[var(--dmx-accent-tint)]",
                       )}
                     >

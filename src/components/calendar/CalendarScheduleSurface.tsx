@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { entityKey } from "@/components/dimax";
 import {
   CalendarDays,
   Check,
@@ -257,6 +258,7 @@ function EventAvatars({
         <span
           key={person.id}
           title={person.full_name}
+          data-entity={entityKey("installer", person.id)}
           className={cn(
             "flex h-6 w-6 items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold",
             AVATAR_STYLE[index % AVATAR_STYLE.length],
@@ -690,6 +692,7 @@ export function CalendarScheduleSurface(props: Props) {
                   type="button"
                   data-testid="calendar-lane-row"
                   key={crew.id}
+                  data-entity={crew.tone === "u" ? undefined : entityKey("installer", crew.id)}
                   onClick={() => onSelectCrew(crew.id)}
                   aria-label={copy(
                     `Open ${crew.title} schedule row`,

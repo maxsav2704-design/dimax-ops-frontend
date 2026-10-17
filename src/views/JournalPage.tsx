@@ -1297,7 +1297,7 @@ export default function JournalPage() {
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="text-lg font-semibold text-text">
+                          <h2 className="type-section">
                             {selectedJournal.title ||
                               t("journal.untitledJournal")}
                           </h2>
@@ -1432,7 +1432,7 @@ export default function JournalPage() {
                   <div className="surface-subtle p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div>
-                        <h2 className="text-sm font-semibold text-text">
+                        <h2 className="type-section">
                           {t("journal.templates")}
                         </h2>
                         <p className="mt-1 text-[12px] text-text-secondary">
@@ -1506,7 +1506,7 @@ export default function JournalPage() {
                   <div className="surface-subtle p-4">
                     <div className="mb-3 flex items-center justify-between">
                       <div>
-                        <h2 className="text-sm font-semibold text-text">
+                        <h2 className="type-section">
                           {t("journal.deliveryChannels")}
                         </h2>
                         <p className="mt-1 text-[12px] text-text-secondary">
@@ -1821,7 +1821,7 @@ export default function JournalPage() {
                     className="h-4 w-4 text-text-secondary"
                     strokeWidth={1.8}
                   />
-                  <h2 className="text-sm font-semibold text-text">
+                  <h2 className="type-section">
                     {t("journal.integrationSnapshot")}
                   </h2>
                 </div>
