@@ -202,4 +202,37 @@ describe("DispatcherBoard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove filter" }));
     expect(onToggleFilter).toHaveBeenCalledWith("unassigned");
   });
+
+  it("pins projects needing attention first and draws the building rail (E1, E7)", () => {
+    const base = {
+      address: "Ashdod", project_status: "ACTIVE", dispatch_status: "READY", contact_name: null,
+      total_doors: 10, installed_doors: 5, pending_doors: 5, assigned_open_doors: 3, completion_pct: 50,
+      next_visit_at: null, next_visit_title: null, recommended_installers: [],
+    };
+    render(
+      <LanguageProvider>
+        <DispatcherBoard
+          summary={{
+            total_projects: 2, total_doors: 20, installed_doors: 10, pending_doors: 10, projects_needing_dispatch: 1,
+            open_issues: 2, blocked_issues: 1, unassigned_doors: 2, available_installers: 1, busy_installers: 1, scheduled_visits_7d: 0,
+          }}
+          projects={[
+            { ...base, project_id: "p-quiet", project_name: "Quiet Project", unassigned_doors: 0, open_issues: 0, blocked_issues: 0 },
+            { ...base, project_id: "p-hot", project_name: "Hot Project", unassigned_doors: 2, open_issues: 2, blocked_issues: 1 },
+          ]}
+          installers={[]}
+        />
+      </LanguageProvider>,
+    );
+    const names = () => screen.getAllByRole("button", { name: /Open project:/ }).map((el) => el.getAttribute("aria-label"));
+    expect(names()).toEqual(["Open project: Quiet Project", "Open project: Hot Project"]);
+    const toggle = screen.getByRole("button", { name: "Attention first" });
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(names()).toEqual(["Open project: Hot Project", "Open project: Quiet Project"]);
+    const rails = screen.getAllByTestId("building-rail");
+    expect(rails).toHaveLength(2);
+    expect(rails[0]).toHaveAttribute("aria-label", "5 installed, 3 in progress, 2 without installer");
+    expect(rails[0].children[0]).toHaveStyle({ width: "50%" });
+  });
 });

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -8,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { getDashboardCopy } from "@/components/dashboard/copy";
-import { attentionAttr, attentionLevel, entityKey, FilterChip } from "@/components/dimax";
+import { attentionAttr, attentionLevel, byAttention, entityKey, FilterChip } from "@/components/dimax";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -114,6 +115,8 @@ function boardCopy(locale: "en" | "ru" | "he") {
       statusReady: "Готов к работе",
       statusAvailable: "Свободен",
       statusBusy: "Занят",
+      sortAttention: "Сначала требующие внимания",
+      rail: "{installed} установлено, {assigned} в работе, {unassigned} без монтажника",
     };
   }
   if (locale === "he") {
@@ -143,6 +146,8 @@ function boardCopy(locale: "en" | "ru" | "he") {
       statusReady: "מוכן לעבודה",
       statusAvailable: "פנוי",
       statusBusy: "עסוק",
+      sortAttention: "דורשים טיפול תחילה",
+      rail: "{installed} הותקנו, {assigned} בעבודה, {unassigned} ללא מתקין",
     };
   }
   return {
@@ -171,7 +176,22 @@ function boardCopy(locale: "en" | "ru" | "he") {
     statusReady: "Ready",
     statusAvailable: "Available",
     statusBusy: "Busy",
+    sortAttention: "Attention first",
+    rail: "{installed} installed, {assigned} in progress, {unassigned} without installer",
   };
+}
+
+// E7 (compact): one proportional rail per project, the building's doors by state.
+function BuildingRail({ installed, assigned, unassigned, total, label }: { installed: number; assigned: number; unassigned: number; total: number; label: string }) {
+  const base = Math.max(total, installed + assigned + unassigned, 1);
+  const pct = (value: number) => `${Math.max(0, Math.min(100, (value / base) * 100))}%`;
+  return (
+    <div className="dmx-rail mt-2" role="img" aria-label={label} data-testid="building-rail">
+      <i className="dmx-rail-installed" style={{ width: pct(installed) }} />
+      <i className="dmx-rail-assigned" style={{ width: pct(assigned) }} />
+      <i className="dmx-rail-unassigned" style={{ width: pct(unassigned) }} />
+    </div>
+  );
 }
 
 function formatStatus(
@@ -210,9 +230,14 @@ export function DispatcherBoard({
   const actions = getDashboardCopy(locale).dispatcher;
   const copy = boardCopy(locale);
   const localeCode = locale === "he" ? "he-IL" : locale === "ru" ? "ru-RU" : "en-US";
+  // E1: "attention first" pins blocked, problem and unassigned projects to the top.
+  const [attentionFirst, setAttentionFirst] = useState(false);
+  const projectAttention = (project: DispatcherProject) =>
+    attentionLevel({ blocked: project.blocked_issues > 0, issues: project.open_issues > 0, unassigned: project.unassigned_doors > 0 });
   const matchesFilter = (project: DispatcherProject) =>
     projectFilter === "issues" ? project.open_issues > 0 : projectFilter === "unassigned" ? project.unassigned_doors > 0 : true;
-  const visibleProjects = projects.filter(matchesFilter).slice(0, 4);
+  const filteredProjects = projects.filter(matchesFilter);
+  const visibleProjects = (attentionFirst ? [...filteredProjects].sort(byAttention(projectAttention)) : filteredProjects).slice(0, 4);
   const filterLabel = projectFilter === "issues" ? copy.summaryProblems : projectFilter === "unassigned" ? copy.summaryDoors : null;
   const visibleInstallers = installers
     .filter((installer) => installer.availability_band === "AVAILABLE")
@@ -338,6 +363,17 @@ export function DispatcherBoard({
             {projectFilter && filterLabel ? (
               <FilterChip testId="dispatcher-filter" onRemove={() => onToggleFilter?.(projectFilter)}>{filterLabel}</FilterChip>
             ) : null}
+            <button
+              type="button"
+              aria-pressed={attentionFirst}
+              onClick={() => setAttentionFirst((value) => !value)}
+              className={cn(
+                "ms-auto inline-flex h-6 items-center rounded-full border px-2.5 text-11 font-medium transition-colors",
+                attentionFirst ? "border-[var(--dmx-accent)] bg-[var(--dmx-accent-tint)] text-text" : "border-border-strong bg-surface text-text-secondary hover:bg-surface-subtle",
+              )}
+            >
+              {copy.sortAttention}
+            </button>
           </div>
           <div className="space-y-2">
             {visibleProjects.length > 0 ? (
@@ -347,11 +383,7 @@ export function DispatcherBoard({
                   type="button"
                   onClick={() => onOpenProject?.(project.project_id)}
                   data-entity={entityKey("project", project.project_id)}
-                  {...attentionAttr(attentionLevel({
-                    blocked: project.blocked_issues > 0,
-                    issues: project.open_issues > 0,
-                    unassigned: project.unassigned_doors > 0,
-                  }))}
+                  {...attentionAttr(projectAttention(project))}
                   className="attn-stripe group flex w-full items-center gap-3 rounded-md border border-border bg-surface-subtle px-3 py-2.5 text-start transition-colors hover:border-border-strong hover:bg-surface"
                   aria-label={`${copy.openProject}: ${project.project_name}`}
                 >
@@ -367,6 +399,16 @@ export function DispatcherBoard({
                     <div className="mt-0.5 truncate text-11 text-text-secondary">
                       {project.address || "—"}
                     </div>
+                    <BuildingRail
+                      installed={project.installed_doors}
+                      assigned={project.assigned_open_doors}
+                      unassigned={project.unassigned_doors}
+                      total={project.total_doors}
+                      label={copy.rail
+                        .replace("{installed}", String(project.installed_doors))
+                        .replace("{assigned}", String(project.assigned_open_doors))
+                        .replace("{unassigned}", String(project.unassigned_doors))}
+                    />
                     <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-11 text-text-secondary">
                       <span>
                         <b className="font-semibold text-text">{project.unassigned_doors}</b>{" "}

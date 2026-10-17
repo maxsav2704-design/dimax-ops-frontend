@@ -1514,6 +1514,12 @@
   .kpi-tile-spark .spark-area { fill: var(--dmx-bg-surface-sunken); }
   .kpi-tile-spark .spark-line { fill: none; stroke: var(--dmx-text-tertiary); stroke-width: 1.5; }
   .kpi-tile-spark .spark-end { fill: var(--dmx-text); }
+  /* E7 compact: a project's doors by state as one proportional rail. */
+  .dmx-rail { display: flex; height: 6px; overflow: hidden; border-radius: 999px; background: var(--dmx-bg-surface-sunken); }
+  .dmx-rail i { display: block; height: 100%; transition: width var(--dmx-duration-base) var(--dmx-easing-standard); }
+  .dmx-rail-installed { background: var(--dmx-status-ok-fg); }
+  .dmx-rail-assigned { background: var(--dmx-status-progress-fg); }
+  .dmx-rail-unassigned { background: var(--dmx-border-strong); }
   /* E5 removable filter chip in a toolbar. */
   .filter-chip { @apply inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-12 font-medium text-text; background: var(--dmx-accent-tint); border-color: var(--dmx-accent); }
   /* E8 freshness. */
