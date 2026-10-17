@@ -5,17 +5,18 @@ import type { AnchorHTMLAttributes } from "react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 
-const { apiFetchMock, pathnameMock, authSessionMock } = vi.hoisted(() => ({
+const { apiFetchMock, pathnameMock, authSessionMock, pushMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
   pathnameMock: vi.fn(),
   authSessionMock: vi.fn(),
+  pushMock: vi.fn(),
 }));
 
 vi.mock("@/lib/api", () => ({ apiFetch: apiFetchMock, logoutSession: vi.fn() }));
 vi.mock("@/hooks/use-auth-session", () => ({ useAuthSession: authSessionMock }));
 vi.mock("next/navigation", () => ({
   usePathname: () => pathnameMock(),
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), push: pushMock }),
 }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
@@ -37,6 +38,7 @@ function renderLayout() {
 describe("DashboardLayout shell (block 9)", () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
+    pushMock.mockReset();
     apiFetchMock.mockResolvedValue({ unread_count: 0 });
     pathnameMock.mockReturnValue("/");
     authSessionMock.mockReturnValue({ role: "ADMIN", admin_scope: "OWNER", can_view_rates: true });
@@ -62,5 +64,19 @@ describe("DashboardLayout shell (block 9)", () => {
     expect(rails).toHaveLength(1);
     expect(rails[0]).toHaveAttribute("data-variant", "rail");
     expect(screen.getByText("page content")).toBeInTheDocument();
+  });
+
+  it("jumps to a section on g then its letter, but not while typing", () => {
+    renderLayout();
+    fireEvent.keyDown(window, { key: "g" });
+    fireEvent.keyDown(window, { key: "p" });
+    expect(pushMock).toHaveBeenCalledWith("/projects");
+    pushMock.mockReset();
+    const field = document.createElement("input");
+    document.body.append(field);
+    fireEvent.keyDown(field, { key: "g" });
+    fireEvent.keyDown(field, { key: "i" });
+    expect(pushMock).not.toHaveBeenCalled();
+    field.remove();
   });
 });

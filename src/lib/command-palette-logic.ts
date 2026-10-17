@@ -86,3 +86,40 @@ export const RECENT_LIMIT = 5;
 export function pushRecent(recent: string[], id: string): string[] {
   return [id, ...recent.filter((item) => item !== id)].slice(0, RECENT_LIMIT);
 }
+
+// "g then key" navigation: press g, then within the window press the letter of
+// a section. Ignored while typing in a field. Pure state machine for tests.
+
+export const GO_SEQUENCE_WINDOW_MS = 900;
+
+export const GO_TARGETS: Record<string, string> = {
+  h: "/",
+  p: "/projects",
+  c: "/calendar",
+  i: "/issues",
+  m: "/installers",
+  j: "/journal",
+  r: "/reports",
+  o: "/operations",
+  s: "/settings",
+};
+
+export type GoState = { armedAt: number | null };
+
+export function isTypingTarget(target: EventTarget | null): boolean {
+  if (!target || typeof (target as HTMLElement).closest !== "function") return false;
+  const element = target as HTMLElement;
+  return !!element.closest("input, textarea, select, [contenteditable=\"true\"], [role=\"combobox\"], [role=\"dialog\"]");
+}
+
+/** Returns the next state and, when a sequence completes, the href to go to. */
+export function stepGoSequence(state: GoState, key: string, now: number, modifiers: { ctrlKey: boolean; metaKey: boolean; altKey: boolean }): { state: GoState; href: string | null } {
+  if (modifiers.ctrlKey || modifiers.metaKey || modifiers.altKey) return { state: { armedAt: null }, href: null };
+  const lower = key.toLowerCase();
+  if (state.armedAt !== null && now - state.armedAt <= GO_SEQUENCE_WINDOW_MS) {
+    const href = GO_TARGETS[lower] ?? null;
+    return { state: { armedAt: null }, href };
+  }
+  if (lower === "g") return { state: { armedAt: now }, href: null };
+  return { state: { armedAt: null }, href: null };
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { entryScore, matchScore, moveSelection, pushRecent, rankEntries, type PaletteEntry } from "./command-palette-logic";
+import { entryScore, isPaletteShortcut, isTypingTarget, matchScore, moveSelection, pushRecent, rankEntries, stepGoSequence, type PaletteEntry } from "./command-palette-logic";
 
 const entries: PaletteEntry[] = [
   { id: "s:projects", kind: "section", title: "Проекты", href: "/projects", keywords: ["projects"] },
@@ -54,5 +54,36 @@ describe("command palette keyboard and recents", () => {
     let recent: string[] = [];
     for (const id of ["a", "b", "c", "a", "d", "e", "f"]) recent = pushRecent(recent, id);
     expect(recent).toEqual(["f", "e", "d", "a", "c"]);
+  });
+});
+
+describe("shortcuts", () => {
+  const plain = { ctrlKey: false, metaKey: false, altKey: false };
+
+  it("recognises Ctrl+K and Cmd+K but not Alt combinations", () => {
+    expect(isPaletteShortcut({ ...plain, ctrlKey: true, key: "k" })).toBe(true);
+    expect(isPaletteShortcut({ ...plain, metaKey: true, key: "K" })).toBe(true);
+    expect(isPaletteShortcut({ ...plain, ctrlKey: true, altKey: true, key: "k" })).toBe(false);
+    expect(isPaletteShortcut({ ...plain, key: "k" })).toBe(false);
+  });
+
+  it("completes g-then-letter inside the window and forgets it afterwards", () => {
+    const armed = stepGoSequence({ armedAt: null }, "g", 1000, plain);
+    expect(armed).toEqual({ state: { armedAt: 1000 }, href: null });
+    expect(stepGoSequence(armed.state, "p", 1500, plain)).toEqual({ state: { armedAt: null }, href: "/projects" });
+    expect(stepGoSequence(armed.state, "p", 2500, plain)).toEqual({ state: { armedAt: null }, href: null });
+    expect(stepGoSequence(armed.state, "x", 1200, plain).href).toBeNull();
+    expect(stepGoSequence({ armedAt: null }, "p", 1000, plain).href).toBeNull();
+    expect(stepGoSequence({ armedAt: 1000 }, "p", 1200, { ...plain, ctrlKey: true }).href).toBeNull();
+  });
+
+  it("knows when the user is typing", () => {
+    const input = document.createElement("input");
+    document.body.append(input);
+    expect(isTypingTarget(input)).toBe(true);
+    const button = document.createElement("button");
+    document.body.append(button);
+    expect(isTypingTarget(button)).toBe(false);
+    expect(isTypingTarget(null)).toBe(false);
   });
 });

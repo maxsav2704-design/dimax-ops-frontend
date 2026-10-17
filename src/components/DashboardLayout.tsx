@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { LogOut, Menu, Search, ShieldCheck } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar } from "./AppSidebar";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { CommandPalette } from "@/components/CommandPalette";
-import { isPaletteShortcut } from "@/lib/command-palette-logic";
+import { isPaletteShortcut, isTypingTarget, stepGoSequence, type GoState } from "@/lib/command-palette-logic";
 import { MAIN_CONTENT_ID, SkipToContent } from "@/components/dimax/SkipToContent";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -66,15 +66,26 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Command palette: Ctrl/Cmd+K anywhere in the admin, or the search button in the topbar.
   const [paletteOpen, setPaletteOpen] = useState(false);
   const searchLabel = pickLocale(locale, "Search (Ctrl+K)", "Поиск (Ctrl+K)", "חיפוש (Ctrl+K)");
+  // "g" then a letter jumps to a section (g p: projects, g i: issues, ...), never while typing.
+  const goState = useRef<GoState>({ armedAt: null });
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!isPaletteShortcut(event)) return;
-      event.preventDefault();
-      setPaletteOpen((current) => !current);
+      if (isPaletteShortcut(event)) {
+        event.preventDefault();
+        setPaletteOpen((current) => !current);
+        return;
+      }
+      if (isTypingTarget(event.target)) return;
+      const step = stepGoSequence(goState.current, event.key, Date.now(), event);
+      goState.current = step.state;
+      if (step.href) {
+        event.preventDefault();
+        router.push(step.href);
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [router]);
   return (
     <div className="dmx-app-frame">
       <SkipToContent />
