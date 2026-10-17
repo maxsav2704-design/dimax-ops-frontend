@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Download,
   History,
+  Lock,
   RefreshCw,
   RotateCcw,
   X,
@@ -273,6 +274,8 @@ export default function EarningsLedgerPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const copy = useCopy();
+  // R6: a recorded earning is shown with a lock and never in an input.
+  const recordedTitle = copy("Recorded earning, not recalculated", "Зафиксированное начисление, не пересчитывается", "רישום שכר קבוע, לא מחושב מחדש");
 
   useEffect(() => {
     if (!hasRateAccess || typeof window === "undefined") {
@@ -572,7 +575,7 @@ export default function EarningsLedgerPage() {
             <div className="surface-subtle min-w-[280px] max-w-lg p-4 sm:p-5">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-border bg-surface px-3 py-3">
-                  <div className="text-[11px] font-medium uppercase text-text-secondary">
+                  <div className="text-11 font-medium uppercase text-text-secondary">
                     {copy("Scope", "Фильтр", "סינון")}
                   </div>
                   <div className="mt-1 text-sm font-semibold text-text">
@@ -582,7 +585,7 @@ export default function EarningsLedgerPage() {
                   </div>
                 </div>
                 <div className="rounded-lg border border-border bg-surface px-3 py-3">
-                  <div className="text-[11px] font-medium uppercase text-text-secondary">
+                  <div className="text-11 font-medium uppercase text-text-secondary">
                     {copy("Work kind", "Тип работы", "סוג עבודה")}
                   </div>
                   <div className="mt-1 text-sm font-semibold text-text">
@@ -890,56 +893,59 @@ export default function EarningsLedgerPage() {
                             {item.work_kind}
                           </span>
                         </div>
-                        <div className="mt-2 truncate text-[13px] font-semibold text-text">
+                        <div className="mt-2 truncate text-13 font-semibold text-text">
                           {item.project_name || item.project_id || "-"}
                         </div>
-                        <div className="mt-0.5 truncate text-[12px] text-text-secondary">
+                        <div className="mt-0.5 truncate text-12 text-text-secondary">
                           {workLabel(item)}
                         </div>
                       </div>
                       <div
                         className={cn(
-                          "shrink-0 text-end text-[17px] font-medium leading-tight tabular-nums",
+                          "num inline-flex shrink-0 items-center gap-1 text-end text-18 font-medium leading-tight",
                           amount < 0 ? "text-status-problem-fg" : "text-text",
                         )}
+                        title={recordedTitle}
+                        data-recorded="true"
                       >
                         {formatMoney(item.amount_snapshot)}
+                        <Lock className="h-3 w-3 text-text-tertiary" aria-hidden="true" />
                       </div>
                     </div>
 
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <div className="min-w-0 rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
-                        <div className="text-[11px] font-medium uppercase text-text-secondary">
+                        <div className="text-11 font-medium uppercase text-text-secondary">
                           {copy("Installer", "Монтажник", "מתקין")}
                         </div>
-                        <div className="mt-1 truncate text-[12px] font-medium text-text">
+                        <div className="mt-1 truncate text-12 font-medium text-text">
                           {item.installer_name || item.installer_id}
                         </div>
                       </div>
                       <div className="min-w-0 rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
-                        <div className="text-[11px] font-medium uppercase text-text-secondary">
+                        <div className="text-11 font-medium uppercase text-text-secondary">
                           {copy("Date", "Дата", "תאריך")}
                         </div>
                         <div
-                          className="mt-1 truncate text-[12px] text-text-secondary tabular-nums"
+                          className="mt-1 truncate text-12 text-text-secondary tabular-nums"
                           dir="ltr"
                         >
                           {formatCompactDateTime(item.completed_at)}
                         </div>
                       </div>
                       <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
-                        <div className="text-[11px] font-medium uppercase text-text-secondary">
+                        <div className="text-11 font-medium uppercase text-text-secondary">
                           {copy("Qty", "Кол-во", "כמות")}
                         </div>
-                        <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                        <div className="mt-1 text-13 font-medium text-text tabular-nums">
                           {formatMoney(item.quantity)}
                         </div>
                       </div>
                       <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
-                        <div className="text-[11px] font-medium uppercase text-text-secondary">
+                        <div className="text-11 font-medium uppercase text-text-secondary">
                           {copy("Rate", "Ставка", "תעריף")}
                         </div>
-                        <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
+                        <div className="mt-1 text-13 font-medium text-text tabular-nums">
                           {formatMoney(item.rate_snapshot)}
                         </div>
                       </div>
@@ -952,7 +958,7 @@ export default function EarningsLedgerPage() {
                       <p className="break-all" dir="ltr">{item.work_price.approval_id}</p>
                     </details>}
                     {reference || item.reason ? (
-                      <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-[12px] leading-5 text-text-secondary">
+                      <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-12 leading-5 text-text-secondary">
                         {reference ? (
                           <div className="truncate">{reference}</div>
                         ) : null}
@@ -965,7 +971,7 @@ export default function EarningsLedgerPage() {
                     ) : null}
 
                     <div className="mt-3 flex items-center justify-between gap-2 border-t border-border-subtle pt-3">
-                      <div className="min-w-0 text-[11px] text-text-secondary">
+                      <div className="min-w-0 text-11 text-text-secondary">
                         {copy(
                           "Payroll entry",
                           "Запись начисления",
@@ -1051,13 +1057,13 @@ export default function EarningsLedgerPage() {
                       <TableCell>
                         <span
                           className={cn(
-                            "inline-flex rounded-full border px-2 py-1 text-[11px] font-semibold",
+                            "inline-flex rounded-full border px-2 py-1 text-11 font-semibold",
                             entryTone(item.entry_type),
                           )}
                         >
                           {item.entry_type}
                         </span>
-                        <div className="mt-1 text-[11px] text-text-secondary">
+                        <div className="mt-1 text-11 text-text-secondary">
                           {item.work_kind}
                         </div>
                       </TableCell>
@@ -1068,16 +1074,16 @@ export default function EarningsLedgerPage() {
                         <div className="font-medium text-text">
                           {item.project_name || item.project_id || "-"}
                         </div>
-                        <div className="text-[12px] text-text-secondary">
+                        <div className="text-12 text-text-secondary">
                           {workLabel(item)}
                         </div>
                         {workReference(item) ? (
-                          <div className="mt-0.5 max-w-[360px] text-[11px] text-text-secondary">
+                          <div className="mt-0.5 max-w-[360px] text-11 text-text-secondary">
                             {workReference(item)}
                           </div>
                         ) : null}
                         {item.reason ? (
-                          <div className="mt-1 max-w-[360px] text-[12px] text-text-secondary">
+                          <div className="mt-1 max-w-[360px] text-12 text-text-secondary">
                             {item.reason}
                           </div>
                         ) : null}
@@ -1102,7 +1108,10 @@ export default function EarningsLedgerPage() {
                             : "text-text",
                         )}
                       >
-                        {formatMoney(item.amount_snapshot)}
+                        <span className="num inline-flex items-center gap-1" title={recordedTitle} data-recorded="true">
+                          {formatMoney(item.amount_snapshot)}
+                          <Lock className="h-3 w-3 text-text-tertiary" aria-hidden="true" />
+                        </span>
                       </TableCell>
                       <TableCell className="text-end">
                         <button
@@ -1125,7 +1134,7 @@ export default function EarningsLedgerPage() {
               </TableBody>
             </Table>
           </div>
-          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-[12px]">
+          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-12">
             <div className="text-text-secondary">
               {copy("Total", "Всего", 'סה"כ')}: {ledgerQuery.data?.total || 0}
             </div>
@@ -1171,7 +1180,7 @@ export default function EarningsLedgerPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
-            <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3 text-[13px]">
+            <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3 text-13">
               <div className="font-medium text-text">
                 {selectedEntry?.installer_name || selectedEntry?.installer_id}
               </div>

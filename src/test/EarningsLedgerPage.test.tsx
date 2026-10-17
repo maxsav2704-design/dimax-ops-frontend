@@ -239,6 +239,8 @@ describe("EarningsLedgerPage", () => {
 
     expect(await screen.findByText(/Correction saved: 135[,.]00/)).toBeInTheDocument();
     await waitFor(() => {
+    // R6: recorded amounts carry the lock glyph and its explanation.
+    expect(screen.getAllByTitle("Recorded earning, not recalculated").length).toBeGreaterThan(0);
       expect(apiFetchMock).toHaveBeenCalledWith("/api/v1/admin/earnings/corrections", {
         method: "POST",
         body: JSON.stringify({

@@ -82,11 +82,11 @@ export function PriceReconciliationDialog({ list, onClose }: { list?: PriceSumma
             {summary.pending_addon_facts > 0 && <p className="text-status-warning-fg">{t.unpaidNote}</p>}
           </div>
           {data.items.length === 0 ? <p className="py-3 text-sm text-text-secondary">{t.empty}</p> : <div className="max-w-full overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[850px] table-fixed text-xs"><thead className="bg-surface-sunken text-text-secondary"><tr>
+            <table className="data-table min-w-[850px] table-fixed"><thead><tr>
               <th className="w-44 p-3 text-start font-medium">{t.work}</th><th className="w-56 p-3 text-start font-medium">{t.source}</th>
               <th className="w-32 p-3 text-end font-medium">{t.current}</th><th className="w-32 p-3 text-end font-medium">{list ? t.proposed : p.price}</th>
               <th className="w-32 p-3 text-end font-medium">{t.delta}</th><th className="w-40 p-3 text-start font-medium">{t.status}</th>
-            </tr></thead><tbody>{data.items.map((row) => <tr key={`${row.source_type}:${row.source_id}`} className="border-t border-border">
+            </tr></thead><tbody>{data.items.map((row) => { const deltaValue = Number(row.delta); const deltaTone = !row.delta || !Number.isFinite(deltaValue) || deltaValue === 0 ? "text-text-tertiary" : deltaValue > 0 ? "text-status-problem-fg" : "text-status-ok-fg"; return <tr key={`${row.source_type}:${row.source_id}`} data-reconciliation-status={row.status} className={row.status === "MATCH" ? "text-text-tertiary" : undefined}>
               <td className="break-words p-3 align-top"><p className="font-medium text-text">{row.name}</p><p className="mt-1 text-text-secondary">{p[row.kind]} · {unit(row.unit)}</p>
                 {row.catalog_changed && row.proposed_name && <p className="mt-1 text-text-secondary">{t.catalogVersion}: {row.proposed_name} · {unit(row.proposed_unit)}</p>}
               </td>
@@ -99,7 +99,7 @@ export function PriceReconciliationDialog({ list, onClose }: { list?: PriceSumma
               </td>
               <td className="break-words p-3 text-end align-top tabular-nums">{money(row.legacy_price)}</td>
               <td className="break-words p-3 text-end align-top font-medium tabular-nums">{money(row.proposed_price)}</td>
-              <td className="break-words p-3 text-end align-top tabular-nums">{money(row.delta, true)}</td>
+              <td className={`break-words p-3 text-end align-top tabular-nums ${deltaTone}`}>{money(row.delta, true)}</td>
               <td className="break-words p-3 align-top"><p className={row.status === "MATCH" ? "text-status-ok-fg" : "text-status-warning-fg"}>{t[row.status]}</p>
                 <div className="mt-1 space-y-1 text-text-secondary">
                   {row.uses_snapshot && <p>{t.snapshot}</p>}{row.uses_surcharge && <p>{t.surcharge}</p>}
@@ -108,7 +108,7 @@ export function PriceReconciliationDialog({ list, onClose }: { list?: PriceSumma
                   {row.legacy_variants > 1 && ["INSTALLER_RATE", "DOOR", "ADDON_PLAN"].includes(row.source_type) && <p className="text-status-warning-fg">{t.variants}: {row.legacy_variants}</p>}
                 </div>
               </td>
-            </tr>)}</tbody></table>
+            </tr>; })}</tbody></table>
           </div>}
         </>}
       </div>

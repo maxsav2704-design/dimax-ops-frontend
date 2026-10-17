@@ -8,7 +8,7 @@ const Table = React.forwardRef<
     {" "}
     <table
       ref={ref}
-      className={cn("w-full caption-bottom text-[13px]", className)}
+      className={cn("w-full caption-bottom text-13", className)}
       {...props}
     />{" "}
   </div>
@@ -18,7 +18,7 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
+  <thead ref={ref} className={cn("bg-surface-subtle [&_tr]:border-b", className)} {...props} />
 ));
 TableHeader.displayName = "TableHeader";
 const TableBody = React.forwardRef<
@@ -53,7 +53,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b border-border-subtle transition-colors data-[state=selected]:bg-accent/10 hover:bg-surface-subtle",
+      "border-b border-border transition-colors data-[state=selected]:bg-[var(--dmx-accent-tint)] hover:bg-surface-subtle",
       className,
     )}
     {...props}
@@ -67,7 +67,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-11 px-4 py-3 text-start align-middle text-[11px] font-medium uppercase text-text-secondary [&:has([role=checkbox])]:pe-0",
+      "h-9 px-3 py-2 text-start align-middle text-11 font-medium uppercase leading-4 text-text-secondary [&:has([role=checkbox])]:pe-0",
       className,
     )}
     {...props}
@@ -81,7 +81,7 @@ const TableCell = React.forwardRef<
   <td
     ref={ref}
     className={cn(
-      "px-4 py-3 align-middle leading-6 [&:has([role=checkbox])]:pe-0",
+      "px-3 py-2 align-middle leading-5 [&:has([role=checkbox])]:pe-0",
       className,
     )}
     {...props}
@@ -94,7 +94,7 @@ const TableCaption = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <caption
     ref={ref}
-    className={cn("mt-4 text-sm text-text-secondary", className)}
+    className={cn("mt-4 text-13 text-text-secondary", className)}
     {...props}
   />
 ));
