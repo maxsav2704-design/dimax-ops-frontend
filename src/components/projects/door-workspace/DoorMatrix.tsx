@@ -17,7 +17,7 @@ import { AlertCircle, CheckCircle2, FilterX, UserPlus } from "lucide-react";
 import { useCopy, useI18n } from "@/lib/i18n";
 
 import type { ReasonItem } from "@/components/projects/catalog-types";
-import { matrixCompletionPct, matrixDoorTileLabel, matrixDoorTileTone, matrixProgressTone } from "@/components/projects/door-workspace/matrix-shared";
+import { matrixCompletionPct, matrixDoorTileLabel, matrixDoorTileTone, matrixProgressTone, moveMatrixFocus } from "@/components/projects/door-workspace/matrix-shared";
 import { projectsPanelClass } from "@/components/projects/shared";
 
 type DoorMatrixProps = {
@@ -73,8 +73,12 @@ export function DoorMatrix({
   children,
 }: DoorMatrixProps) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const copy = useCopy();
+  // E7: arrow keys move between door tiles; the grouping comes from the tiles' floor keys.
+  const handleMatrixKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    moveMatrixFocus(event, locale === "he");
+  };
   const {
     allFilteredDoorsSelected,
     bulkAssignInstallerId,
@@ -136,6 +140,7 @@ export function DoorMatrix({
     <div
       id="project-door-matrix"
       tabIndex={-1}
+      data-matrix-root=""
       className={projectsPanelClass("overflow-hidden p-4")}
     >
       <div className="-mx-4 -mt-4 mb-4 flex gap-0.5 overflow-x-auto border-b border-border bg-surface px-2 pt-1">
@@ -1017,7 +1022,7 @@ export function DoorMatrix({
               </div>
 
               <div className="space-y-3 bg-surface-subtle p-4">
-                {house.floors.map((floor) => {
+                {house.floors.map((floor, floorIndex) => {
                   const floorProgressPct = matrixCompletionPct(
                     floor.installed_count,
                     floor.total_doors,
@@ -1180,6 +1185,9 @@ export function DoorMatrix({
                                 onToggleSelection={() =>
                                   toggleDoorSelection(door.door_id)
                                 }
+                                floorKey={`${house.house_number}-${floor.floor_label}`}
+                                fillStep={floorIndex}
+                                onKeyDown={handleMatrixKeyDown}
                           />
                         ))}
                       </div>

@@ -160,6 +160,7 @@ import {
   KpiCard as DimaxKpiCard,
   PillButton,
   WidgetCard,
+  useScrolledPast,
 } from "@/components/dimax";
 
 
@@ -431,6 +432,8 @@ export default function ProjectsPage() {
   };
   const tt = (key: string) => projectsOverrides[locale]?.[key] ?? t(key);
   const copy = useCopy();
+  // E3: past 120 px the selected project keeps its name, status and the way back to its doors.
+  const projectBarCondensed = useScrolledPast();
   const locationLabel = (value: string | null | undefined): string => {
     if (!value) {
       return "-";
@@ -2600,6 +2603,27 @@ export default function ProjectsPage() {
           >
             {selectedProject ? (
               <>
+                <div
+                  className="dmx-condensed-bar"
+                  data-on={projectBarCondensed ? "true" : "false"}
+                  aria-hidden={!projectBarCondensed}
+                  data-testid="project-condensed-bar"
+                >
+                  <span className="truncate text-14 font-medium text-text">{selectedProject.name}</span>
+                  <StatusBadge
+                    status={selectedProject.lifecycle_status || selectedProject.status}
+                    label={tokenLabel(selectedProject.lifecycle_status || selectedProject.status)}
+                    domain="project"
+                  />
+                  <span className="flex-1" />
+                  <button
+                    type="button"
+                    className="dmx-secondary-action"
+                    onClick={() => scrollToProjectSection("project-door-matrix")}
+                  >
+                    {copy("Doors", "Двери", "דלתות")}
+                  </button>
+                </div>
                 <div
                   className={projectsPanelClass("overflow-hidden")}
                   data-testid="project-detail-v2-header"

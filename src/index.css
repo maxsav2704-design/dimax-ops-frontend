@@ -553,6 +553,22 @@
     outline-offset: 2px;
   }
 
+  /* R8: the one page-load moment of the project workspace, the matrix fills in floor by floor. */
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes dmx-matrix-fill {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .dmx-door-tile[data-fill-step] { animation: dmx-matrix-fill 220ms var(--dmx-easing-standard) both; }
+    .dmx-door-tile[data-fill-step="1"] { animation-delay: 60ms; }
+    .dmx-door-tile[data-fill-step="2"] { animation-delay: 120ms; }
+    .dmx-door-tile[data-fill-step="3"] { animation-delay: 180ms; }
+    .dmx-door-tile[data-fill-step="4"] { animation-delay: 240ms; }
+    .dmx-door-tile[data-fill-step="5"] { animation-delay: 300ms; }
+    .dmx-door-tile[data-fill-step="6"] { animation-delay: 360ms; }
+    .dmx-door-tile[data-fill-step="7"] { animation-delay: 420ms; }
+  }
+
   @media (hover: hover) and (prefers-reduced-motion: no-preference) {
     .dmx-door-tile {
       transition: transform 160ms var(--dmx-easing-standard), box-shadow 160ms ease;

@@ -15,26 +15,35 @@ type DoorMatrixTileProps = {
   testId?: string;
   onInspect: () => void;
   onToggleSelection: () => void;
+  /** E7: floor grouping for arrow-key navigation. */
+  floorKey?: string;
+  /** R8: one page-load moment, the matrix fills in floor by floor (0..7). */
+  fillStep?: number;
+  /** E7: arrow-key navigation handled by the matrix. */
+  onKeyDown?: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
 };
 
-export function DoorMatrixTile({ marking, status, tone, inspectLabel, context, focused, selected, hasIssues, testId, onInspect, onToggleSelection }: DoorMatrixTileProps) {
+export function DoorMatrixTile({ marking, status, tone, inspectLabel, context, focused, selected, hasIssues, testId, onInspect, onToggleSelection, floorKey, fillStep, onKeyDown }: DoorMatrixTileProps) {
   const { locale } = useI18n();
   const selectLabel = pickLocale(locale, "Select door", "Выбрать дверь", "בחר דלת");
 
   return (
-    <div className="dmx-door-tile min-w-0" data-focused={focused} data-selected={selected}>
+    <div className="dmx-door-tile min-w-0" data-focused={focused} data-selected={selected} data-fill-step={fillStep == null ? undefined : Math.max(0, Math.min(7, fillStep))}>
       <button
         type="button"
         data-testid={testId}
         aria-label={inspectLabel}
         aria-pressed={focused}
+        data-matrix-tile=""
+        data-floor-key={floorKey}
         title={[marking, status, context].filter(Boolean).join(" · ")}
         onClick={onInspect}
+        onKeyDown={onKeyDown}
         className={cn("dmx-door-tile-face flex h-full min-h-24 w-full flex-col items-start justify-between gap-2 rounded-md border px-2.5 pb-2.5 pt-8 text-start", tone)}
       >
-        {context && <span dir="auto" className="absolute start-2.5 top-2 max-w-[calc(100%-42px)] truncate text-[10px] font-medium">{context}</span>}
-        <span dir="auto" className="w-full break-words text-[13px] font-semibold leading-4 tabular-nums [overflow-wrap:anywhere]">{marking}</span>
-        <span className="flex w-full items-start gap-1 text-[10px] leading-4">
+        {context && <span dir="auto" className="absolute start-2.5 top-2 max-w-[calc(100%-42px)] truncate text-11 font-medium">{context}</span>}
+        <span dir="auto" className="w-full break-words text-13 font-semibold leading-4 tabular-nums [overflow-wrap:anywhere]">{marking}</span>
+        <span className="flex w-full items-start gap-1 text-11 leading-4">
           {hasIssues && <AlertTriangle aria-hidden="true" className="mt-0.5 h-3 w-3 shrink-0" />}
           <span>{status}</span>
         </span>

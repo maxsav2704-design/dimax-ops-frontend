@@ -7,7 +7,7 @@ import { DoorMatrixTile } from "@/components/projects/DoorMatrixTile";
 import { ProjectSideWidgets } from "@/components/projects/ProjectSideWidgets";
 import { type ProjectAddonPlanItem } from "@/components/projects/catalog-types";
 import { type DocumentGenerationDTO } from "@/components/projects/document-shared";
-import { matrixCompletionPct, matrixDoorTileLabel, matrixDoorTileTone, matrixProgressTone } from "@/components/projects/door-workspace/matrix-shared";
+import { matrixCompletionPct, matrixDoorTileLabel, matrixDoorTileTone, matrixProgressTone, moveMatrixFocus } from "@/components/projects/door-workspace/matrix-shared";
 import { useDoorWorkspace } from "@/components/projects/door-workspace/useDoorWorkspace";
 import { type ProjectPlanFactResponse, type ProjectRiskDrilldownResponse } from "@/components/projects/financial-types";
 import { projectsMetricLabelClass } from "@/components/projects/project-form";
@@ -80,8 +80,12 @@ export function DoorCommandBar({
   onMarkInstalled,
 }: DoorCommandBarProps) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const copy = useCopy();
+  // E7: arrow keys move between the preview tiles (see matrix-shared).
+  const handleTileKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    moveMatrixFocus(event, locale === "he");
+  };
   const {
     doorStatusAction,
     filteredMatrixRows,
@@ -115,7 +119,7 @@ export function DoorCommandBar({
       data-testid="project-detail-v28-command"
     >
       <section className={projectsPanelClass("overflow-hidden")}>
-        <div data-testid="project-detail-v28-door-workspace">
+        <div data-testid="project-detail-v28-door-workspace" data-matrix-root="">
           <div className="flex gap-0.5 overflow-x-auto border-b border-border bg-surface px-3 pt-1">
             {[
               {
@@ -426,7 +430,7 @@ export function DoorCommandBar({
             </div>
           ) : (
             <div className="space-y-2 bg-surface-subtle px-3 py-3">
-              {projectDetailFloorPreview.map((floor) => {
+              {projectDetailFloorPreview.map((floor, floorIndex) => {
                 const safeProgressPct = matrixCompletionPct(
                   floor.installed_count,
                   floor.total_doors,
@@ -557,6 +561,9 @@ export function DoorCommandBar({
                             testId={`project-detail-v28-door-tile-${door.door_id}`}
                             onInspect={() => setFocusedDoorId(door.door_id)}
                             onToggleSelection={() => toggleDoorSelection(door.door_id)}
+                            floorKey={`${floor.house_number}-${floor.floor_label}`}
+                            fillStep={floorIndex}
+                            onKeyDown={handleTileKeyDown}
                           />
                         ))}
                       </div>

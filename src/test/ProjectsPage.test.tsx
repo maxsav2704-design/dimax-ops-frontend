@@ -4380,4 +4380,53 @@ describe("ProjectsPage", () => {
     const duplicateKey = errorSpy.mock.calls.find((call) => String(call[0]).includes("same key"));
     expect(duplicateKey).toBeUndefined();
   }, 30000);
+
+  it("moves tile focus with the arrow keys, remembers the ledger density and condenses the project header (E7, R7, E3)", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/admin/projects") return { items: [{ id: "project-1", name: "Tower", status: "ACTIVE" }] };
+      if (path === "/api/v1/admin/projects/project-1") return { id: "project-1", name: "Tower", issues_open: [] };
+      if (path.includes("/doors/layout")) return {
+        project_id: "project-1", total_doors: 2,
+        buckets: [{ house_number: "1", floor_label: "2", total: 2, status_breakdown: { NOT_INSTALLED: 2 }, doors: [
+          { id: "door-1", door_marking: "D-101", unit_label: "Entry", apartment_number: "21", status: "NOT_INSTALLED", installer_id: null, door_type_id: "type-1" },
+          { id: "door-2", door_marking: "D-102", unit_label: "Fire", apartment_number: "22", status: "NOT_INSTALLED", installer_id: "inst-1", door_type_id: "type-1" },
+        ] }],
+      };
+      return { items: [], total: 0 };
+    });
+    const originalMatchMedia = window.matchMedia;
+    Object.defineProperty(window, "matchMedia", { configurable: true, writable: true, value: (query: string) => ({
+      matches: query.includes("min-width: 768px"), media: query, onchange: null,
+      addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+    }) });
+    render(<ProjectsPage />, { wrapper: Providers });
+    const first = await screen.findByTestId("project-detail-v28-door-tile-door-1");
+    const second = screen.getByTestId("project-detail-v28-door-tile-door-2");
+    expect(first).toHaveAttribute("data-floor-key", "1-2");
+    first.focus();
+    fireEvent.keyDown(first, { key: "ArrowRight" });
+    expect(second).toHaveFocus();
+    fireEvent.keyDown(second, { key: "ArrowRight" });
+    expect(second).toHaveFocus();
+    fireEvent.keyDown(second, { key: "ArrowLeft" });
+    expect(first).toHaveFocus();
+
+    const table = screen.getByTestId("project-door-ledger-table");
+    expect(table).toHaveClass("data-table");
+    expect(table).not.toHaveClass("data-table-compact");
+    expect(screen.getByTestId("project-door-table-row-door-1")).toHaveAttribute("data-attention", "1");
+    expect(screen.getByTestId("project-door-table-row-door-2")).not.toHaveAttribute("data-attention");
+    fireEvent.click(screen.getByRole("button", { name: "Compact" }));
+    expect(table).toHaveClass("data-table-compact");
+    expect(window.localStorage.getItem("dmx.projects.ledger.density")).toBe("compact");
+
+    const bar = screen.getByTestId("project-condensed-bar");
+    expect(bar).toHaveAttribute("data-on", "false");
+    Object.defineProperty(window, "scrollY", { configurable: true, writable: true, value: 300 });
+    fireEvent.scroll(window);
+    expect(bar).toHaveAttribute("data-on", "true");
+    expect(within(bar).getByText("Tower")).toBeInTheDocument();
+    Object.defineProperty(window, "scrollY", { configurable: true, writable: true, value: 0 });
+    Object.defineProperty(window, "matchMedia", { configurable: true, writable: true, value: originalMatchMedia });
+  });
 });

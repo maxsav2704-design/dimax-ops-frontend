@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { attentionAttr, attentionLevel, entityKey } from "@/components/dimax";
 import { LEDGER_ROW_PAGE } from "@/components/projects/door-workspace/constants";
 import { type MatrixRow } from "@/components/projects/door-workspace/types";
 import { projectsMetricLabelClass } from "@/components/projects/project-form";
@@ -8,6 +10,8 @@ import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
 import { useCopy, useI18n } from "@/lib/i18n";
+
+const LEDGER_DENSITY_KEY = "dmx.projects.ledger.density";
 
 type DoorLedgerProps = {
   filteredMatrixRows: MatrixRow[];
@@ -51,22 +55,55 @@ export function DoorLedger({
 }: DoorLedgerProps) {
   const { t } = useI18n();
   const copy = useCopy();
-
+  // R7: comfortable / compact rows, remembered per browser.
+  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(LEDGER_DENSITY_KEY) === "compact") setDensity("compact");
+    } catch {
+      /* storage unavailable: keep the default */
+    }
+  }, []);
+  const chooseDensity = (next: "comfortable" | "compact") => {
+    setDensity(next);
+    try {
+      window.localStorage.setItem(LEDGER_DENSITY_KEY, next);
+    } catch {
+      /* storage unavailable: the choice lives for this page only */
+    }
+  };
+  const rowAttention = (row: MatrixRow) =>
+    attentionAttr(attentionLevel({ issues: row.issue_count > 0, unassigned: !row.installer_id }));
   return (
     <div id="project-door-ledger" tabIndex={-1} className="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
       <div className="flex flex-col gap-3 border-b border-border bg-surface px-3 py-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className={projectsMetricLabelClass}>
-            {copy("Audit ledger", "Реестр контроля", "יומן בקרה")}
+          <div className={cn(projectsMetricLabelClass, "flex flex-wrap items-center gap-2")}>
+            <span>{copy("Audit ledger", "Реестр контроля", "יומן בקרה")}</span>
+            {ledgerDesktop ? (
+              <span className="inline-flex overflow-hidden rounded-md border border-border-strong" role="group" aria-label={copy("Row density", "Плотность строк", "צפיפות שורות")}>
+                {(["comfortable", "compact"] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={density === option}
+                    onClick={() => chooseDensity(option)}
+                    className={cn("h-6 px-2 text-11 font-medium normal-case tracking-normal text-text transition-colors", density === option ? "bg-surface-sunken" : "bg-surface hover:bg-surface-subtle")}
+                  >
+                    {option === "compact" ? copy("Compact", "Компактно", "צפוף") : copy("Comfortable", "Обычно", "רגיל")}
+                  </button>
+                ))}
+              </span>
+            ) : null}
           </div>
-          <div className="mt-1 text-[13px] font-semibold text-text">
+          <div className="mt-1 text-13 font-semibold text-text">
             {t("projects.doorLedgerTable")}
           </div>
-          <div className="text-[11px] text-text-secondary">
+          <div className="text-11 text-text-secondary">
             {t("projects.doorLedgerSubtitle")}
           </div>
         </div>
-        <div className="inline-flex w-fit rounded-full border border-border bg-surface-subtle px-2.5 py-1 text-[11px] font-medium text-text-secondary">
+        <div className="inline-flex w-fit rounded-full border border-border bg-surface-subtle px-2.5 py-1 text-11 font-medium text-text-secondary">
           {t("projects.rowsCount").replace(
             "{count}",
             String(filteredMatrixRows.length),
@@ -112,7 +149,7 @@ export function DoorLedger({
       {!ledgerDesktop && (
       <div className="divide-y divide-border-subtle md:hidden">
         {filteredMatrixRows.length === 0 ? (
-          <div className="px-3.5 py-4 text-[12px] text-text-secondary">
+          <div className="px-3.5 py-4 text-12 text-text-secondary">
             {copy(
               "No doors for selected filters.",
               "Нет дверей для выбранных фильтров.",
@@ -124,6 +161,8 @@ export function DoorLedger({
             <div
               key={row.door_id}
               data-testid={`project-door-row-${row.door_id}`}
+              data-entity={entityKey("door", row.door_id)}
+              {...rowAttention(row)}
               role="button"
               tabIndex={0}
               onClick={() => setFocusedDoorId(row.door_id)}
@@ -148,7 +187,7 @@ export function DoorLedger({
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="truncate text-[13px] font-semibold text-text">
+                  <div className="truncate text-13 font-semibold text-text">
                     <LtrText>{row.door_marking}</LtrText>
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -188,7 +227,7 @@ export function DoorLedger({
                   <div className={projectsMetricLabelClass}>
                     {t("projects.unit")}
                   </div>
-                  <div className="mt-1 truncate text-[12px] font-medium text-text">
+                  <div className="mt-1 truncate text-12 font-medium text-text">
                     <LtrText>{row.unit_label}</LtrText>
                   </div>
                 </div>
@@ -196,7 +235,7 @@ export function DoorLedger({
                   <div className={projectsMetricLabelClass}>
                     {t("projects.doorType")}
                   </div>
-                  <div className="mt-1 truncate text-[12px] font-medium text-text">
+                  <div className="mt-1 truncate text-12 font-medium text-text">
                     {row.door_type_label}
                   </div>
                 </div>
@@ -204,7 +243,7 @@ export function DoorLedger({
                   <div className={projectsMetricLabelClass}>
                     {t("projects.houseLabel")}
                   </div>
-                  <div className="mt-1 text-[12px] font-medium text-text">
+                  <div className="mt-1 text-12 font-medium text-text">
                     <LtrText>{row.house_number}</LtrText>
                   </div>
                 </div>
@@ -212,12 +251,12 @@ export function DoorLedger({
                   <div className={projectsMetricLabelClass}>
                     {t("projects.floorLabel")}
                   </div>
-                  <div className="mt-1 text-[12px] font-medium text-text">
+                  <div className="mt-1 text-12 font-medium text-text">
                     <LtrText>{row.floor_label}</LtrText>
                   </div>
                 </div>
               </div>
-              <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-[12px] text-text-secondary">
+              <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-12 text-text-secondary">
                 {t("projects.apt")}:{" "}
                 <LtrText>{row.apartment_number}</LtrText>
                 <span className="mx-2 text-border-strong">|</span>
@@ -231,8 +270,11 @@ export function DoorLedger({
       )}
       {ledgerDesktop && (
       <div className="hidden overflow-auto md:block">
-        <table className="w-full min-w-[980px] border-separate border-spacing-0 text-[12px] leading-5">
-          <thead className="bg-surface-subtle text-text-secondary">
+        <table
+          data-testid="project-door-ledger-table"
+          className={cn("data-table data-table-sticky min-w-[980px]", density === "compact" && "data-table-compact")}
+        >
+          <thead>
             <tr>
               <th className="w-10 px-2 py-2 text-start font-medium">
                 <input
@@ -248,38 +290,38 @@ export function DoorLedger({
                   className="h-4 w-4 rounded border-border text-accent focus:ring-accent/30"
                 />
               </th>
-              <th className="px-2 py-2 text-start font-medium">
+              <th className="px-2 text-start font-medium">
                 {copy(
                   "Order Number",
                   "Номер заказа",
                   "מספר הזמנה",
                 )}
               </th>
-              <th className="px-2 py-2 text-start font-medium">
+              <th className="px-2 text-start font-medium">
                 {t("projects.houseLabel")}
               </th>
-              <th className="px-2 py-2 text-start font-medium">
+              <th className="px-2 text-start font-medium">
                 {t("projects.floorLabel")}
               </th>
-              <th className="px-2 py-2 text-start font-medium">
+              <th className="px-2 text-start font-medium">
                 {t("projects.apt")}
               </th>
-              <th className="px-2 py-2 text-start font-medium">
+              <th className="px-2 text-start font-medium">
                 {t("projects.location")}
               </th>
-              <th className="px-2 py-2 text-start font-medium">
+              <th className="px-2 text-start font-medium">
                 {t("projects.marking")}
               </th>
-              <th className="px-2 py-2 text-start font-medium">
+              <th className="px-2 text-start font-medium">
                 {t("projects.doorType")}
               </th>
-              <th className="px-2 py-2 text-start font-medium">
+              <th className="px-2 text-start font-medium">
                 {t("projects.unit")}
               </th>
-              <th className="px-2 py-2 text-start font-medium">
+              <th className="px-2 text-start font-medium">
                 {t("common.status")}
               </th>
-              <th className="px-2 py-2 text-start font-medium">
+              <th className="px-2 text-start font-medium">
                 {t("projects.blockers")}
               </th>
             </tr>
@@ -315,15 +357,15 @@ export function DoorLedger({
                       setFocusedDoorId(row.door_id);
                     }
                   }}
+                  data-entity={entityKey("door", row.door_id)}
+                  {...rowAttention(row)}
                   className={cn(
-                    "cursor-pointer border-t border-border transition-colors hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/35",
-                    row.issue_count > 0 &&
-                      "bg-status-problem-bg",
+                    "cursor-pointer transition-colors hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/35",
                     focusedDoorId === row.door_id &&
                       "bg-[var(--dmx-accent-tint)]",
                   )}
                 >
-                  <td className="px-2 py-1.5">
+                  <td className="px-2">
                     <input
                       type="checkbox"
                       aria-label={copy(
@@ -340,22 +382,22 @@ export function DoorLedger({
                       className="h-4 w-4 rounded border-border text-accent focus:ring-accent/30"
                     />
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2">
                     <LtrText>{row.order_number}</LtrText>
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2">
                     <LtrText>{row.house_number}</LtrText>
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2">
                     <LtrText>{row.floor_label}</LtrText>
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2">
                     <LtrText>{row.apartment_number}</LtrText>
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2">
                     {locationLabel(row.location_code)}
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2">
                     <button
                       type="button"
                       aria-label={copy("Open door {door}", "Открыть дверь {door}", "פתח דלת {door}").replace("{door}", row.door_marking)}
@@ -363,27 +405,27 @@ export function DoorLedger({
                         event.stopPropagation();
                         setFocusedDoorId(row.door_id);
                       }}
-                      className="inline-flex max-w-[140px] items-center rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-semibold text-text hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                      className="inline-flex max-w-[140px] items-center rounded-full border border-border bg-surface px-2.5 py-1 text-11 font-semibold text-text hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                     >
                       <LtrText as="span" className="truncate">
                         {row.door_marking}
                       </LtrText>
                     </button>
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2">
                     {row.door_type_label}
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2">
                     <LtrText>{row.unit_label}</LtrText>
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2">
                     <StatusBadge
                       status={row.status}
                       label={tokenLabel(row.status)}
                       domain="door"
                     />
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2">
                     {row.issue_count > 0 ? (
                       <span className="text-status-problem-fg">
                         <LtrText>{row.issue_count}</LtrText>
@@ -404,7 +446,7 @@ export function DoorLedger({
       {hiddenMatrixRows > 0 && (
         <div
           data-testid="project-door-ledger-more"
-          className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-3.5 py-3 text-[12px] text-text-secondary"
+          className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-3.5 py-3 text-12 text-text-secondary"
         >
           <span>
             {copy("Showing {shown} of {total} doors", "Показано {shown} из {total} дверей", "מוצגות {shown} מתוך {total} דלתות")
