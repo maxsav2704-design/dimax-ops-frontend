@@ -1,8 +1,9 @@
 "use client";
-import { ReactNode } from "react";
-import { LogOut, ShieldCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
+import { LogOut, Menu, ShieldCheck } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar } from "./AppSidebar";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { MAIN_CONTENT_ID, SkipToContent } from "@/components/dimax/SkipToContent";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -47,15 +48,33 @@ function scopeLabel(
 }
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const session = useAuthSession();
   const { locale } = useI18n();
   const signOutLabel =
     pickLocale(locale, "Sign out", "Выйти", "התנתק");
+  const menuLabel = pickLocale(locale, "Menu", "Меню", "תפריט");
+  const navigationLabel = pickLocale(locale, "Navigation", "Навигация", "ניווט");
+  const closeLabel = pickLocale(locale, "Close", "Закрыть", "סגור");
+  // Block 9: below md the sidebar is an icon rail; the drawer offers the labelled copy.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
   return (
     <div className="dmx-app-frame">
       <SkipToContent />
       <div className="dmx-app-shell">
         <header className="dmx-topbar">
+          <button
+            type="button"
+            aria-label={menuLabel}
+            aria-expanded={drawerOpen}
+            onClick={() => setDrawerOpen(true)}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface hover:text-text md:hidden"
+          >
+            <Menu className="h-4 w-4" strokeWidth={1.8} />
+          </button>
           <div className="dmx-brand-pill">DIMAX</div>
           <div className="hidden min-w-0 flex-1 text-center text-[11px] font-medium uppercase text-text-secondary sm:block">
             DIMAX GROUP
@@ -84,6 +103,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </button>
           </div>
         </header>
+        <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <DialogContent className="dmx-drawer-sheet" closeLabel={closeLabel} data-testid="dmx-drawer">
+            <DialogTitle className="sr-only">{navigationLabel}</DialogTitle>
+            <AppSidebar variant="drawer" onNavigate={() => setDrawerOpen(false)} />
+          </DialogContent>
+        </Dialog>
         <div className="dmx-shell-grid">
           <AppSidebar />
           <main

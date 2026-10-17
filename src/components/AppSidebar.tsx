@@ -34,6 +34,7 @@ import {
 } from "@/lib/admin-access";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type SidebarItem = {
   title: string;
@@ -84,7 +85,14 @@ function sidebarCopy(locale: "en" | "ru" | "he") {
   };
 }
 
-export function AppSidebar() {
+type AppSidebarProps = {
+  /** "rail": the fixed column (icons only below md). "drawer": the mobile off-canvas copy with labels. */
+  variant?: "rail" | "drawer";
+  /** Called after a link is chosen (the drawer closes itself). */
+  onNavigate?: () => void;
+};
+
+export function AppSidebar({ variant = "rail", onNavigate }: AppSidebarProps = {}) {
   const pathname = usePathname();
   const session = useAuthSession();
   const { locale, t } = useI18n();
@@ -300,17 +308,34 @@ export function AppSidebar() {
     content.scrollBy({ top: event.deltaY, behavior: "auto" });
   };
 
+  // Block 9: below md the rail shows icons only, so each link carries a tooltip
+  // (hover/focus devices); the drawer variant shows the labels and needs none.
+  const tooltipSide = locale === "he" ? "left" : "right";
+  const withRailTooltip = (key: string, label: string, trigger: JSX.Element) =>
+    variant === "rail" ? (
+      <Tooltip key={key}>
+        <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+        <TooltipContent side={tooltipSide} className="text-13 md:hidden">
+          {label}
+        </TooltipContent>
+      </Tooltip>
+    ) : (
+      trigger
+    );
+
   const renderItem = (item: SidebarItem) => {
     const isActive = isItemActive(item.path);
-    return (
+    return withRailTooltip(
+      item.path,
+      item.title,
       <Link
         key={item.path}
         href={item.path}
         aria-label={item.title}
-        title={item.title}
         aria-current={isActive ? "page" : undefined}
         data-active={isActive ? "true" : "false"}
         className="dmx-sidebar-link"
+        onClick={onNavigate}
       >
         <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.9} />
         <span className="dmx-sidebar-label">{item.title}</span>
@@ -319,27 +344,33 @@ export function AppSidebar() {
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         ) : null}
-      </Link>
+      </Link>,
     );
   };
 
   return (
+    <TooltipProvider delayDuration={250}>
     <aside
       className="dmx-sidebar"
       aria-label="Admin navigation"
+      data-variant={variant}
       onWheel={handleWheel}
     >
-      {canRunPrivilegedAdminActions(session) ? (
-        <Link
-          href="/projects?create=1"
-          aria-label={copy.createProject}
-          title={copy.createProject}
-          className="dmx-sidebar-create"
-        >
-          <Plus className="h-4 w-4 shrink-0" strokeWidth={2.2} />
-          <span className="dmx-sidebar-label">{copy.createProject}</span>
-        </Link>
-      ) : null}
+      {canRunPrivilegedAdminActions(session)
+        ? withRailTooltip(
+            "create",
+            copy.createProject,
+            <Link
+              href="/projects?create=1"
+              aria-label={copy.createProject}
+              className="dmx-sidebar-create"
+              onClick={onNavigate}
+            >
+              <Plus className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+              <span className="dmx-sidebar-label">{copy.createProject}</span>
+            </Link>,
+          )
+        : null}
 
       <nav
         className="min-h-0 flex-1 overflow-y-auto py-1"
@@ -396,5 +427,6 @@ export function AppSidebar() {
         })}
       </nav>
     </aside>
+    </TooltipProvider>
   );
 }

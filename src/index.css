@@ -480,6 +480,39 @@
     border-color: var(--dmx-bg-surface);
   }
 
+  /* Block 9: the mobile drawer is the full sidebar with labels, whatever the viewport. */
+  .dmx-sidebar[data-variant="drawer"] {
+    @apply w-full border-0 px-2.5;
+  }
+  .dmx-sidebar[data-variant="drawer"] .dmx-sidebar-label,
+  .dmx-sidebar[data-variant="drawer"] .dmx-sidebar-group-title {
+    display: block;
+  }
+  .dmx-sidebar[data-variant="drawer"] .dmx-sidebar-link,
+  .dmx-sidebar[data-variant="drawer"] .dmx-sidebar-group-toggle {
+    justify-content: flex-start;
+  }
+  .dmx-sidebar[data-variant="drawer"] .dmx-sidebar-create {
+    width: 100%;
+  }
+  .dmx-sidebar[data-variant="drawer"] .dmx-sidebar-badge {
+    position: static;
+    margin-inline-start: auto;
+  }
+  .dmx-drawer-sheet {
+    @apply fixed inset-y-0 start-0 z-[60] h-full max-h-none w-[280px] max-w-[85vw] translate-x-0 translate-y-0 rounded-none border-0 border-e border-border bg-surface p-0 pt-10;
+    left: auto;
+    top: 0;
+  }
+  .dmx-drawer-sheet[data-state="open"] { animation: dmx-drawer-in 220ms var(--dmx-easing-standard); }
+  .dmx-drawer-sheet[data-state="closed"] { animation: dmx-drawer-out 180ms var(--dmx-easing-standard); }
+  @keyframes dmx-drawer-in { from { transform: translateX(calc(-100% * var(--dmx-dir, 1))); } to { transform: none; } }
+  @keyframes dmx-drawer-out { from { transform: none; } to { transform: translateX(calc(-100% * var(--dmx-dir, 1))); } }
+  [dir="rtl"] .dmx-drawer-sheet { --dmx-dir: -1; }
+  @media (prefers-reduced-motion: reduce) {
+    .dmx-drawer-sheet[data-state="open"], .dmx-drawer-sheet[data-state="closed"] { animation: none; }
+  }
+
   .kpi-progress {
     @apply h-1.5 rounded-full;
   }
