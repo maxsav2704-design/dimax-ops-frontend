@@ -6,7 +6,7 @@ import { AlertTriangle, CalendarDays, Plus } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DataStateNotice } from "@/components/DataStateNotice";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
-import { CardSkeleton, COMPANY_CURRENCY, FreshnessBadge, KpiTile, TableSkeleton, useEntityHighlight, type KpiThresholds, type KpiTone } from "@/components/dimax";
+import { CardSkeleton, COMPANY_CURRENCY, FreshnessBadge, KpiTile, TableSkeleton, useEntityHighlight, useLastVisitSnapshot, type KpiThresholds, type KpiTone } from "@/components/dimax";
 import { getDashboardCopy } from "@/components/dashboard/copy";
 import { DispatcherBoard, type DispatcherProjectFilter } from "@/components/dashboard/DispatcherBoard";
 import { NextSchedule } from "@/components/dashboard/NextSchedule";
@@ -355,6 +355,20 @@ const Index = () => {
     installerCapacityTotal > 0
       ? Math.round((busyInstallers / installerCapacityTotal) * 100)
       : 0;
+  // E4 "since your last visit": the previous visit's numbers, stored locally, give every count a delta.
+  const activeProjectsCount = dashboard?.limits.projects.current ?? null;
+  const visitValues = useMemo(
+    () => ({
+      activeProjects: activeProjectsCount,
+      openIssues: dispatcherSummary ? openIssues : null,
+      freeInstallers: dispatcherSummary ? availableInstallers : null,
+    }),
+    [activeProjectsCount, dispatcherSummary, openIssues, availableInstallers],
+  );
+  const { previous: lastVisit } = useLastVisitSnapshot("dmx.dashboard.last-visit.v1", visitValues, {
+    ready: !!dashboard && !!dispatcherSummary,
+  });
+  const sinceVisitLabel = pickLocale(locale, "since your last visit", "с прошлого визита", "מאז הביקור הקודם");
   const todayLabel = now.toLocaleDateString(localeCode(locale), {
     weekday: "short",
     day: "numeric",
@@ -383,6 +397,9 @@ const Index = () => {
       pending: dashboardQuery.isPending,
       status: labels.active,
       tone: "neutral",
+      metric: activeProjectsCount,
+      previous: lastVisit.activeProjects ?? null,
+      deltaLabel: sinceVisitLabel,
     },
     {
       label: labels.installed7d,
@@ -408,6 +425,8 @@ const Index = () => {
       metric: openIssues,
       thresholds: { warn: 1, bad: 5 },
       filter: "issues",
+      previous: lastVisit.openIssues ?? null,
+      deltaLabel: sinceVisitLabel,
     },
     {
       label: labels.freeInstallers,
@@ -418,6 +437,8 @@ const Index = () => {
       status: labels.availableNow,
       metric: availableInstallers,
       tone: availableInstallers === 0 ? "bad" : teamUtilization > 85 ? "warn" : "ok",
+      previous: lastVisit.freeInstallers ?? null,
+      deltaLabel: sinceVisitLabel,
     },
     {
       label: copy.kpi.revenue,

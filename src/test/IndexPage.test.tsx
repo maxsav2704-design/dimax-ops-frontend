@@ -378,4 +378,18 @@ describe("Index dashboard", () => {
     expect(within(installedTile).getByTestId("dashboard-kpi-spark")).toBeInTheDocument();
     expect(within(screen.getAllByTestId("dashboard-kpi")[0]).queryByTestId("dashboard-kpi-spark")).not.toBeInTheDocument();
   });
+
+  it("shows what changed since the previous visit on the issue tile (E4)", async () => {
+    storageState.set("dmx.dashboard.last-visit.v1", JSON.stringify({ at: Date.now() - 3_600_000, values: { activeProjects: 0, openIssues: 5, freeInstallers: 0 } }));
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const response = emptyDashboardResponse(path);
+      if ("summary" in response && response.summary) response.summary.open_issues = 2;
+      return response;
+    });
+    renderSubject();
+    await screen.findByText("Needs attention");
+    const issuesTile = screen.getAllByTestId("dashboard-kpi")[2];
+    expect(within(issuesTile).getByTestId("dashboard-kpi-delta")).toHaveTextContent("−3 since your last visit");
+    expect(JSON.parse(storageState.get("dmx.dashboard.last-visit.v1") || "{}").values.openIssues).toBe(2);
+  });
 });
