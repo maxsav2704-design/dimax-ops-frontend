@@ -19,7 +19,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
-import { attentionAttr, attentionLevel, EmptyState, InlineNotice, KpiTile, TableSkeleton } from "@/components/dimax";
+import { attentionAttr, attentionLevel, ConfirmActionDialog, EmptyState, InlineNotice, KpiTile, TableSkeleton } from "@/components/dimax";
 import { useI18n, type Locale, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -246,6 +246,18 @@ function downloadTextFile(filename: string, content: string, mimeType: string): 
   }
 }
 
+// Bulk apply carries only the workflow fields: the selected issue's details
+// and due date are its own and must never be copied onto other issues.
+const BULK_WORKFLOW_FIELDS = ["status", "workflow_state", "priority", "owner_user_id"] as const;
+
+function bulkWorkflowPatch(payload: Record<string, unknown>): Record<string, unknown> {
+  const bulk: Record<string, unknown> = {};
+  for (const key of BULK_WORKFLOW_FIELDS) {
+    if (key in payload) bulk[key] = payload[key];
+  }
+  return bulk;
+}
+
 function buildWorkflowPatch(
   issue: AdminIssue,
   form: WorkflowFormState,
@@ -336,6 +348,7 @@ export default function IssuesPage() {
     string | null
   >(null);
   const [form, setForm] = useState<WorkflowFormState>(emptyForm());
+  const [bulkConfirm, setBulkConfirm] = useState<Record<string, unknown> | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [saveNote, setSaveNote] = useState<string | null>(null);
   const copy = useCopy();
@@ -801,13 +814,13 @@ export default function IssuesPage() {
         skipped > 0
           ? copy(
               `Bulk updated ${result.updated} issues, skipped ${skipped}`,
-              "\u041c\u0430\u0441\u0441\u043e\u0432\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u043e ${result.updated} \u043f\u0440\u043e\u0431\u043b\u0435\u043c, \u043f\u0440\u043e\u043f\u0443\u0449\u0435\u043d\u043e ${skipped}",
-              "\u05e2\u05d5\u05d3\u05db\u05e0\u05d5 ${result.updated} \u05ea\u05e7\u05dc\u05d5\u05ea, \u05d3\u05d5\u05dc\u05d2\u05d5 ${skipped}",
+              `Массово обновлено ${result.updated} проблем, пропущено ${skipped}`,
+              `עודכנו ${result.updated} תקלות, דולגו ${skipped}`,
             )
           : copy(
               `Bulk updated ${result.updated} issues`,
-              "\u041c\u0430\u0441\u0441\u043e\u0432\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u043e ${result.updated} \u043f\u0440\u043e\u0431\u043b\u0435\u043c",
-              "\u05e2\u05d5\u05d3\u05db\u05e0\u05d5 ${result.updated} \u05ea\u05e7\u05dc\u05d5\u05ea",
+              `Массово обновлено ${result.updated} проблем`,
+              `עודכנו ${result.updated} תקלות`,
             ),
       );
       await queryClient.invalidateQueries({ queryKey: ["issues"] });
@@ -829,12 +842,12 @@ export default function IssuesPage() {
     if (!selectedIssue) {
       return;
     }
-    const payload = buildWorkflowPatch(selectedIssue, form);
+    const payload = bulkWorkflowPatch(buildWorkflowPatch(selectedIssue, form));
     if (Object.keys(payload).length === 0) {
       setSaveNote(null);
       setFormError(
         copy(
-          "No changes to apply in bulk",
+          "No status, workflow, priority or owner change to apply in bulk",
           "\u041d\u0435\u0442 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u0439 \u0434\u043b\u044f \u043c\u0430\u0441\u0441\u043e\u0432\u043e\u0433\u043e \u043f\u0440\u0438\u043c\u0435\u043d\u0435\u043d\u0438\u044f",
           "\u05d0\u05d9\u05df \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d4 \u05de\u05e8\u05d5\u05db\u05d6\u05ea",
         ),
@@ -854,8 +867,26 @@ export default function IssuesPage() {
     }
     setFormError(null);
     setSaveNote(null);
-    bulkWorkflowMutation.mutate(payload);
+    setBulkConfirm(payload);
   };
+  const bulkChangeSummary = (payload: Record<string, unknown>) =>
+    Object.entries(payload)
+      .map(([key, value]) => {
+        const label =
+          key === "status"
+            ? copy("status", "статус", "סטטוס")
+            : key === "workflow_state"
+              ? copy("workflow", "этап", "שלב")
+              : key === "priority"
+                ? copy("priority", "приоритет", "עדיפות")
+                : copy("owner", "ответственный", "אחראי");
+        const shown =
+          key === "owner_user_id"
+            ? (value ? ownerNameByUserId.get(String(value)) ?? String(value) : copy("none", "нет", "אין"))
+            : String(value);
+        return `${label}: ${shown}`;
+      })
+      .join(", ");
   return (
     <DashboardLayout>
       <div className="page-shell page-stack-tight motion-stagger">
@@ -1649,6 +1680,30 @@ export default function IssuesPage() {
                       ? tt("issues.applyingBulk")
                       : `${tt("issues.applyToFiltered")} (${visibleIssues.length})`}
                   </button>
+                  <ConfirmActionDialog
+                    open={bulkConfirm !== null}
+                    onOpenChange={(open) => { if (!open) setBulkConfirm(null); }}
+                    testId="issues-bulk-confirm"
+                    tone="danger"
+                    busy={bulkWorkflowMutation.isPending}
+                    title={copy(
+                      `Apply to ${visibleIssues.length} filtered issues`,
+                      `Применить к ${visibleIssues.length} отфильтрованным проблемам`,
+                      `להחיל על ${visibleIssues.length} תקלות מסוננות`,
+                    )}
+                    changes={bulkConfirm ? bulkChangeSummary(bulkConfirm) : null}
+                    keeps={copy(
+                      "Details, due dates and comments of those issues stay as they are.",
+                      "Описание, сроки и комментарии этих проблем не меняются.",
+                      "הפרטים, המועדים וההערות של התקלות נשארים כפי שהם.",
+                    )}
+                    confirmLabel={copy("Apply", "Применить", "החל")}
+                    onConfirm={() => {
+                      const payload = bulkConfirm;
+                      setBulkConfirm(null);
+                      if (payload) bulkWorkflowMutation.mutate(payload);
+                    }}
+                  />
                 </div>
               </div>
             )}

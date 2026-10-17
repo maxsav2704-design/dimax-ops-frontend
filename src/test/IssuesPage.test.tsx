@@ -328,6 +328,65 @@ describe("IssuesPage", () => {
     });
   }, 15000);
 
+  it("bulk apply carries only workflow fields, never details, and asks for confirmation first", async () => {
+    const issueId = "47dc52c8-e2d4-4061-8dc8-05ce3199c06d";
+    const otherId = "9b1b6d4e-8f0a-4a0b-9c3e-5d2f1a7c8e90";
+    const issue = (id: string, title: string) => ({
+      id,
+      company_id: "8ea9b2c0-0848-4997-a5dd-58e5df3787e0",
+      door_id: "1d8816f9-1bcf-4cfd-a111-2596887197a4",
+      project_id: "7fa68e09-d216-4b3c-b5ef-206efe47d457",
+      door_unit_label: "A-101",
+      status: "OPEN",
+      workflow_state: "NEW",
+      priority: "P3",
+      owner_user_id: null,
+      due_at: null,
+      is_overdue: false,
+      title,
+      details: `${title} details`,
+      created_at: "2026-02-20T10:00:00Z",
+      updated_at: "2026-02-22T10:00:00Z",
+    });
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/api/v1/admin/installers")) return [];
+      if (path.includes("/api/v1/admin/issues/workflow/bulk")) {
+        return { updated: 2, missing_issue_ids: [], items: [] };
+      }
+      if (path.includes("/api/v1/admin/issues")) {
+        return { items: [issue(issueId, "Install blocked"), issue(otherId, "Frame damaged")] };
+      }
+      return {};
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <IssuesPage />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByText("Install blocked", {}, { timeout: 5000 }));
+    fireEvent.change(await screen.findByLabelText("Issue workflow state"), { target: { value: "IN_PROGRESS" } });
+    fireEvent.change(screen.getByLabelText("Issue details"), { target: { value: "Only mine" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /Apply to filtered/i }));
+    const dialog = await screen.findByTestId("issues-bulk-confirm");
+    expect(dialog).toHaveTextContent("2 filtered issues");
+    expect(dialog).toHaveTextContent("workflow: IN_PROGRESS");
+    expect(apiFetchMock.mock.calls.some((call) => String(call[0]).includes("/workflow/bulk"))).toBe(false);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Apply" }));
+    await waitFor(() => {
+      const bulkCall = apiFetchMock.mock.calls.find((call) => String(call[0]).includes("/api/v1/admin/issues/workflow/bulk"));
+      expect(bulkCall).toBeTruthy();
+      const body = JSON.parse(String(bulkCall?.[1]?.body));
+      expect(body.issue_ids).toEqual([issueId, otherId]);
+      expect(body.workflow_state).toBe("IN_PROGRESS");
+      expect(body).not.toHaveProperty("details");
+      expect(body).not.toHaveProperty("due_at");
+    });
+    expect(await screen.findByText("Bulk updated 2 issues")).toBeInTheDocument();
+  }, 15000);
+
   it("keeps viewer workflow actions read-only", async () => {
     authSessionMock.mockReturnValue({
       role: "ADMIN",
