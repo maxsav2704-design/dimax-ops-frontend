@@ -1147,7 +1147,7 @@ export function DoorMatrix({
                       </div>
                     </div>
 
-                    <div className="border-b border-border-subtle bg-surface px-4 py-3">
+                    <div className="bg-surface px-4 py-3">
                       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-text-secondary">
                         <span className="font-medium text-text-secondary">
                           {copy("Door matrix", "Матрица дверей", "מטריצת דלתות")}
@@ -1162,432 +1162,77 @@ export function DoorMatrix({
                         </span>
                       </div>
                       {matrixDensity === "rows" ? <DoorRowsHeader /> : null}
-                      <div className={matrixDensity === "rows" ? "dmx-door-rows" : "grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-2"}>
-                        {floorDoors.map(({ apartment, cell, door }) => (
-                          <DoorMatrixTile
-                                key={`${house.house_number}-${floor.floor_label}-${apartment.apartment_number}-${cell.location_code}-${door.door_id}-tile`}
-                                marking={matrixDoorTileLabel(door)}
-                                status={tokenLabel(door.status)}
-                                tone={matrixDoorTileTone(door)}
-                                focused={focusedDoorId === door.door_id}
-                                selected={selectedDoorIdSet.has(door.door_id)}
-                                hasIssues={door.issue_count > 0}
-                                inspectLabel={copy(
-                                  "Inspect door {door}",
-                                  "Открыть дверь {door}",
-                                  "פתח דלת {door}",
-                                ).replace(
-                                  "{door}",
-                                  door.door_marking,
-                                )}
-                                context={`${apartment.apartment_number} · ${locationLabel(
-                                  cell.location_code,
-                                )}`}
-                                onInspect={() =>
-                                  setFocusedDoorId(door.door_id)
-                                }
-                                onToggleSelection={() =>
-                                  toggleDoorSelection(door.door_id)
-                                }
-                                floorKey={`${house.house_number}-${floor.floor_label}`}
-                                fillStep={floorIndex}
-                                onKeyDown={handleMatrixKeyDown}
-                                density={matrixDensity}
-                                model={door.door_type_label}
-                                state={matrixDoorState(door)}
-                          />
+                      {/* One list per floor, grouped by apartment: the group line carries the
+                          apartment facts (orders, counts, blockers), the doors below it use the
+                          same rows / cards as everywhere else. Replaces the apartment × location
+                          table and the mobile cards that duplicated the same doors (2026-10-17). */}
+                      <div className="space-y-3">
+                        {floor.apartments.map((apartment) => (
+                          <section
+                            key={`${house.house_number}-${floor.floor_label}-${apartment.apartment_number}-group`}
+                            data-testid={`project-matrix-apartment-${house.house_number}-${floor.floor_label}-${apartment.apartment_number}`}
+                            aria-label={`${copy("Apartment", "Квартира", "דירה")} ${apartment.apartment_number}`}
+                          >
+                            <div className="dmx-door-group" data-tone={apartment.issue_count > 0 ? "problem" : "neutral"}>
+                              <span className="dmx-door-group-pill" title={copy("Apartment", "Квартира", "דירה")}>
+                                <LtrText as="span">{apartment.apartment_number}</LtrText>
+                              </span>
+                              {apartment.order_numbers.map((orderNumber) => (
+                                <span
+                                  key={`${house.house_number}-${floor.floor_label}-${apartment.apartment_number}-${orderNumber}`}
+                                  className="dmx-door-group-order"
+                                  title={copy("Order", "Заказ", "הזמנה")}
+                                >
+                                  <LtrText as="span">{orderNumber}</LtrText>
+                                </span>
+                              ))}
+                              <span className="dmx-door-group-facts">
+                                {t("projects.doorsCount").replace("{count}", String(apartment.total_doors))}
+                                {" · "}
+                                {t("projects.installedShort").replace("{count}", String(apartment.installed_count))}
+                                {" · "}
+                                {t("projects.openShort").replace("{count}", String(apartment.open_count))}
+                              </span>
+                              {apartment.issue_count > 0 ? (
+                                <span className="dmx-door-group-blockers">
+                                  {t("projects.blockerCount")
+                                    .replace("{count}", String(apartment.issue_count))
+                                    .replace("{suffix}", apartment.issue_count > 1 ? "s" : "")}
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className={matrixDensity === "rows" ? "dmx-door-rows" : "grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-2"}>
+                              {apartment.cells.flatMap((cell) =>
+                                cell.doors.map((door) => (
+                                  <DoorMatrixTile
+                                    key={`${house.house_number}-${floor.floor_label}-${apartment.apartment_number}-${cell.location_code}-${door.door_id}-tile`}
+                                    marking={matrixDoorTileLabel(door)}
+                                    status={tokenLabel(door.status)}
+                                    tone={matrixDoorTileTone(door)}
+                                    focused={focusedDoorId === door.door_id}
+                                    selected={selectedDoorIdSet.has(door.door_id)}
+                                    hasIssues={door.issue_count > 0}
+                                    inspectLabel={copy(
+                                      "Inspect door {door}",
+                                      "Открыть дверь {door}",
+                                      "פתח דלת {door}",
+                                    ).replace("{door}", door.door_marking)}
+                                    context={`${apartment.apartment_number} · ${locationLabel(cell.location_code)}`}
+                                    onInspect={() => setFocusedDoorId(door.door_id)}
+                                    onToggleSelection={() => toggleDoorSelection(door.door_id)}
+                                    floorKey={`${house.house_number}-${floor.floor_label}`}
+                                    fillStep={floorIndex}
+                                    onKeyDown={handleMatrixKeyDown}
+                                    density={matrixDensity}
+                                    model={door.door_type_label}
+                                    state={matrixDoorState(door)}
+                                  />
+                                )),
+                              )}
+                            </div>
+                          </section>
                         ))}
                       </div>
-                    </div>
-
-                    <div className="space-y-3 p-3 md:hidden">
-                      {floor.apartments.map((apartment) => (
-                        <article
-                          key={`${house.house_number}-${floor.floor_label}-${apartment.apartment_number}-mobile`}
-                          className="rounded-lg border border-border bg-surface px-3 py-3"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className={projectsMetricLabelClass}>
-                                {copy("Apartment", "Квартира", "דירה")}
-                              </div>
-                              <div className="mt-1 text-[14px] font-semibold text-text">
-                                <LtrText>
-                                  {apartment.apartment_number}
-                                </LtrText>
-                              </div>
-                            </div>
-                            <div className="shrink-0 text-end">
-                              <div className={projectsMetricLabelClass}>
-                                {t("projects.doors")}
-                              </div>
-                              <div className="mt-1 text-[17px] font-medium leading-tight text-text tabular-nums">
-                                {apartment.total_doors}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="mt-3 flex flex-wrap gap-1.5">
-                            {apartment.order_numbers.map(
-                              (orderNumber) => (
-                                <span
-                                  key={`${house.house_number}-${floor.floor_label}-${apartment.apartment_number}-mobile-${orderNumber}`}
-                                  className="rounded-full border border-border bg-surface-subtle px-2.5 py-1 text-[11px] text-text"
-                                >
-                                  <LtrText>{orderNumber}</LtrText>
-                                </span>
-                              ),
-                            )}
-                          </div>
-
-                          <div className="mt-3 space-y-2">
-                            {apartment.cells.map((cell) =>
-                              cell.doors.map((door) => (
-                                <button
-                                  key={`${apartment.apartment_number}-${door.door_id}-mobile`}
-                                  type="button"
-                                  data-testid={`project-matrix-mobile-door-card-${door.door_id}`}
-                                  aria-label={copy(
-                                    "Open door detail {door}",
-                                    "Открыть карточку двери {door}",
-                                    "פתח כרטיס דלת {door}",
-                                  ).replace(
-                                    "{door}",
-                                    door.door_marking,
-                                  )}
-                                  onClick={() =>
-                                    setFocusedDoorId(door.door_id)
-                                  }
-                                  className={cn(
-                                    "w-full rounded-lg border px-2.5 py-2 text-start transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35",
-                                    door.issue_count > 0
-                                      ? "border-status-problem-border bg-status-problem-bg"
-                                      : "border-border bg-surface-subtle",
-                                  )}
-                                >
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="min-w-0">
-                                      <div className="truncate text-[12px] font-semibold text-text">
-                                        <LtrText>
-                                          {door.door_marking}
-                                        </LtrText>
-                                      </div>
-                                      <div className="mt-0.5 truncate text-[11px] text-text-secondary">
-                                        <LtrText>
-                                          {door.unit_label}
-                                        </LtrText>
-                                      </div>
-                                    </div>
-                                    <StatusBadge
-                                      status={door.status}
-                                      label={tokenLabel(
-                                        door.status,
-                                      )}
-                                      domain="door"
-                                    />
-                                  </div>
-                                  <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10.5px] text-text-secondary">
-                                    <span>
-                                      {locationLabel(
-                                        cell.location_code,
-                                      )}
-                                    </span>
-                                    <span>
-                                      {door.door_type_label}
-                                    </span>
-                                    <span>
-                                      {door.installer_id
-                                        ? t("projects.assigned")
-                                        : t("projects.unassigned")}
-                                    </span>
-                                  </div>
-                                  {door.issue_count > 0 ? (
-                                    <div className="mt-2 line-clamp-2 break-words text-[11px] text-status-problem-fg">
-                                      {door.issue_titles[0] ||
-                                        t("projects.openBlocker")}
-                                      {door.issue_count > 1
-                                        ? ` (+${door.issue_count - 1})`
-                                        : ""}
-                                    </div>
-                                  ) : null}
-                                </button>
-                              )),
-                            )}
-                          </div>
-
-                          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
-                              <div className={projectsMetricLabelClass}>
-                                {t("installerProject.installed")}
-                              </div>
-                              <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
-                                {apartment.installed_count}
-                              </div>
-                            </div>
-                            <div className="rounded-lg border border-border bg-surface-subtle px-2.5 py-2">
-                              <div className={projectsMetricLabelClass}>
-                                {t("common.open")}
-                              </div>
-                              <div className="mt-1 text-[13px] font-medium text-text tabular-nums">
-                                {apartment.open_count}
-                              </div>
-                            </div>
-                            <div
-                              className={cn(
-                                "rounded-lg border px-2.5 py-2",
-                                apartment.issue_count > 0
-                                  ? "border-status-problem-border bg-status-problem-bg"
-                                  : "border-border bg-surface-subtle",
-                              )}
-                            >
-                              <div className={projectsMetricLabelClass}>
-                                {t("projects.blockers")}
-                              </div>
-                              <div
-                                className={cn(
-                                  "mt-1 text-[13px] font-medium tabular-nums",
-                                  apartment.issue_count > 0
-                                    ? "text-status-problem-fg"
-                                    : "text-text",
-                                )}
-                              >
-                                {apartment.issue_count}
-                              </div>
-                            </div>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-
-                    <div className="hidden overflow-auto md:block">
-                      <table className="w-full min-w-[920px] border-separate border-spacing-0 text-[12px]">
-                        <thead className="bg-surface-subtle text-text-secondary">
-                          <tr>
-                            <th className="px-3 py-2 text-start font-medium">
-                              {copy("Apartment", "Квартира", "דירה")}
-                            </th>
-                            <th className="px-3 py-2 text-start font-medium">
-                              {copy("Order", "Заказ", "הזמנה")}
-                            </th>
-                            {floor.location_codes.map(
-                              (locationCode) => (
-                                <th
-                                  key={`${house.house_number}-${floor.floor_label}-${locationCode}`}
-                                  className="px-3 py-2 text-start font-medium"
-                                >
-                                  {locationLabel(locationCode)}
-                                </th>
-                              ),
-                            )}
-                            <th className="px-3 py-2 text-start font-medium">
-                              {t("projects.statusMix")}
-                            </th>
-                            <th className="px-3 py-2 text-start font-medium">
-                              {t("projects.blockers")}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {floor.apartments.map((apartment) => (
-                            <tr
-                              key={`${house.house_number}-${floor.floor_label}-${apartment.apartment_number}`}
-                              className={cn(
-                                "align-top transition-colors hover:bg-surface-subtle",
-                                apartment.issue_count > 0 &&
-                                  "bg-status-problem-bg",
-                              )}
-                            >
-                              <td className="px-3 py-3">
-                                <div className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-full bg-surface-sunken px-2 text-[12px] font-semibold text-text tabular-nums">
-                                  <LtrText as="span">
-                                    {apartment.apartment_number}
-                                  </LtrText>
-                                </div>
-                                <div className="text-[11px] text-text-secondary mt-1">
-                                  {t("projects.doorsCount").replace(
-                                    "{count}",
-                                    String(apartment.total_doors),
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-3 py-3">
-                                <div className="flex flex-wrap gap-1.5">
-                                  {apartment.order_numbers.map(
-                                    (orderNumber) => (
-                                      <span
-                                        key={`${house.house_number}-${floor.floor_label}-${apartment.apartment_number}-${orderNumber}`}
-                                        className="rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] text-text"
-                                      >
-                                        <LtrText>
-                                          {orderNumber}
-                                        </LtrText>
-                                      </span>
-                                    ),
-                                  )}
-                                </div>
-                              </td>
-                              {floor.location_codes.map(
-                                (locationCode) => {
-                                  const cell =
-                                    apartment.cells.find(
-                                      (item) =>
-                                        item.location_code ===
-                                        locationCode,
-                                    ) || null;
-                                  return (
-                                    <td
-                                      key={`${house.house_number}-${floor.floor_label}-${apartment.apartment_number}-${locationCode}`}
-                                      className="px-3 py-3 min-w-[220px]"
-                                    >
-                                      {!cell ? (
-                                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface-sunken text-[12px] text-text-tertiary">
-                                          -
-                                        </span>
-                                      ) : (
-                                        <div className="space-y-2">
-                                          {cell.doors.map(
-                                            (door) => (
-                                              <button
-                                                key={door.door_id}
-                                                type="button"
-                                                data-testid={`project-matrix-door-card-${door.door_id}`}
-                                                aria-label={copy(
-                                                  "Open door detail {door}",
-                                                  "Открыть карточку двери {door}",
-                                                  "פתח כרטיס דלת {door}",
-                                                ).replace(
-                                                  "{door}",
-                                                  door.door_marking,
-                                                )}
-                                                onClick={() =>
-                                                  setFocusedDoorId(
-                                                    door.door_id,
-                                                  )
-                                                }
-                                                className={cn(
-                                                  "w-full min-w-0 rounded-lg border px-2.5 py-2 text-start transition-colors hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35",
-                                                  door.issue_count >
-                                                    0
-                                                    ? "border-status-problem-border bg-status-problem-bg"
-                                                    : "border-border bg-surface",
-                                                )}
-                                              >
-                                                <div className="flex items-start justify-between gap-2">
-                                                  <div className="min-w-0">
-                                                    <div className="truncate font-medium text-text">
-                                                      <LtrText>
-                                                        {
-                                                          door.door_marking
-                                                        }
-                                                      </LtrText>
-                                                    </div>
-                                                    <div className="truncate text-[11px] text-text-secondary">
-                                                      <LtrText>
-                                                        {
-                                                          door.unit_label
-                                                        }
-                                                      </LtrText>
-                                                    </div>
-                                                  </div>
-                                                  <StatusBadge
-                                                    status={
-                                                      door.status
-                                                    }
-                                                    label={tokenLabel(
-                                                      door.status,
-                                                    )}
-                                                    domain="door"
-                                                    className="shrink-0"
-                                                  />
-                                                </div>
-                                                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-text-secondary">
-                                                  <span>
-                                                    {
-                                                      door.door_type_label
-                                                    }
-                                                  </span>
-                                                  <span>
-                                                    {door.installer_id
-                                                      ? t(
-                                                          "projects.assigned",
-                                                        )
-                                                      : t(
-                                                          "projects.unassigned",
-                                                        )}
-                                                  </span>
-                                                </div>
-                                                {door.issue_count >
-                                                0 ? (
-                                                  <div className="mt-1 line-clamp-2 break-words text-[10px] text-status-problem-fg">
-                                                    {door
-                                                      .issue_titles[0] ||
-                                                      t(
-                                                        "projects.openBlocker",
-                                                      )}
-                                                    {door.issue_count >
-                                                    1
-                                                      ? ` (+${door.issue_count - 1})`
-                                                    : ""}
-                                                  </div>
-                                                ) : null}
-                                              </button>
-                                            ),
-                                          )}
-                                        </div>
-                                      )}
-                                    </td>
-                                  );
-                                },
-                              )}
-                              <td className="px-3 py-3">
-                                <div className="flex flex-wrap gap-1.5">
-                                  <span className="rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] text-text">
-                                    {t(
-                                      "projects.installedShort",
-                                    ).replace(
-                                      "{count}",
-                                      String(
-                                        apartment.installed_count,
-                                      ),
-                                    )}
-                                  </span>
-                                  <span className="rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] text-text">
-                                    {t(
-                                      "projects.openShort",
-                                    ).replace(
-                                      "{count}",
-                                      String(apartment.open_count),
-                                    )}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-3 py-3">
-                                {apartment.issue_count > 0 ? (
-                                  <span className="rounded-full border border-status-problem-border bg-status-problem-bg px-2.5 py-1 text-[11px] text-status-problem-fg">
-                                    {t("projects.blockerCount")
-                                      .replace(
-                                        "{count}",
-                                        String(
-                                          apartment.issue_count,
-                                        ),
-                                      )
-                                      .replace(
-                                        "{suffix}",
-                                        apartment.issue_count > 1
-                                          ? "s"
-                                          : "",
-                                      )}
-                                  </span>
-                                ) : (
-                                  <span className="text-text-secondary">
-                                    {t("projects.noBlockers")}
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
                     </div>
                   </article>
                   );

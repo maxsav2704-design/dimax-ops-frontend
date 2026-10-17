@@ -4426,6 +4426,11 @@ describe("ProjectsPage", () => {
     expect(screen.getByTestId("project-detail-v28-door-tile-door-1").parentElement).toHaveAttribute("data-density", "rows");
     expect(window.localStorage.getItem("dmx.projects.matrix.density")).toBe("rows");
     fireEvent.click(screen.getByRole("button", { name: "Cards" }));
+    // Doors are grouped by apartment inside the floor: one group line, the doors below it.
+    const groups = screen.getAllByTestId(/^project-matrix-apartment-/);
+    expect(groups.length).toBeGreaterThan(0);
+    expect(groups[0].querySelector(".dmx-door-group-pill")).not.toBeNull();
+    expect(groups[0].querySelector("[data-matrix-tile]")).not.toBeNull();
 
     const bar = screen.getByTestId("project-condensed-bar");
     expect(bar).toHaveAttribute("data-on", "false");

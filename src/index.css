@@ -636,6 +636,13 @@
   .dmx-door-row[data-focused="true"] .dmx-door-row-face { border-color: var(--dmx-link); box-shadow: inset 0 0 0 1px var(--dmx-link); }
   .dmx-door-row[data-selected="true"] .dmx-door-row-face { border-color: var(--dmx-text); background: var(--dmx-bg-surface-subtle); }
   .dmx-door-tile.dmx-door-row:hover { transform: none; box-shadow: none; }
+  /* Apartment group line above its doors: number pill, order pills, counts, blockers. */
+  .dmx-door-group { @apply mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1; }
+  .dmx-door-group-pill { @apply inline-flex h-7 min-w-[28px] items-center justify-center rounded-full bg-surface-sunken px-2 text-12 font-semibold tabular-nums text-text; }
+  .dmx-door-group[data-tone="problem"] .dmx-door-group-pill { background: var(--dmx-status-problem-bg); color: var(--dmx-status-problem-fg); }
+  .dmx-door-group-order { @apply inline-flex min-h-6 items-center rounded-full border border-border bg-surface px-2 text-11 text-text; }
+  .dmx-door-group-facts { @apply text-11 text-text-secondary; }
+  .dmx-door-group-blockers { @apply inline-flex min-h-6 items-center rounded-full border px-2 text-11 font-medium; border-color: var(--dmx-status-problem-border); background: var(--dmx-status-problem-bg); color: var(--dmx-status-problem-fg); }
   @media (max-width: 640px) {
     .dmx-door-rows-head, .dmx-door-row-face { grid-template-columns: 14px minmax(0, 1fr) minmax(72px, auto); }
     .dmx-door-rows-head > span:nth-child(3), .dmx-door-rows-head > span:nth-child(4),
