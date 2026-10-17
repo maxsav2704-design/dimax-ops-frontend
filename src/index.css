@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Rubik:wght@400;500;600;700&display=swap");
+/* Fonts are self-hosted through next/font (app/layout.tsx) and exposed as --font-rubik / --font-mono. */
 
 @tailwind base;
 @tailwind components;
@@ -291,7 +291,7 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     min-height: 100vh;
-    font-family: "Rubik", "Noto Sans Hebrew", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font-rubik), "Rubik", "Noto Sans Hebrew", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     text-rendering: optimizeLegibility;
     font-feature-settings: "liga" 1, "kern" 1, "tnum" 1;
     background: var(--dmx-bg-canvas);
@@ -334,7 +334,7 @@
   h3,
   h4,
   [data-display="true"] {
-    font-family: "Rubik", "Noto Sans Hebrew", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font-rubik), "Rubik", "Noto Sans Hebrew", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     letter-spacing: 0;
     /* 1.08 clipped Cyrillic and Hebrew ascenders on wrapped titles. */
     line-height: 1.2;
@@ -1143,7 +1143,7 @@
   .login-suite-value {
     margin-block-start: 0.25rem;
     color: hsl(var(--dimax-ink));
-    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+    font-family: var(--font-mono), "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
     font-size: 0.875rem;
     font-weight: 600;
     line-height: 1;
@@ -1209,7 +1209,7 @@
   }
 
   .login-input-mono {
-    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+    font-family: var(--font-mono), "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
   }
 
   .login-password-input {

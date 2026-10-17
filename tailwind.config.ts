@@ -15,9 +15,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['"Rubik"', '"Noto Sans Hebrew"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
-        display: ['"Rubik"', '"Noto Sans Hebrew"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
-        mono: ['"JetBrains Mono"', '"SFMono-Regular"', 'Consolas', 'monospace'],
+        sans: ['var(--font-rubik)', '"Rubik"', '"Noto Sans Hebrew"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+        display: ['var(--font-rubik)', '"Rubik"', '"Noto Sans Hebrew"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+        mono: ['var(--font-mono)', '"JetBrains Mono"', '"SFMono-Regular"', 'Consolas', 'monospace'],
       },
       fontSize: {
         "11": ["var(--dmx-text-11)", { lineHeight: "1.5" }],

@@ -1,10 +1,26 @@
 import type { Metadata } from "next";
+import { JetBrains_Mono, Rubik } from "next/font/google";
 import { headers } from "next/headers";
 import Script from "next/script";
 import type { ReactNode } from "react";
 import { AppProviders } from "@/components/AppProviders";
 import { getDocumentLocaleBootstrapScript } from "@/lib/locale";
 import "./globals.css";
+
+// Self-hosted through next/font: no render-blocking Google Fonts stylesheet, the
+// faces are served from this origin and exposed as CSS variables for Tailwind.
+const rubik = Rubik({
+  subsets: ["latin", "cyrillic", "hebrew"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-rubik",
+});
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -23,7 +39,7 @@ export default async function RootLayout({
   // (no static prerender), which a per-request CSP nonce requires anyway.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
-    <html lang="en" dir="ltr" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html lang="en" dir="ltr" data-scroll-behavior="smooth" suppressHydrationWarning className={`${rubik.variable} ${jetBrainsMono.variable}`}>
       <head />
       <body>
         {/* Browsers hide the nonce attribute from the DOM after parsing, so the
