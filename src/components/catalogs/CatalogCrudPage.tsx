@@ -86,7 +86,7 @@ function formatDateTime(value: string): string {
 }
 function catalogNoticeClass(tone: "success" | "error"): string {
   return cn(
-    "flex rounded-lg border px-4 py-3 text-[13px]",
+    "flex rounded-lg border px-4 py-3 text-13",
     tone === "success" &&
       "items-center gap-2 border-status-ok-border bg-status-ok-bg text-status-ok-fg",
     tone === "error" &&
@@ -95,7 +95,7 @@ function catalogNoticeClass(tone: "success" | "error"): string {
 }
 function catalogStatusClass(active: boolean): string {
   return cn(
-    "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase ",
+    "inline-flex items-center rounded-full border px-2.5 py-1 text-11 font-semibold uppercase ",
     active
       ? "border-status-ok-border bg-status-ok-bg text-status-ok-fg"
       : "border-status-blocked-border bg-status-blocked-bg text-status-blocked-fg",
@@ -374,7 +374,7 @@ export function CatalogCrudPage({
               <div>
                 {" "}
                 <div className={catalogMetricLabelClass()}>{copy("Business role", "Назначение", "תפקיד")}</div>{" "}
-                <p className="mt-1 text-[13px] leading-6 text-text-secondary">
+                <p className="mt-1 text-13 leading-6 text-text-secondary">
                   {purpose}
                 </p>{" "}
               </div>{" "}
@@ -531,7 +531,7 @@ export function CatalogCrudPage({
                 {copy("Review visible rows, adjust status in one pass, and keep imports disciplined.", "Просматривайте видимые строки, корректируйте статус за один проход и следите за дисциплиной импорта.", "סקור שורות גלויות, התאם סטטוס במעבר אחד ושמור על משמעת ביבוא.")}{" "}
               </div>{" "}
             </div>{" "}
-            <div className="text-[12px] leading-6 text-text-secondary">
+            <div className="text-12 leading-6 text-text-secondary">
               {copy("Selected:", "Выбрано:", "נבחר:")} {selectedCount}
             </div>{" "}
           </div>{" "}
@@ -566,7 +566,7 @@ export function CatalogCrudPage({
             </button>{" "}
             <button
               type="button"
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-status-problem-border bg-status-problem-bg px-3.5 text-[12px] font-medium leading-none text-status-problem-fg transition-colors duration-150 hover:bg-status-problem-bg disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-status-problem-border bg-status-problem-bg px-3.5 text-12 font-medium leading-none text-status-problem-fg transition-colors duration-150 hover:bg-status-problem-bg disabled:cursor-not-allowed disabled:opacity-60"
               disabled={!canManageCatalog || selectedCount === 0 || bulkMutation.isPending}
               onClick={() => bulkMutation.mutate("delete")}
             >
@@ -653,10 +653,10 @@ export function CatalogCrudPage({
                     </label>{" "}
                     <div className="min-w-0 flex-1">
                       {" "}
-                      <div className="truncate text-[13px] font-semibold text-text">
+                      <div className="truncate text-13 font-semibold text-text">
                         {item.code}
                       </div>{" "}
-                      <div className="mt-1 line-clamp-2 text-[12px] leading-5 text-text-secondary">
+                      <div className="mt-1 line-clamp-2 text-12 leading-5 text-text-secondary">
                         {" "}
                         {item.name}{" "}
                       </div>{" "}
@@ -668,7 +668,7 @@ export function CatalogCrudPage({
                         : copy("Inactive", "Неактивен", "לא פעיל")}{" "}
                     </span>{" "}
                   </div>{" "}
-                  <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-[12px] leading-5 text-text-secondary">
+                  <div className="mt-3 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-12 leading-5 text-text-secondary">
                     {" "}
                     {copy("Updated:", "Обновлено:", "עודכן:")} {formatDateTime(item.updated_at)}{" "}
                   </div>{" "}
@@ -687,7 +687,7 @@ export function CatalogCrudPage({
                     <button
                       type="button"
                       onClick={() => deleteMutation.mutate(item.id)}
-                      className="inline-flex h-8 items-center justify-center gap-2 rounded-full border border-status-problem-border bg-status-problem-bg px-2.5 text-[12px] font-medium leading-none text-status-problem-fg transition-colors duration-150 hover:bg-status-problem-bg disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex h-8 items-center justify-center gap-2 rounded-full border border-status-problem-border bg-status-problem-bg px-2.5 text-12 font-medium leading-none text-status-problem-fg transition-colors duration-150 hover:bg-status-problem-bg disabled:cursor-not-allowed disabled:opacity-60"
                       disabled={!canManageCatalog || deleteMutation.isPending}
                       aria-label={copy(`Delete ${item.code} card`, `Удалить ${item.code}`, `מחיקת ${item.code}`)}
                     >
@@ -778,7 +778,7 @@ export function CatalogCrudPage({
                           <button
                             type="button"
                             onClick={() => deleteMutation.mutate(item.id)}
-                            className="inline-flex h-8 items-center justify-center gap-2 rounded-full border border-status-problem-border bg-status-problem-bg px-2.5 text-[12px] font-medium leading-none text-status-problem-fg transition-colors duration-150 hover:bg-status-problem-bg disabled:cursor-not-allowed disabled:opacity-60"
+                            className="inline-flex h-8 items-center justify-center gap-2 rounded-full border border-status-problem-border bg-status-problem-bg px-2.5 text-12 font-medium leading-none text-status-problem-fg transition-colors duration-150 hover:bg-status-problem-bg disabled:cursor-not-allowed disabled:opacity-60"
                             disabled={!canManageCatalog || deleteMutation.isPending}
                             aria-label={copy(`Delete ${item.code}`, `Удалить ${item.code}`, `מחיקת ${item.code}`)}
                           >

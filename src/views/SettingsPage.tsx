@@ -91,7 +91,7 @@ function BoolBadge({ value, locale }: { value: boolean; locale?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold border",
+        "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-11 font-semibold border",
         value
           ? "border-status-ok-border bg-status-ok-bg text-status-ok-fg"
           : "border-status-blocked-border bg-status-blocked-bg text-status-blocked-fg",
@@ -385,7 +385,7 @@ export default function SettingsPage() {
         )}{" "}
         {feedback && <InlineNotice tone={feedback.tone}>{feedback.message}</InlineNotice>}{" "}
         {isLoading && (
-          <div className="rounded-lg border border-border bg-surface p-4 text-[13px] text-text-secondary">
+          <div className="rounded-lg border border-border bg-surface p-4 text-13 text-text-secondary">
             {" "}
             {copy(
               "Loading settings...",
@@ -426,12 +426,12 @@ export default function SettingsPage() {
                 </div>{" "}
                 <div className="surface-subtle flex min-h-[220px] flex-col px-3 py-3">
                   {" "}
-                  <div className="flex items-center justify-between text-[12px] leading-6 text-text-secondary">
+                  <div className="flex items-center justify-between text-12 leading-6 text-text-secondary">
                     {" "}
                     <span>{copy("Status", "Статус", "סטטוס")}</span>{" "}
                     <BoolBadge value={company.is_active} locale={locale} />{" "}
                   </div>{" "}
-                  <div className="mt-3 grid gap-1 text-[12px] leading-6 text-text-secondary">
+                  <div className="mt-3 grid gap-1 text-12 leading-6 text-text-secondary">
                     {" "}
                     <div>
                       {copy("Created", "Создано", "נוצר")}:{" "}
@@ -479,14 +479,14 @@ export default function SettingsPage() {
                 {" "}
                 <div className="surface-subtle px-3 py-3">
                   {" "}
-                  <p className="mb-3 text-[11px] font-medium uppercase text-text-secondary">
+                  <p className="mb-3 text-11 font-medium uppercase text-text-secondary">
                     {copy("Email / SMTP", "Эл. почта / SMTP", "דוא״ל / SMTP")}
                   </p>{" "}
                   <div className="space-y-2">
                     {" "}
                     <div className="flex items-center gap-2">
                       {" "}
-                      <span className="text-[12px] leading-6 text-text-secondary">
+                      <span className="text-12 leading-6 text-text-secondary">
                         {" "}
                         {copy(
                           "SMTP configured",
@@ -501,7 +501,7 @@ export default function SettingsPage() {
                     </div>{" "}
                     <div className="flex items-center gap-2">
                       {" "}
-                      <span className="text-[12px] leading-6 text-text-secondary">
+                      <span className="text-12 leading-6 text-text-secondary">
                         {" "}
                         {copy(
                           "Email enabled",
@@ -516,7 +516,7 @@ export default function SettingsPage() {
                     </div>{" "}
                     <div className="flex items-center gap-2">
                       {" "}
-                      <span className="text-[12px] leading-6 text-text-secondary">
+                      <span className="text-12 leading-6 text-text-secondary">
                         {" "}
                         {copy(
                           "Channel ready",
@@ -530,7 +530,7 @@ export default function SettingsPage() {
                       />{" "}
                     </div>{" "}
                   </div>{" "}
-                  <div className="mt-auto pt-3 space-y-1 text-[12px] leading-6 text-text-secondary">
+                  <div className="mt-auto pt-3 space-y-1 text-12 leading-6 text-text-secondary">
                     {" "}
                     <div>
                       {" "}
@@ -544,7 +544,7 @@ export default function SettingsPage() {
                 </div>{" "}
                 <div className="surface-subtle flex min-h-[220px] flex-col px-3 py-3">
                   {" "}
-                  <p className="mb-3 text-[11px] font-medium uppercase text-text-secondary">
+                  <p className="mb-3 text-11 font-medium uppercase text-text-secondary">
                     {copy(
                       "WhatsApp / Twilio",
                       "WhatsApp/Твилио",
@@ -555,7 +555,7 @@ export default function SettingsPage() {
                     {" "}
                     <div className="flex items-center gap-2">
                       {" "}
-                      <span className="text-[12px] leading-6 text-text-secondary">
+                      <span className="text-12 leading-6 text-text-secondary">
                         {" "}
                         {copy(
                           "Twilio configured",
@@ -570,7 +570,7 @@ export default function SettingsPage() {
                     </div>{" "}
                     <div className="flex items-center gap-2">
                       {" "}
-                      <span className="text-[12px] leading-6 text-text-secondary">
+                      <span className="text-12 leading-6 text-text-secondary">
                         {" "}
                         {copy(
                           "WhatsApp enabled",
@@ -585,7 +585,7 @@ export default function SettingsPage() {
                     </div>{" "}
                     <div className="flex items-center gap-2">
                       {" "}
-                      <span className="text-[12px] leading-6 text-text-secondary">
+                      <span className="text-12 leading-6 text-text-secondary">
                         {" "}
                         {copy(
                           "Fallback to email",
@@ -600,7 +600,7 @@ export default function SettingsPage() {
                     </div>{" "}
                     <div className="flex items-center gap-2">
                       {" "}
-                      <span className="text-[12px] leading-6 text-text-secondary">
+                      <span className="text-12 leading-6 text-text-secondary">
                         {" "}
                         {copy(
                           "Channel ready",
@@ -614,7 +614,7 @@ export default function SettingsPage() {
                       />{" "}
                     </div>{" "}
                   </div>{" "}
-                  <div className="mt-auto pt-3 space-y-1 text-[12px] leading-6 text-text-secondary">
+                  <div className="mt-auto pt-3 space-y-1 text-12 leading-6 text-text-secondary">
                     {" "}
                     <div>
                       {" "}
@@ -640,14 +640,14 @@ export default function SettingsPage() {
                 </div>{" "}
                 <div className="surface-subtle min-h-[220px] px-3 py-3">
                   {" "}
-                  <p className="mb-3 text-[11px] font-medium uppercase text-text-secondary">
+                  <p className="mb-3 text-11 font-medium uppercase text-text-secondary">
                     {copy(
                       "Storage / Links",
                       "Хранилище / ссылки",
                       "אחסון / קישורים",
                     )}
                   </p>{" "}
-                  <div className="space-y-2 text-[12px] leading-6 text-text-secondary">
+                  <div className="space-y-2 text-12 leading-6 text-text-secondary">
                     {" "}
                     <div className="flex items-center gap-2">
                       {" "}
@@ -685,14 +685,14 @@ export default function SettingsPage() {
                 </div>{" "}
                 <div className="surface-subtle min-h-[220px] px-3 py-3">
                   {" "}
-                  <p className="mb-3 text-[11px] font-medium uppercase text-text-secondary">
+                  <p className="mb-3 text-11 font-medium uppercase text-text-secondary">
                     {copy(
                       "Limits / Sync / Auth",
                       "Лимиты / синхронизация / авторизация",
                       "מגבלות / סנכרון / הרשאה",
                     )}
                   </p>{" "}
-                  <div className="space-y-1 text-[12px] leading-6 text-text-secondary">
+                  <div className="space-y-1 text-12 leading-6 text-text-secondary">
                     {" "}
                     <div>
                       {copy(
@@ -758,7 +758,7 @@ export default function SettingsPage() {
                   {" "}
                   <div className="flex min-h-[184px] flex-col rounded-lg border border-border bg-surface px-3 py-3">
                     {" "}
-                    <div className="mb-3 text-[11px] font-medium uppercase text-text-secondary">
+                    <div className="mb-3 text-11 font-medium uppercase text-text-secondary">
                       {copy("Email test", "Проверка эл. почты", "בדיקת אימייל")}
                     </div>{" "}
                     <input
@@ -791,7 +791,7 @@ export default function SettingsPage() {
                   </div>{" "}
                   <div className="flex min-h-[184px] flex-col rounded-lg border border-border bg-surface px-3 py-3">
                     {" "}
-                    <div className="mb-3 text-[11px] font-medium uppercase text-text-secondary">
+                    <div className="mb-3 text-11 font-medium uppercase text-text-secondary">
                       {copy("WhatsApp test", "Тест WhatsApp", "בדיקת WhatsApp")}
                     </div>{" "}
                     <input
