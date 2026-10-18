@@ -1326,21 +1326,21 @@ export default function ReportsPage() {
       variant: marginLeakageValue == null ? "bars" : marginLeakageValue !== 0 ? "line-down" : "line-up",
     },
     {
-      eyebrow: "Risk concentration watch",
-      title: "Backlog and profit risk by project",
+      eyebrow: copy("Risk concentration watch", "Концентрация рисков", "ריכוז סיכונים"),
+      title: copy("Backlog and profit risk by project", "Отставание и риск прибыли по объектам", "פיגור וסיכון לרווח לפי פרויקט"),
       value: canExportFinancialReports
-        ? `${formatCount(riskConcentration?.summary?.risky_projects)} projects`
-        : "Restricted",
+        ? `${formatCount(riskConcentration?.summary?.risky_projects)} ${copy("projects", "объектов", "פרויקטים")}`
+        : copy("Restricted", "Нет доступа", "אין הרשאה"),
       delta: canExportFinancialReports
         ? `${formatAmount(
             riskConcentration?.summary?.open_issue_profit_at_risk,
-          )} ${COMPANY_CURRENCY} at risk`
-        : "finance access required",
+          )} ${COMPANY_CURRENCY} ${copy("at risk", "под риском", "בסיכון")}`
+        : copy("Finance access required", "Нужен доступ к финансам", "נדרשת הרשאה לכספים"),
       detail:
         canExportFinancialReports && riskConcentration?.projects?.[0]
-          ? `Worst project: ${riskConcentration.projects[0].project_name}.`
-          : "Concentrates project, order and installer risk in one view.",
-      cta: "Open risk block",
+          ? `${copy("Worst project", "Самый рискованный объект", "הפרויקט המסוכן ביותר")}: ${riskConcentration.projects[0].project_name}.`
+          : copy("Concentrates project, order and installer risk in one view.", "Собирает риски объектов, заказов и монтажников в одном месте.", "מרכז סיכוני פרויקטים, הזמנות ומתקינים במבט אחד."),
+      cta: copy("Open risk block", "Открыть блок рисков", "לפתוח את בלוק הסיכונים"),
       onClick: () => scrollToReport("reports-project-risk-drilldown"),
       tone:
         (riskConcentration?.summary?.risky_projects ?? 0) > 0
