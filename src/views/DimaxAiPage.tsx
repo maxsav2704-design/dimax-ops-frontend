@@ -92,7 +92,7 @@ function Timeline({ task, t }: { task: AiTask; t: Copy }) {
     items.push({ key: "failed", label: t.timeline.failed, state: "failed" });
   }
   return (
-    <ol className="dmx-ai-timeline" aria-label={t.thread}>
+    <ol className="dmx-ai-timeline">
       {items.map((item) => (
         <li key={item.key} className="dmx-ai-timeline-item" data-state={item.state}>
           <span className="dmx-ai-timeline-dot" aria-hidden="true" />
