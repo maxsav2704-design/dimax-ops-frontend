@@ -201,13 +201,13 @@ function pickByLocale(
   return en;
 }
 
-function formatDateTime(value: string | null): string {
+function formatDateTime(value: string | null, fallback = "Not set"): string {
   if (!value) {
-    return "Not set";
+    return fallback;
   }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return "Not set";
+    return fallback;
   }
   return date.toLocaleString([], {
     month: "short",
@@ -219,13 +219,13 @@ function formatDateTime(value: string | null): string {
   });
 }
 
-function compactDate(value: string | null): string {
+function compactDate(value: string | null, fallback = "Not signed"): string {
   if (!value) {
-    return "Not signed";
+    return fallback;
   }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return "Not signed";
+    return fallback;
   }
   return date.toLocaleDateString([], {
     month: "short",
@@ -1252,7 +1252,7 @@ export default function JournalPage() {
                         <div className="mt-3 flex items-center justify-between text-[11px] text-text-secondary">
                           <span>
                             {t("journal.signed")}:{" "}
-                            {compactDate(journal.signed_at)}
+                            {compactDate(journal.signed_at, copy("Not signed", "Не подписан", "לא נחתם"))}
                           </span>
                           <span>{journal.id.slice(0, 8)}</span>
                         </div>
@@ -1314,7 +1314,7 @@ export default function JournalPage() {
                           {t("journal.snapshotVersion")} v
                           {selectedJournal.snapshot_version} •{" "}
                           {t("journal.signed")}:{" "}
-                          {compactDate(selectedJournal.signed_at)}
+                          {compactDate(selectedJournal.signed_at, copy("Not signed", "Не подписан", "לא נחתם"))}
                         </div>
                         {selectedJournal.signer_name ? (
                           <div className="mt-1 text-[12px] text-text-secondary">
@@ -1388,7 +1388,7 @@ export default function JournalPage() {
                         </div>
                         <div className="mt-2 text-[12px] text-text-secondary">
                           {t("journal.lastSent")}:{" "}
-                          {formatDateTime(selectedJournal.email_last_sent_at)}
+                          {formatDateTime(selectedJournal.email_last_sent_at, copy("Not set", "Не задано", "לא הוגדר"))}
                         </div>
                         {selectedJournal.email_last_error ? (
                           <div className="mt-2 text-[12px] text-status-problem-fg">
@@ -1787,7 +1787,7 @@ export default function JournalPage() {
                           <div className="mt-3 space-y-1 text-[11px] text-text-secondary">
                             <div>
                               {t("journal.scheduled")}:{" "}
-                              {formatDateTime(item.scheduled_at)}
+                              {formatDateTime(item.scheduled_at, copy("Not set", "Не задано", "לא הוגדר"))}
                             </div>
                             <div>
                               {t("journal.attempts")}: {item.attempts}/

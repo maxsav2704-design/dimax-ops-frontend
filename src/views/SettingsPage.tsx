@@ -111,6 +111,19 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const { locale } = useI18n();
   const copy = useCopy();
+  // The server reports integration gaps in English; the known notes get their translation here.
+  const integrationNote = (note: string) =>
+    note === "SMTP host/from is not fully configured"
+      ? copy(note, "SMTP-хост или отправитель настроены не полностью", "מארח SMTP או השולח אינם מוגדרים במלואם")
+      : note === "Email channel is disabled"
+        ? copy(note, "Почтовый канал отключён", "ערוץ הדוא\"ל מושבת")
+        : note === "Twilio credentials/from number are not fully configured"
+          ? copy(note, "Учётные данные Twilio или номер отправителя настроены не полностью", "פרטי Twilio או מספר השולח אינם מוגדרים במלואם")
+          : note === "WhatsApp channel is disabled"
+            ? copy(note, "Канал WhatsApp отключён", "ערוץ WhatsApp מושבת")
+            : note === "Twilio status callback URL is not configured"
+              ? copy(note, "Адрес обратного вызова статусов Twilio не настроен", "כתובת ה-callback לסטטוסי Twilio אינה מוגדרת")
+              : note;
   const companyNameId = useId();
   const [companyName, setCompanyName] = useState("");
   const [emailTestRecipient, setEmailTestRecipient] =
@@ -538,7 +551,7 @@ export default function SettingsPage() {
                       {integrationsHealth.email.sender_identity || "-"}{" "}
                     </div>{" "}
                     {integrationsHealth.email.notes.map((note) => (
-                      <div key={note}>{note}</div>
+                      <div key={note}>{integrationNote(note)}</div>
                     ))}{" "}
                   </div>{" "}
                 </div>{" "}
@@ -634,7 +647,7 @@ export default function SettingsPage() {
                         : copy("no", "нет", "לא")}{" "}
                     </div>{" "}
                     {integrationsHealth.whatsapp.notes.map((note) => (
-                      <div key={note}>{note}</div>
+                      <div key={note}>{integrationNote(note)}</div>
                     ))}{" "}
                   </div>{" "}
                 </div>{" "}

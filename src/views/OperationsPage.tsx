@@ -3917,8 +3917,8 @@ export default function OperationsPage() {
                                       >
                                         <RefreshCcw className="h-3.5 w-3.5" />
                                         {busyAction === resetTarget.busyKey
-                                          ? "Requesting..."
-                                          : "Cold resync"}
+                                          ? copy("Requesting...", "Запрос...", "שולח בקשה...")
+                                          : copy("Cold resync", "Холодная пересинхронизация", "סנכרון מלא מחדש")}
                                       </button>
                                     ) : null}
                                   </div>
@@ -4053,8 +4053,8 @@ export default function OperationsPage() {
                           >
                             <RefreshCcw className="h-3.5 w-3.5" />
                             {busyAction === resetTarget.busyKey
-                              ? "Requesting..."
-                              : "Cold resync"}
+                              ? copy("Requesting...", "Запрос...", "שולח בקשה...")
+                              : copy("Cold resync", "Холодная пересинхронизация", "סנכרון מלא מחדש")}
                           </button>
                         </div>
                       </div>
