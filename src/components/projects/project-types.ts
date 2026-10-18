@@ -12,8 +12,17 @@ export type ProjectListItem = {
   health_status?: ProjectHealthStatus;
 };
 
+export type ProjectRiskItem = {
+  kind: "SYNC" | "DELIVERY_OUTBOX" | string;
+  status: string;
+  details?: string | null;
+  opened_at?: string | null;
+};
+
 export type ProjectDetailsResponse = {
   id?: string;
+  /** Open system risks on the project (installer sync, outbox delivery), see backend 0078. */
+  open_risks?: ProjectRiskItem[];
   name?: string;
   code?: string | null;
   address?: string;

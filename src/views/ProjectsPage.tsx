@@ -1145,6 +1145,13 @@ export default function ProjectsPage() {
   const selectedProjectCode =
     projectDetails?.code || selectedProject?.code || selectedProjectId || "-";
   const projectDeadlineDays = daysUntilDate(projectDetails?.planned_end_date);
+  const projectOpenRisks = projectDetails?.open_risks ?? [];
+  const projectRiskLabel = (kind: string) =>
+    kind === "SYNC"
+      ? copy("installer sync", "синхронизация монтажника", "סנכרון המתקין")
+      : kind === "DELIVERY_OUTBOX"
+        ? copy("document delivery", "доставка документов", "משלוח מסמכים")
+        : kind;
   const projectInstalledDoors =
     projectPlanFact?.installed_doors ?? projectDoorTotals.installedCount;
   const projectTotalDoors =
@@ -2864,6 +2871,18 @@ export default function ProjectsPage() {
                             : copy("no blocked issues", "нет блокеров", "אין חסימות"),
                         tone: projectBlockedIssues > 0 ? "bad" : resolveKpiTone(projectOpenIssues, { warn: 1, bad: 5 }),
                       },
+                      ...(projectOpenRisks.length > 0
+                        ? [
+                            {
+                              key: "risks",
+                              label: copy("System risks", "Системные риски", "סיכוני מערכת"),
+                              value: projectOpenRisks.length,
+                              detail: projectOpenRisks.map((risk) => projectRiskLabel(risk.kind)).join(" · "),
+                              tone: "warn" as const,
+                              testId: "project-fact-risks",
+                            },
+                          ]
+                        : []),
                       {
                         key: "revenue",
                         label: copy("Revenue", "Выручка", "הכנסות"),

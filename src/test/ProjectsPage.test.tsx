@@ -4431,6 +4431,8 @@ describe("ProjectsPage", () => {
     expect(groups.length).toBeGreaterThan(0);
     expect(groups[0].querySelector(".dmx-door-group-pill")).not.toBeNull();
     expect(groups[0].querySelector("[data-matrix-tile]")).not.toBeNull();
+    // No open system risk in this fixture: the facts strip has no risk item.
+    expect(screen.queryByTestId("project-fact-risks")).toBeNull();
 
     const bar = screen.getByTestId("project-condensed-bar");
     expect(bar).toHaveAttribute("data-on", "false");
