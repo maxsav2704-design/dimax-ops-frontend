@@ -46,6 +46,8 @@ type ReportsDashboardResponse = {
     problem_projects: number;
     missing_rates_installed_doors: number;
     missing_addon_plans_done: number;
+    /** Installed doors whose client price is 0 (imported without a price): revenue is understated by them. */
+    zero_client_price_installed_doors?: number;
     /** Effective installations per day, oldest first (14 days); drives the sparkline. */
     installed_series_14d?: number[];
   };
