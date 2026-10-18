@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CalendarDays, Plus } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { AiAssistPanel } from "@/components/ai/AiAssistPanel";
 import { DataStateNotice } from "@/components/DataStateNotice";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { CardSkeleton, COMPANY_CURRENCY, FreshnessBadge, KpiTile, TableSkeleton, useEntityHighlight, useLastVisitSnapshot, type KpiThresholds, type KpiTone } from "@/components/dimax";
@@ -515,6 +516,7 @@ const Index = () => {
               </>
             }
           />
+          <AiAssistPanel testId="dashboard-ai-assist" context={null} label={dashboardTitle} />
 
           {[
             { query: dashboardQuery, label: labels.reports },

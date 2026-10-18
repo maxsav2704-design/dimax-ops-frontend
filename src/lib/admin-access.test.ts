@@ -9,6 +9,11 @@ import {
 } from "@/lib/admin-access";
 
 describe("admin-access policy", () => {
+  it.each(["OWNER", "OPERATIONS", "FINANCE", "VIEWER"] as const)("allows AI queries for an explicit %s profile", (admin_scope) => {
+    expect(canAccessAdminPath({ role: "ADMIN", admin_scope }, "/ai")).toBe(true);
+    expect(canAccessAdminPath("ADMIN", "/ai")).toBe(false);
+    expect(canAccessAdminPath("INSTALLER", "/ai")).toBe(false);
+  });
   it.each([
     ["OWNER", true, true], ["OWNER", false, false], ["OPERATIONS", true, true],
     ["OPERATIONS", false, false], ["FINANCE", true, true], ["FINANCE", false, false],

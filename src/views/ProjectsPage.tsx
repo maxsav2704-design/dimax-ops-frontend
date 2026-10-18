@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { AiAssistPanel } from "@/components/ai/AiAssistPanel";
 
 
 import { DataStateNotice } from "@/components/DataStateNotice";
@@ -2904,6 +2905,18 @@ export default function ProjectsPage() {
                     ]}
                   />
                 </div>
+
+                <AiAssistPanel
+                  testId="project-ai-assist"
+                  context={
+                    focusedDoorRow
+                      ? { kind: "door", id: focusedDoorRow.door_id }
+                      : selectedProjectId
+                        ? { kind: "project", id: selectedProjectId }
+                        : null
+                  }
+                  label={focusedDoorRow ? focusedDoorRow.unit_label : projectDetails?.name ?? ""}
+                />
 
                 <DoorCommandBar
                   workspace={workspace}

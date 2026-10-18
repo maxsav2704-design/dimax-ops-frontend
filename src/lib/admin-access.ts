@@ -3,6 +3,7 @@
 import type { AuthSession, UserRole } from "@/lib/auth-role";
 
 export type AdminModule =
+  | "ai"
   | "dashboard"
   | "projects"
   | "issues"
@@ -98,6 +99,9 @@ function normalizeSession(auth: AuthLike): AuthSession | null {
 
 export function pathToAdminModule(pathname: string): AdminModule {
   const normalizedPath = normalizePath(pathname);
+  if (normalizedPath === "/ai" || normalizedPath.startsWith("/ai/")) {
+    return "ai";
+  }
   if (normalizedPath === "/") {
     return "dashboard";
   }
@@ -150,6 +154,9 @@ export function canAccessAdminModule(auth: AuthLike, module: AdminModule): boole
   }
   if (session.role !== "ADMIN") {
     return false;
+  }
+  if (module === "ai") {
+    return ["OWNER", "OPERATIONS", "FINANCE", "VIEWER"].includes(session.admin_scope ?? "");
   }
   if (module === "price-lists") {
     return session.can_view_rates && ["OWNER", "OPERATIONS", "FINANCE"].includes(session.admin_scope ?? "");

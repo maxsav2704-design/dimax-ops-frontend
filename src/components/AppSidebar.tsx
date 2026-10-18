@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   BarChart3,
   BookOpen,
+  Bot,
   CalendarDays,
   ChevronDown,
   DoorOpen,
@@ -109,6 +110,7 @@ export function AppSidebar({ variant = "rail", onNavigate }: AppSidebarProps = {
       icon: LayoutDashboard,
       collapsible: false,
       items: [
+        { title: "DIMAX AI", path: "/ai", icon: Bot, module: "ai" },
         {
           title: t("nav.dashboard"),
           path: "/",

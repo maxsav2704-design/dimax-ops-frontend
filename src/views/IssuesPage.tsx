@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { AiAssistPanel } from "@/components/ai/AiAssistPanel";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
@@ -1365,6 +1366,14 @@ export default function IssuesPage() {
               ) : null}
             </div>
 
+            {selectedIssue ? (
+              <AiAssistPanel
+                testId="issues-ai-assist"
+                className="mb-3"
+                context={{ kind: "issue", id: selectedIssue.id }}
+                label={selectedIssue.title || selectedIssue.door_unit_label}
+              />
+            ) : null}
             {!selectedIssue ? (
               <div className="text-[13px] text-text-secondary">
                 {t("issues.selectIssue")}
