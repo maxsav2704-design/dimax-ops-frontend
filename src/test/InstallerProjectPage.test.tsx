@@ -180,11 +180,12 @@ describe("InstallerProjectPage", () => {
       );
       expect(call).toBeTruthy();
       const payload = JSON.parse(String(call?.[1]?.body));
-      expect(payload).toEqual({
+      expect(payload).toMatchObject({
         addon_type_id: "addon-1",
         qty_done: "3",
         comment: "Extra hardware installed",
       });
+      expect(payload.client_event_id).toMatch(/^[0-9a-f-]{36}$/);
     });
   });
 
