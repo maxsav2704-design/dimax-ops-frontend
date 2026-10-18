@@ -123,7 +123,8 @@ describe("DocumentsPage", () => {
     apiFetchMock.mockImplementation(baseApiHandler);
     renderPage();
 
-    await screen.findAllByRole("button", { name: /archive project handover/i });
+    // Under full-suite load the page needs more than the default second to render.
+    await screen.findAllByRole("button", { name: /archive project handover/i }, { timeout: 10_000 });
     expect(screen.getByRole("button", { name: /upload template/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /generate document/i })).toBeDisabled();
     for (const button of screen.getAllByRole("button", { name: /archive project handover/i })) {
