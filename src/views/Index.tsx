@@ -450,7 +450,7 @@ const Index = () => {
       label: copy.kpi.revenue,
       value: kpi ? formatCompactCurrency(kpi.revenue_total, locale) : "\u2014",
       detail: kpi
-        ? `${copy.kpi.payroll}: ${formatCurrency(kpi.payroll_total, locale)}`
+        ? `${copy.kpi.payroll}: ${formatCurrency(kpi.payroll_total, locale)}${(kpi.zero_client_price_installed_doors ?? 0) > 0 ? ` · ${kpi.zero_client_price_installed_doors} ${copy.kpi.zeroClientPrice}` : ""}`
         : `${copy.kpi.payroll}: \u2014`,
       // Money is only for sessions with the rates capability.
       hidden: session?.can_view_rates === false,

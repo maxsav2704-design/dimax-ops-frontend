@@ -25,6 +25,7 @@ type DashboardCopy = {
     doorsWithoutRates: string;
     revenue: string;
     payroll: string;
+    zeroClientPrice: string;
   };
   errors: {
     dashboardLoadFailed: string;
@@ -138,6 +139,7 @@ const copy: Record<Locale, DashboardCopy> = {
       doorsWithoutRates: "doors without rates",
       revenue: "Revenue",
       payroll: "Payroll",
+      zeroClientPrice: "installed without a client price",
     },
     errors: {
       dashboardLoadFailed: "Failed to load dashboard data. Check token and API availability.",
@@ -250,6 +252,7 @@ const copy: Record<Locale, DashboardCopy> = {
       doorsWithoutRates: "дверей без ставок",
       revenue: "Выручка",
       payroll: "Начисления",
+      zeroClientPrice: "установлено без цены клиента",
     },
     errors: {
       dashboardLoadFailed: "Не удалось загрузить данные дашборда. Проверьте токен и доступность API.",
@@ -362,6 +365,7 @@ const copy: Record<Locale, DashboardCopy> = {
       doorsWithoutRates: "דלתות ללא תעריף",
       revenue: "הכנסות",
       payroll: "תשלומים",
+      zeroClientPrice: "הותקנו ללא מחיר לקוח",
     },
     errors: {
       dashboardLoadFailed: "טעינת נתוני הדשבורד נכשלה. בדקו את הטוקן ואת זמינות ה-API.",
