@@ -525,6 +525,22 @@ export default function IssuesPage() {
     [issues, selectedIssueId],
   );
   const [issueMediaOpen, setIssueMediaOpen] = useState(false);
+  const [commentDraft, setCommentDraft] = useState("");
+  const commentMutation = useMutation({
+    mutationFn: (body: string) =>
+      apiFetch<AdminIssueComment>(`/api/v1/admin/issues/${selectedIssueId}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ body }),
+      }),
+    onSuccess: async () => {
+      setCommentDraft("");
+      setFormError(null);
+      await queryClient.invalidateQueries({ queryKey: ["admin-issue-comments", selectedIssueId] });
+    },
+    onError: (error) => {
+      setFormError(readableApiError(error, locale, copy("Comment was not saved.", "Комментарий не сохранён.", "ההערה לא נשמרה.")));
+    },
+  });
 
   const issueCommentsQuery = useQuery({
     queryKey: ["admin-issue-comments", selectedIssueId],
@@ -1402,7 +1418,7 @@ export default function IssuesPage() {
                     ) : issueCommentsQuery.data &&
                       issueCommentsQuery.data.length > 0 ? (
                       <div className="space-y-2">
-                        {issueCommentsQuery.data.slice(0, 4).map((comment) => (
+                        {issueCommentsQuery.data.map((comment) => (
                           <div
                             key={comment.id}
                             className="rounded-lg border border-border-subtle bg-surface px-3 py-2"
@@ -1426,6 +1442,35 @@ export default function IssuesPage() {
                         {copy("No comments yet.", "Комментариев пока нет.", "עדיין אין הערות.")}
                       </div>
                     )}
+                    {canManageIssues ? (
+                      <form
+                        className="flex flex-col gap-2 border-t border-border-subtle pt-2"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          const body = commentDraft.trim();
+                          if (body && selectedIssueId) commentMutation.mutate(body);
+                        }}
+                      >
+                        <textarea
+                          aria-label={copy("New comment", "Новый комментарий", "הערה חדשה")}
+                          value={commentDraft}
+                          onChange={(event) => setCommentDraft(event.target.value)}
+                          maxLength={2000}
+                          rows={2}
+                          placeholder={copy("Write to the installer…", "Написать монтажнику…", "לכתוב למתקין…")}
+                          className="control-input min-h-[56px] py-2 text-[12px]"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!commentDraft.trim() || commentMutation.isPending}
+                          className="dmx-secondary-action self-end"
+                        >
+                          {commentMutation.isPending
+                            ? copy("Sending…", "Отправка…", "שולח…")
+                            : copy("Add comment", "Добавить комментарий", "הוסף הערה")}
+                        </button>
+                      </form>
+                    ) : null}
                   </div>
 
                   <div className="space-y-2 rounded-lg border border-border bg-surface-subtle p-3">
@@ -1476,7 +1521,7 @@ export default function IssuesPage() {
                       issueMediaQuery.data.length > 0 ? (
                       <div className="space-y-2">
                         {issueMediaQuery.data
-                          .slice(0, 4)
+                          
                           .map((media, index) => (
                             <div
                               key={media.id}

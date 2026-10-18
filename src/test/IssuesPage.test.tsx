@@ -548,6 +548,40 @@ describe("IssuesPage", () => {
       );
     });
   }, 15000);
+  it("lets the office add a comment to the selected issue", async () => {
+    const issueId = "47dc52c8-e2d4-4061-8dc8-05ce3199c06d";
+    let comments: Array<{ id: string; body: string; author_name: string; created_at: string }> = [];
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path.includes("/api/v1/admin/installers")) return [];
+      if (path === `/api/v1/admin/issues/${issueId}/comments` && init?.method === "POST") {
+        const body = JSON.parse(String(init.body)) as { body: string };
+        comments = [...comments, { id: `c-${comments.length + 1}`, body: body.body, author_name: "Owner One", created_at: "2026-02-23T10:00:00Z" }];
+        return comments[comments.length - 1];
+      }
+      if (path === `/api/v1/admin/issues/${issueId}/comments`) return { items: comments };
+      if (path.includes("/api/v1/admin/issues")) {
+        return { items: [{
+          id: issueId, company_id: "8ea9b2c0-0848-4997-a5dd-58e5df3787e0", door_id: "1d8816f9-1bcf-4cfd-a111-2596887197a4",
+          project_id: "7fa68e09-d216-4b3c-b5ef-206efe47d457", door_unit_label: "A-101", status: "OPEN", workflow_state: "NEW",
+          priority: "P3", owner_user_id: null, due_at: null, is_overdue: false, title: "Install blocked",
+          details: "Client requested delay", created_at: "2026-02-20T10:00:00Z", updated_at: "2026-02-22T10:00:00Z",
+        }] };
+      }
+      return {};
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={queryClient}><IssuesPage /></QueryClientProvider>);
+    fireEvent.click(await screen.findByText("Install blocked", {}, { timeout: 5000 }));
+    expect(await screen.findByText("No comments yet.")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("New comment"), { target: { value: "Frame ordered, ETA Monday" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add comment" }));
+
+    expect(await screen.findByText("Frame ordered, ETA Monday")).toBeInTheDocument();
+    const post = apiFetchMock.mock.calls.find((call) => String(call[0]).endsWith("/comments") && call[1]?.method === "POST");
+    expect(JSON.parse(String(post?.[1]?.body))).toEqual({ body: "Frame ordered, ETA Monday" });
+  }, 15000);
+
   it("shows a retryable error when issue comments fail to load instead of an empty list", async () => {
     let commentsDown = true;
     apiFetchMock.mockImplementation(async (path: string) => {
