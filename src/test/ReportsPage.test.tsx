@@ -1481,6 +1481,22 @@ describe("ReportsPage", () => {
     expect(screen.getAllByText("Strong").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Risk").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Watch").length).toBeGreaterThan(0);
+
+    // Tiers: one page, three readers. "People" hides the operations sections and is remembered.
+    const switcher = screen.getByTestId("reports-tier-switch");
+    // (the library and insight cards at the top name every section, so sections are checked by id)
+    fireEvent.click(within(switcher).getByRole("button", { name: "People" }));
+    expect(document.getElementById("reports-installers-kpi")).not.toBeNull();
+    expect(document.getElementById("reports-operations-center")).toBeNull();
+    expect(document.getElementById("reports-delivery-risk")).toBeNull();
+    expect(window.localStorage.getItem("dmx.reports.tier")).toBe("people");
+    fireEvent.click(within(switcher).getByRole("button", { name: "Operations" }));
+    expect(document.getElementById("reports-operations-center")).not.toBeNull();
+    expect(document.getElementById("reports-installers-kpi")).toBeNull();
+    fireEvent.click(within(switcher).getByRole("button", { name: "Everything" }));
+    expect(document.getElementById("reports-installers-kpi")).not.toBeNull();
+    expect(document.getElementById("reports-operations-center")).not.toBeNull();
+    window.localStorage.removeItem("dmx.reports.tier");
   }, 45000);
 
   it("shows readable success notice after executive export", async () => {

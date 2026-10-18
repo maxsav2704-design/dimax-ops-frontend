@@ -68,7 +68,7 @@ import { InstallerCrossViewSection } from "@/components/reports/InstallerCrossVi
 import { InstallerProfitabilityMatrixSection } from "@/components/reports/InstallerProfitabilityMatrixSection";
 import { IssuesAnalyticsSection } from "@/components/reports/IssuesAnalyticsSection";
 
-import { reportsOverrides, downloadCsvExport, AUDIT_ACTION_OPTIONS, AUDIT_ENTITY_OPTIONS, AUDIT_EXPORT_LIMIT, AUDIT_PREVIEW_LIMIT, FAILED_OUTBOX_LIMIT, INSTALLERS_SORT_OPTIONS, INSTALLER_MATRIX_LIMIT, INSTALLER_MATRIX_SORT_OPTIONS, INSTALLER_PROJECT_LIMIT, INSTALLER_PROJECT_SORT_OPTIONS, ISSUES_ANALYTICS_DAYS, ISSUE_AUDIT_ACTION_OPTIONS, KPI_EXPORT_LIMIT, KPI_PAGE_SIZE, LIVE_REPORT_REFRESH_MS, ORDER_NUMBERS_SORT_OPTIONS, PAGE_SIZE, PROJECT_MARGIN_LIMIT, RISK_CONCENTRATION_LIMIT, SLA_HISTORY_DAYS_OPTIONS, SLA_STATUS_CLASS, SORT_DIR_OPTIONS, STANDARD_REPORT_REFRESH_MS, buildAuditParams, buildOperationsHref, changedFieldKeys, compactMap, formatAmount, formatCount, formatDateTime, formatPercent, getReportsFocusCopy, getReportsFocusTargetId, getReportsOpsPresetCopy, installerPerformanceBandClass, isUuid, metricLabel, parseReportsFocus, parseReportsOpsPreset, prettyJson, readReportsPresets, reportsMetricCardClass, reportsNoticeClass, reportsPanelClass, toReportNumber, writeReportsPresets } from "@/components/reports/shared";
+import { reportsOverrides, downloadCsvExport, AUDIT_ACTION_OPTIONS, AUDIT_ENTITY_OPTIONS, AUDIT_EXPORT_LIMIT, AUDIT_PREVIEW_LIMIT, FAILED_OUTBOX_LIMIT, INSTALLERS_SORT_OPTIONS, INSTALLER_MATRIX_LIMIT, INSTALLER_MATRIX_SORT_OPTIONS, INSTALLER_PROJECT_LIMIT, INSTALLER_PROJECT_SORT_OPTIONS, ISSUES_ANALYTICS_DAYS, ISSUE_AUDIT_ACTION_OPTIONS, KPI_EXPORT_LIMIT, KPI_PAGE_SIZE, LIVE_REPORT_REFRESH_MS, ORDER_NUMBERS_SORT_OPTIONS, PAGE_SIZE, PROJECT_MARGIN_LIMIT, RISK_CONCENTRATION_LIMIT, SLA_HISTORY_DAYS_OPTIONS, SLA_STATUS_CLASS, SORT_DIR_OPTIONS, STANDARD_REPORT_REFRESH_MS, buildAuditParams, buildOperationsHref, changedFieldKeys, compactMap, formatAmount, formatCount, formatDateTime, formatPercent, getReportsFocusCopy, getReportsFocusTargetId, getReportsOpsPresetCopy, installerPerformanceBandClass, isUuid, metricLabel, parseReportsFocus, parseReportsOpsPreset, parseReportsTier, reportsFocusTier, REPORTS_TIERS, REPORTS_TIER_STORAGE_KEY, type ReportsTier, prettyJson, readReportsPresets, reportsMetricCardClass, reportsNoticeClass, reportsPanelClass, toReportNumber, writeReportsPresets } from "@/components/reports/shared";
 import { ReportsInsightCard, ReportsLibraryCard, SavedReportViewCard, SectionMessage } from "@/components/reports/widgets";
 import type { AuditCatalogChangesResponse, DeliveryStatsResponse, InstallerKpiDetailsResponse, InstallerMatrixSortBy, InstallerProfitabilityMatrixResponse, InstallerProjectProfitabilityResponse, InstallerProjectSortBy, InstallersKpiResponse, InstallersSortBy, IssuesAddonsImpactResponse, IssuesAnalyticsResponse, LimitAlertsReadResponse, LimitAlertsResponse, OperationsSlaHistoryResponse, OperationsSlaResponse, OrderNumbersKpiResponse, OrderNumbersSortBy, OutboxListResponse, OutboxRetryAuditListResponse, OutboxRetryResponse, OutboxSummaryResponse, ProjectAddonPlanItem, ProjectOption, ProjectPlanFactResponse, ProjectRiskDrilldownResponse, ProjectsMarginResponse, ReportsInsight, ReportsLibraryGroup, ReportsOpsPreset, ReportsPreset, ReportsScopedContext, RiskConcentrationResponse, SortDir, UrgencySurchargeItem, WebhookSignalListResponse, OperationsCenterResponse } from "@/components/reports/types";
 
@@ -176,6 +176,31 @@ export default function ReportsPage() {
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const activeFocus = parseReportsFocus(searchParams?.get("focus") || null);
+  // Tier: the URL wins, then the remembered choice, then the whole cockpit.
+  const tierParam = parseReportsTier(searchParams?.get("tier") || null);
+  const [tier, setTierState] = useState<ReportsTier>(tierParam ?? "all");
+  useEffect(() => {
+    if (tierParam) {
+      setTierState(tierParam);
+      return;
+    }
+    try {
+      const stored = parseReportsTier(window.localStorage.getItem(REPORTS_TIER_STORAGE_KEY));
+      if (stored) setTierState(stored);
+    } catch {
+      /* storage unavailable: the choice lives for this page */
+    }
+  }, [tierParam]);
+  const setTier = (next: ReportsTier) => {
+    setTierState(next);
+    try {
+      window.localStorage.setItem(REPORTS_TIER_STORAGE_KEY, next);
+    } catch {
+      /* storage unavailable */
+    }
+  };
+  const isTierVisible = (sectionTier: ReportsTier) =>
+    tier === "all" || tier === sectionTier || reportsFocusTier(activeFocus) === sectionTier;
   const activeOpsPreset = parseReportsOpsPreset(
     searchParams?.get("ops_preset") || null,
   );
@@ -1850,6 +1875,33 @@ export default function ReportsPage() {
             </div>
           </div>
         )}
+        <div
+          role="group"
+          aria-label={copy("Reports for", "Отчёты для", "דוחות עבור")}
+          data-testid="reports-tier-switch"
+          className="inline-flex h-9 items-center rounded-full border border-border bg-surface p-0.5"
+        >
+          {REPORTS_TIERS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={tier === option}
+              onClick={() => setTier(option)}
+              className={cn(
+                "h-7 rounded-full px-3 text-12 font-medium transition-colors",
+                tier === option ? "bg-text text-text-inverse" : "text-text-secondary hover:text-text",
+              )}
+            >
+              {option === "all"
+                ? copy("Everything", "Всё", "הכול")
+                : option === "executive"
+                  ? copy("Executive", "Руководитель", "הנהלה")
+                  : option === "operations"
+                    ? copy("Operations", "Операции", "תפעול")
+                    : copy("People", "Люди", "אנשים")}
+            </button>
+          ))}
+        </div>
         {activeFocus && (
           <div className={reportsNoticeClass("accent")}>
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1909,27 +1961,36 @@ export default function ReportsPage() {
           </div>
         )}
 
+        {isTierVisible("operations") ? (
         <OperationsCenterSection
           center={operationsCenter}
           loading={operationsCenterQuery.isLoading}
           unreadCount={unreadCount}
         />
+        ) : null}
 
+        {isTierVisible("operations") ? (
         <OperationsSlaSection
           query={operationsSlaQuery}
           historyQuery={operationsSlaHistoryQuery}
           historyDays={slaHistoryDays}
           onHistoryDaysChange={setSlaHistoryDays}
         />
+        ) : null}
 
+        {isTierVisible("operations") ? (
         <IssuesAnalyticsSection
           query={issuesAnalyticsQuery}
         />
+        ) : null}
 
+        {isTierVisible("operations") ? (
         <IssuesAddonsImpactSection
           query={issuesAddonsImpactQuery}
         />
+        ) : null}
 
+        {isTierVisible("executive") ? (
         <ProjectPlanFactSection
           planFactQuery={projectPlanFactQuery}
           addonPlanQuery={projectAddonPlanQuery}
@@ -1938,23 +1999,31 @@ export default function ReportsPage() {
           projectId={projectPlanFactProjectId}
           onProjectIdChange={setProjectPlanFactProjectId}
         />
+        ) : null}
 
+        {isTierVisible("executive") ? (
         <ProjectRiskDrilldownSection
           query={projectRiskDrilldownQuery}
           projectsQuery={projectsQuery}
           projectId={projectRiskProjectId}
           onProjectIdChange={setProjectRiskProjectId}
         />
+        ) : null}
 
+        {isTierVisible("executive") ? (
         <ProjectMarginExecutiveSection
           topQuery={topProjectsMarginQuery}
           riskQuery={riskProjectsMarginQuery}
         />
+        ) : null}
 
+        {isTierVisible("people") ? (
         <InstallerProfitabilityMatrixSection
           query={riskConcentrationQuery}
         />
+        ) : null}
 
+        {isTierVisible("people") ? (
         <InstallerCrossViewSection
           query={installerProfitabilityMatrixQuery}
           sortBy={installerMatrixSortBy}
@@ -1962,7 +2031,9 @@ export default function ReportsPage() {
           onSortByChange={setInstallerMatrixSortBy}
           onSortDirChange={setInstallerMatrixSortDir}
         />
+        ) : null}
 
+        {isTierVisible("people") ? (
         <InstallersKpiSection
           query={installerProjectProfitabilityQuery}
           sortBy={installerProjectSortBy}
@@ -1970,7 +2041,9 @@ export default function ReportsPage() {
           onSortByChange={setInstallerProjectSortBy}
           onSortDirChange={setInstallerProjectSortDir}
         />
+        ) : null}
 
+        {isTierVisible("people") ? (
         <InstallersKpiTableSection
           query={installersKpiQuery}
           items={installersKpiItems}
@@ -1985,7 +2058,9 @@ export default function ReportsPage() {
           canExportFinancialReports={canExportFinancialReports}
           ratesScopeHint={ratesScopeHint}
         />
+        ) : null}
 
+        {isTierVisible("people") ? (
         <InstallerDetailsSection
           query={installerDetailsQuery}
           directoryQuery={installerDirectoryQuery}
@@ -1994,7 +2069,9 @@ export default function ReportsPage() {
           onInstallerIdChange={setInstallerDetailsId}
           scopedInstallerMissing={scopedInstallerMissing}
         />
+        ) : null}
 
+        {isTierVisible("executive") ? (
         <OrderNumbersSection
           kpiQuery={orderNumbersKpiQuery}
           projectsQuery={projectsQuery}
@@ -2013,7 +2090,9 @@ export default function ReportsPage() {
           canExportFinancialReports={canExportFinancialReports}
           ratesScopeHint={ratesScopeHint}
         />
+        ) : null}
 
+        {isTierVisible("operations") ? (
         <DeliveryRiskSection
           deliveryQuery={deliveryQuery}
           outboxSummaryQuery={outboxSummaryQuery}
@@ -2027,7 +2106,9 @@ export default function ReportsPage() {
           scopedDeliveryChannel={scopedDeliveryChannel}
           scopedWebhookProvider={scopedWebhookProvider}
         />
+        ) : null}
 
+        {isTierVisible("operations") ? (
         <FailedOutboxSection
           query={failedOutboxQuery}
           retryMutation={retryMutation}
@@ -2035,7 +2116,9 @@ export default function ReportsPage() {
           privilegedActionHint={privilegedActionHint}
           scopedDeliveryChannel={scopedDeliveryChannel}
         />
+        ) : null}
 
+        {isTierVisible("operations") ? (
         <div className={reportsPanelClass("overflow-hidden")}>
           <div className="hidden md:grid grid-cols-[180px_130px_130px_130px_1fr] gap-3 px-4 py-3 border-b border-border bg-surface-subtle text-[11px] uppercase text-text-secondary">
             <span>{copy("Time", "Время", "זמן")}</span>
@@ -2178,7 +2261,9 @@ export default function ReportsPage() {
               );
             })}
         </div>
+        ) : null}
 
+        {isTierVisible("operations") ? (
         <AuditCatalogsSection
           query={auditCatalogsQuery}
           entityType={auditEntityType}
@@ -2196,7 +2281,9 @@ export default function ReportsPage() {
           canRunPrivilegedActions={canRunPrivilegedActions}
           privilegedActionHint={privilegedActionHint}
         />
+        ) : null}
 
+        {isTierVisible("operations") ? (
         <IssueAuditSection
           query={issueAuditQuery}
           actionFilter={issueAuditAction}
@@ -2216,6 +2303,7 @@ export default function ReportsPage() {
           canRunPrivilegedActions={canRunPrivilegedActions}
           privilegedActionHint={privilegedActionHint}
         />
+        ) : null}
 
         <div className="flex items-center justify-between">
           <div className="text-[12px] text-text-secondary">

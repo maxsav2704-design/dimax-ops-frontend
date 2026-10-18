@@ -536,6 +536,21 @@ export function getReportsOpsPresetCopy(
   };
 }
 
+// Reports tiers (premium visual, owner's open item): one page, three readers.
+// "all" keeps the whole cockpit; a tier hides the sections meant for the other readers.
+export type ReportsTier = "all" | "executive" | "operations" | "people";
+export const REPORTS_TIERS: ReportsTier[] = ["all", "executive", "operations", "people"];
+export const REPORTS_TIER_STORAGE_KEY = "dmx.reports.tier";
+
+export function parseReportsTier(value: string | null): ReportsTier | null {
+  return value === "all" || value === "executive" || value === "operations" || value === "people" ? value : null;
+}
+
+/** The tier a focus deep link belongs to: its section is shown whatever tier is chosen. */
+export function reportsFocusTier(focus: ReportsFocus | null): ReportsTier | null {
+  return focus ? "operations" : null;
+}
+
 export function parseReportsFocus(value: string | null): ReportsFocus | null {
   if (value === "operations" || value === "delivery" || value === "issues") {
     return value;
