@@ -1563,6 +1563,33 @@ export default function ReportsPage() {
                 </>
               }
             />
+            <div
+              role="group"
+              aria-label={copy("Reports for", "Отчёты для", "דוחות עבור")}
+              data-testid="reports-tier-switch"
+              className="inline-flex h-9 items-center rounded-full border border-border bg-surface p-0.5"
+            >
+              {REPORTS_TIERS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={tier === option}
+                  onClick={() => setTier(option)}
+                  className={cn(
+                    "h-7 rounded-full px-3 text-12 font-medium transition-colors",
+                    tier === option ? "bg-text text-text-inverse" : "text-text-secondary hover:text-text",
+                  )}
+                >
+                  {option === "all"
+                    ? copy("Everything", "Всё", "הכול")
+                    : option === "executive"
+                      ? copy("Executive", "Руководитель", "הנהלה")
+                      : option === "operations"
+                        ? copy("Operations", "Операции", "תפעול")
+                        : copy("People", "Люди", "אנשים")}
+                </button>
+              ))}
+            </div>
 
             <div>
               <div className="mb-3 flex items-center justify-between gap-3">
@@ -1875,33 +1902,6 @@ export default function ReportsPage() {
             </div>
           </div>
         )}
-        <div
-          role="group"
-          aria-label={copy("Reports for", "Отчёты для", "דוחות עבור")}
-          data-testid="reports-tier-switch"
-          className="inline-flex h-9 items-center rounded-full border border-border bg-surface p-0.5"
-        >
-          {REPORTS_TIERS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              aria-pressed={tier === option}
-              onClick={() => setTier(option)}
-              className={cn(
-                "h-7 rounded-full px-3 text-12 font-medium transition-colors",
-                tier === option ? "bg-text text-text-inverse" : "text-text-secondary hover:text-text",
-              )}
-            >
-              {option === "all"
-                ? copy("Everything", "Всё", "הכול")
-                : option === "executive"
-                  ? copy("Executive", "Руководитель", "הנהלה")
-                  : option === "operations"
-                    ? copy("Operations", "Операции", "תפעול")
-                    : copy("People", "Люди", "אנשים")}
-            </button>
-          ))}
-        </div>
         {activeFocus && (
           <div className={reportsNoticeClass("accent")}>
             <div className="flex flex-wrap items-center justify-between gap-3">
