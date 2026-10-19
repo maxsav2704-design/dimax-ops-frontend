@@ -9,6 +9,7 @@ import {
   Settings2,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { AiSettingsCard } from "@/components/ai/AiSettingsCard";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import {
   InlineNotice,
@@ -475,6 +476,7 @@ export default function SettingsPage() {
                 </button>{" "}
               </div>{" "}
             </WidgetCard>{" "}
+            <AiSettingsCard canManage={canManageSettings} />
             <WidgetCard
               title={copy(
                 "Integrations Snapshot",

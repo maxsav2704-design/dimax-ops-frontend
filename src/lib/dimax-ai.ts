@@ -26,7 +26,13 @@ export type AiStatus = {
   provider?: "openai" | "mock";
   actions_enabled?: boolean;
   real_model_verified?: false;
+  execution?: "inline" | "background";
+  rules_version?: number | null;
+  daily_limit?: number;
+  daily_used?: number;
 };
+export type AiRules = { version: number; text: string; updated_at: string | null; updated_by: string | null };
+export type AiCheck = { ok: boolean; provider: "openai" | "mock"; model: string | null; latency_ms: number; code: string | null; answer_preview: string | null };
 
 export type AiSource = { kind: "project" | "door" | "issue" | "installer"; id: string; label: string; path: string };
 export type AiStep = { tool: string; ok: boolean; ms: number };
@@ -41,6 +47,7 @@ export type AiReply = {
   steps?: AiStep[];
   proposal_ids?: string[];
   provider?: "openai" | "mock";
+  rules_version?: number | null;
 };
 
 export type AiProposalStatus = "PROPOSED" | "CONFIRMED" | "EXECUTED" | "REJECTED" | "EXPIRED" | "FAILED" | "CONFLICT";
@@ -218,6 +225,18 @@ export const aiCopy = {
       result: "Saved record", open: "Open record", decisionLost: "The connection was lost. Confirm again: the same decision is reused, nothing is saved twice.",
     },
     assist: { title: "DIMAX AI", open: "Open the workspace", hint: "Ask about this object" },
+    executionBackground: "Runs in the background: the answer arrives while you keep working", executionInline: "Runs within the request",
+    rulesVersion: (version: number) => `Company rules: version ${version}`, noRulesYet: "Company rules: none set",
+    budget: (used: number, limit: number) => `Daily limit: ${used} of ${limit} requests today`,
+    settings: {
+      meta: "Connection, daily limit and the company rules the agent follows.",
+      ready: "Connected and switched on", background: "Execution: background worker", inline: "Execution: within the request",
+      budget: (used: number, limit: number) => `Daily limit: ${used} of ${limit} requests today`,
+      rules: "Company rules for the agent", rulesHint: "Plain language, read by the agent as company authority. Rules cannot add tools, grant rights or change prices, installation facts or earnings.",
+      rulesPlaceholder: "Example: deadlines for issues are at least two working days; always mention the project name in answers.",
+      version: "Version", noRules: "No rules set yet", save: "Save rules", saved: "Rules saved", saveFailed: "Rules could not be saved",
+      check: "Check connection", checkOk: "Connection works", checkFailed: "Connection check failed", ownerOnly: "Only the company owner can change rules or run the check.",
+    },
   },
   ru: {
     title: "DIMAX AI", subtitle: "Задачи и вопросы по объектам, позициям, замечаниям и монтажникам. Изменения — это предложения, которые вы подтверждаете.",
@@ -258,6 +277,18 @@ export const aiCopy = {
       result: "Сохранённая запись", open: "Открыть запись", decisionLost: "Связь прервалась. Подтвердите снова: решение переиспользуется, ничего не сохраняется дважды.",
     },
     assist: { title: "DIMAX AI", open: "Открыть рабочее место", hint: "Спросить об этом объекте" },
+    executionBackground: "Работает в фоне: ответ придёт, пока вы продолжаете работу", executionInline: "Работает внутри запроса",
+    rulesVersion: (version: number) => `Правила компании: версия ${version}`, noRulesYet: "Правила компании: не заданы",
+    budget: (used: number, limit: number) => `Дневной лимит: ${used} из ${limit} запросов сегодня`,
+    settings: {
+      meta: "Подключение, дневной лимит и правила компании, которым следует агент.",
+      ready: "Подключён и включён", background: "Исполнение: фоновый воркер", inline: "Исполнение: внутри запроса",
+      budget: (used: number, limit: number) => `Дневной лимит: ${used} из ${limit} запросов сегодня`,
+      rules: "Правила компании для агента", rulesHint: "Обычным языком; агент читает их как правила компании. Правила не добавляют инструментов, не дают прав и не меняют цены, факты монтажа и начисления.",
+      rulesPlaceholder: "Например: срок по замечаниям не меньше двух рабочих дней; всегда называть объект в ответе.",
+      version: "Версия", noRules: "Правила ещё не заданы", save: "Сохранить правила", saved: "Правила сохранены", saveFailed: "Не удалось сохранить правила",
+      check: "Проверить подключение", checkOk: "Подключение работает", checkFailed: "Проверка подключения не прошла", ownerOnly: "Менять правила и запускать проверку может только владелец компании.",
+    },
   },
   he: {
     title: "DIMAX AI", subtitle: "משימות ושאלות על פרויקטים, פריטים, ליקויים ומתקינים. שינויים הם הצעות שאתם מאשרים.",
@@ -298,5 +329,17 @@ export const aiCopy = {
       result: "רשומה שנשמרה", open: "פתח רשומה", decisionLost: "החיבור אבד. אשר שוב: אותה החלטה נעשה בה שימוש, דבר לא נשמר פעמיים.",
     },
     assist: { title: "DIMAX AI", open: "פתח את סביבת העבודה", hint: "שאל על האובייקט הזה" },
+    executionBackground: "פועל ברקע: התשובה תגיע בזמן שאתם ממשיכים לעבוד", executionInline: "פועל בתוך הבקשה",
+    rulesVersion: (version: number) => `כללי החברה: גרסה ${version}`, noRulesYet: "כללי החברה: לא הוגדרו",
+    budget: (used: number, limit: number) => `מגבלה יומית: ${used} מתוך ${limit} בקשות היום`,
+    settings: {
+      meta: "חיבור, מגבלה יומית וכללי החברה שהסוכן פועל לפיהם.",
+      ready: "מחובר ופעיל", background: "ביצוע: עובד רקע", inline: "ביצוע: בתוך הבקשה",
+      budget: (used: number, limit: number) => `מגבלה יומית: ${used} מתוך ${limit} בקשות היום`,
+      rules: "כללי החברה לסוכן", rulesHint: "בשפה פשוטה; הסוכן קורא אותם כסמכות החברה. הכללים אינם מוסיפים כלים, אינם מעניקים הרשאות ואינם משנים מחירים, עובדות התקנה או צבירות.",
+      rulesPlaceholder: "לדוגמה: מועד יעד לליקויים הוא לפחות יומיים עבודה; לציין תמיד את שם הפרויקט בתשובה.",
+      version: "גרסה", noRules: "עדיין לא הוגדרו כללים", save: "שמור כללים", saved: "הכללים נשמרו", saveFailed: "לא ניתן היה לשמור את הכללים",
+      check: "בדוק חיבור", checkOk: "החיבור פועל", checkFailed: "בדיקת החיבור נכשלה", ownerOnly: "רק בעל החברה יכול לשנות כללים או להריץ את הבדיקה.",
+    },
   },
 };

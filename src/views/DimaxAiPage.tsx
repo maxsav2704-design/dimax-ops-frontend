@@ -438,6 +438,9 @@ function Workspace({ surface }: { surface: AiSurface }) {
             {status && <ul className="dmx-ai-capabilities">
               <li data-tone={status.provider === "mock" ? "warn" : "muted"}>{status.provider === "mock" ? t.providerMock : t.providerLive}</li>
               <li data-tone={status.actions_enabled ? "ok" : "muted"}>{status.actions_enabled ? t.actionsOn : t.actionsOff}</li>
+              {status.execution ? <li data-tone="muted">{status.execution === "background" ? t.executionBackground : t.executionInline}</li> : null}
+              {status.rules_version !== undefined ? <li data-tone={status.rules_version ? "ok" : "muted"}>{status.rules_version ? t.rulesVersion(status.rules_version) : t.noRulesYet}</li> : null}
+              {typeof status.daily_limit === "number" ? <li data-tone={(status.daily_used ?? 0) >= status.daily_limit ? "warn" : "muted"}>{t.budget(status.daily_used ?? 0, status.daily_limit)}</li> : null}
             </ul>}
           </section>
         </aside>
