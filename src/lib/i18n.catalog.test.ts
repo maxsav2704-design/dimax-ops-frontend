@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 import { messages, type Locale } from "@/lib/i18n";
 
 const localeIndependentKeys = new Set([
+  // Product name, the same in every language.
+  "installerShell.ai",
   "landing.eyebrow",
   "landing.previewOpsRoute",
   "landing.previewReportsRoute",
