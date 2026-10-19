@@ -201,6 +201,7 @@ export const aiCopy = {
     installerExamples: ["Which of my positions are not finished?", "What is open on my issues?", "Report an obstacle on a position"],
     installerSubtitle: "Your positions, your issues. Reports are proposals you confirm; installation is confirmed in the app as before.",
     tooLong: "Use no more than 4,000 characters.", cancelled: "You stopped waiting for this answer. No business data was changed.",
+    voice: "Dictate", voiceStop: "Stop dictation", voiceFailed: "Dictation did not work in this browser.",
     conversations: "Conversation", newConversation: "New conversation", more: "Load older records",
     historyError: "Conversation history could not be loaded.", recover: "Check the same request",
     retryTask: "Run this task again", cancelTask: "Cancel task", saved: "Saved on the server",
@@ -253,6 +254,7 @@ export const aiCopy = {
     installerExamples: ["Какие мои позиции не завершены?", "Что открыто по моим замечаниям?", "Записать препятствие по позиции"],
     installerSubtitle: "Ваши позиции и ваши замечания. Отчёты — это предложения, которые вы подтверждаете; монтаж подтверждается в приложении как раньше.",
     tooLong: "Используйте не более 4 000 символов.", cancelled: "Ожидание ответа остановлено. Данные бизнеса не изменены.",
+    voice: "Надиктовать", voiceStop: "Остановить диктовку", voiceFailed: "Диктовка в этом браузере не сработала.",
     conversations: "Диалог", newConversation: "Новый диалог", more: "Загрузить более ранние записи",
     historyError: "Не удалось загрузить историю диалога.", recover: "Проверить тот же запрос",
     retryTask: "Запустить задачу снова", cancelTask: "Отменить задачу", saved: "Сохранено на сервере",
@@ -305,6 +307,7 @@ export const aiCopy = {
     installerExamples: ["אילו מהפריטים שלי לא הושלמו?", "מה פתוח בליקויים שלי?", "לרשום מכשול על פריט"],
     installerSubtitle: "הפריטים שלך והליקויים שלך. דיווחים הם הצעות שאתה מאשר; ההתקנה מאושרת באפליקציה כמו קודם.",
     tooLong: "השתמש בעד 4,000 תווים.", cancelled: "ההמתנה לתשובה הופסקה. נתוני העסק לא השתנו.",
+    voice: "הכתבה", voiceStop: "עצור הכתבה", voiceFailed: "ההכתבה לא עבדה בדפדפן זה.",
     conversations: "שיחה", newConversation: "שיחה חדשה", more: "טען רשומות קודמות",
     historyError: "לא ניתן לטעון את היסטוריית השיחה.", recover: "בדוק את אותה בקשה",
     retryTask: "הפעל את המשימה שוב", cancelTask: "בטל משימה", saved: "נשמר בשרת",
@@ -343,3 +346,21 @@ export const aiCopy = {
     },
   },
 };
+
+type SpeechRecognitionLike = {
+  lang: string; interimResults: boolean; maxAlternatives: number;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void; stop: () => void;
+};
+
+/** The browser's speech recognition when it exists; voice only fills the question, rights stay unchanged. */
+export function speechRecognitionFactory(): (() => SpeechRecognitionLike) | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
+  const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+  return Ctor ? () => new Ctor() : null;
+}
+
+export const SPEECH_LANG: Record<AiLocale, string> = { en: "en-US", ru: "ru-RU", he: "he-IL" };

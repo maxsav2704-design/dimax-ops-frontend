@@ -316,4 +316,33 @@ describe("DIMAX AI workspace", () => {
     expect(safeAiSourcePath("/installer/projects/1f16d537-5617-4c4b-a944-dafba2bcead9")).toBe(true);
     expect(safeAiSourcePath("/installer/projects/../admin")).toBe(false);
   });
+
+  it("dictates into the question through the browser's recognition when it exists, in the current language", async () => {
+    const sessions: { lang: string; onresult: ((event: { results: { transcript: string }[][] }) => void) | null; onend: (() => void) | null; start: () => void; stop: () => void }[] = [];
+    (window as unknown as { webkitSpeechRecognition: unknown }).webkitSpeechRecognition = class {
+      lang = ""; interimResults = true; maxAlternatives = 0; onresult = null; onerror = null; onend = null;
+      start = vi.fn(); stop = vi.fn();
+      constructor() { sessions.push(this as never); }
+    };
+    language.locale = "ru";
+    try {
+      mount();
+      const voice = await screen.findByTestId("dimax-ai-voice");
+      fireEvent.click(voice);
+      expect(sessions[0].lang).toBe("ru-RU");
+      expect(voice).toHaveAttribute("aria-pressed", "true");
+      act(() => { sessions[0].onresult?.({ results: [[{ transcript: "Какие позиции не завершены" }]] }); sessions[0].onend?.(); });
+      expect(screen.getByLabelText("Задача или вопрос")).toHaveValue("Какие позиции не завершены");
+      expect(voice).toHaveAttribute("aria-pressed", "false");
+      expect(api.mock.calls.every(([, init]) => !init?.method)).toBe(true);
+    } finally {
+      delete (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
+    }
+  });
+
+  it("hides the dictation button when the browser has no recognition", async () => {
+    mount();
+    await waitFor(() => expect(screen.queryByText(/Checking connection/)).not.toBeInTheDocument());
+    expect(screen.queryByTestId("dimax-ai-voice")).not.toBeInTheDocument();
+  });
 });

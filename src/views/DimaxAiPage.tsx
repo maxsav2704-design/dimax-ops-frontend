@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Bot, Check, Loader2, X } from "lucide-react";
+import { Bot, Check, Loader2, Mic, MicOff, X } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { InstallerShell } from "@/components/installer/InstallerShell";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
@@ -14,7 +14,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { onAuthChanged } from "@/lib/auth-session";
 import {
-  AI_SURFACES, aiCopy, canUseAiSurface, parseAiContext, previewRows, previewValue, safeAiSourcePath, PREVIEW_FIELD_LABEL, PROPOSAL_TOOL_LABEL,
+  AI_SURFACES, aiCopy, canUseAiSurface, parseAiContext, previewRows, previewValue, safeAiSourcePath, speechRecognitionFactory, PREVIEW_FIELD_LABEL, PROPOSAL_TOOL_LABEL, SPEECH_LANG,
   type AiContext, type AiConversation, type AiPage, type AiProposal, type AiReply, type AiStatus, type AiSurface, type AiTask, type AiTaskRequest,
 } from "@/lib/dimax-ai";
 import { useI18n } from "@/lib/i18n";
@@ -218,6 +218,27 @@ function Workspace({ surface }: { surface: AiSurface }) {
   const confirmKeys = useRef(new Map<string, string>());
   const active = useRef<AbortController | null>(null);
   const mounted = useRef(true);
+  // Voice: the browser's own recognition, feature-detected; it only fills the question.
+  const [speech] = useState(() => speechRecognitionFactory());
+  const recognition = useRef<ReturnType<NonNullable<ReturnType<typeof speechRecognitionFactory>>> | null>(null);
+  const [listening, setListening] = useState(false);
+  function toggleVoice() {
+    if (!speech) return;
+    if (listening) { recognition.current?.stop(); return; }
+    try {
+      const session = speech();
+      session.lang = SPEECH_LANG[locale]; session.interimResults = false; session.maxAlternatives = 1;
+      session.onresult = (event) => {
+        const transcript = Array.from(event.results).map((result) => result[0]?.transcript ?? "").join(" ").trim();
+        if (transcript && mounted.current) setQuestion((old) => (old ? `${old} ${transcript}` : transcript).slice(0, 4000));
+      };
+      session.onerror = () => { if (mounted.current) { setError(t.voiceFailed); setListening(false); } };
+      session.onend = () => { if (mounted.current) setListening(false); };
+      recognition.current = session;
+      setListening(true); setError("");
+      session.start();
+    } catch { setError(t.voiceFailed); setListening(false); }
+  }
 
   useEffect(() => {
     mounted.current = true;
@@ -478,6 +499,10 @@ function Workspace({ surface }: { surface: AiSurface }) {
                 </Button>
                 {busy ? <Button type="button" variant="outline" onClick={stopWaiting}>{t.cancel}</Button> :
                   <Button type="button" variant="outline" disabled={!!pending} onClick={() => { setQuestion(""); setError(""); }}>{t.clear}</Button>}
+                {speech ? <Button type="button" variant="outline" aria-pressed={listening} disabled={busy || !!pending} onClick={toggleVoice} data-testid="dimax-ai-voice">
+                  {listening ? <MicOff className="size-4" aria-hidden="true" /> : <Mic className="size-4" aria-hidden="true" />}
+                  {listening ? t.voiceStop : t.voice}
+                </Button> : null}
                 {!busy && pending && <Button type="button" variant="outline"
                   onClick={() => void send(`${AI_API}/tasks`, pending)}>{t.recover}</Button>}
               </div>
