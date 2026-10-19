@@ -123,6 +123,26 @@ export const AI_PROMPTS: Record<AiContextKind | "company", Tri[]> = {
   ],
 };
 
+/** The installer's own wording: their positions, a comment for the office. */
+export const AI_INSTALLER_PROMPTS: Record<AiContextKind | "company", Tri[]> = {
+  company: [
+    tri("Which of my positions are not finished?", "Какие мои позиции не завершены?", "אילו מהפריטים שלי לא הושלמו?"),
+    tri("What is on my schedule this week?", "Что у меня по расписанию на этой неделе?", "מה בלו\"ז שלי השבוע?"),
+  ],
+  project: [
+    tri("Which of my positions here are not finished?", "Какие мои позиции здесь не завершены?", "אילו מהפריטים שלי כאן לא הושלמו?"),
+    tri("Report an obstacle on my position", "Записать препятствие по моей позиции", "לרשום מכשול על הפריט שלי"),
+  ],
+  door: [
+    tri("What is recorded on this position?", "Что записано по этой позиции?", "מה רשום על הפריט הזה?"),
+    tri("Report an obstacle on this position", "Записать препятствие по этой позиции", "לרשום מכשול על הפריט הזה"),
+  ],
+  issue: [
+    tri("Summarise this issue", "Кратко: что с этим замечанием?", "סכם את הליקוי הזה"),
+    tri("Add my comment for the office", "Добавить мой комментарий для офиса", "להוסיף את התגובה שלי למשרד"),
+  ],
+};
+
 export const PROPOSAL_TOOL_LABEL: Record<string, Tri> = {
   propose_issue_report: tri("Report an issue on a position", "Замечание по позиции", "ליקוי על פריט"),
   propose_issue_comment: tri("Comment in the issue", "Комментарий к замечанию", "תגובה בליקוי"),

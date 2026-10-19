@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { AI_PROMPTS, AI_SURFACES, aiContextHref, aiCopy, canUseAiSurface, type AiContext, type AiSurface } from "@/lib/dimax-ai";
+import { AI_INSTALLER_PROMPTS, AI_PROMPTS, AI_SURFACES, aiContextHref, aiCopy, canUseAiSurface, type AiContext, type AiSurface } from "@/lib/dimax-ai";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +28,7 @@ export function AiAssistPanel({ context, label, prompts, surface = "admin", clas
   const t = aiCopy[locale];
   if (!canUseAiSurface(session, surface)) return null;
   const base = AI_SURFACES[surface].base;
-  const questions = prompts ?? AI_PROMPTS[context?.kind ?? "company"].map((prompt) => prompt[locale]);
+  const questions = prompts ?? (surface === "installer" ? AI_INSTALLER_PROMPTS : AI_PROMPTS)[context?.kind ?? "company"].map((prompt) => prompt[locale]);
   return (
     <section dir={dir} data-testid={testId} aria-label={t.assist.title} className={cn("dmx-ai-assist", className)}>
       <span className="dmx-ai-orb dmx-ai-orb--mini" aria-hidden="true"><span className="dmx-ai-orb-core" /></span>

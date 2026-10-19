@@ -46,6 +46,7 @@ describe("AiAssistPanel", () => {
     auth.mockReturnValue({ role: "INSTALLER", admin_scope: null });
     const { unmount } = render(<AiAssistPanel surface="installer" context={{ kind: "project", id: PROJECT }} label="Tower B" testId="panel" />);
     expect(screen.getByRole("link", { name: "Open the workspace" })).toHaveAttribute("href", `/installer/ai?context=project%3A${PROJECT}`);
+    expect(screen.getByRole("link", { name: "Report an obstacle on my position" })).toBeInTheDocument();
     unmount();
     render(<AiAssistPanel context={{ kind: "project", id: PROJECT }} label="Tower B" testId="panel" />);
     expect(screen.queryByTestId("panel")).not.toBeInTheDocument();
