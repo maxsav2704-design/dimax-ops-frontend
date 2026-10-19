@@ -5,17 +5,17 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Bot, Check, Loader2, X } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { InstallerShell } from "@/components/installer/InstallerShell";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import { ConfirmActionDialog } from "@/components/dimax";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { canAccessAdminModule } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
 import { onAuthChanged } from "@/lib/auth-session";
 import {
-  AI_API, aiCopy, parseAiContext, previewRows, previewValue, safeAiSourcePath, PREVIEW_FIELD_LABEL, PROPOSAL_TOOL_LABEL,
-  type AiContext, type AiConversation, type AiPage, type AiProposal, type AiReply, type AiStatus, type AiTask, type AiTaskRequest,
+  AI_SURFACES, aiCopy, canUseAiSurface, parseAiContext, previewRows, previewValue, safeAiSourcePath, PREVIEW_FIELD_LABEL, PROPOSAL_TOOL_LABEL,
+  type AiContext, type AiConversation, type AiPage, type AiProposal, type AiReply, type AiStatus, type AiSurface, type AiTask, type AiTaskRequest,
 } from "@/lib/dimax-ai";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -190,9 +190,11 @@ function ProposalCard({ proposal, t, locale, busy, canDecide, onReview, onReject
 
 /* ---------- the workspace ---------- */
 
-function Workspace() {
+function Workspace({ surface }: { surface: AiSurface }) {
   const { locale, dir } = useI18n();
   const t = aiCopy[locale];
+  const AI_API = AI_SURFACES[surface].api;
+  const examples = surface === "installer" ? t.installerExamples : t.examples;
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<AiStatus | null>(null);
   const [connectionError, setConnectionError] = useState(false);
@@ -227,7 +229,7 @@ function Workspace() {
     setConversations((old) => offset ? [...old, ...page.items] : page.items);
     setMoreConversations(page.has_more);
     if (!offset) setConversationId((old) => old === undefined ? page.items[0]?.id ?? null : old);
-  }, []);
+  }, [AI_API]);
   useEffect(() => {
     const controller = new AbortController();
     setStatus(null); setConnectionError(false);
@@ -236,7 +238,7 @@ function Workspace() {
       .catch(() => { if (!controller.signal.aborted) setConnectionError(true); });
     void loadConversations(controller.signal).catch(() => { if (!controller.signal.aborted) setHistoryError(true); });
     return () => controller.abort();
-  }, [check, loadConversations]);
+  }, [check, loadConversations, AI_API]);
   useEffect(() => {
     setTasks([]); setMoreTasks(false); setHistoryError(false);
     if (!conversationId) return;
@@ -247,7 +249,7 @@ function Workspace() {
       .catch(() => { if (!controller.signal.aborted) setHistoryError(true); })
       .finally(() => { if (!controller.signal.aborted) setHistoryLoading(false); });
     return () => controller.abort();
-  }, [conversationId, check]);
+  }, [conversationId, check, AI_API]);
 
   const runningId = tasks.find((task) => task.status === "RUNNING")?.id;
   useEffect(() => {
@@ -274,7 +276,7 @@ function Workspace() {
         .finally(() => { polling = false; });
     }, 3000);
     return () => { clearInterval(interval); controller.abort(); };
-  }, [runningId]);
+  }, [runningId, AI_API]);
 
   function failureText(failure: { code?: string; status?: number }) {
     return failure.status === 403 || failure.status === 401 ? t.accessError :
@@ -388,7 +390,7 @@ function Workspace() {
 
   return (
     <div dir={dir} className="dmx-ai-shell">
-      <DimaxPageHeader eyebrow="DIMAX" title={t.title} subtitle={t.subtitle}
+      <DimaxPageHeader eyebrow="DIMAX" title={t.title} subtitle={surface === "installer" ? t.installerSubtitle : t.subtitle}
         badge={<span className="rounded-md border px-2 py-1 text-xs text-text-secondary">{status?.actions_enabled ? t.actionsOn : t.readOnly}</span>} />
 
       <div className="dmx-ai-grid">
@@ -463,7 +465,7 @@ function Workspace() {
               <Textarea id="dimax-ai-question" value={question} onChange={(event) => setQuestion(event.target.value)}
                 maxLength={4000} rows={3} disabled={busy || !!pending} className="resize-y" />
               <div className="flex flex-wrap gap-2">
-                {t.examples.map((example) => <Button key={example} type="button" variant="outline" size="sm"
+                {examples.map((example) => <Button key={example} type="button" variant="outline" size="sm"
                   disabled={busy || !!pending} className="h-auto whitespace-normal text-start" onClick={() => setQuestion(example)}>{example}</Button>)}
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -527,12 +529,13 @@ function Workspace() {
   );
 }
 
-export default function DimaxAiPage() {
+export default function DimaxAiPage({ surface = "admin" }: { surface?: AiSurface }) {
   const session = useAuthSession();
   const { locale } = useI18n();
   const [epoch, setEpoch] = useState(0);
   useEffect(() => onAuthChanged(() => setEpoch((old) => old + 1)), []);
-  const allowed = canAccessAdminModule(session, "ai");
-  return <DashboardLayout>{allowed ? <Workspace key={`${epoch}:${session?.admin_scope}`} /> :
-    <p role="alert">{aiCopy[locale].access}</p>}</DashboardLayout>;
+  const allowed = canUseAiSurface(session, surface);
+  const Layout = surface === "installer" ? InstallerShell : DashboardLayout;
+  return <Layout>{allowed ? <Workspace key={`${epoch}:${session?.role}:${session?.admin_scope}`} surface={surface} /> :
+    <p role="alert">{aiCopy[locale].access}</p>}</Layout>;
 }

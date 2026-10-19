@@ -41,4 +41,13 @@ describe("AiAssistPanel", () => {
     render(<AiAssistPanel context={null} label="x" testId="panel" />);
     expect(screen.queryByTestId("panel")).not.toBeInTheDocument();
   });
+
+  it("opens the installer cabinet workspace for an installer and hides the admin one", () => {
+    auth.mockReturnValue({ role: "INSTALLER", admin_scope: null });
+    const { unmount } = render(<AiAssistPanel surface="installer" context={{ kind: "project", id: PROJECT }} label="Tower B" testId="panel" />);
+    expect(screen.getByRole("link", { name: "Open the workspace" })).toHaveAttribute("href", `/installer/ai?context=project%3A${PROJECT}`);
+    unmount();
+    render(<AiAssistPanel context={{ kind: "project", id: PROJECT }} label="Tower B" testId="panel" />);
+    expect(screen.queryByTestId("panel")).not.toBeInTheDocument();
+  });
 });

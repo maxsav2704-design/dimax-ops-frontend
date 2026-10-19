@@ -1,5 +1,18 @@
 export const AI_API = "/api/v1/admin/ai";
 
+/** Where the workspace runs: the admin office or the installer cabinet. Same mechanism, different API and routes. */
+export type AiSurface = "admin" | "installer";
+export const AI_SURFACES: Record<AiSurface, { api: string; base: string }> = {
+  admin: { api: "/api/v1/admin/ai", base: "/ai" },
+  installer: { api: "/api/v1/installer/ai", base: "/installer/ai" },
+};
+
+export function canUseAiSurface(session: { role?: string; admin_scope?: string | null } | null | undefined, surface: AiSurface): boolean {
+  if (!session) return false;
+  if (surface === "installer") return session.role === "INSTALLER";
+  return session.role === "ADMIN" && ["OWNER", "OPERATIONS", "FINANCE", "VIEWER"].includes(session.admin_scope ?? "");
+}
+
 export type AiLocale = "en" | "ru" | "he";
 export type AiContextKind = "project" | "door" | "issue";
 export type AiContext = { kind: AiContextKind; id: string };
@@ -56,7 +69,7 @@ export type AiTaskRequest = { request_id: string; conversation_id: string | null
 
 // Only current in-app destinations are allowed. Model text is rendered as text.
 export function safeAiSourcePath(path: string): boolean {
-  return /^\/(projects|issues|installers)\?/.test(path) && !/[\\\r\n]/.test(path);
+  return (/^\/(projects|issues|installers)\?/.test(path) || /^\/installer\/(projects\/[0-9a-f-]{36}|issues\?)/.test(path)) && !/[\\\r\n]/.test(path);
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -70,12 +83,12 @@ export function parseAiContext(value: string | null | undefined): AiContext | nu
 }
 
 /** The one agent mechanism everywhere: a section opens the workspace with its object as context. */
-export function aiContextHref(context: AiContext | null, question?: string): string {
+export function aiContextHref(context: AiContext | null, question?: string, base = "/ai"): string {
   const params = new URLSearchParams();
   if (context) params.set("context", `${context.kind}:${context.id}`);
   if (question) params.set("q", question);
   const query = params.toString();
-  return query ? `/ai?${query}` : "/ai";
+  return query ? `${base}?${query}` : base;
 }
 
 type Tri = { en: string; ru: string; he: string };
@@ -178,6 +191,8 @@ export const aiCopy = {
     accessError: "Your access has changed. Refresh the page before continuing.",
     empty: "Ask a specific question. Answers use records available to your account.",
     examples: ["Which projects are active?", "Find open issues on my project", "Find an installer by name"],
+    installerExamples: ["Which of my positions are not finished?", "What is open on my issues?", "Report an obstacle on a position"],
+    installerSubtitle: "Your positions, your issues. Reports are proposals you confirm; installation is confirmed in the app as before.",
     tooLong: "Use no more than 4,000 characters.", cancelled: "You stopped waiting for this answer. No business data was changed.",
     conversations: "Conversation", newConversation: "New conversation", more: "Load older records",
     historyError: "Conversation history could not be loaded.", recover: "Check the same request",
@@ -216,6 +231,8 @@ export const aiCopy = {
     accessError: "Права доступа изменились. Обновите страницу перед продолжением.",
     empty: "Задайте конкретный вопрос. Ответ будет основан на записях, доступных вашей учётной записи.",
     examples: ["Какие объекты сейчас активны?", "Найди открытые замечания на моём объекте", "Найди монтажника по имени"],
+    installerExamples: ["Какие мои позиции не завершены?", "Что открыто по моим замечаниям?", "Записать препятствие по позиции"],
+    installerSubtitle: "Ваши позиции и ваши замечания. Отчёты — это предложения, которые вы подтверждаете; монтаж подтверждается в приложении как раньше.",
     tooLong: "Используйте не более 4 000 символов.", cancelled: "Ожидание ответа остановлено. Данные бизнеса не изменены.",
     conversations: "Диалог", newConversation: "Новый диалог", more: "Загрузить более ранние записи",
     historyError: "Не удалось загрузить историю диалога.", recover: "Проверить тот же запрос",
@@ -254,6 +271,8 @@ export const aiCopy = {
     accessError: "הרשאות הגישה השתנו. רענן את הדף לפני ההמשך.",
     empty: "שאל שאלה ממוקדת. התשובות מבוססות על הרשומות הזמינות לחשבון שלך.",
     examples: ["אילו פרויקטים פעילים?", "מצא ליקויים פתוחים בפרויקט שלי", "מצא מתקין לפי שם"],
+    installerExamples: ["אילו מהפריטים שלי לא הושלמו?", "מה פתוח בליקויים שלי?", "לרשום מכשול על פריט"],
+    installerSubtitle: "הפריטים שלך והליקויים שלך. דיווחים הם הצעות שאתה מאשר; ההתקנה מאושרת באפליקציה כמו קודם.",
     tooLong: "השתמש בעד 4,000 תווים.", cancelled: "ההמתנה לתשובה הופסקה. נתוני העסק לא השתנו.",
     conversations: "שיחה", newConversation: "שיחה חדשה", more: "טען רשומות קודמות",
     historyError: "לא ניתן לטעון את היסטוריית השיחה.", recover: "בדוק את אותה בקשה",

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Bot,
   CalendarDays,
   CircleAlert,
   FolderKanban,
@@ -50,6 +51,12 @@ export function InstallerShell({ children }: { children: ReactNode }) {
       href: "/installer/sync-queue",
       icon: Workflow,
       isActive: (path: string) => path === "/installer/sync-queue",
+    },
+    {
+      title: t("installerShell.ai"),
+      href: "/installer/ai",
+      icon: Bot,
+      isActive: (path: string) => path === "/installer/ai",
     },
   ];
   return (

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StrictMode, type ReactNode, type AnchorHTMLAttributes } from "react";
 import DimaxAiPage from "@/views/DimaxAiPage";
@@ -19,6 +19,7 @@ vi.mock("@/lib/i18n", () => ({
   useCopy: () => (en: string, ru: string, he: string) => ({ en, ru, he })[language.locale],
 }));
 vi.mock("@/components/DashboardLayout", () => ({ DashboardLayout: ({ children }: { children: ReactNode }) => <div>{children}</div> }));
+vi.mock("@/components/installer/InstallerShell", () => ({ InstallerShell: ({ children }: { children: ReactNode }) => <div data-testid="installer-shell">{children}</div> }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => <a href={href} {...rest}>{children}</a> }));
 
 const ready = { ready: true, reason: "ready", tools: ["search_projects"], read_only: true };
@@ -297,5 +298,22 @@ describe("DIMAX AI workspace", () => {
     mount();
     expect(await screen.findByTestId("dimax-ai-proposal-review")).toBeDisabled();
     expect(screen.getByText("Actions: off, reads only")).toBeInTheDocument();
+  });
+
+  it("serves the installer cabinet through the installer API and refuses admins there", async () => {
+    auth.mockReturnValue({ role: "INSTALLER", admin_scope: null });
+    render(<StrictMode><DimaxAiPage surface="installer" /></StrictMode>);
+    expect(await screen.findByTestId("installer-shell")).toBeInTheDocument();
+    await ask(); await screen.findByText(reply.answer);
+    const paths = api.mock.calls.map(([path]) => String(path));
+    expect(paths.every((path) => path.startsWith("/api/v1/installer/ai"))).toBe(true);
+    expect(screen.getByText("Which of my positions are not finished?")).toBeInTheDocument();
+    cleanup();
+    auth.mockReturnValue({ role: "ADMIN", admin_scope: "OWNER" }); api.mockClear();
+    render(<DimaxAiPage surface="installer" />);
+    expect(screen.getByRole("alert")).toHaveTextContent("AI access is unavailable");
+    expect(api).not.toHaveBeenCalled();
+    expect(safeAiSourcePath("/installer/projects/1f16d537-5617-4c4b-a944-dafba2bcead9")).toBe(true);
+    expect(safeAiSourcePath("/installer/projects/../admin")).toBe(false);
   });
 });

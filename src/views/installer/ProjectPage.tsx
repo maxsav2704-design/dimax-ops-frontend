@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { AiAssistPanel } from "@/components/ai/AiAssistPanel";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -817,6 +818,12 @@ export default function InstallerProjectPage({
           </div>{" "}
           <div className={projectPanelClass("min-w-0 max-w-xl space-y-4 p-4 sm:p-5 xl:min-w-[320px]")}>
             {" "}
+            <AiAssistPanel
+              surface="installer"
+              testId="installer-project-ai-assist"
+              context={{ kind: "project", id: projectId }}
+              label={details?.name ?? ""}
+            />
             <div className="text-[12px] leading-5 text-text-secondary">
               {" "}
               {t("installerProject.contextCopy")}{" "}

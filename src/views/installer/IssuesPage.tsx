@@ -1,5 +1,6 @@
 ﻿"use client";
 import Link from "next/link";
+import { AiAssistPanel } from "@/components/ai/AiAssistPanel";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -638,6 +639,14 @@ export default function InstallerIssuesPage() {
                   {issue.status}{" "}
                 </span>{" "}
               </div>{" "}
+              {focusedIssueId === issue.id ? (
+                <AiAssistPanel
+                  surface="installer"
+                  testId="installer-issue-ai-assist"
+                  context={{ kind: "issue", id: issue.id }}
+                  label={issue.title || copy("Issue", "Проблема", "בעיה")}
+                />
+              ) : null}
               <div className="text-sm text-text-secondary">
                 {" "}
                 {issue.description ||
