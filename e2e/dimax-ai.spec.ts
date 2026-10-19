@@ -157,3 +157,48 @@ for (const [locale, width] of [["ru", 1280], ["he", 390]] as const) {
     await page.screenshot({ path: testInfo.outputPath(`dimax-ai-executed-${locale}.png`), fullPage: true });
   });
 }
+
+// Installer cabinet (2026-10-19): the same workspace on /installer/ai through the installer API; admins are refused there.
+test("DIMAX AI installer cabinet workspace he at 390px", async ({ page }, testInfo) => {
+  const PROJECT = "1f16d537-5617-4c4b-a944-dafba2bcead9";
+  const calls: string[] = [];
+  let savedTask: Record<string, unknown> | null = null;
+  await page.setViewportSize({ width: 390, height: 1100 });
+  await page.addInitScript(() => window.localStorage.setItem("dimax_locale", "he"));
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    const headers = { "access-control-allow-origin": request.headers().origin || "http://127.0.0.1:4191",
+      "access-control-allow-credentials": "true", "access-control-allow-headers": "Content-Type,Authorization,Accept-Language",
+      "access-control-allow-methods": "GET,POST,OPTIONS" };
+    const reply = (json: unknown) => route.fulfill({ headers, json });
+    if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers });
+    if (path.includes("/ai/")) calls.push(path);
+    if (path.endsWith("/auth/me")) return reply({ role: "INSTALLER", admin_scope: null });
+    if (path.endsWith("/installer/ai/status")) return reply({ ready: true, reason: "ready", tools: ["my_projects"], read_only: true, provider: "mock", actions_enabled: true, real_model_verified: false });
+    if (path.endsWith("/installer/ai/conversations")) return reply({ items: savedTask ? [{ id: "inst-conv", title: "x", created_at: "2026-10-19T09:00:00Z", updated_at: "2026-10-19T09:00:00Z" }] : [], has_more: false });
+    if (path.endsWith("/installer/ai/conversations/inst-conv/tasks")) return reply({ items: savedTask ? [savedTask] : [], has_more: false });
+    if (path.endsWith("/installer/ai/tasks")) {
+      const body = request.postDataJSON();
+      savedTask = { ...body, id: "inst-run", conversation_id: "inst-conv", status: "COMPLETED", attempt_count: 1, error_code: null,
+        created_at: "2026-10-19T09:00:00Z", updated_at: "2026-10-19T09:00:01Z", proposals: [],
+        reply: { run_id: "inst-run", answer: "לפי הרשומות שלך: 3 פריטים לא הושלמו.", sources: [{ kind: "project", id: PROJECT, label: "בניין 1", path: `/installer/projects/${PROJECT}` }],
+          tools_used: ["my_project_summary", "my_project_doors"], provider_requests: 2, read_only: true, provider: "mock",
+          steps: [{ tool: "my_project_summary", ok: true, ms: 4 }, { tool: "my_project_doors", ok: true, ms: 9 }], proposal_ids: [] } };
+      return reply(savedTask);
+    }
+    return reply({ items: [], unread_count: 0 });
+  });
+  await page.goto(`/installer/ai?context=project:${PROJECT}`);
+  await expect(page.getByRole("heading", { name: "DIMAX AI", exact: true })).toBeVisible();
+  await expect(page.getByTestId("dimax-ai-context")).toBeVisible();
+  // The client-side status text proves hydration; the pre-rendered HTML alone would drop the typed text.
+  await expect(page.getByText("ספק הדגמה", { exact: false }).first()).toBeVisible();
+  await page.getByLabel("משימה או שאלה").fill("אילו מהפריטים שלי לא הושלמו?");
+  await page.getByRole("button", { name: "שאל את DIMAX AI", exact: true }).click();
+  await expect(page.getByRole("link", { name: "בניין 1", exact: true })).toHaveAttribute("href", `/installer/projects/${PROJECT}`);
+  expect(calls.every((path) => path.includes("/installer/ai/"))).toBeTruthy();
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await page.screenshot({ path: testInfo.outputPath("dimax-ai-installer-he.png"), fullPage: true });
+});
