@@ -127,6 +127,8 @@ export const PROPOSAL_TOOL_LABEL: Record<string, Tri> = {
   propose_issue_report: tri("Report an issue on a position", "Замечание по позиции", "ליקוי על פריט"),
   propose_issue_comment: tri("Comment in the issue", "Комментарий к замечанию", "תגובה בליקוי"),
   propose_issue_workflow: tri("Change the issue workflow", "Изменение хода замечания", "שינוי מהלך הליקוי"),
+  propose_my_issue_report: tri("My report on a position", "Моё замечание по позиции", "הדיווח שלי על פריט"),
+  propose_my_issue_comment: tri("My comment in the issue", "Мой комментарий к замечанию", "התגובה שלי בליקוי"),
 };
 
 export const PREVIEW_FIELD_LABEL: Record<string, Tri> = {
