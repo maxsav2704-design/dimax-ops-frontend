@@ -303,7 +303,8 @@ function Workspace({ surface }: { surface: AiSurface }) {
     return failure.status === 403 || failure.status === 401 ? t.accessError :
       failure.status === 429 || failure.code === "AI_PROVIDER_LIMIT" ? t.limit :
       failure.code === "AI_PROVIDER_TIMEOUT" || failure.code === "AI_DEADLINE" ? t.timeout :
-      failure.code === "AI_NOT_CONFIGURED" ? t.disconnected : t.unavailable;
+      failure.code === "AI_NOT_CONFIGURED" ? t.disconnected :
+      failure.code === "AI_CONTEXT_NOT_FOUND" ? t.contextMissing : t.unavailable;
   }
   async function send(path: string, body: AiTaskRequest | { request_id: string }) {
     if (active.current) return;
