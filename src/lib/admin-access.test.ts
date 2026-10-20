@@ -9,6 +9,12 @@ import {
 } from "@/lib/admin-access";
 
 describe("admin-access policy", () => {
+  it.each(["OWNER", "OPERATIONS", "FINANCE", "VIEWER", null] as const)("guards commercial drafts for %s", (admin_scope) => {
+    const session = { role: "ADMIN" as const, admin_scope, can_view_rates: true };
+    expect(canAccessAdminPath(session, "/factory-accounting")).toBe(admin_scope === "OWNER");
+    expect(canAccessAdminPath(session, "/factory-accounting/?contract=1")).toBe(admin_scope === "OWNER");
+    expect(canAccessAdminPath("INSTALLER", "/factory-accounting")).toBe(false);
+  });
   it.each(["OWNER", "OPERATIONS", "FINANCE", "VIEWER"] as const)("allows AI queries for an explicit %s profile", (admin_scope) => {
     expect(canAccessAdminPath({ role: "ADMIN", admin_scope }, "/ai")).toBe(true);
     expect(canAccessAdminPath("ADMIN", "/ai")).toBe(false);

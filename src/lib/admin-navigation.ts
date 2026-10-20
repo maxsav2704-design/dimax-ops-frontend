@@ -1,5 +1,6 @@
 import type { AdminModule } from "@/lib/admin-access";
 import type { Locale } from "@/lib/locale";
+import { commercialCopy } from "@/components/accounting/copy";
 
 // The admin's sections as palette entries. Titles come from the same nav.*
 // keys the sidebar uses; keywords add the English and Russian spellings so a
@@ -20,6 +21,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { path: "/installers", module: "installers", navKey: "nav.installers", keywords: ["installers", "монтажники"] },
   { path: "/journal", module: "journal", navKey: "nav.journal", keywords: ["journal", "журнал", "доставка"] },
   { path: "/price-lists", module: "price-lists", navKey: "nav.priceLists", keywords: ["price list", "прайс", "завод", "ставки"] },
+  { path: "/factory-accounting", module: "factory-accounting", navKey: "nav.factoryAccounting", keywords: ["factory settlements", "расчёты", "договоры", "commercial", "חוזים", "התחשבנות"] },
   { path: "/reports", module: "reports", navKey: "nav.reports", keywords: ["reports", "отчёты", "отчеты"] },
   { path: "/earnings-ledger", module: "reports", navKey: "nav.earningsLedger", keywords: ["ledger", "начисления", "payroll"] },
   { path: "/documents", module: "projects", navKey: "nav.documents", keywords: ["documents", "документы"] },
@@ -31,6 +33,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
 ];
 
 export function sectionTitle(section: AdminSection, locale: Locale, t: (key: string) => string): string {
+  if (section.module === "factory-accounting") return commercialCopy[locale].title;
   const translated = t(section.navKey);
   if (translated && translated !== section.navKey) return translated;
   const fallback: Record<string, [string, string, string]> = {

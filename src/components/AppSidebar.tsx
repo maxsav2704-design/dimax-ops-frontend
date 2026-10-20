@@ -35,6 +35,7 @@ import {
 } from "@/lib/admin-access";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { commercialCopy } from "@/components/accounting/copy";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type SidebarItem = {
@@ -156,6 +157,7 @@ export function AppSidebar({ variant = "rail", onNavigate }: AppSidebarProps = {
       collapsible: false,
       items: [
         { title: copy.prices, path: "/price-lists", icon: FileCheck2, module: "price-lists" },
+        { title: commercialCopy[locale].title, path: "/factory-accounting", icon: ReceiptText, module: "factory-accounting" },
         {
           title: t("nav.reports"),
           path: "/reports",

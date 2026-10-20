@@ -15,6 +15,7 @@ export type AdminModule =
   | "reasons"
   | "reports"
   | "price-lists"
+  | "factory-accounting"
   | "operations"
   | "settings";
 
@@ -135,6 +136,9 @@ export function pathToAdminModule(pathname: string): AdminModule {
   if (normalizedPath === "/price-lists" || normalizedPath.startsWith("/price-lists/")) {
     return "price-lists";
   }
+  if (normalizedPath === "/factory-accounting" || normalizedPath.startsWith("/factory-accounting/")) {
+    return "factory-accounting";
+  }
   if (normalizedPath.startsWith("/earnings-ledger")) {
     return "reports";
   }
@@ -160,6 +164,9 @@ export function canAccessAdminModule(auth: AuthLike, module: AdminModule): boole
   }
   if (module === "price-lists") {
     return session.can_view_rates && ["OWNER", "OPERATIONS", "FINANCE"].includes(session.admin_scope ?? "");
+  }
+  if (module === "factory-accounting") {
+    return session.admin_scope === "OWNER";
   }
   switch (session.admin_scope) {
     case "OWNER":
