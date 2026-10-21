@@ -42,7 +42,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { canAccessAdminModule, canRunPrivilegedAdminActions } from "@/lib/admin-access";
+import { ImportInboxCard } from "@/components/projects/ImportInboxCard";
+import { canAccessAdminModule, canManageImports, canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
 import {
   readableApiError,
@@ -2775,6 +2776,8 @@ export default function OperationsPage() {
             {actionFeedback.message}
           </InlineNotice>
         )}
+
+        <ImportInboxCard canManage={canManageImports(session)} isOwner={session?.admin_scope === "OWNER"} />
 
         <WidgetCard
           title={t("operations.actionSummary")}
