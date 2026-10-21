@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, FileText, Plus, RefreshCw } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ContractEditor } from "@/components/accounting/ContractEditor";
 import { CommercialPriceEditor } from "@/components/accounting/CommercialPriceEditor";
+import { ContractTermsPanel } from "@/components/accounting/ContractTermsPanel";
+import { termsCopy } from "@/components/accounting/terms-copy";
 import { commercialCopy, type CommercialCopy } from "@/components/accounting/copy";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
@@ -126,6 +128,31 @@ function ContractPrices({ contract }: { contract: CommercialContract }) {
   </section>;
 }
 
+function ContractWorkspace({ contract }: { contract: CommercialContract }) {
+  const { locale } = useI18n();
+  const t = termsCopy[locale];
+  const [view, setView] = useState("prices");
+  const id = useId();
+  const tabs = [["prices", t.prices], ["terms", t.tab]];
+  return <div className="min-w-0 space-y-4">
+    <div role="tablist" aria-label={contract.reference} className="flex flex-wrap gap-1 border-b border-border">
+      {tabs.map(([key, label]) => <button key={key} id={id + key} type="button" role="tab"
+        aria-selected={view === key} aria-controls={id + key + "-panel"} tabIndex={view === key ? 0 : -1}
+        className={cn("min-h-10 max-w-full border-b-2 px-3 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+          view === key ? "border-accent text-text-primary" : "border-transparent text-text-secondary hover:bg-surface-sunken")}
+        onClick={() => setView(key)} onKeyDown={(event) => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+          event.preventDefault();
+          const next = event.key === "Home" ? "prices" : event.key === "End" ? "terms" : view === "prices" ? "terms" : "prices";
+          setView(next); document.getElementById(id + next)?.focus();
+        }}>{label}</button>)}
+    </div>
+    {tabs.map(([key]) => <div key={key} role="tabpanel" id={id + key + "-panel"} aria-labelledby={id + key} hidden={view !== key}>
+      {view === key && (key === "prices" ? <ContractPrices contract={contract} /> : <ContractTermsPanel contract={contract} />)}
+    </div>)}
+  </div>;
+}
+
 function CommercialWorkspace() {
   const { locale, dir } = useI18n();
   const t = commercialCopy[locale];
@@ -164,7 +191,7 @@ function CommercialWorkspace() {
         <Pager t={t} offset={offset} total={contracts.data.total} busy={contracts.isFetching}
           onChange={(value) => { setOffset(value); setSelected(null); }} />
       </section>
-      {selectedContract && <ContractPrices key={selectedContract.id} contract={selectedContract} />}
+      {selectedContract && <ContractWorkspace key={selectedContract.id} contract={selectedContract} />}
     </div>}
     {creating && <ContractEditor onClose={() => { setCreating(false); refresh(); }} onSaved={(row) => {
       setCreating(false); setOffset(0); setSelected(row.id); refresh();
