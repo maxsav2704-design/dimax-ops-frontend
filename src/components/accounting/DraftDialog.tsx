@@ -8,10 +8,11 @@ import { useI18n } from "@/lib/i18n";
 import { commercialCopy } from "./copy";
 import type { useCommercialWrite } from "./use-commercial-write";
 
-export function DraftDialog({ title, description, dirty, valid, write, onClose, onSave, children }: {
+export function DraftDialog({ title, description, dirty, valid, write, onClose, onSave, children, submitLabel }: {
   title: string; description: string; dirty: boolean; valid: boolean;
   write: Pick<ReturnType<typeof useCommercialWrite>, "busy" | "locked" | "blocked" | "uncertain" | "error">;
   onClose: () => void; onSave: () => void; children: ReactNode;
+  submitLabel?: string;
 }) {
   const { locale, dir } = useI18n();
   const t = commercialCopy[locale];
@@ -35,7 +36,7 @@ export function DraftDialog({ title, description, dirty, valid, write, onClose, 
           <Button type="button" variant="outline" onClick={close} disabled={write.busy}>{t.cancel}</Button>
           <Button type="submit" disabled={write.busy || write.blocked || (!write.uncertain && !valid)}
             className="h-auto min-h-10 max-w-full whitespace-normal">
-            <Save className="me-2 size-4 shrink-0" />{write.busy ? t.saving : write.uncertain ? t.retry : t.save}
+            <Save className="me-2 size-4 shrink-0" />{write.busy ? t.saving : write.uncertain ? t.retry : submitLabel ?? t.save}
           </Button>
         </div>
       </form>

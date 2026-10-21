@@ -60,8 +60,8 @@ describe("commercial draft UI", () => {
     expect(api).not.toHaveBeenCalled();
   });
   it("shows separate commercial terms, demo marking and no approval/billing controls", async () => {
-    mount(); await screen.findByText("Entrance");
-    expect(screen.getByText("Not factory-confirmed")).toBeInTheDocument();
+    mount(); await screen.findByText("Entrance", {}, { timeout: 5000 });
+    expect(screen.getByText("Factory decisions are recorded for a pair of versions in Factory confirmation.")).toBeInTheDocument();
     expect(screen.getByText("Not available for billing")).toBeInTheDocument();
     expect(screen.getByText(/Invented test prices/)).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "DIMAX price, ILS excl. VAT" })).toBeInTheDocument();

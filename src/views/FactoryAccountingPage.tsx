@@ -10,6 +10,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { ContractEditor } from "@/components/accounting/ContractEditor";
 import { CommercialPriceEditor } from "@/components/accounting/CommercialPriceEditor";
 import { ContractTermsPanel } from "@/components/accounting/ContractTermsPanel";
+import { ContractApprovalsPanel } from "@/components/accounting/ContractApprovalsPanel";
+import { approvalCopy } from "@/components/accounting/approval-copy";
 import { termsCopy } from "@/components/accounting/terms-copy";
 import { commercialCopy, type CommercialCopy } from "@/components/accounting/copy";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -133,7 +135,7 @@ function ContractWorkspace({ contract }: { contract: CommercialContract }) {
   const t = termsCopy[locale];
   const [view, setView] = useState("prices");
   const id = useId();
-  const tabs = [["prices", t.prices], ["terms", t.tab]];
+  const tabs = [["prices", t.prices], ["terms", t.tab], ["approvals", approvalCopy[locale].tab]];
   return <div className="min-w-0 space-y-4">
     <div role="tablist" aria-label={contract.reference} className="flex flex-wrap gap-1 border-b border-border">
       {tabs.map(([key, label]) => <button key={key} id={id + key} type="button" role="tab"
@@ -143,12 +145,14 @@ function ContractWorkspace({ contract }: { contract: CommercialContract }) {
         onClick={() => setView(key)} onKeyDown={(event) => {
           if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
           event.preventDefault();
-          const next = event.key === "Home" ? "prices" : event.key === "End" ? "terms" : view === "prices" ? "terms" : "prices";
+          const index = tabs.findIndex(([value]) => value === view);
+          const step = (event.key === "ArrowRight" ? 1 : -1) * (locale === "he" ? -1 : 1);
+          const next = tabs[event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (index + step + tabs.length) % tabs.length][0];
           setView(next); document.getElementById(id + next)?.focus();
         }}>{label}</button>)}
     </div>
     {tabs.map(([key]) => <div key={key} role="tabpanel" id={id + key + "-panel"} aria-labelledby={id + key} hidden={view !== key}>
-      {view === key && (key === "prices" ? <ContractPrices contract={contract} /> : <ContractTermsPanel contract={contract} />)}
+      {view === key && (key === "prices" ? <ContractPrices contract={contract} /> : key === "terms" ? <ContractTermsPanel contract={contract} /> : <ContractApprovalsPanel contract={contract} />)}
     </div>)}
   </div>;
 }

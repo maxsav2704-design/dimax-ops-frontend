@@ -143,8 +143,14 @@ describe("contract terms", () => {
   });
   it("supports keyboard switching", async () => {
     mount(); const tab = await screen.findByRole("tab", { name: "Commercial prices" });
+    fireEvent.keyDown(tab, { key: "ArrowRight" });
+    const terms = await screen.findByRole("tab", { name: "Factory details and terms" });
+    expect(terms).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(tab, { key: "End" });
-    expect(await screen.findByRole("tab", { name: "Factory details and terms" })).toHaveAttribute("aria-selected", "true");
+    const approvals = await screen.findByRole("tab", { name: "Factory confirmation" });
+    expect(approvals).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(approvals, { key: "Home" });
+    expect(tab).toHaveAttribute("aria-selected", "true");
   });
   it.each([["ru", "Реквизиты и условия", "Новая версия условий"], ["he", "פרטי המפעל ותנאי החוזה", "גרסת תנאים חדשה"]])("localizes %s", async (locale, label, button) => {
     mount(locale); fireEvent.click(await screen.findByRole("tab", { name: label }));
