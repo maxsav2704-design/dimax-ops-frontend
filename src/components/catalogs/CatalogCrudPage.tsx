@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -72,6 +72,7 @@ type CatalogCrudPageProps = {
   endpoint: "/api/v1/admin/door-types" | "/api/v1/admin/reasons";
   queryKey: "door-types" | "reasons";
   entityLabel: string;
+  footer?: ReactNode;
 };
 const CODE_RE = /^[A-Za-z0-9_-]{2,64}$/;
 function emptyForm(): CatalogForm {
@@ -163,6 +164,7 @@ export function CatalogCrudPage({
   endpoint,
   queryKey,
   entityLabel,
+  footer,
 }: CatalogCrudPageProps) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1001,6 +1003,7 @@ export function CatalogCrudPage({
           bulkMutation.mutate("delete");
         }}
       />
+      {footer}
     </DashboardLayout>
   );
 }

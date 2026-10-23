@@ -72,6 +72,7 @@ import type { InstallerListItem, LibraryProductItem } from "@/components/project
 
 
 import { FailedImportQueueCard } from "@/components/projects/FailedImportQueueCard";
+import { DoorStagesCard } from "@/components/projects/DoorStagesCard";
 
 
 import type { FailedImportQueueResponse } from "@/components/projects/import-types";
@@ -2917,6 +2918,17 @@ export default function ProjectsPage() {
                   }
                   label={focusedDoorRow ? focusedDoorRow.unit_label : projectDetails?.name ?? ""}
                 />
+
+                {focusedDoorRow && (
+                  <DoorStagesCard
+                    key={focusedDoorRow.door_id}
+                    doorId={focusedDoorRow.door_id}
+                    doorTypeId={focusedDoorRow.door_type_id}
+                    canPlan={canManageProjects}
+                    installers={installersReference.items}
+                    onDoorChanged={() => { if (selectedProjectId) void refreshSelectedProjectOperationalData(selectedProjectId); }}
+                  />
+                )}
 
                 <DoorCommandBar
                   workspace={workspace}

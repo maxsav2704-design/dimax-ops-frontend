@@ -1,9 +1,13 @@
 import { CatalogCrudPage } from "@/components/catalogs/CatalogCrudPage";
+import { WorkStagesSection } from "@/components/doors/WorkStagesSection";
+import { useAuthSession } from "@/hooks/use-auth-session";
+import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { useI18n, useCopy } from "@/lib/i18n";
 
 export default function DoorTypesPage() {
   const { locale } = useI18n();
   const copy = useCopy();
+  const session = useAuthSession();
 
   return (
     <CatalogCrudPage
@@ -22,6 +26,7 @@ export default function DoorTypesPage() {
       endpoint="/api/v1/admin/door-types"
       queryKey="door-types"
       entityLabel={copy("Door Type", "тип двери", "סוג דלת")}
+      footer={<WorkStagesSection canPlan={canRunPrivilegedAdminActions(session)} />}
     />
   );
 }
