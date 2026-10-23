@@ -21,7 +21,7 @@ export const approvalSummarySchema = z.object({
   revoked_at: z.string().nullable(), revocation_reason: z.string().nullable(), mailbox_verified_at: z.string().nullable(),
   snapshot_hash: z.string(), email_outbox_id: z.string().uuid(), delivery_status: z.string(),
   status: z.enum(["PENDING", "CONFIRMED", "REVOKED", "EXPIRED", "SUPERSEDED", "CONTACT_CHANGED"]),
-  is_demo: z.boolean(), usable_for_billing: z.literal(false),
+  is_demo: z.boolean(), agreement_id: z.string().uuid().nullable().optional(), usable_for_billing: z.literal(false),
 });
 export const approvalPageSchema = z.object({ items: z.array(approvalSummarySchema), total: z.number().int().nonnegative() });
 export const approvalDetailSchema = approvalSummarySchema.extend({ snapshot: agreementSchema });

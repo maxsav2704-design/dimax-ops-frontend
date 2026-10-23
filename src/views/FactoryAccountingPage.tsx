@@ -11,7 +11,9 @@ import { ContractEditor } from "@/components/accounting/ContractEditor";
 import { CommercialPriceEditor } from "@/components/accounting/CommercialPriceEditor";
 import { ContractTermsPanel } from "@/components/accounting/ContractTermsPanel";
 import { ContractApprovalsPanel } from "@/components/accounting/ContractApprovalsPanel";
+import { agreementCopy } from "@/components/accounting/agreement-copy";
 import { approvalCopy } from "@/components/accounting/approval-copy";
+import { ContractPeriodsPanel } from "@/components/accounting/ContractPeriodsPanel";
 import { termsCopy } from "@/components/accounting/terms-copy";
 import { commercialCopy, type CommercialCopy } from "@/components/accounting/copy";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -135,7 +137,7 @@ function ContractWorkspace({ contract }: { contract: CommercialContract }) {
   const t = termsCopy[locale];
   const [view, setView] = useState("prices");
   const id = useId();
-  const tabs = [["prices", t.prices], ["terms", t.tab], ["approvals", approvalCopy[locale].tab]];
+  const tabs = [["prices", t.prices], ["terms", t.tab], ["approvals", approvalCopy[locale].tab], ["periods", agreementCopy[locale].periods]];
   return <div className="min-w-0 space-y-4">
     <div role="tablist" aria-label={contract.reference} className="flex flex-wrap gap-1 border-b border-border">
       {tabs.map(([key, label]) => <button key={key} id={id + key} type="button" role="tab"
@@ -152,7 +154,7 @@ function ContractWorkspace({ contract }: { contract: CommercialContract }) {
         }}>{label}</button>)}
     </div>
     {tabs.map(([key]) => <div key={key} role="tabpanel" id={id + key + "-panel"} aria-labelledby={id + key} hidden={view !== key}>
-      {view === key && (key === "prices" ? <ContractPrices contract={contract} /> : key === "terms" ? <ContractTermsPanel contract={contract} /> : <ContractApprovalsPanel contract={contract} />)}
+      {view === key && (key === "prices" ? <ContractPrices contract={contract} /> : key === "terms" ? <ContractTermsPanel contract={contract} /> : key === "periods" ? <ContractPeriodsPanel contract={contract} /> : <ContractApprovalsPanel contract={contract} />)}
     </div>)}
   </div>;
 }
