@@ -56,7 +56,7 @@ describe("commercial draft UI", () => {
   });
   it.each(["OPERATIONS", "FINANCE", "VIEWER", "INSTALLER", null])("does not query commercial data for %s", (scope) => {
     auth.mockReturnValue({ role: scope === "INSTALLER" ? "INSTALLER" : "ADMIN", admin_scope: scope });
-    mount(); expect(screen.getByText("Factory settlement access requires OWNER.")).toBeInTheDocument();
+    mount(); expect(screen.getByText("Contracts & billing access requires OWNER.")).toBeInTheDocument();
     expect(api).not.toHaveBeenCalled();
   });
   it("shows separate commercial terms, demo marking and no approval/billing controls", async () => {
@@ -150,7 +150,7 @@ describe("commercial draft UI", () => {
     expect(form.getByLabelText("Change reason")).toHaveValue("Test amendment");
     auth.mockReturnValue({ role: "INSTALLER" });
     fireEvent(window, new CustomEvent("dimax-auth-changed"));
-    await screen.findByText("Factory settlement access requires OWNER.");
+    await screen.findByText("Contracts & billing access requires OWNER.");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.queryByText("Entrance")).not.toBeInTheDocument();
   });
@@ -200,10 +200,10 @@ describe("commercial draft UI", () => {
     expect(screen.queryByText("Entrance")).not.toBeInTheDocument();
     expect(api).toHaveBeenCalledWith(API + "?limit=20&offset=20", expect.anything(), expect.anything());
   });
-  it.each([["ru", "Расчёты с заводом", "ltr"], ["he", "התחשבנות עם המפעל", "rtl"]])("renders %s with correct direction", async (locale, heading, dir) => {
+  it.each([["ru", "Договоры и оплаты", "ltr"], ["he", "חוזים וחיובים", "rtl"]])("renders %s with correct direction", async (locale, heading, dir) => {
     mount(locale); await screen.findByText("Entrance");
     const title = screen.getByRole("heading", { level: 1, name: heading });
     expect(title.closest("[dir]")).toHaveAttribute("dir", dir);
-    expect(screen.queryByText("Factory settlements")).not.toBeInTheDocument();
+    expect(screen.queryByText("Contracts & billing")).not.toBeInTheDocument();
   });
 });

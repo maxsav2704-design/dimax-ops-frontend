@@ -62,7 +62,7 @@ async function fixture(page: Page, { empty = false, scope = "OWNER", unavailable
 }
 
 for (const [locale, title, width] of [
-  ["ru", "Расчёты с заводом", 1440], ["he", "התחשבנות עם המפעל", 768], ["en", "Factory settlements", 390],
+  ["ru", "Договоры и оплаты", 1440], ["he", "חוזים וחיובים", 768], ["en", "Contracts & billing", 390],
 ] as const) {
   test("commercial layout " + locale, async ({ page }, info) => {
     const errors: string[] = [];

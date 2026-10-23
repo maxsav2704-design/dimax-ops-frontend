@@ -1,7 +1,7 @@
 import type { Locale } from "@/lib/locale";
 
 const en = {
-  title: "Factory settlements", scope: "DIMAX / Commercial terms", contracts: "Contracts",
+  title: "Contracts & billing", scope: "DIMAX / Commercial terms", contracts: "Contracts",
   newContract: "New contract", factory: "Factory", reference: "Contract reference",
   contractReason: "Preparation reason", newVersion: "New price version", versions: "Price versions",
   version: "Version", draft: "Draft", demo: "Test data", notConfirmed: "Factory decisions are recorded for a pair of versions in Factory confirmation.",
@@ -15,7 +15,7 @@ const en = {
   save: "Save draft", saving: "Saving…", close: "Close", cancel: "Cancel",
   loading: "Loading…", refresh: "Refresh", previous: "Previous page", next: "Next page",
   emptyContracts: "No contracts yet", emptyVersions: "No price versions yet", noItems: "No price lines",
-  denied: "Factory settlement access requires OWNER.", error: "Could not load commercial terms. Try again.",
+  denied: "Contracts & billing access requires OWNER.", error: "Could not load commercial terms. Try again.",
   serviceUnavailable: "Commercial draft service is unavailable. No changes have been submitted.",
   validation: "Check the required fields and catalog items.", conflict: "Terms changed or the reference already exists. Close and refresh before preparing another draft.",
   uncertain: "The save result is unknown. Retry the same request before creating another draft.",
@@ -32,7 +32,7 @@ export type CommercialCopy = { [K in keyof typeof en]: string };
 export const commercialCopy: Record<Locale, CommercialCopy> = {
   en,
   ru: {
-    title: "Расчёты с заводом", scope: "DIMAX / Коммерческие условия", contracts: "Договоры",
+    title: "Договоры и оплаты", scope: "DIMAX / Коммерческие условия", contracts: "Договоры",
     newContract: "Новый договор", factory: "Завод", reference: "Номер договора",
     contractReason: "Основание подготовки", newVersion: "Новая версия прайса", versions: "Версии прайса",
     version: "Версия", draft: "Черновик", demo: "Тестовые данные", notConfirmed: "Решения по паре версий находятся в разделе «Согласование заводом».",
@@ -46,7 +46,7 @@ export const commercialCopy: Record<Locale, CommercialCopy> = {
     save: "Сохранить черновик", saving: "Сохранение…", close: "Закрыть", cancel: "Отмена",
     loading: "Загрузка…", refresh: "Обновить", previous: "Предыдущая страница", next: "Следующая страница",
     emptyContracts: "Договоров пока нет", emptyVersions: "Версий прайса пока нет", noItems: "Нет строк прайса",
-    denied: "Расчёты с заводом доступны только OWNER.", error: "Не удалось загрузить условия. Повторите попытку.",
+    denied: "Договоры и оплаты доступны только OWNER.", error: "Не удалось загрузить условия. Повторите попытку.",
     serviceUnavailable: "Сервис коммерческих черновиков недоступен. Изменения не отправлены.",
     validation: "Проверьте обязательные поля и позиции справочника.", conflict: "Условия изменились или номер договора уже занят. Закройте форму и обновите данные.",
     uncertain: "Результат сохранения неизвестен. Повторите тот же запрос перед созданием нового черновика.",
@@ -60,7 +60,7 @@ export const commercialCopy: Record<Locale, CommercialCopy> = {
     noSelection: "Выберите договор", pcs: "шт.", hour: "час", currency: "Валюта", vat: "Без НДС",
   },
   he: {
-    title: "התחשבנות עם המפעל", scope: "DIMAX / תנאים מסחריים", contracts: "חוזים",
+    title: "חוזים וחיובים", scope: "DIMAX / תנאים מסחריים", contracts: "חוזים",
     newContract: "חוזה חדש", factory: "מפעל", reference: "מספר חוזה",
     contractReason: "סיבת הכנה", newVersion: "גרסת מחירון חדשה", versions: "גרסאות מחירון",
     version: "גרסה", draft: "טיוטה", demo: "נתוני בדיקה", notConfirmed: "החלטות לצמד גרסאות מופיעות בלשונית אישור המפעל.",
@@ -74,7 +74,7 @@ export const commercialCopy: Record<Locale, CommercialCopy> = {
     save: "שמירת טיוטה", saving: "שומר…", close: "סגירה", cancel: "ביטול",
     loading: "טוען…", refresh: "רענון", previous: "עמוד קודם", next: "עמוד הבא",
     emptyContracts: "אין חוזים עדיין", emptyVersions: "אין גרסאות מחירון עדיין", noItems: "אין שורות מחירון",
-    denied: "ההתחשבנות עם המפעל זמינה רק לבעלים.", error: "לא ניתן לטעון את התנאים. יש לנסות שוב.",
+    denied: "חוזים וחיובים זמינים רק לבעלים.", error: "לא ניתן לטעון את התנאים. יש לנסות שוב.",
     serviceUnavailable: "שירות הטיוטות המסחריות אינו זמין. לא נשלחו שינויים.",
     validation: "יש לבדוק את שדות החובה ופריטי הקטלוג.", conflict: "התנאים השתנו או שמספר החוזה כבר קיים. יש לסגור ולרענן.",
     uncertain: "תוצאת השמירה אינה ידועה. יש לנסות שוב את אותה בקשה לפני יצירת טיוטה נוספת.",

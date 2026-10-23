@@ -21,7 +21,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { path: "/installers", module: "installers", navKey: "nav.installers", keywords: ["installers", "монтажники"] },
   { path: "/journal", module: "journal", navKey: "nav.journal", keywords: ["journal", "журнал", "доставка"] },
   { path: "/price-lists", module: "price-lists", navKey: "nav.priceLists", keywords: ["price list", "прайс", "завод", "ставки"] },
-  { path: "/factory-accounting", module: "factory-accounting", navKey: "nav.factoryAccounting", keywords: ["factory settlements", "расчёты", "договоры", "commercial", "חוזים", "התחשבנות"] },
+  { path: "/factory-accounting", module: "factory-accounting", navKey: "nav.factoryAccounting", keywords: ["contracts", "billing", "factory settlements", "договоры", "оплаты", "расчёты", "commercial", "חוזים", "חיובים", "התחשבנות"] },
   { path: "/reports", module: "reports", navKey: "nav.reports", keywords: ["reports", "отчёты", "отчеты"] },
   { path: "/earnings-ledger", module: "reports", navKey: "nav.earningsLedger", keywords: ["ledger", "начисления", "payroll"] },
   { path: "/documents", module: "projects", navKey: "nav.documents", keywords: ["documents", "документы"] },

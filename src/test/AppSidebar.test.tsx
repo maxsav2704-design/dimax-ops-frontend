@@ -82,7 +82,7 @@ describe("AppSidebar", () => {
     expect(screen.getByText("Work")).toBeInTheDocument();
     expect(screen.getByText("Money and reports")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Factory price list" })).toHaveAttribute("href", "/price-lists");
-    expect(screen.getByRole("link", { name: "Factory settlements" })).toHaveAttribute("href", "/factory-accounting");
+    expect(screen.getByRole("link", { name: "Contracts & billing" })).toHaveAttribute("href", "/factory-accounting");
     expect(
       screen.getByRole("link", { name: /create project/i }),
     ).toHaveAttribute("href", "/projects?create=1");
@@ -123,7 +123,7 @@ describe("AppSidebar", () => {
     expect(screen.queryByRole("link", { name: /operations/i })).not.toBeInTheDocument();
     expect(await screen.findByRole("link", { name: /reports/i })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /projects/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Factory settlements" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Contracts & billing" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /library/i })).not.toBeInTheDocument();
   });
 
