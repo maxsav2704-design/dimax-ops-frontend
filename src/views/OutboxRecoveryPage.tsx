@@ -210,17 +210,17 @@ export default function OutboxRecoveryPage() {
           {tab === "items" && !hasReview && <p className="py-6 text-13 text-text-secondary">{copy("No active review.", "Активной сверки нет.", "אין בדיקה פעילה.")}</p>}
           {!loading && !queryError && (hasReview || tab === "history") && pageRows?.length === 0 && <p className="py-6 text-13 text-text-secondary">{copy("No records on this page.", "На этой странице записей нет.", "אין רשומות בעמוד זה.")}</p>}
           {!queryError && tab === "items" && hasReview && items.data && <div className="overflow-x-auto">
-            <table className="w-full table-fixed text-start text-13 sm:table-auto"><caption className="sr-only">{copy("Messages requiring reconciliation", "Письма для сверки", "הודעות לבדיקה")}</caption>
-              <thead className="border-b border-border text-12 text-text-secondary"><tr>
+            <table className="w-full text-start text-13 max-sm:block"><caption className="sr-only">{copy("Messages requiring reconciliation", "Письма для сверки", "הודעות לבדיקה")}</caption>
+              <thead className="border-b border-border text-12 text-text-secondary max-sm:sr-only"><tr>
                 <th scope="col" className="w-1/2 px-3 py-2 text-start font-medium sm:w-auto">{copy("Message / recipient", "Письмо / получатель", "הודעה / נמען")}</th>
                 <th scope="col" className="px-3 py-2 text-start font-medium">{copy("Decision", "Решение", "החלטה")}</th>
                 <th scope="col" className="w-14 px-2 py-2 text-end font-medium sm:w-auto"><span className="sr-only sm:not-sr-only">{copy("Review", "Сверка", "בדיקה")}</span></th>
-              </tr></thead><tbody>{items.data.map(row => <tr key={row.id} className="border-b border-border hover:bg-surface-subtle">
-                <td className="max-w-72 px-3 py-3"><div className="break-words font-medium">{row.message.subject || copy("No subject", "Без темы", "ללא נושא")}</div>
+              </tr></thead><tbody className="max-sm:block">{items.data.map(row => <tr key={row.id} className="border-b border-border hover:bg-surface-subtle max-sm:grid max-sm:grid-cols-[minmax(0,1fr)_auto]">
+                <td className="max-w-72 px-3 py-3 max-sm:col-start-1 max-sm:row-start-1 max-sm:max-w-none max-sm:pb-1"><div className="break-words font-medium">{row.message.subject || copy("No subject", "Без темы", "ללא נושא")}</div>
                   <div dir="auto" className="mt-1 break-all text-12 text-text-secondary">{row.message.recipient || "—"}</div>
                   <div className="mt-1 text-12 text-text-secondary">{row.message.channel === "EMAIL" ? copy("Email", "Почта", "דוא״ל") : "WhatsApp"} · {formatDate(row.message.scheduled_at)}</div></td>
-                <td className="break-words px-3 py-3"><span className={row.action === "HOLD" || row.action === null ? "text-status-warning-fg" : "text-text-secondary"}>{row.action ? labels[row.action] : labels.unresolved}</span></td>
-                <td className="px-2 py-3 text-end"><Button variant="outline" size="sm" className="max-sm:h-9 max-sm:w-9 max-sm:p-0" title={copy("Review", "Проверить", "בדיקה")} disabled={busy || status.isFetching || loading} onClick={() => { mutation.reset(); setNotice(""); setSelected(row); }}>
+                <td className="break-words px-3 py-3 max-sm:col-start-1 max-sm:row-start-2 max-sm:pt-0"><span className={row.action === "HOLD" || row.action === null ? "text-status-warning-fg" : "text-text-secondary"}>{row.action ? labels[row.action] : labels.unresolved}</span></td>
+                <td className="px-2 py-3 text-end max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center"><Button variant="outline" size="sm" className="max-sm:h-9 max-sm:w-9 max-sm:p-0" title={copy("Review", "Проверить", "בדיקה")} disabled={busy || status.isFetching || loading} onClick={() => { mutation.reset(); setNotice(""); setSelected(row); }}>
                   <FileCheck2 aria-hidden /><span className="sr-only sm:not-sr-only">{copy("Review", "Проверить", "בדיקה")}</span></Button></td>
               </tr>)}</tbody></table>
           </div>}
