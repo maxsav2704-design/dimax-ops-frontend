@@ -61,7 +61,9 @@ jobs:
       - name: Component regression
         run: npx vitest run src/test/OutboxRecoveryPage.test.tsx src/test/OperationsPage.test.tsx
       - name: Lint scoped changes
-        run: npx eslint src/lib/outbox-recovery.ts src/views/OutboxRecoveryPage.tsx src/test/OutboxRecoveryPage.test.tsx e2e/outbox-recovery.spec.ts playwright.recovery.config.ts 'app/(admin)/operations/recovery/page.tsx'
+        run: npx eslint src/lib/outbox-recovery.ts src/views/OutboxRecoveryPage.tsx src/test/OutboxRecoveryPage.test.tsx acceptance/outbox-recovery.spec.ts playwright.recovery.config.ts 'app/(admin)/operations/recovery/page.tsx'
+      - name: Validate standard test discovery stays intact
+        run: node scripts/validate-test-discovery.mjs
       - name: Production build
         run: npm run build
       - name: Install pinned backend dependencies

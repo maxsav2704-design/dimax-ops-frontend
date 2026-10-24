@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { fillReadyLoginForm } from "./login-helpers";
+import { fillReadyLoginForm } from "../e2e/login-helpers";
 
 const api = "http://127.0.0.1:18089";
 const base = "/api/v1/admin/outbox/recovery";
@@ -66,6 +66,7 @@ for (const [index, labels] of locales.entries()) {
         await dialog.getByRole("combobox", { name: labels.offset, exact: true }).selectOption("+02:00");
       }
       await dialog.getByLabel(labels.check, { exact: true }).check();
+      await expect(dialog.getByRole("button", { name: labels.close, exact: true })).toBeInViewport();
       expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBeTruthy();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
       if (action === "ACCEPTED") await page.screenshot({ path: info.outputPath(`decision-${labels.locale}.png`), fullPage: true });
@@ -84,6 +85,8 @@ for (const [index, labels] of locales.entries()) {
     await expect(page.getByRole("heading", { name: labels.released, exact: true })).toBeVisible();
     const status = await request.get(api + base, { headers: opsHeaders });
     expect(await status.json()).toMatchObject({ state: "RELEASED", unresolved: 0, held: 1 });
+    expect(await page.getByRole("table").evaluate(el => el.scrollWidth <= el.clientWidth)).toBeTruthy();
+    await expect(page.getByText("Synthetic HOLD", { exact: true })).toBeInViewport();
     await page.screenshot({ path: info.outputPath(`queue-${labels.locale}.png`), fullPage: true });
 
     await page.getByRole("row").filter({ hasText: "Synthetic ACCEPTED" }).getByRole("button", { name: labels.review, exact: true }).click();

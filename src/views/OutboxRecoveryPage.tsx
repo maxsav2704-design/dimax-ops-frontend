@@ -210,18 +210,18 @@ export default function OutboxRecoveryPage() {
           {tab === "items" && !hasReview && <p className="py-6 text-13 text-text-secondary">{copy("No active review.", "Активной сверки нет.", "אין בדיקה פעילה.")}</p>}
           {!loading && !queryError && (hasReview || tab === "history") && pageRows?.length === 0 && <p className="py-6 text-13 text-text-secondary">{copy("No records on this page.", "На этой странице записей нет.", "אין רשומות בעמוד זה.")}</p>}
           {!queryError && tab === "items" && hasReview && items.data && <div className="overflow-x-auto">
-            <table className="w-full min-w-[540px] text-start text-13"><caption className="sr-only">{copy("Messages requiring reconciliation", "Письма для сверки", "הודעות לבדיקה")}</caption>
+            <table className="w-full table-fixed text-start text-13 sm:table-auto"><caption className="sr-only">{copy("Messages requiring reconciliation", "Письма для сверки", "הודעות לבדיקה")}</caption>
               <thead className="border-b border-border text-12 text-text-secondary"><tr>
-                <th scope="col" className="px-3 py-2 text-start font-medium">{copy("Message / recipient", "Письмо / получатель", "הודעה / נמען")}</th>
+                <th scope="col" className="w-1/2 px-3 py-2 text-start font-medium sm:w-auto">{copy("Message / recipient", "Письмо / получатель", "הודעה / נמען")}</th>
                 <th scope="col" className="px-3 py-2 text-start font-medium">{copy("Decision", "Решение", "החלטה")}</th>
-                <th scope="col" className="px-3 py-2 text-end font-medium">{copy("Review", "Сверка", "בדיקה")}</th>
+                <th scope="col" className="w-14 px-2 py-2 text-end font-medium sm:w-auto"><span className="sr-only sm:not-sr-only">{copy("Review", "Сверка", "בדיקה")}</span></th>
               </tr></thead><tbody>{items.data.map(row => <tr key={row.id} className="border-b border-border hover:bg-surface-subtle">
                 <td className="max-w-72 px-3 py-3"><div className="break-words font-medium">{row.message.subject || copy("No subject", "Без темы", "ללא נושא")}</div>
                   <div dir="auto" className="mt-1 break-all text-12 text-text-secondary">{row.message.recipient || "—"}</div>
                   <div className="mt-1 text-12 text-text-secondary">{row.message.channel === "EMAIL" ? copy("Email", "Почта", "דוא״ל") : "WhatsApp"} · {formatDate(row.message.scheduled_at)}</div></td>
-                <td className="px-3 py-3"><span className={row.action === "HOLD" || row.action === null ? "text-status-warning-fg" : "text-text-secondary"}>{row.action ? labels[row.action] : labels.unresolved}</span></td>
-                <td className="px-3 py-3 text-end"><Button variant="outline" size="sm" disabled={busy || status.isFetching || loading} onClick={() => { mutation.reset(); setNotice(""); setSelected(row); }}>
-                  <FileCheck2 aria-hidden />{copy("Review", "Проверить", "בדיקה")}</Button></td>
+                <td className="break-words px-3 py-3"><span className={row.action === "HOLD" || row.action === null ? "text-status-warning-fg" : "text-text-secondary"}>{row.action ? labels[row.action] : labels.unresolved}</span></td>
+                <td className="px-2 py-3 text-end"><Button variant="outline" size="sm" className="max-sm:h-9 max-sm:w-9 max-sm:p-0" title={copy("Review", "Проверить", "בדיקה")} disabled={busy || status.isFetching || loading} onClick={() => { mutation.reset(); setNotice(""); setSelected(row); }}>
+                  <FileCheck2 aria-hidden /><span className="sr-only sm:not-sr-only">{copy("Review", "Проверить", "בדיקה")}</span></Button></td>
               </tr>)}</tbody></table>
           </div>}
           {!queryError && tab === "history" && history.data?.map(entry => <article key={entry.id} className="space-y-2 border-b border-border py-4 text-13">
@@ -241,10 +241,11 @@ export default function OutboxRecoveryPage() {
       </>}
     </>}
     <Dialog open={allowed && (!!command || !!selectedCurrent)} onOpenChange={open => { if (!open && !busy) { setCommand(null); setSelected(null); mutation.reset(); } }}>
-      <DialogContent closeLabel={copy("Close", "Закрыть", "סגירה")} className="w-[calc(100%_-_2rem)] max-w-xl text-start" onEscapeKeyDown={event => { if (busy) event.preventDefault(); }} onPointerDownOutside={event => { if (busy) event.preventDefault(); }}>
-        <DialogHeader><DialogTitle className="pe-7">{command === "begin" ? copy("Open recovery review", "Открыть сверку восстановления", "פתיחת בדיקת שחזור") : command === "release" ? copy("Resume queue", "Возобновить очередь", "חידוש התור") : copy("Message review", "Сверка письма", "בדיקת הודעה")}</DialogTitle>
+      <DialogContent closeLabel={copy("Close", "Закрыть", "סגירה")} className="flex w-[calc(100%_-_2rem)] max-w-xl flex-col gap-0 overflow-hidden p-0 text-start" onEscapeKeyDown={event => { if (busy) event.preventDefault(); }} onPointerDownOutside={event => { if (busy) event.preventDefault(); }}>
+        <DialogHeader className="shrink-0 px-6 pt-6 text-start"><DialogTitle className="pe-7">{command === "begin" ? copy("Open recovery review", "Открыть сверку восстановления", "פתיחת בדיקת שחזור") : command === "release" ? copy("Resume queue", "Возобновить очередь", "חידוש התור") : copy("Message review", "Сверка письма", "בדיקת הודעה")}</DialogTitle>
           <DialogDescription>{command === "release" ? copy("Messages on hold remain blocked. Work, signatures and earnings will not be replayed.", "Письма на удержании останутся заблокированными. Работы, подписи и начисления не повторяются.", "הודעות בהמתנה יישארו חסומות. עבודות, חתימות וצבירות שכר לא יבוצעו שוב.") :
             copy("Decisions are recorded with the administrator and evidence reference.", "Решения сохраняются с автором и ссылкой на подтверждение.", "ההחלטות נשמרות עם המחבר והאסמכתה.")}</DialogDescription></DialogHeader>
+        <div className="min-h-0 space-y-4 overflow-y-auto p-6">
         {mutation.isError && <InlineNotice tone="error">{conflict ? copy("The state or permissions changed. Close this window, refresh and review again.", "Состояние или права изменились. Закройте окно, обновите данные и повторите сверку.", "המצב או ההרשאות השתנו. סגרו, רעננו ובדקו מחדש.") :
           copy("The result is not confirmed. Do not create another decision; retry this same request or check the history.", "Результат не подтверждён. Не создавайте другое решение: повторите тот же запрос или проверьте журнал.", "התוצאה לא אושרה. אין ליצור החלטה אחרת; נסו שוב את אותה בקשה או בדקו ביומן.")}</InlineNotice>}
         {selectedCurrent && selected && <>
@@ -266,6 +267,7 @@ export default function OutboxRecoveryPage() {
           <label className="flex items-start gap-2 text-13"><input type="checkbox" className="mt-1 accent-accent" checked={confirmed} disabled={busy || conflict} onChange={event => setConfirmed(event.target.checked)} /><span>{copy("I confirm this recovery action.", "Подтверждаю это действие восстановления.", "אני מאשר את פעולת השחזור.")}</span></label>
           <DialogFooter><Button type="submit" disabled={!owner || busy || conflict || !current || status.isFetching || !reason.trim() || !confirmed || (command === "release" && current?.unresolved !== 0)}><ShieldCheck aria-hidden />{copy("Confirm", "Подтвердить", "אישור")}</Button></DialogFooter>
         </form>}
+        </div>
       </DialogContent>
     </Dialog>
     <Link href="/operations" className="inline-flex items-center gap-2 text-13 text-text-secondary hover:text-text"><ChevronLeft className="size-4 rtl:rotate-180" aria-hidden />{copy("Back to operations", "К операциям", "חזרה לתפעול")}</Link>
