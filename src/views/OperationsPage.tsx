@@ -2294,6 +2294,10 @@ export default function OperationsPage() {
               }
               actions={
                 <>
+                <Link href="/operations/recovery" className="dmx-secondary-action">
+                  <Mail className="h-4 w-4" />
+                  {copy("Mail reconciliation", "Сверка писем", "בדיקת הודעות")}
+                </Link>
                 <Link href="/settings" className="dmx-secondary-action">
                   <Bell className="h-4 w-4" />
                   {copy("Alerts config", "Конфигурация оповещений", "תצורת התראות")}

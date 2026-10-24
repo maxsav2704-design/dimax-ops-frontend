@@ -1,0 +1,98 @@
+name: Outbox Recovery UI Acceptance
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/outbox-recovery-ui-20261024]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: outbox-recovery-ui-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  isolated-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16.12-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic-ci-only
+          POSTGRES_DB: dimax_recovery_ui
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d dimax_recovery_ui"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      APP_ENV: test
+      DIMAX_RECOVERY_UI_TEST: synthetic-only
+      DATABASE_URL: postgresql+psycopg2://postgres:synthetic-ci-only@127.0.0.1:5432/dimax_recovery_ui
+      JWT_SECRET: synthetic-ci-only-not-a-production-secret
+      OUTBOX_RECOVERY_EPOCH: 00000000-0000-4000-8000-000000000099
+      EMAIL_ENABLED: 'false'
+      WHATSAPP_ENABLED: 'false'
+      AI_ENABLED: 'false'
+      CORS_ALLOW_ORIGINS: http://127.0.0.1:4192
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:18089
+      NEXT_TELEMETRY_DISABLED: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: maxsav2704-design/dimax-ops-backend
+          ref: ee10b44c08d1dd175d6bc49ed14b64cc77cb0613
+          path: .acceptance-backend
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install locked frontend dependencies
+        run: npm ci
+      - name: Component regression
+        run: npx vitest run src/test/OutboxRecoveryPage.test.tsx src/test/OperationsPage.test.tsx
+      - name: Lint scoped changes
+        run: npx eslint src/lib/outbox-recovery.ts src/views/OutboxRecoveryPage.tsx src/test/OutboxRecoveryPage.test.tsx e2e/outbox-recovery.spec.ts playwright.recovery.config.ts 'app/(admin)/operations/recovery/page.tsx'
+      - name: Production build
+        run: npm run build
+      - name: Install pinned backend dependencies
+        working-directory: .acceptance-backend
+        run: python -m pip install --no-cache-dir -c constraints.txt -r requirements.txt
+      - name: Migrate isolated database and seed synthetic mail
+        working-directory: .acceptance-backend
+        run: |
+          python -m alembic upgrade head
+          PYTHONPATH=. python ../e2e/fixtures/seed-recovery.py
+      - name: Start isolated API without workers or external delivery
+        working-directory: .acceptance-backend
+        run: |
+          python -m uvicorn app.main:app --host 127.0.0.1 --port 18089 > ../recovery-api.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:18089/health > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Real API browser chain in EN RU HE
+        run: npx playwright test --config playwright.recovery.config.ts
+      - name: Verify persisted decisions and held-message protection
+        working-directory: .acceptance-backend
+        run: PYTHONPATH=. python ../e2e/fixtures/seed-recovery.py verify
+      - name: Retain compact synthetic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovery-ui-evidence
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            test-results/recovery-ui/**
+            recovery-api.log
