@@ -58,12 +58,12 @@ for (const [index, labels] of locales.entries()) {
       const row = page.getByRole("row").filter({ hasText: `Synthetic ${action}` });
       await row.getByRole("button", { name: labels.review, exact: true }).click();
       dialog = page.getByRole("dialog");
-      await dialog.getByLabel(labels.decision, { exact: true }).selectOption(action);
+      await dialog.getByRole("combobox", { name: labels.decision, exact: true }).selectOption(action);
       await dialog.getByLabel(labels.reason, { exact: true }).fill(`Synthetic evidence checked: ${action}`);
       await dialog.getByLabel(labels.evidence, { exact: true }).fill(`TRACE-${action}`);
       if (action === "ACCEPTED") {
         await dialog.getByLabel(labels.time, { exact: true }).fill("2020-01-01T10:30");
-        await dialog.getByLabel(labels.offset, { exact: true }).selectOption("+02:00");
+        await dialog.getByRole("combobox", { name: labels.offset, exact: true }).selectOption("+02:00");
       }
       await dialog.getByLabel(labels.check, { exact: true }).check();
       expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBeTruthy();

@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import OutboxRecoveryPage from "@/views/OutboxRecoveryPage";
 import { LanguageProvider } from "@/lib/i18n";
-import { providerAcceptedAt, recoveryStatusSchema, recoveryPath as base } from "@/lib/outbox-recovery";
+import { fetchRecoveryRows, providerAcceptedAt, recoveryStatusSchema, recoveryPath as base } from "@/lib/outbox-recovery";
 
 const { api, auth } = vi.hoisted(() => ({ api: vi.fn(), auth: { role: "ADMIN", admin_scope: "OWNER" } }));
 vi.mock("@/lib/api", () => ({ apiFetch: api }));
@@ -189,6 +189,15 @@ describe("Outbox recovery", () => {
 });
 
 describe("Recovery response and time validation", () => {
+  it("rejects items from a changed recovery instead of combining snapshots", async () => {
+    row.recovery_id = id(99);
+    await expect(fetchRecoveryRows(id(2), 0, new AbortController().signal)).rejects.toThrow("Recovery changed");
+    expect(api.mock.calls).toHaveLength(1);
+  });
+  it("rejects a different message identity", async () => {
+    api.mockResolvedValueOnce([{ ...row }]).mockResolvedValueOnce({ id: id(99) });
+    await expect(fetchRecoveryRows(id(2), 0, new AbortController().signal)).rejects.toThrow("Message identity changed");
+  });
   it("rejects unknown states and incomplete responses", () => {
     expect(recoveryStatusSchema.safeParse({}).success).toBe(false);
     expect(recoveryStatusSchema.safeParse({ ...state, state: "READY" }).success).toBe(false);

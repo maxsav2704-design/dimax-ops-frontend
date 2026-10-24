@@ -15,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { onAuthChanged } from "@/lib/auth-session";
-import { readableApiError } from "@/lib/api-error-display";
 import { useCopy, useI18n } from "@/lib/i18n";
 import {
   fetchRecoveryRows, providerAcceptedAt, recoveryDecisionSchema, recoveryPageSize,
@@ -172,7 +171,7 @@ export default function OutboxRecoveryPage() {
       ? copy("The session changed. Reopen this section before continuing.", "Сессия изменилась. Откройте раздел заново перед продолжением.", "ההתחברות השתנתה. פתחו את המסך מחדש לפני המשך.")
       : copy("Owner or operations access is required.", "Требуется доступ владельца или операционного администратора.", "נדרשת הרשאת בעלים או תפעול.")}</InlineNotice> : <>
       {notice && !queryError && <InlineNotice tone="success" onDismiss={() => setNotice("")}>{notice}</InlineNotice>}
-      {queryError && <InlineNotice tone="error">{readableApiError(queryError, locale, copy("Reconciliation is unavailable. No action is allowed until data is refreshed.", "Сверка недоступна. Действия заблокированы до обновления данных.", "הבדיקה אינה זמינה. הפעולות חסומות עד לרענון הנתונים."))}</InlineNotice>}
+      {queryError && <InlineNotice tone="error">{copy("Reconciliation data could not be refreshed. Refresh the page before continuing; if this repeats, contact the administrator.", "Не удалось обновить данные сверки. Обновите страницу перед продолжением; если ошибка повторяется, обратитесь к администратору.", "לא ניתן לרענן את נתוני הבדיקה. רעננו את העמוד לפני המשך; אם השגיאה חוזרת, פנו למנהל.")}</InlineNotice>}
       {status.isLoading && <p role="status" className="text-13">{copy("Loading queue state…", "Загружаем состояние очереди…", "טוען מצב תור…")}</p>}
       {current && <>
         <section className="border-y border-border py-4" aria-label={copy("Recovery state", "Состояние восстановления", "מצב שחזור")}>

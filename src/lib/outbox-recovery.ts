@@ -19,9 +19,9 @@ export const recoveryDecisionSchema = z.object({
   accepted_at: z.string().nullable(), actor_id: z.string().uuid(), created_at: z.string(),
 });
 const messageSchema = z.object({
-  id: z.string().uuid(), channel: z.string(), recipient: z.string().nullable(),
+  id: z.string().uuid(), channel: z.enum(["EMAIL", "WHATSAPP"]), recipient: z.string().nullable(),
   subject: z.string().nullable(), attachment_name: z.string().nullable(),
-  status: z.string(), scheduled_at: z.string(), sent_at: z.string().nullable(),
+  status: z.enum(["PENDING", "FAILED", "SENT"]), scheduled_at: z.string(), sent_at: z.string().nullable(),
 });
 export type RecoveryItem = z.infer<typeof recoveryItemSchema>;
 export type RecoveryDecision = z.infer<typeof recoveryDecisionSchema>;
