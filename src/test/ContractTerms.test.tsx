@@ -138,7 +138,7 @@ describe("contract terms", () => {
   it("clears the open terms editor on lost permission", async () => {
     mount(); await editor(); auth.mockReturnValue({ role: "INSTALLER" });
     fireEvent(window, new CustomEvent("dimax-auth-changed"));
-    await screen.findByText("Factory settlement access requires OWNER.");
+    await screen.findByText("Contracts & billing access requires OWNER.");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
   it("supports keyboard switching", async () => {
@@ -146,11 +146,16 @@ describe("contract terms", () => {
     fireEvent.keyDown(tab, { key: "ArrowRight" });
     const terms = await screen.findByRole("tab", { name: "Factory details and terms" });
     expect(terms).toHaveAttribute("aria-selected", "true");
-    fireEvent.keyDown(tab, { key: "End" });
+    fireEvent.keyDown(terms, { key: "ArrowRight" });
     const approvals = await screen.findByRole("tab", { name: "Factory confirmation" });
     expect(approvals).toHaveAttribute("aria-selected", "true");
-    fireEvent.keyDown(approvals, { key: "Home" });
+    fireEvent.keyDown(approvals, { key: "End" });
+    const periods = await screen.findByRole("tab", { name: "Periods", exact: true });
+    expect(periods).toHaveAttribute("aria-selected", "true");
+    expect(periods).toHaveFocus();
+    fireEvent.keyDown(periods, { key: "Home" });
     expect(tab).toHaveAttribute("aria-selected", "true");
+    expect(tab).toHaveFocus();
   });
   it.each([["ru", "Реквизиты и условия", "Новая версия условий"], ["he", "פרטי המפעל ותנאי החוזה", "גרסת תנאים חדשה"]])("localizes %s", async (locale, label, button) => {
     mount(locale); fireEvent.click(await screen.findByRole("tab", { name: label }));

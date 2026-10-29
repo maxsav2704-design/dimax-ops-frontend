@@ -39,7 +39,7 @@ describe("individual rate cutover", () => {
     await screen.findByText("Historical individual rates");
     expect(await screen.findByText("111.00 ILS")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add Rate" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Save", exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open active version" }));
     expect(push).toHaveBeenCalledWith("/price-lists");
     expect(api.mock.calls.some(([, init]) => init?.method)).toBe(false);
@@ -70,10 +70,10 @@ describe("individual rate cutover", () => {
     const status = await screen.findByRole("region", { name: "Current pricing" });
     await within(status).findByRole("alert");
     fireEvent.change(screen.getByDisplayValue("111.00"), { target: { value: "999" } });
-    expect(screen.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     failed = false;
     fireEvent.click(within(status).getByRole("button", { name: "Retry" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Save", exact: true })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeEnabled());
   });
   it("refreshes pricing after a server rejects a stale legacy write", async () => {
     let cutover = false;
@@ -83,8 +83,8 @@ describe("individual rate cutover", () => {
       return reads(path);
     });
     mount();
-    await waitFor(() => expect(screen.getByRole("button", { name: "Save", exact: true })).toBeEnabled());
-    fireEvent.click(screen.getByRole("button", { name: "Save", exact: true }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await screen.findByText("Historical individual rates");
     expect(api.mock.calls.filter(([, init]) => init?.method === "PATCH")).toHaveLength(1);
   });

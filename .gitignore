@@ -15,6 +15,7 @@ dist-ssr
 .next-dev
 .next-acceptance/
 .next-acceptance-preview/
+.next-ai-core/
 .next-*.log
 .preview-web.*
 installer-calendar-preview.png
