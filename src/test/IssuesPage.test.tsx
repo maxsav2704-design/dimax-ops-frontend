@@ -191,6 +191,35 @@ describe("IssuesPage", () => {
     expect(await screen.findByText("Workflow updated")).toBeInTheDocument();
   }, 15000);
 
+  it("shows who raised a site issue and lets only the site representative close it", async () => {
+    const issueId = "47dc52c8-e2d4-4061-8dc8-05ce3199c0aa";
+    const siteIssue = {
+      id: issueId, company_id: "8ea9b2c0-0848-4997-a5dd-58e5df3787e0", door_id: "1d8816f9-1bcf-4cfd-a111-2596887197a4",
+      project_id: "7fa68e09-d216-4b3c-b5ef-206efe47d457", door_unit_label: "A-102", status: "OPEN", workflow_state: "RESOLVED",
+      priority: "P3", owner_user_id: null, due_at: null, is_overdue: false, title: "Gap at the frame", details: null,
+      created_at: "2026-10-20T10:00:00Z", updated_at: "2026-10-22T10:00:00Z",
+      source: "SITE", stage_code: "FRAME", raised_by_name: "Site Rep", fix_reported_at: "2026-10-22T09:00:00Z",
+    };
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/api/v1/admin/installers")) return [];
+      if (path.includes("/api/v1/admin/issues")) return { items: [siteIssue] };
+      return {};
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={queryClient}><IssuesPage /></QueryClientProvider>);
+    fireEvent.click(await screen.findByText("Gap at the frame"));
+    const trail = await screen.findByTestId("issue-trail");
+    expect(within(trail).getByText("Raised by the site: Site Rep")).toBeInTheDocument();
+    expect(within(trail).getByText("Stage FRAME")).toBeInTheDocument();
+    expect(within(trail).getByText(/Fix reported/)).toBeInTheDocument();
+    const statusSelect = screen.getByLabelText("Issue status") as HTMLSelectElement;
+    expect((within(statusSelect).getByRole("option", { name: "Closed" }) as HTMLOptionElement).disabled).toBe(true);
+    const workflowSelect = screen.getByLabelText("Issue workflow state") as HTMLSelectElement;
+    expect((within(workflowSelect).getByRole("option", { name: "Closed" }) as HTMLOptionElement).disabled).toBe(true);
+    expect((within(workflowSelect).getByRole("option", { name: "Fixed, awaiting check" }) as HTMLOptionElement).disabled).toBe(false);
+    expect(screen.getByText(/closed only by the site representative/)).toBeInTheDocument();
+  });
+
   it("preselects issue from query param issue_id", async () => {
     const issueA = "47dc52c8-e2d4-4061-8dc8-05ce3199c06d";
     const issueB = "1fe3476d-2438-4d8b-9a66-d0f7f5564f20";

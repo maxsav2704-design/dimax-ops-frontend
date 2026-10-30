@@ -72,6 +72,13 @@ type AdminIssue = {
   details: string | null;
   created_at: string;
   updated_at: string;
+  // Step 5a: who raised the defect (and may close it), its stage, the fix / confirmation trail.
+  source?: "INTERNAL" | "SITE";
+  stage_code?: string | null;
+  raised_by_name?: string | null;
+  fix_reported_at?: string | null;
+  confirmed_by_kind?: "ADMIN" | "SITE_REPRESENTATIVE" | "SYSTEM" | null;
+  confirmed_by_name?: string | null;
 };
 
 type AdminIssueComment = {
@@ -356,7 +363,7 @@ export default function IssuesPage() {
       : value === "TRIAGED" ? copy("Triaged", "Разобрана", "סווגה")
         : value === "IN_PROGRESS" ? copy("In progress", "В работе", "בטיפול")
           : value === "BLOCKED" ? copy("Blocked", "Заблокирована", "חסומה")
-            : value === "RESOLVED" ? copy("Resolved", "Решена", "נפתרה")
+            : value === "RESOLVED" ? copy("Fixed, awaiting check", "Исправлено, ждёт проверки", "תוקן, ממתין לבדיקה")
               : value === "CLOSED" ? copy("Closed", "Закрыта", "סגורה")
                 : value;
   const priorityLabel = (value: IssuePriority) =>
@@ -1272,6 +1279,8 @@ export default function IssuesPage() {
                           {issue.door_unit_label} {copy("- project", "- проект", "- פרויקט")}{" "}
                           {shortId(issue.project_id)} {copy("- door", "- дверь", "- דלת")}{" "}
                           {shortId(issue.door_id)}
+                          {issue.source === "SITE" ? ` · ${copy("site", "объект", "אתר")}` : ""}
+                          {issue.stage_code ? ` · ${issue.stage_code}` : ""}
                         </span>
                         {issue.details ? (
                           <span className="mt-2 block truncate text-[11px] text-text-secondary">
@@ -1387,6 +1396,39 @@ export default function IssuesPage() {
                   <div className="font-medium mt-0.5">
                     {selectedIssue.door_unit_label} / {selectedIssue.project_id}
                   </div>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5" data-testid="issue-trail">
+                    {selectedIssue.source === "SITE" ? (
+                      <span className="inline-flex rounded-full bg-status-warning-bg px-2 py-0.5 text-11 font-medium text-status-warning-fg">
+                        {copy("Raised by the site", "От представителя объекта", "מטעם נציג האתר")}{selectedIssue.raised_by_name ? `: ${selectedIssue.raised_by_name}` : ""}
+                      </span>
+                    ) : null}
+                    {selectedIssue.stage_code ? (
+                      <span className="inline-flex rounded-full bg-surface-sunken px-2 py-0.5 text-11 font-medium text-text-secondary">
+                        {copy("Stage", "Этап", "שלב")} {selectedIssue.stage_code}
+                      </span>
+                    ) : null}
+                    {selectedIssue.status === "OPEN" && selectedIssue.workflow_state === "RESOLVED" ? (
+                      <span className="inline-flex rounded-full bg-status-ok-bg px-2 py-0.5 text-11 font-medium text-status-ok-fg">
+                        {copy("Fix reported", "Исправление заявлено", "דווח על תיקון")}{selectedIssue.fix_reported_at ? ` · ${formatDateTime(selectedIssue.fix_reported_at)}` : ""}
+                      </span>
+                    ) : null}
+                    {selectedIssue.status === "CLOSED" && selectedIssue.confirmed_by_kind ? (
+                      <span className="inline-flex rounded-full bg-surface-sunken px-2 py-0.5 text-11 font-medium text-text-secondary">
+                        {selectedIssue.confirmed_by_kind === "SITE_REPRESENTATIVE"
+                          ? `${copy("Confirmed by the site", "Подтвердил представитель объекта", "אושר על ידי נציג האתר")}${selectedIssue.confirmed_by_name ? `: ${selectedIssue.confirmed_by_name}` : ""}`
+                          : selectedIssue.confirmed_by_kind === "SYSTEM"
+                            ? copy("Closed by the installation", "Закрыто установкой двери", "נסגר עם ההתקנה")
+                            : copy("Confirmed by the office", "Подтвердил офис", "אושר על ידי המשרד")}
+                      </span>
+                    ) : null}
+                  </div>
+                  {selectedIssue.source === "SITE" && selectedIssue.status === "OPEN" ? (
+                    <div className="mt-1.5 text-11 text-text-secondary">
+                      {copy("A site issue is closed only by the site representative through the acceptance link; the office may mark it fixed and checked.",
+                        "Замечание объекта закрывает только представитель объекта по ссылке приёмки; офис может отметить его исправленным и проверенным.",
+                        "תקלה מטעם האתר נסגרת רק על ידי נציג האתר דרך קישור הקבלה; המשרד יכול לסמן אותה כתוקנה ונבדקה.")}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="grid gap-3 lg:grid-cols-2">
@@ -1591,7 +1633,7 @@ export default function IssuesPage() {
                     className="control-input h-9 text-[12px]"
                   >
                     {STATUS_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
+                      <option key={option} value={option} disabled={option === "CLOSED" && selectedIssue.source === "SITE"}>
                         {statusLabel(option)}
                       </option>
                     ))}
@@ -1629,7 +1671,7 @@ export default function IssuesPage() {
                   className="control-input h-9 text-[12px]"
                 >
                   {WORKFLOW_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
+                    <option key={option} value={option} disabled={option === "CLOSED" && selectedIssue.source === "SITE"}>
                       {workflowLabel(option)}
                     </option>
                   ))}
