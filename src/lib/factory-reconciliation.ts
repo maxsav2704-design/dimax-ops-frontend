@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { apiFetch, type ResponseSchema } from "./api";
+import { apiDownload, apiFetch, type ResponseSchema } from "./api";
+import { downloadBlob } from "./download";
 import { contractPath } from "./commercial-prices";
 import { claimsPath } from "./factory-claims";
 
@@ -80,6 +81,12 @@ export async function postFile<T>(path: string, file: File, schema: ResponseSche
   const body = new FormData();
   body.append("file", file, file.name);
   return apiFetch(path, { method: "POST", body, signal }, { schema });
+}
+
+/** Downloads an attachment through the authenticated API client (a plain link would reach the admin origin without the token). */
+export async function downloadAttachment(path: string, filename: string): Promise<void> {
+  const response = await apiDownload(path, { method: "GET" });
+  downloadBlob(await response.blob(), filename);
 }
 
 export function uploadClaimAttachment(contractId: string, claimId: string, file: File, signal?: AbortSignal): Promise<ClaimAttachment> {

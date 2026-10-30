@@ -10,8 +10,8 @@ import { useI18n } from "@/lib/i18n";
 import { claimDetailSchema, type ClaimLine, type ClaimSummary } from "@/lib/factory-claims";
 import { priceErrorStatus } from "@/lib/factory-prices";
 import {
-  claimAttachmentPath, claimPath, claimReconciliationSchema, contractReconciliationPath, contractReconciliationSchema, reconciliationPath,
-  uploadClaimAttachment, type ClaimResponse, type Correction, type ReconciliationFigures,
+  claimAttachmentPath, claimPath, claimReconciliationSchema, contractReconciliationPath, contractReconciliationSchema, downloadAttachment,
+  reconciliationPath, uploadClaimAttachment, type ClaimResponse, type Correction, type ReconciliationFigures,
 } from "@/lib/factory-reconciliation";
 import { DraftDialog } from "./DraftDialog";
 import { amountOk, field, useMoney } from "./form";
@@ -71,7 +71,8 @@ export function ClaimReconciliationPanel({ contractId, claim, onClose }: { contr
   }
   const data = state.data;
   const issued = data?.status === "ISSUED";
-  const attachmentLink = (id: string, name: string) => <a className="underline" href={claimAttachmentPath(contractId, claim.id, id)}><bdi>{name}</bdi></a>;
+  const attachmentLink = (id: string, name: string) => <button type="button" className="underline"
+    onClick={() => void downloadAttachment(claimAttachmentPath(contractId, claim.id, id), name)}><bdi>{name}</bdi></button>;
   return <section aria-label={t.title} data-testid="claim-reconciliation" className="space-y-4 rounded-md border border-border p-3">
     <div className="flex flex-wrap items-start justify-between gap-2">
       <div><h3 className="text-sm font-semibold">{t.title} · <span className="font-mono">{claim.number}.{claim.version}</span></h3>

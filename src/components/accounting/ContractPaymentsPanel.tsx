@@ -10,6 +10,7 @@ import { useI18n } from "@/lib/i18n";
 import { claimPageSchema, claimsPath, type ClaimSummary } from "@/lib/factory-claims";
 import type { CommercialContract } from "@/lib/commercial-prices";
 import { priceErrorStatus } from "@/lib/factory-prices";
+import { downloadAttachment } from "@/lib/factory-reconciliation";
 import {
   moneySummaryPath, moneySummarySchema, paymentAttachmentPath, paymentPath, paymentSchema, paymentPageSchema, paymentsPath, refundPageSchema,
   refundPath, refundSchema, refundsPath, uploadPaymentProof, uploadRefundProof, type DuplicateWarning, type Payment, type Refund,
@@ -120,7 +121,8 @@ function PaymentRow({ row, t, money, contractId, uploading, onProof, onAction }:
     <tr data-testid="payment-row" className="border-t border-border">
       <td className="p-2 font-mono text-xs">{row.received_on}</td>
       <td className="p-2"><bdi>{row.counterparty_name}</bdi><span className="block text-xs text-text-secondary">{t[row.purpose_kind]} · {t[row.tax_basis]}</span></td>
-      <td className="p-2 font-mono text-xs">{row.bank_reference ?? "—"}{row.proof && <a className="block underline" href={paymentAttachmentPath(contractId, row.proof.id)}>{t.proof}</a>}</td>
+      <td className="p-2 font-mono text-xs">{row.bank_reference ?? "—"}{row.proof && <button type="button" className="block underline"
+        onClick={() => void downloadAttachment(paymentAttachmentPath(contractId, row.proof!.id), row.proof!.filename)}>{t.proof}</button>}</td>
       <td className="p-2 text-end font-mono font-semibold tabular-nums">{money(row.amount)}</td>
       <td className="p-2">{t[row.status]}{row.duplicate_acknowledged && <span className="block text-xs text-text-secondary">{t.acknowledge}</span>}
         {row.reversal_reason && <span className="block text-xs text-text-secondary"><bdi>{row.reversal_reason}</bdi></span>}</td>

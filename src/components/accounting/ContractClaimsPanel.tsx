@@ -36,6 +36,7 @@ export function ContractClaimsPanel({ contract }: { contract: CommercialContract
   const refresh = () => {
     void client.invalidateQueries({ queryKey: ["factory-claims", contract.id] });
     void client.invalidateQueries({ queryKey: ["factory-claim-period", contract.id] });
+    void client.invalidateQueries({ queryKey: ["factory-reconciliation", contract.id] });  // the summary counts issued packages
     setAction(null);
   };
   const compose = useCommercialWrite(claimsPath(contract.id), claimDetailSchema, refresh);
