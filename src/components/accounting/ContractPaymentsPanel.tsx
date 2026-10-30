@@ -5,9 +5,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch, type ResponseSchema } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import { formatLocaleMoney } from "@/lib/formatting";
 import { claimPageSchema, claimsPath, type ClaimSummary } from "@/lib/factory-claims";
 import type { CommercialContract } from "@/lib/commercial-prices";
 import { priceErrorStatus } from "@/lib/factory-prices";
@@ -16,20 +15,21 @@ import {
   refundPath, refundSchema, refundsPath, uploadPaymentProof, uploadRefundProof, type DuplicateWarning, type Payment, type Refund,
 } from "@/lib/factory-payments";
 import { DraftDialog } from "./DraftDialog";
+import { amountOk, field, useMoney } from "./form";
+import { PayloadDecisionDialog } from "./PayloadDecisionDialog";
 import { paymentCopy, type PaymentCopy } from "./payment-copy";
 import { useCommercialWrite } from "./use-commercial-write";
+import { useUpload } from "./use-upload";
 
 type Dialog =
   | { kind: "register" } | { kind: "post"; payment: Payment } | { kind: "cancel"; payment: Payment } | { kind: "reverse"; payment: Payment }
   | { kind: "allocate"; payment: Payment } | { kind: "release"; payment: Payment; allocationId: string } | { kind: "propose"; payment: Payment }
   | { kind: "decide"; refund: Refund } | { kind: "execute"; refund: Refund } | { kind: "cancelRefund"; refund: Refund };
-const field = "h-9 w-full rounded-md border border-border bg-surface px-2 text-sm";
-const amountOk = (value: string) => /^\d+(\.\d{1,2})?$/.test(value) && Number(value) > 0;
 
 /** Payments from the factory: money received apart from what it settles; allocations, OWNER reversals and refunds. */
 export function ContractPaymentsPanel({ contract }: { contract: CommercialContract }) {
   const { locale } = useI18n(), t = paymentCopy[locale], client = useQueryClient();
-  const money = (value: string) => formatLocaleMoney(value, "ILS", locale, { minimumFractionDigits: 2 });
+  const money = useMoney();
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const payments = useQuery({ queryKey: ["factory-payments", contract.id], retry: false,
@@ -38,7 +38,8 @@ export function ContractPaymentsPanel({ contract }: { contract: CommercialContra
     queryFn: ({ signal }) => apiFetch(moneySummaryPath(contract.id), { signal }, { schema: moneySummarySchema }) });
   const refunds = useQuery({ queryKey: ["factory-refunds", contract.id], retry: false,
     queryFn: ({ signal }) => apiFetch(refundsPath(contract.id) + "?limit=50&offset=0", { signal }, { schema: refundPageSchema }) });
-  const claims = useQuery({ queryKey: ["factory-claims", contract.id],
+  // The package list is needed only by the allocation dialog.
+  const claims = useQuery({ queryKey: ["factory-claims", contract.id], enabled: dialog?.kind === "allocate",
     queryFn: ({ signal }) => apiFetch(claimsPath(contract.id) + "?limit=50&offset=0", { signal }, { schema: claimPageSchema }) });
   const refresh = () => {
     for (const key of ["factory-payments", "factory-money", "factory-refunds", "factory-reconciliation"]) void client.invalidateQueries({ queryKey: [key, contract.id] });
@@ -53,6 +54,8 @@ export function ContractPaymentsPanel({ contract }: { contract: CommercialContra
     return <p role="status" className="py-4 text-sm text-text-secondary">{t.disabled}</p>;
   }
   const issued = (claims.data?.items ?? []).filter((row) => row.status === "ISSUED");
+  const reasonDialog = (path: string, schema: ResponseSchema<unknown>, withRequest: boolean, title: string, description: string, submit: string) =>
+    <ReasonDialog path={path} schema={schema} withRequest={withRequest} title={title} description={description} submit={submit} t={t} onClose={() => setDialog(null)} onSaved={refresh} />;
   return <section aria-label={t.tab} className="min-w-0 space-y-4">
     <div className="border-b border-border pb-3"><h2 className="text-base font-semibold">{t.title}</h2>
       <p className="mt-1 text-sm text-text-secondary">{t.intro}</p><p className="text-xs text-text-secondary">{t.vatNote}</p></div>
@@ -97,16 +100,15 @@ export function ContractPaymentsPanel({ contract }: { contract: CommercialContra
     </div>
     {dialog?.kind === "register" && <RegisterDialog contractId={contract.id} onClose={() => setDialog(null)} onSaved={refresh} />}
     {dialog?.kind === "post" && <PostDialog contractId={contract.id} payment={dialog.payment} onClose={() => setDialog(null)} onSaved={refresh} />}
-    {(dialog?.kind === "cancel" || dialog?.kind === "reverse") && <ReasonDialog path={paymentPath(contract.id, dialog.payment.id) + "/" + dialog.kind} schema={paymentSchema}
-      withRequest={dialog.kind === "reverse"} title={dialog.kind === "cancel" ? t.cancelTitle : t.reverseTitle} description={dialog.kind === "cancel" ? t.cancelDescription : t.reverseDescription}
-      submit={dialog.kind === "cancel" ? t.cancel : t.reverse} t={t} onClose={() => setDialog(null)} onSaved={refresh} />}
-    {dialog?.kind === "release" && <ReasonDialog path={paymentPath(contract.id, dialog.payment.id) + "/allocations/" + dialog.allocationId + "/release"} schema={paymentSchema}
-      withRequest={false} title={t.releaseTitle} description={t.releaseDescription} submit={t.release} t={t} onClose={() => setDialog(null)} onSaved={refresh} />}
-    {dialog?.kind === "cancelRefund" && <ReasonDialog path={refundPath(contract.id, dialog.refund.id) + "/cancel"} schema={refundSchema} withRequest={false}
-      title={t.cancelRefundTitle} description={t.cancelRefundDescription} submit={t.cancelRefund} t={t} onClose={() => setDialog(null)} onSaved={refresh} />}
+    {dialog?.kind === "cancel" && reasonDialog(paymentPath(contract.id, dialog.payment.id) + "/cancel", paymentSchema, false, t.cancelTitle, t.cancelDescription, t.cancel)}
+    {dialog?.kind === "reverse" && reasonDialog(paymentPath(contract.id, dialog.payment.id) + "/reverse", paymentSchema, true, t.reverseTitle, t.reverseDescription, t.reverse)}
+    {dialog?.kind === "release" && reasonDialog(paymentPath(contract.id, dialog.payment.id) + "/allocations/" + dialog.allocationId + "/release", paymentSchema, false, t.releaseTitle, t.releaseDescription, t.release)}
+    {dialog?.kind === "cancelRefund" && reasonDialog(refundPath(contract.id, dialog.refund.id) + "/cancel", refundSchema, false, t.cancelRefundTitle, t.cancelRefundDescription, t.cancelRefund)}
     {dialog?.kind === "allocate" && <AllocateDialog contractId={contract.id} payment={dialog.payment} claims={issued} onClose={() => setDialog(null)} onSaved={refresh} />}
     {dialog?.kind === "propose" && <ProposeDialog contractId={contract.id} payment={dialog.payment} onClose={() => setDialog(null)} onSaved={refresh} />}
-    {dialog?.kind === "decide" && <DecideDialog contractId={contract.id} refund={dialog.refund} onClose={() => setDialog(null)} onSaved={refresh} />}
+    {dialog?.kind === "decide" && <PayloadDecisionDialog path={refundPath(contract.id, dialog.refund.id) + "/decision"} schema={refundSchema} payloadSha256={dialog.refund.payload_sha256}
+      labels={{ title: t.decideTitle, description: t.decideDescription, fingerprint: t.fingerprint, approve: t.APPROVE, reject: t.REJECT, reason: t.reason, checked: t.checked }}
+      summary={<p><span className="font-mono tabular-nums">{dialog.refund.amount}</span> ILS · <bdi>{dialog.refund.reason}</bdi></p>} onClose={() => setDialog(null)} onSaved={refresh} />}
     {dialog?.kind === "execute" && <ExecuteDialog contractId={contract.id} refund={dialog.refund} onClose={() => setDialog(null)} onSaved={refresh} />}
   </section>;
 }
@@ -151,7 +153,7 @@ function RegisterDialog({ contractId, onClose, onSaved }: DialogProps) {
   const write = useCommercialWrite(paymentsPath(contractId), paymentSchema, onSaved);
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setForm({ ...form, [key]: e.target.value });
   const valid = amountOk(form.amount) && form.received_on.length > 0 && form.counterparty_name.trim().length > 0;
-  return <DraftDialog title={t.registerTitle} description={t.registerDescription} dirty={Object.values(form).some((v) => v.length > 0 && v !== "SETTLEMENT" && v !== "EX_VAT")} valid={valid}
+  return <DraftDialog title={t.registerTitle} description={t.registerDescription} dirty={form.amount.length > 0 || form.counterparty_name.length > 0} valid={valid}
     write={write} onClose={onClose} submitLabel={t.register}
     onSave={() => void write.save(() => ({ request_id: crypto.randomUUID(), amount: form.amount, received_on: form.received_on, counterparty_name: form.counterparty_name.trim(),
       bank_reference: form.bank_reference.trim() || null, stated_purpose: form.stated_purpose.trim() || null, purpose_kind: form.purpose_kind, tax_basis: form.tax_basis }))}>
@@ -169,25 +171,17 @@ function RegisterDialog({ contractId, onClose, onSaved }: DialogProps) {
   </DraftDialog>;
 }
 
+/** Posting goes through the shared write hook; a 409 POSSIBLE_DUPLICATE is the server asking the office to decide, not a failure. */
 function PostDialog({ contractId, payment, onClose, onSaved }: DialogProps & { payment: Payment }) {
   const { locale } = useI18n(), t = paymentCopy[locale];
-  const [warnings, setWarnings] = useState<DuplicateWarning[] | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<"conflict" | "denied" | "validation" | "uncertain" | null>(null);
-  async function save() {
-    setBusy(true); setError(null);
-    try {
-      await apiFetch(paymentPath(contractId, payment.id) + "/post", { method: "POST",
-        body: JSON.stringify({ request_id: crypto.randomUUID(), acknowledge_possible_duplicate: acknowledged }) }, { schema: paymentSchema });
-      onSaved();
-    } catch (cause) {
-      if (cause instanceof ApiError && cause.status === 409 && cause.meta?.reason === "POSSIBLE_DUPLICATE") setWarnings((cause.meta.warnings as DuplicateWarning[]) ?? []);
-      else { const status = priceErrorStatus(cause); setError(status === 401 || status === 403 ? "denied" : status === 409 ? "conflict" : status >= 500 || status < 400 ? "uncertain" : "validation"); }
-    } finally { setBusy(false); }
-  }
-  return <DraftDialog title={t.postTitle} description={t.postDescription} dirty={acknowledged} valid={!warnings || acknowledged}
-    write={{ busy, locked: busy, blocked: false, uncertain: false, error }} onClose={onClose} submitLabel={t.post} onSave={() => void save()}>
+  const write = useCommercialWrite(paymentPath(contractId, payment.id) + "/post", paymentSchema, onSaved);
+  const warnings = write.conflictMeta?.reason === "POSSIBLE_DUPLICATE" ? (write.conflictMeta.warnings as DuplicateWarning[]) : null;
+  const asked = !!warnings;
+  return <DraftDialog title={t.postTitle} description={t.postDescription} dirty={acknowledged} valid={!asked || acknowledged}
+    write={{ ...write, blocked: asked ? false : write.blocked, locked: asked ? write.busy : write.locked, error: asked ? null : write.error }}
+    onClose={onClose} submitLabel={t.post}
+    onSave={() => void write.save(() => ({ request_id: crypto.randomUUID(), acknowledge_possible_duplicate: acknowledged }), { answered: asked })}>
     <p className="text-sm"><span className="font-mono tabular-nums">{payment.amount}</span> ILS · {payment.received_on} · <bdi>{payment.counterparty_name}</bdi></p>
     {warnings && <div role="alert" className="space-y-2 rounded-md border border-status-problem-fg/40 p-2 text-sm">
       <p>{t.possibleDuplicate}</p>
@@ -198,7 +192,7 @@ function PostDialog({ contractId, payment, onClose, onSaved }: DialogProps & { p
 }
 
 function ReasonDialog<T>({ path, schema, withRequest, title, description, submit, t, onClose, onSaved }: {
-  path: string; schema: Parameters<typeof useCommercialWrite<T>>[1]; withRequest: boolean; title: string; description: string; submit: string; t: PaymentCopy; onClose: () => void; onSaved: () => void;
+  path: string; schema: ResponseSchema<T>; withRequest: boolean; title: string; description: string; submit: string; t: PaymentCopy; onClose: () => void; onSaved: () => void;
 }) {
   const [reason, setReason] = useState("");
   const write = useCommercialWrite<T>(path, schema, onSaved);
@@ -240,49 +234,23 @@ function ProposeDialog({ contractId, payment, onClose, onSaved }: DialogProps & 
   </DraftDialog>;
 }
 
-function DecideDialog({ contractId, refund, onClose, onSaved }: DialogProps & { refund: Refund }) {
-  const { locale } = useI18n(), t = paymentCopy[locale];
-  const [decision, setDecision] = useState<"APPROVE" | "REJECT">("APPROVE");
-  const [reason, setReason] = useState("");
-  const [checked, setChecked] = useState(false);
-  const write = useCommercialWrite(refundPath(contractId, refund.id) + "/decision", refundSchema, onSaved);
-  return <DraftDialog title={t.decideTitle} description={t.decideDescription} dirty={reason.length > 0 || checked} valid={checked && reason.trim().length > 0} write={write}
-    onClose={onClose} submitLabel={t[decision]}
-    onSave={() => void write.save(() => ({ request_id: crypto.randomUUID(), payload_sha256: refund.payload_sha256, decision, reason: reason.trim() }))}>
-    <p className="text-sm"><span className="font-mono tabular-nums">{refund.amount}</span> ILS · <bdi>{refund.reason}</bdi></p>
-    <p className="break-all font-mono text-xs"><span className="text-text-secondary">{t.fingerprint}:</span> {refund.payload_sha256}</p>
-    <div className="flex gap-4 text-sm">
-      <label className="flex items-center gap-2"><input type="radio" name="refund-decision" checked={decision === "APPROVE"} onChange={() => setDecision("APPROVE")} />{t.APPROVE}</label>
-      <label className="flex items-center gap-2"><input type="radio" name="refund-decision" checked={decision === "REJECT"} onChange={() => setDecision("REJECT")} />{t.REJECT}</label>
-    </div>
-    <label className="block space-y-1 text-sm">{t.reason}<Textarea aria-label={t.reason} value={reason} maxLength={1000} onChange={(e) => setReason(e.target.value)} /></label>
-    <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-1" />{t.checked}</label>
-  </DraftDialog>;
-}
-
 function ExecuteDialog({ contractId, refund, onClose, onSaved }: DialogProps & { refund: Refund }) {
   const { locale } = useI18n(), t = paymentCopy[locale];
   const [form, setForm] = useState({ executed_on: "", bank_reference: "" });
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [proofId, setProofId] = useState<string | null>(null);
+  const upload = useUpload((file) => uploadRefundProof(contractId, file));
   const write = useCommercialWrite(refundPath(contractId, refund.id) + "/execute", refundSchema, onSaved);
   async function save() {
-    let id = proofId;
-    if (!id) {
-      if (!file) return;
-      setUploading(true);
-      try { id = (await uploadRefundProof(contractId, file)).id; setProofId(id); } finally { setUploading(false); }
-    }
-    void write.save(() => ({ request_id: crypto.randomUUID(), executed_on: form.executed_on, bank_reference: form.bank_reference.trim(), proof_attachment_id: id }));
+    const proofId = await upload.ensure();
+    if (!proofId) return;
+    void write.save(() => ({ request_id: crypto.randomUUID(), executed_on: form.executed_on, bank_reference: form.bank_reference.trim(), proof_attachment_id: proofId }));
   }
-  return <DraftDialog title={t.executeTitle} description={t.executeDescription} dirty={form.executed_on.length > 0 || form.bank_reference.length > 0 || !!file}
-    valid={form.executed_on.length > 0 && form.bank_reference.trim().length > 0 && !!file && !uploading}
-    write={{ ...write, busy: write.busy || uploading, locked: write.locked || uploading }} onClose={onClose} submitLabel={t.execute} onSave={() => void save()}>
+  return <DraftDialog title={t.executeTitle} description={t.executeDescription} dirty={form.executed_on.length > 0 || form.bank_reference.length > 0 || !!upload.file}
+    valid={form.executed_on.length > 0 && form.bank_reference.trim().length > 0 && !!upload.file && !upload.uploading}
+    write={upload.wrap(write)} onClose={onClose} submitLabel={t.execute} onSave={() => void save()}>
     <p className="text-sm"><span className="font-mono tabular-nums">{refund.amount}</span> ILS · <bdi>{refund.reason}</bdi></p>
     <label className="block space-y-1 text-sm">{t.executedOn}<Input type="date" aria-label={t.executedOn} value={form.executed_on} onChange={(e) => setForm({ ...form, executed_on: e.target.value })} /></label>
     <label className="block space-y-1 text-sm">{t.bankReference}<Input aria-label={t.bankReference} value={form.bank_reference} maxLength={120} onChange={(e) => setForm({ ...form, bank_reference: e.target.value })} /></label>
-    <label className="block space-y-1 text-sm">{t.proofFile}<Input type="file" aria-label={t.proofFile} onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
-    {uploading && <p role="status" className="text-xs">{t.uploading}</p>}
+    <label className="block space-y-1 text-sm">{t.proofFile}<Input type="file" aria-label={t.proofFile} onChange={(e) => upload.setFile(e.target.files?.[0] ?? null)} /></label>
+    {upload.uploading && <p role="status" className="text-xs">{t.uploading}</p>}
   </DraftDialog>;
 }

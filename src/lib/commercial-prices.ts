@@ -50,8 +50,12 @@ export type CommercialPriceInput = {
 export function commercialLineKey(line: Pick<CommercialLine, "kind" | "target_id" | "stage_code">) {
   return [line.kind, line.target_id, line.stage_code].join(":");
 }
+/** The contract's own API path; every settlement module builds its routes from it. */
+export function contractPath(contractId: string) {
+  return COMMERCIAL_API + "/" + encodeURIComponent(contractId);
+}
 export function commercialPricesPath(contractId: string) {
-  return COMMERCIAL_API + "/" + encodeURIComponent(contractId) + "/prices";
+  return contractPath(contractId) + "/prices";
 }
 export async function commercialWrite<T>(path: string, body: object, schema: ResponseSchema<T>, signal: AbortSignal) {
   return apiFetch(path, { method: "POST", body: JSON.stringify(body), signal }, { schema });

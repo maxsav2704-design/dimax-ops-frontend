@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COMMERCIAL_API } from "./commercial-prices";
+import { contractPath } from "./commercial-prices";
 
 // Step 6 (backend 0093): a claim is a package per contract and execution period made of the exact accepted
 // signed journal rows, rated ex-VAT at the pair in effect. A row is claimed once; an issued package is frozen;
@@ -34,5 +34,5 @@ export type ClaimSummary = z.infer<typeof claimSummarySchema>;
 export type ClaimDetail = z.infer<typeof claimDetailSchema>;
 export type ClaimPeriodView = z.infer<typeof claimPeriodViewSchema>;
 
-export function claimsPath(contractId: string) { return COMMERCIAL_API + "/" + encodeURIComponent(contractId) + "/claims"; }
+export function claimsPath(contractId: string) { return contractPath(contractId) + "/claims"; }
 export function claimPeriodPath(contractId: string, start: string) { return claimsPath(contractId) + "/periods/" + encodeURIComponent(start); }

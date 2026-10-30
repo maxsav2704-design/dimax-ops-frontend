@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { apiFetch } from "./api";
+import { apiFetch, type ResponseSchema } from "./api";
+import { contractPath } from "./commercial-prices";
 import { claimsPath } from "./factory-claims";
 
 // Step 7 (backend 0094): the factory's answer is bound to an exact issued claim version and gives three numbers
@@ -10,8 +11,8 @@ const money = z.string().regex(/^-?\d+(?:\.\d{1,2})?$/);
 const uuid = z.string().uuid();
 
 export const attachmentSchema = z.object({
-  id: uuid, claim_id: uuid, filename: z.string(), content_type: z.string(), size: z.number().int().positive(), sha256: z.string().length(64),
-  created_at: z.string(),
+  id: uuid, claim_id: uuid.nullable(), payment_id: uuid.nullable().optional(), filename: z.string(), content_type: z.string(),
+  size: z.number().int().positive(), sha256: z.string().length(64), created_at: z.string(),
 });
 export const responseLineSchema = z.object({
   claim_line_id: uuid, label: z.string(), amount_ex_vat: money, decision: z.enum(["ACKNOWLEDGED", "DISPUTED"]), factory_note: z.string().nullable(),
@@ -68,12 +69,19 @@ export type ClaimAttachment = z.infer<typeof attachmentSchema>;
 
 export function claimPath(contractId: string, claimId: string) { return claimsPath(contractId) + "/" + encodeURIComponent(claimId); }
 export function reconciliationPath(contractId: string, claimId: string) { return claimPath(contractId, claimId) + "/reconciliation"; }
-export function contractReconciliationPath(contractId: string) { return claimsPath(contractId).replace(/\/claims$/, "/reconciliation"); }
+export function contractReconciliationPath(contractId: string) { return contractPath(contractId) + "/reconciliation"; }
 export function attachmentsPath(contractId: string, claimId: string) { return claimPath(contractId, claimId) + "/attachments"; }
+export function claimAttachmentPath(contractId: string, claimId: string, attachmentId: string) {
+  return attachmentsPath(contractId, claimId) + "/" + encodeURIComponent(attachmentId);
+}
 
-/** Uploads one answer or evidence file; the server stores it once per claim (sha256) and returns its record. */
-export async function uploadClaimAttachment(contractId: string, claimId: string, file: File, signal?: AbortSignal): Promise<ClaimAttachment> {
+/** One multipart upload; the server stores a file once per owner (sha256) and returns its record. */
+export async function postFile<T>(path: string, file: File, schema: ResponseSchema<T>, signal?: AbortSignal): Promise<T> {
   const body = new FormData();
   body.append("file", file, file.name);
-  return apiFetch(attachmentsPath(contractId, claimId), { method: "POST", body, signal }, { schema: attachmentSchema });
+  return apiFetch(path, { method: "POST", body, signal }, { schema });
+}
+
+export function uploadClaimAttachment(contractId: string, claimId: string, file: File, signal?: AbortSignal): Promise<ClaimAttachment> {
+  return postFile(attachmentsPath(contractId, claimId), file, attachmentSchema, signal);
 }

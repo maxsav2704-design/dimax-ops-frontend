@@ -94,6 +94,7 @@ describe("factory payments", () => {
     expect(screen.getByTestId("money-summary")).toHaveTextContent("15,000.00");
     fireEvent.click(within(screen.getByTestId("payment-row")).getByRole("button", { name: "Allocate" }));
     dialog = within(screen.getByRole("dialog"));
+    await dialog.findByRole("option", { name: /1\.1/ });  // the package list loads when the dialog opens
     fireEvent.change(dialog.getByLabelText("Package"), { target: { value: claimId } });
     fireEvent.change(dialog.getByLabelText("Amount"), { target: { value: "15000.00" } });
     fireEvent.click(dialog.getByRole("button", { name: "Allocate" }));

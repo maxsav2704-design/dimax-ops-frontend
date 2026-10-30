@@ -97,7 +97,7 @@ describe("claim reconciliation", () => {
     fireEvent.click(panel.getByRole("button", { name: "Prepare write-off" }));
     let dialog = within(screen.getByRole("dialog"));
     fireEvent.change(dialog.getByLabelText("Amount ex-VAT"), { target: { value: "2000.00" } });
-    fireEvent.click(dialog.getByLabelText(/Door B/));
+    fireEvent.click(await dialog.findByLabelText(/Door B/));  // the claim lines load when the dialog opens
     fireEvent.change(dialog.getByLabelText("Based on answer"), { target: { value: response.id } });
     fireEvent.change(dialog.getByLabelText("Reason"), { target: { value: "Factory disputes door B" } });
     fireEvent.click(dialog.getByRole("button", { name: "Prepare write-off" }));

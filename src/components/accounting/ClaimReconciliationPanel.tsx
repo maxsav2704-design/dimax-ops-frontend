@@ -7,23 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import { formatLocaleMoney } from "@/lib/formatting";
 import { claimDetailSchema, type ClaimLine, type ClaimSummary } from "@/lib/factory-claims";
 import { priceErrorStatus } from "@/lib/factory-prices";
 import {
-  claimPath, claimReconciliationSchema, contractReconciliationPath, contractReconciliationSchema, reconciliationPath, uploadClaimAttachment,
-  type ClaimReconciliation, type ClaimResponse, type Correction, type ReconciliationFigures,
+  claimAttachmentPath, claimPath, claimReconciliationSchema, contractReconciliationPath, contractReconciliationSchema, reconciliationPath,
+  uploadClaimAttachment, type ClaimResponse, type Correction, type ReconciliationFigures,
 } from "@/lib/factory-reconciliation";
 import { DraftDialog } from "./DraftDialog";
+import { amountOk, field, useMoney } from "./form";
+import { PayloadDecisionDialog } from "./PayloadDecisionDialog";
 import { reconciliationCopy, type ReconciliationCopy } from "./reconciliation-copy";
 import { useCommercialWrite } from "./use-commercial-write";
+import { useUpload } from "./use-upload";
 
 type Dialog = { kind: "answer" } | { kind: "prepare" } | { kind: "decide"; correction: Correction } | { kind: "retention" } | { kind: "release" };
-
-function useMoney() {
-  const { locale } = useI18n();
-  return (value: string | null) => value === null ? "—" : formatLocaleMoney(value, "ILS", locale, { minimumFractionDigits: 2 });
-}
 
 function Figures({ figures, t }: { figures: ReconciliationFigures; t: ReconciliationCopy }) {
   const money = useMoney();
@@ -61,7 +58,8 @@ export function ClaimReconciliationPanel({ contractId, claim, onClose }: { contr
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const state = useQuery({ queryKey: ["factory-reconciliation", contractId, claim.id], retry: false,
     queryFn: ({ signal }) => apiFetch(reconciliationPath(contractId, claim.id), { signal }, { schema: claimReconciliationSchema }) });
-  const detail = useQuery({ queryKey: ["factory-claim", contractId, claim.id],
+  // The claim's lines are needed only by the answer and write-off dialogs.
+  const detail = useQuery({ queryKey: ["factory-claim", contractId, claim.id], enabled: dialog?.kind === "answer" || dialog?.kind === "prepare",
     queryFn: ({ signal }) => apiFetch(claimPath(contractId, claim.id), { signal }, { schema: claimDetailSchema }) });
   const refresh = () => {
     void client.invalidateQueries({ queryKey: ["factory-reconciliation", contractId] });
@@ -73,6 +71,7 @@ export function ClaimReconciliationPanel({ contractId, claim, onClose }: { contr
   }
   const data = state.data;
   const issued = data?.status === "ISSUED";
+  const attachmentLink = (id: string, name: string) => <a className="underline" href={claimAttachmentPath(contractId, claim.id, id)}><bdi>{name}</bdi></a>;
   return <section aria-label={t.title} data-testid="claim-reconciliation" className="space-y-4 rounded-md border border-border p-3">
     <div className="flex flex-wrap items-start justify-between gap-2">
       <div><h3 className="text-sm font-semibold">{t.title} · <span className="font-mono">{claim.number}.{claim.version}</span></h3>
@@ -94,7 +93,7 @@ export function ClaimReconciliationPanel({ contractId, claim, onClose }: { contr
               {row.clarification_required && <span className="ms-2 rounded bg-status-problem-bg px-1 text-status-problem-fg">{t.clarification}</span>}</p>
             {row.note && <p className="text-xs text-text-secondary"><bdi>{row.note}</bdi></p>}
             {row.lines.length > 0 && <ul className="text-xs text-text-secondary">{row.lines.map((line) => <li key={line.claim_line_id}><bdi>{line.label}</bdi>: {t[line.decision]}{line.factory_note ? ` — ${line.factory_note}` : ""}</li>)}</ul>}
-            <p className="text-xs"><a className="underline" href={claimPath(contractId, claim.id) + "/attachments/" + row.attachment.id}>{t.attachment}: <bdi>{row.attachment.filename}</bdi></a> · <span className="font-mono">{row.attachment.sha256.slice(0, 12)}</span></p>
+            <p className="text-xs">{t.attachment}: {attachmentLink(row.attachment.id, row.attachment.filename)} · <span className="font-mono">{row.attachment.sha256.slice(0, 12)}</span></p>
           </li>)}
         </ul>}
       </div>
@@ -122,7 +121,7 @@ export function ClaimReconciliationPanel({ contractId, claim, onClose }: { contr
         {data.releases.length > 0 && <ul className="divide-y divide-border border-y border-border text-sm">
           {data.releases.map((row) => <li key={row.id} data-testid="release" className="py-2">
             <span className="font-mono tabular-nums">{money(row.amount_ex_vat)}</span> · <span className="font-mono text-xs">{row.occurred_at.slice(0, 10)}</span> · <bdi>{row.evidence}</bdi>
-            {row.attachment && <span className="text-xs"> · <a className="underline" href={claimPath(contractId, claim.id) + "/attachments/" + row.attachment.id}><bdi>{row.attachment.filename}</bdi></a></span>}
+            {row.attachment && <span className="text-xs"> · {attachmentLink(row.attachment.id, row.attachment.filename)}</span>}
           </li>)}
         </ul>}
         {data.retention_history.length > 1 && <p className="text-xs text-text-secondary">{t.history}: {data.retention_history.map((row) => `${row.revision} ${money(row.amount_ex_vat)} (${t[row.status]})`).join(" · ")}</p>}
@@ -133,31 +132,18 @@ export function ClaimReconciliationPanel({ contractId, claim, onClose }: { contr
     </>}
     {dialog?.kind === "answer" && data && <AnswerDialog contractId={contractId} claim={claim} lines={detail.data?.lines ?? []} onClose={() => setDialog(null)} onSaved={refresh} />}
     {dialog?.kind === "prepare" && data && <PrepareDialog contractId={contractId} claim={claim} lines={detail.data?.lines ?? []} responses={data.responses} onClose={() => setDialog(null)} onSaved={refresh} />}
-    {dialog?.kind === "decide" && data && <DecideDialog contractId={contractId} claim={claim} correction={dialog.correction} onClose={() => setDialog(null)} onSaved={refresh} />}
+    {dialog?.kind === "decide" && data && <PayloadDecisionDialog path={claimPath(contractId, claim.id) + "/corrections/" + dialog.correction.id + "/decision"}
+      schema={claimReconciliationSchema} payloadSha256={dialog.correction.payload_sha256} extraBody={{ expected_claim_version: claim.version }}
+      labels={{ title: t.decideTitle, description: t.decideDescription, fingerprint: t.fingerprint, approve: t.APPROVE, reject: t.REJECT, reason: t.reason, checked: t.checkedPayload }}
+      summary={<><p><span className="font-mono">{dialog.correction.amount_ex_vat}</span> ILS · <bdi>{dialog.correction.reason}</bdi></p>
+        <p className="text-xs"><span className="text-text-secondary">{t.expectedVersion}:</span> {claim.number}.{claim.version}</p></>}
+      onClose={() => setDialog(null)} onSaved={refresh} />}
     {dialog?.kind === "retention" && data && <RetentionDialog contractId={contractId} claim={claim} onClose={() => setDialog(null)} onSaved={refresh} />}
     {dialog?.kind === "release" && data && <ReleaseDialog contractId={contractId} claim={claim} onClose={() => setDialog(null)} onSaved={refresh} />}
   </section>;
 }
 
 type DialogProps = { contractId: string; claim: ClaimSummary; onClose: () => void; onSaved: () => void };
-const field = "h-9 w-full rounded-md border border-border bg-surface px-2 text-sm";
-
-function useUpload(contractId: string, claimId: string) {
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploaded, setUploaded] = useState<{ name: string; id: string } | null>(null);
-  async function ensure(): Promise<string | null> {
-    if (!file) return null;
-    if (uploaded && uploaded.name === file.name) return uploaded.id;
-    setUploading(true);
-    try {
-      const row = await uploadClaimAttachment(contractId, claimId, file);
-      setUploaded({ name: file.name, id: row.id });
-      return row.id;
-    } finally { setUploading(false); }
-  }
-  return { file, setFile, uploading, ensure };
-}
 
 function AnswerDialog({ contractId, claim, lines, onClose, onSaved }: DialogProps & { lines: ClaimLine[] }) {
   const { locale } = useI18n(), t = reconciliationCopy[locale];
@@ -165,10 +151,10 @@ function AnswerDialog({ contractId, claim, lines, onClose, onSaved }: DialogProp
   const [withLines, setWithLines] = useState(false);
   const [decisions, setDecisions] = useState<Record<string, "ACKNOWLEDGED" | "DISPUTED">>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
-  const upload = useUpload(contractId, claim.id);
+  const upload = useUpload((file) => uploadClaimAttachment(contractId, claim.id, file));
   const write = useCommercialWrite(claimPath(contractId, claim.id) + "/responses", claimReconciliationSchema, onSaved);
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setForm({ ...form, [key]: e.target.value });
-  const valid = form.author_name.trim().length > 0 && form.answered_at.length > 0 && /^\d+(\.\d{1,2})?$/.test(form.acknowledged_amount) && !!upload.file
+  const valid = form.author_name.trim().length > 0 && form.answered_at.length > 0 && amountOk(form.acknowledged_amount, { zero: true }) && !!upload.file
     && (!withLines || lines.every((line) => line.id && decisions[line.id]));
   const dirty = form.author_name.length > 0 || form.acknowledged_amount.length > 0 || !!upload.file;
   async function save() {
@@ -182,7 +168,7 @@ function AnswerDialog({ contractId, claim, lines, onClose, onSaved }: DialogProp
     }));
   }
   return <DraftDialog title={t.answerTitle} description={t.answerDescription} dirty={dirty} valid={valid && !upload.uploading}
-    write={{ ...write, busy: write.busy || upload.uploading, locked: write.locked || upload.uploading }} onClose={onClose} submitLabel={t.registerAnswer} onSave={() => void save()}>
+    write={upload.wrap(write)} onClose={onClose} submitLabel={t.registerAnswer} onSave={() => void save()}>
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="block space-y-1 text-sm">{t.channel}<select aria-label={t.channel} value={form.channel} onChange={set("channel")} className={field}>
         <option value="EMAIL">{t.EMAIL}</option><option value="WHATSAPP">{t.WHATSAPP}</option></select></label>
@@ -213,9 +199,8 @@ function PrepareDialog({ contractId, claim, lines, responses, onClose, onSaved }
   const [basis, setBasis] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const write = useCommercialWrite(claimPath(contractId, claim.id) + "/corrections", claimReconciliationSchema, onSaved);
-  const valid = /^\d+(\.\d{1,2})?$/.test(amount) && Number(amount) > 0 && reason.trim().length > 0;
-  return <DraftDialog title={t.prepareTitle} description={t.prepareDescription} dirty={amount.length > 0 || reason.length > 0} valid={valid} write={write} onClose={onClose}
-    submitLabel={t.prepareWriteOff}
+  return <DraftDialog title={t.prepareTitle} description={t.prepareDescription} dirty={amount.length > 0 || reason.length > 0} valid={amountOk(amount) && reason.trim().length > 0}
+    write={write} onClose={onClose} submitLabel={t.prepareWriteOff}
     onSave={() => void write.save(() => ({ request_id: crypto.randomUUID(), kind: "WRITE_OFF", amount_ex_vat: amount, line_ids: picked.length ? picked : null,
       basis_response_id: basis || null, reason: reason.trim() }))}>
     <label className="block space-y-1 text-sm">{t.amount}<Input inputMode="decimal" aria-label={t.amount} value={amount} onChange={(e) => setAmount(e.target.value)} /></label>
@@ -229,34 +214,12 @@ function PrepareDialog({ contractId, claim, lines, responses, onClose, onSaved }
   </DraftDialog>;
 }
 
-function DecideDialog({ contractId, claim, correction, onClose, onSaved }: DialogProps & { correction: Correction }) {
-  const { locale } = useI18n(), t = reconciliationCopy[locale];
-  const [decision, setDecision] = useState<"APPROVE" | "REJECT">("APPROVE");
-  const [reason, setReason] = useState("");
-  const [checked, setChecked] = useState(false);
-  const write = useCommercialWrite(claimPath(contractId, claim.id) + "/corrections/" + correction.id + "/decision", claimReconciliationSchema, onSaved);
-  return <DraftDialog title={t.decideTitle} description={t.decideDescription} dirty={reason.length > 0 || checked} valid={checked && reason.trim().length > 0} write={write}
-    onClose={onClose} submitLabel={t[decision]}
-    onSave={() => void write.save(() => ({ request_id: crypto.randomUUID(), payload_sha256: correction.payload_sha256, expected_claim_version: claim.version,
-      decision, reason: reason.trim() }))}>
-    <p className="text-sm"><span className="font-mono">{correction.amount_ex_vat}</span> ILS · <bdi>{correction.reason}</bdi></p>
-    <p className="break-all font-mono text-xs"><span className="text-text-secondary">{t.fingerprint}:</span> {correction.payload_sha256}</p>
-    <p className="text-xs"><span className="text-text-secondary">{t.expectedVersion}:</span> {claim.number}.{claim.version}</p>
-    <div className="flex gap-4 text-sm">
-      <label className="flex items-center gap-2"><input type="radio" name="decision" checked={decision === "APPROVE"} onChange={() => setDecision("APPROVE")} />{t.APPROVE}</label>
-      <label className="flex items-center gap-2"><input type="radio" name="decision" checked={decision === "REJECT"} onChange={() => setDecision("REJECT")} />{t.REJECT}</label>
-    </div>
-    <label className="block space-y-1 text-sm">{t.reason}<Textarea aria-label={t.reason} value={reason} maxLength={1000} onChange={(e) => setReason(e.target.value)} /></label>
-    <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-1" />{t.checkedPayload}</label>
-  </DraftDialog>;
-}
-
 function RetentionDialog({ contractId, claim, onClose, onSaved }: DialogProps) {
   const { locale } = useI18n(), t = reconciliationCopy[locale];
   const [form, setForm] = useState({ amount_ex_vat: "", basis: "", release_condition: "", reason: "" });
   const write = useCommercialWrite(claimPath(contractId, claim.id) + "/retention", claimReconciliationSchema, onSaved);
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm({ ...form, [key]: e.target.value });
-  const valid = /^\d+(\.\d{1,2})?$/.test(form.amount_ex_vat) && form.basis.trim().length > 0 && form.release_condition.trim().length > 0 && form.reason.trim().length > 0;
+  const valid = amountOk(form.amount_ex_vat, { zero: true }) && form.basis.trim().length > 0 && form.release_condition.trim().length > 0 && form.reason.trim().length > 0;
   return <DraftDialog title={t.setTitle} description={t.setDescription} dirty={Object.values(form).some((v) => v.length > 0)} valid={valid} write={write} onClose={onClose}
     submitLabel={t.setRetention}
     onSave={() => void write.save(() => ({ request_id: crypto.randomUUID(), amount_ex_vat: form.amount_ex_vat, basis: form.basis.trim(),
@@ -271,17 +234,17 @@ function RetentionDialog({ contractId, claim, onClose, onSaved }: DialogProps) {
 function ReleaseDialog({ contractId, claim, onClose, onSaved }: DialogProps) {
   const { locale } = useI18n(), t = reconciliationCopy[locale];
   const [form, setForm] = useState({ amount_ex_vat: "", evidence: "", occurred_at: "" });
-  const upload = useUpload(contractId, claim.id);
+  const upload = useUpload((file) => uploadClaimAttachment(contractId, claim.id, file));
   const write = useCommercialWrite(claimPath(contractId, claim.id) + "/retention/releases", claimReconciliationSchema, onSaved);
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm({ ...form, [key]: e.target.value });
-  const valid = /^\d+(\.\d{1,2})?$/.test(form.amount_ex_vat) && Number(form.amount_ex_vat) > 0 && form.evidence.trim().length > 0 && form.occurred_at.length > 0;
+  const valid = amountOk(form.amount_ex_vat) && form.evidence.trim().length > 0 && form.occurred_at.length > 0;
   async function save() {
     const attachmentId = await upload.ensure();
     void write.save(() => ({ request_id: crypto.randomUUID(), amount_ex_vat: form.amount_ex_vat, evidence: form.evidence.trim(),
       attachment_id: attachmentId, occurred_at: new Date(form.occurred_at).toISOString() }));
   }
   return <DraftDialog title={t.releaseTitle} description={t.releaseDescription} dirty={Object.values(form).some((v) => v.length > 0)} valid={valid && !upload.uploading}
-    write={{ ...write, busy: write.busy || upload.uploading, locked: write.locked || upload.uploading }} onClose={onClose} submitLabel={t.release} onSave={() => void save()}>
+    write={upload.wrap(write)} onClose={onClose} submitLabel={t.release} onSave={() => void save()}>
     <label className="block space-y-1 text-sm">{t.amount}<Input inputMode="decimal" aria-label={t.amount} value={form.amount_ex_vat} onChange={set("amount_ex_vat")} /></label>
     <label className="block space-y-1 text-sm">{t.occurredAt}<Input type="datetime-local" aria-label={t.occurredAt} value={form.occurred_at} onChange={set("occurred_at")} /></label>
     <label className="block space-y-1 text-sm">{t.evidence}<Textarea aria-label={t.evidence} value={form.evidence} maxLength={2000} onChange={set("evidence")} /></label>

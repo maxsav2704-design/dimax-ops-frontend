@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { apiFetch } from "./api";
-import { COMMERCIAL_API } from "./commercial-prices";
-import { attachmentSchema, type ClaimAttachment } from "./factory-reconciliation";
+import { contractPath } from "./commercial-prices";
+import { attachmentSchema, postFile, type ClaimAttachment } from "./factory-reconciliation";
 
 // Step 8 (backend 0095): money received from the factory apart from what it settles. A payment is posted only with a
 // bank proof and an explicit answer to duplicate warnings; allocations are many-to-many with issued claim versions
@@ -44,7 +43,6 @@ export type Refund = z.infer<typeof refundSchema>;
 export type MoneySummary = z.infer<typeof moneySummarySchema>;
 export type DuplicateWarning = z.infer<typeof duplicateWarningSchema>;
 
-function contractPath(contractId: string) { return COMMERCIAL_API + "/" + encodeURIComponent(contractId); }
 export function paymentsPath(contractId: string) { return contractPath(contractId) + "/payments"; }
 export function paymentPath(contractId: string, paymentId: string) { return paymentsPath(contractId) + "/" + encodeURIComponent(paymentId); }
 export function moneySummaryPath(contractId: string) { return paymentsPath(contractId) + "/summary"; }
@@ -53,15 +51,11 @@ export function refundsPath(contractId: string) { return contractPath(contractId
 export function refundPath(contractId: string, refundId: string) { return refundsPath(contractId) + "/" + encodeURIComponent(refundId); }
 
 /** Attaches the bank proof to a draft payment; the server stores it once per payment (sha256). */
-export async function uploadPaymentProof(contractId: string, paymentId: string, file: File, signal?: AbortSignal): Promise<Payment> {
-  const body = new FormData();
-  body.append("file", file, file.name);
-  return apiFetch(paymentPath(contractId, paymentId) + "/proof", { method: "POST", body, signal }, { schema: paymentSchema });
+export function uploadPaymentProof(contractId: string, paymentId: string, file: File, signal?: AbortSignal): Promise<Payment> {
+  return postFile(paymentPath(contractId, paymentId) + "/proof", file, paymentSchema, signal);
 }
 
 /** Uploads the proof of an executed refund (outgoing transfer). */
-export async function uploadRefundProof(contractId: string, file: File, signal?: AbortSignal): Promise<ClaimAttachment> {
-  const body = new FormData();
-  body.append("file", file, file.name);
-  return apiFetch(refundsPath(contractId) + "/attachments", { method: "POST", body, signal }, { schema: attachmentSchema });
+export function uploadRefundProof(contractId: string, file: File, signal?: AbortSignal): Promise<ClaimAttachment> {
+  return postFile(refundsPath(contractId) + "/attachments", file, attachmentSchema, signal);
 }
