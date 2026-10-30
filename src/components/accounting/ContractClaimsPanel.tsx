@@ -14,6 +14,8 @@ import {
   claimDetailSchema, claimPageSchema, claimPeriodPath, claimPeriodViewSchema, claimsPath, type ClaimSummary,
 } from "@/lib/factory-claims";
 import { claimCopy } from "./claim-copy";
+import { ClaimReconciliationPanel, ContractReconciliationSummary } from "./ClaimReconciliationPanel";
+import { reconciliationCopy } from "./reconciliation-copy";
 import { DraftDialog } from "./DraftDialog";
 import { useCommercialWrite } from "./use-commercial-write";
 
@@ -24,6 +26,7 @@ export function ContractClaimsPanel({ contract }: { contract: CommercialContract
   const { locale } = useI18n(), t = claimCopy[locale], client = useQueryClient();
   const [period, setPeriod] = useState<string>("");
   const [action, setAction] = useState<Action | null>(null);
+  const [reconcile, setReconcile] = useState<ClaimSummary | null>(null);
   const periods = useQuery({ queryKey: ["commercial-periods", contract.id],
     queryFn: ({ signal }) => apiFetch(periodsPath(contract.id), { signal }, { schema: periodPageSchema }) });
   const claims = useQuery({ queryKey: ["factory-claims", contract.id],
@@ -86,6 +89,7 @@ export function ContractClaimsPanel({ contract }: { contract: CommercialContract
         </table>
       </div>
     </div>}
+    {claims.data && <ContractReconciliationSummary contractId={contract.id} />}
     {claims.data && <div className="space-y-2">
       <h3 className="text-sm font-semibold">{t.packages} ({claims.data.total})</h3>
       {claims.data.items.length > 0 && <div className="overflow-x-auto border-y border-border">
@@ -110,10 +114,13 @@ export function ContractClaimsPanel({ contract }: { contract: CommercialContract
               {row.status === "DRAFT" && <Button size="sm" onClick={() => setAction({ kind: "issue", claim: row })}>{t.issue}</Button>}
               {row.status === "DRAFT" && <Button size="sm" variant="outline" onClick={() => setAction({ kind: "cancel", claim: row })}>{t.cancel}</Button>}
               {row.status === "ISSUED" && <Button size="sm" variant="outline" onClick={() => setAction({ kind: "correct", claim: row })}>{t.correct}</Button>}
+              {(row.status === "ISSUED" || row.status === "SUPERSEDED") && <Button size="sm" variant="outline" aria-pressed={reconcile?.id === row.id}
+                onClick={() => setReconcile(reconcile?.id === row.id ? null : row)}>{reconciliationCopy[locale].reconcile}</Button>}
             </div></td>
           </tr>)}</tbody>
         </table>
       </div>}
+      {reconcile && <ClaimReconciliationPanel contractId={contract.id} claim={reconcile} onClose={() => setReconcile(null)} />}
     </div>}
     {action && <ClaimActionDialog contractId={contract.id} action={action} onClose={() => setAction(null)} onSaved={refresh} />}
   </section>;
