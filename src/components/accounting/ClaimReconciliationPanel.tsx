@@ -32,11 +32,12 @@ function Figures({ figures, t }: { figures: ReconciliationFigures; t: Reconcilia
     [t.acknowledged, figures.acknowledged_ex_vat === null ? t.notComparable : money(figures.acknowledged_ex_vat)],
     [t.disputed, money(figures.disputed_ex_vat)], [t.writtenOff, money(figures.written_off_ex_vat)], [t.outstanding, money(figures.outstanding_ex_vat)],
     [t.retention, money(figures.retention_ex_vat)], [t.released, money(figures.retention_released_ex_vat)], [t.held, money(figures.retention_held_ex_vat)],
-    [t.payableNow, money(figures.payable_now_ex_vat)], [t.paid, `— (${t.paidLater})`],
+    [t.payableNow, money(figures.payable_now_ex_vat)], [t.paid, money(figures.paid_ex_vat)], [t.retentionPaid, money(figures.retention_paid_ex_vat)],
+    [t.balanceDue, money(figures.balance_due_ex_vat)],
   ];
   return <dl data-testid="reconciliation-figures" className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
     {cells.map(([label, value]) => <div key={label}><dt className="text-xs text-text-secondary">{label}</dt><dd className="font-mono tabular-nums">{value}</dd></div>)}
-    <div className="col-span-2 sm:col-span-5"><dt className="sr-only">{t.status}</dt><dd className="text-xs">{t[figures.answer_state]}</dd></div>
+    <div className="col-span-2 sm:col-span-5"><dt className="sr-only">{t.status}</dt><dd className="text-xs">{t[figures.answer_state]} · {t[figures.settlement]}</dd></div>
   </dl>;
 }
 
@@ -126,6 +127,9 @@ export function ClaimReconciliationPanel({ contractId, claim, onClose }: { contr
         </ul>}
         {data.retention_history.length > 1 && <p className="text-xs text-text-secondary">{t.history}: {data.retention_history.map((row) => `${row.revision} ${money(row.amount_ex_vat)} (${t[row.status]})`).join(" · ")}</p>}
       </div>
+      {data.allocations.length > 0 && <div className="space-y-1"><h4 className="text-sm font-semibold">{t.allocations}</h4>
+        <ul className="text-xs">{data.allocations.map((a) => <li key={a.id} data-testid="claim-allocation">
+          <span className="font-mono tabular-nums">{money(a.amount)}</span> · {t[a.part]} · {a.bank_reference ?? a.payment_id.slice(0, 8)} · {a.active ? t.active : `${t.releasedAllocation}: ${a.release_reason ?? ""}`}</li>)}</ul></div>}
     </>}
     {dialog?.kind === "answer" && data && <AnswerDialog contractId={contractId} claim={claim} lines={detail.data?.lines ?? []} onClose={() => setDialog(null)} onSaved={refresh} />}
     {dialog?.kind === "prepare" && data && <PrepareDialog contractId={contractId} claim={claim} lines={detail.data?.lines ?? []} responses={data.responses} onClose={() => setDialog(null)} onSaved={refresh} />}

@@ -40,14 +40,20 @@ export const releaseSchema = z.object({
 export const figuresSchema = z.object({
   currency: z.literal("ILS"), presented_ex_vat: money, answer_state: z.enum(["UNANSWERED", "NEEDS_CLARIFICATION", "ANSWERED"]),
   acknowledged_ex_vat: money.nullable(), disputed_ex_vat: money, written_off_ex_vat: money, outstanding_ex_vat: money, retention_ex_vat: money,
-  retention_released_ex_vat: money, retention_held_ex_vat: money, payable_now_ex_vat: money, paid_ex_vat: z.null(), vat: z.null(),
+  retention_released_ex_vat: money, retention_held_ex_vat: money, principal_due_ex_vat: money, principal_paid_ex_vat: money,
+  principal_remaining_ex_vat: money, retention_paid_ex_vat: money, retention_payable_ex_vat: money, paid_ex_vat: money, balance_due_ex_vat: money,
+  payable_now_ex_vat: money, settlement: z.enum(["OPEN", "PRINCIPAL_PAID_RETENTION_PENDING", "SETTLED"]), vat: z.null(),
+});
+export const allocationRefSchema = z.object({
+  id: uuid, payment_id: uuid, part: z.enum(["PRINCIPAL", "RETENTION"]), amount: money, active: z.boolean(), bank_reference: z.string().nullable(),
+  released_at: z.string().nullable(), release_reason: z.string().nullable(),
 });
 export const claimReconciliationSchema = z.object({
   claim_id: uuid, number: z.number().int().positive(), version: z.number().int().positive(),
   status: z.enum(["ISSUED", "SUPERSEDED", "DRAFT", "CANCELLED"]), issue_snapshot_sha256: z.string().nullable(), figures: figuresSchema.nullable(),
   current_response_id: uuid.nullable(), responses: z.array(claimResponseSchema), corrections: z.array(correctionSchema),
   retention: retentionSchema.nullable(), retention_history: z.array(retentionSchema), releases: z.array(releaseSchema),
-  attachments: z.array(attachmentSchema),
+  attachments: z.array(attachmentSchema), allocations: z.array(allocationRefSchema),
 });
 export const contractReconciliationSchema = z.object({
   contract_id: uuid, issued_claims: z.number().int().nonnegative(), answered_claims: z.number().int().nonnegative(),

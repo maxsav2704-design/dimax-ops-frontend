@@ -21,10 +21,11 @@ const attachment = { id: "2c1e2d3f-5a6b-4c7d-8e9f-0a1b2c3d4e5f", claim_id: claim
   sha256: "a".repeat(64), created_at: "2026-12-22T10:00:00Z" };
 const figures = (over: object = {}) => ({ currency: "ILS", presented_ex_vat: "20000.00", answer_state: "UNANSWERED", acknowledged_ex_vat: null, disputed_ex_vat: "0.00",
   written_off_ex_vat: "0.00", outstanding_ex_vat: "20000.00", retention_ex_vat: "0.00", retention_released_ex_vat: "0.00", retention_held_ex_vat: "0.00",
-  payable_now_ex_vat: "20000.00", paid_ex_vat: null, vat: null, ...over });
+  principal_due_ex_vat: "20000.00", principal_paid_ex_vat: "0.00", principal_remaining_ex_vat: "20000.00", retention_paid_ex_vat: "0.00",
+  retention_payable_ex_vat: "0.00", paid_ex_vat: "0.00", balance_due_ex_vat: "20000.00", payable_now_ex_vat: "20000.00", settlement: "OPEN", vat: null, ...over });
 let state: Record<string, unknown>;
 const empty = () => ({ claim_id: claimId, number: 1, version: 1, status: "ISSUED", issue_snapshot_sha256: "b".repeat(64), figures: figures(),
-  current_response_id: null, responses: [], corrections: [], retention: null, retention_history: [], releases: [], attachments: [] });
+  current_response_id: null, responses: [], corrections: [], retention: null, retention_history: [], releases: [], attachments: [], allocations: [] });
 const response = { id: "3c1e2d3f-5a6b-4c7d-8e9f-0a1b2c3d4e5f", claim_id: claimId, claim_number: 1, claim_version: 1, issue_snapshot_sha256: "b".repeat(64),
   presented_amount_ex_vat: "20000.00", channel: "EMAIL", author_name: "Dana", author_contact: null, answered_at: "2026-12-22T09:30:00+02:00", attachment,
   acknowledged_amount: "18000.00", tax_basis: "EX_VAT", comparison: "COMPARABLE", detail: "NONE", disputed_amount_ex_vat: "2000.00", clarification_required: true,
@@ -66,7 +67,8 @@ describe("claim reconciliation", () => {
     mount(<ClaimReconciliationPanel contractId={contractId} claim={claim} onClose={() => undefined} />);
     const panel = within(await screen.findByTestId("claim-reconciliation"));
     expect(panel.getByTestId("reconciliation-figures")).toHaveTextContent("No answer yet");
-    expect(panel.getByTestId("reconciliation-figures")).toHaveTextContent("payments are a later step");
+    expect(panel.getByTestId("reconciliation-figures")).toHaveTextContent("Balance due");
+    expect(panel.getByTestId("reconciliation-figures")).toHaveTextContent("Open");
     fireEvent.click(panel.getByRole("button", { name: "Register answer" }));
     const dialog = within(screen.getByRole("dialog"));
     fireEvent.change(dialog.getByLabelText("Author at the factory"), { target: { value: "Dana" } });
