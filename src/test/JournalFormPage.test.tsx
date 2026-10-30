@@ -158,6 +158,43 @@ describe("JournalFormPage", () => {
     expect(push).toHaveBeenCalledWith(name === "Projects" ? "/projects" : "/journal");
   });
 
+  it("lets the office exclude a row with a reason while partial acceptance is on, and shows stage rows and open issues", async () => {
+    type AcceptanceRow = { item_id?: string; accepted?: boolean; exclusion_reason?: string | null };
+    type PartialModel = Omit<ReturnType<typeof fixture>, "items" | "journal"> & {
+      journal: ReturnType<typeof fixture>["journal"] & { partial_acceptance?: boolean };
+      items: Array<ReturnType<typeof fixture>["items"][number] & AcceptanceRow>;
+      stage_items?: Array<AcceptanceRow & { unit_label: string; door_type_name: string; stage_code: string; stage_name: string; completed_at: string | null }>;
+      open_issues?: Array<{ unit_label: string; stage_code: string | null; source: string; title: string | null; workflow_state: string }>;
+    };
+    const m = model as PartialModel;
+    m.journal.partial_acceptance = true;
+    m.items = [{ ...m.items[0], item_id: "row-door-1", accepted: true, exclusion_reason: null }];
+    m.stage_items = [{ unit_label: "S-1", door_type_name: "Staged", stage_code: "FRAME", stage_name: "Frame", completed_at: "2026-09-14T07:30:00Z", item_id: "row-stage-1", accepted: true, exclusion_reason: null }];
+    m.open_issues = [{ unit_label: "A-2-201", stage_code: null, source: "SITE", title: "Gap at the frame", workflow_state: "NEW" }];
+    api.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path.endsWith("/snapshot")) return structuredClone(m);
+      if (path.endsWith("/acceptance")) {
+        const body = JSON.parse(String(init?.body));
+        m.items[0] = { ...m.items[0], accepted: body.accepted, exclusion_reason: body.reason };
+        m.journal.snapshot_version++;
+        return { updated: 1, accepted_rows: 1, total_rows: 2 };
+      }
+      return { ok: true };
+    });
+    vi.spyOn(window, "prompt").mockReturnValue("Wrong door");
+    render(<JournalFormPage />);
+    expect(await screen.findByText("A-2-201")).toBeInTheDocument();
+    expect(screen.getByTestId("journal-stage-rows")).toHaveTextContent("S-1");
+    expect(screen.getByTestId("journal-open-issues")).toHaveTextContent("Gap at the frame");
+    const [checkbox] = screen.getAllByLabelText("Accepted") as HTMLInputElement[];
+    expect(checkbox.checked).toBe(true);
+    fireEvent.click(checkbox);
+    await waitFor(() => expect(api).toHaveBeenCalledWith("/api/v1/admin/journals/journal-1/acceptance",
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify({ item_ids: ["row-door-1"], accepted: false, reason: "Wrong door" }) })));
+    expect(await screen.findByText("Wrong door")).toBeInTheDocument();
+    expect(JSON.stringify(api.mock.calls)).not.toMatch(/price|rate|amount/);
+  });
+
   it("downloads the server PDF through the authenticated API", async () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     Object.defineProperty(URL, "createObjectURL", { configurable: true, value: vi.fn(() => "blob:journal") });

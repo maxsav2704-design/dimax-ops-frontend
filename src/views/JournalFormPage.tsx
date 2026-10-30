@@ -12,6 +12,8 @@ import { apiDownload, apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
 import { useI18n, useCopy } from "@/lib/i18n";
 
+type AcceptanceRow = { item_id?: string | null; accepted?: boolean; exclusion_reason?: string | null };
+
 type JournalSnapshot = {
   journal: {
     id: string; project_id: string; status: "DRAFT" | "ACTIVE" | "ARCHIVED";
@@ -19,19 +21,25 @@ type JournalSnapshot = {
     pdf_locale?: "en" | "ru" | "he";
     lock_header: boolean; lock_table: boolean; lock_footer: boolean;
     signed_at: string | null; signer_name: string | null;
+    // Step 5b: rows can be accepted or excluded before the representative signs.
+    partial_acceptance?: boolean; follows_journal_id?: string | null;
   };
   project: {
     name: string; address: string | null;
     developer_company: string | null; contact_name: string | null;
   };
-  items: {
+  items: (AcceptanceRow & {
     unit_label: string; door_type_id: string;
     door_type_name: string; installed_at: string | null;
-  }[];
-  addon_items: {
+  })[];
+  addon_items: (AcceptanceRow & {
     name: string; quantity: string; unit: string;
     done_at: string; comment: string | null;
-  }[];
+  })[];
+  stage_items?: (AcceptanceRow & {
+    unit_label: string; door_type_name: string; stage_code: string; stage_name: string; completed_at: string | null;
+  })[];
+  open_issues?: { unit_label: string; stage_code: string | null; source: string; title: string | null; workflow_state: string }[];
   signing_url: string | null;
 };
 
@@ -170,6 +178,29 @@ function JournalEditor({ id }: { id: string }) {
       if (!signal.aborted) setNotice("saved");
     });
   };
+
+  // Step 5b: the office accepts or excludes a row (with a reason) while the journal is a DRAFT.
+  const setAcceptance = (itemId: string, accepted: boolean) => {
+    if (!editable || dirty || draft?.lock_table) return;
+    const reason = accepted ? null : window.prompt(copy("Why is this row not accepted?", "Почему строка не принимается?", "מדוע השורה אינה מתקבלת?")) ?? null;
+    if (!accepted && !reason?.trim()) return;
+    void runAction("acceptance", async (signal) => {
+      await apiFetch(`${endpoint}/acceptance`, {
+        method: "PATCH", signal,
+        body: JSON.stringify({ item_ids: [itemId], accepted, reason: reason?.trim() || null }),
+      });
+      await reloadModel(signal);
+    });
+  };
+  const acceptanceCell = (row: AcceptanceRow) => model?.journal.partial_acceptance && row.item_id ? (
+    <td className="p-2">
+      <label className="inline-flex items-center gap-1.5 text-xs">
+        <input type="checkbox" checked={row.accepted !== false} disabled={blocked || !editable || dirty || draft?.lock_table}
+          aria-label={copy("Accepted", "Принято", "התקבל")} onChange={(event) => setAcceptance(row.item_id!, event.target.checked)} />
+        {row.accepted === false ? <span className="text-status-warning-fg">{row.exclusion_reason}</span> : copy("Accepted", "Принято", "התקבל")}
+      </label>
+    </td>
+  ) : null;
 
   const transition = (action: "mark-ready" | "refresh-snapshot") => {
     if (!editable || dirty || (action === "refresh-snapshot" && draft?.lock_table)) return;
@@ -336,19 +367,44 @@ function JournalEditor({ id }: { id: string }) {
                 <table className="w-full min-w-[460px] text-start text-sm">
                   <thead><tr className="border-b border-border text-xs text-text-secondary">
                     {[copy("Door / position", "Дверь / позиция", "דלת / מיקום"),
-                      copy("Type", "Тип", "סוג"), copy("Installed", "Установлена", "הותקנה")].map((label) => (
+                      copy("Type", "Тип", "סוג"), copy("Installed", "Установлена", "הותקנה"),
+                      ...(model.journal.partial_acceptance ? [copy("Acceptance", "Приёмка", "קבלה")] : [])].map((label) => (
                       <th key={label} className="p-2 text-start font-medium">{label}</th>
                     ))}
                   </tr></thead>
                   <tbody>{model.items.map((item, index) => (
-                    <tr key={`${item.unit_label}:${index}`} className="border-b border-border">
+                    <tr key={`${item.unit_label}:${index}`} data-testid="journal-door-row" className={`border-b border-border ${item.accepted === false ? "opacity-60" : ""}`}>
                       <td className="break-words p-2">{item.unit_label}</td>
                       <td className="p-2">{item.door_type_name}</td>
                       <td className="p-2">{date(item.installed_at)}</td>
+                      {acceptanceCell(item)}
                     </tr>
                   ))}</tbody>
                 </table>
               </div>
+              {model.stage_items?.length ? (
+                <div className="overflow-x-auto" data-testid="journal-stage-rows">
+                  <h3 className="pt-2 text-xs font-semibold text-text-secondary">{copy("Completed installation stages", "Выполненные этапы монтажа", "שלבי התקנה שהושלמו")} ({model.stage_items.length})</h3>
+                  <table className="w-full min-w-[460px] text-start text-sm">
+                    <tbody>{model.stage_items.map((item, index) => (
+                      <tr key={`${item.unit_label}:${item.stage_code}:${index}`} className={`border-b border-border ${item.accepted === false ? "opacity-60" : ""}`}>
+                        <td className="break-words p-2">{item.unit_label}</td>
+                        <td className="p-2">{item.stage_name}</td>
+                        <td className="p-2">{date(item.completed_at)}</td>
+                        {acceptanceCell(item)}
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              ) : null}
+              {model.open_issues?.length ? (
+                <div data-testid="journal-open-issues" className="rounded-md border border-status-warning-border bg-status-warning-bg p-3 text-xs">
+                  <div className="font-semibold">{copy("Open issues shown to the representative", "Открытые замечания, которые увидит представитель", "תקלות פתוחות שיוצגו לנציג")} ({model.open_issues.length})</div>
+                  {model.open_issues.map((issue, index) => (
+                    <div key={index}>{issue.unit_label}{issue.stage_code ? ` / ${issue.stage_code}` : ""} · {issue.title || "-"} · {issue.source === "SITE" ? copy("site", "объект", "אתר") : "DIMAX"}{issue.workflow_state === "RESOLVED" ? ` · ${copy("fixed, awaiting check", "исправлено, ждёт проверки", "תוקן, ממתין לבדיקה")}` : ""}</div>
+                  ))}
+                </div>
+              ) : null}
               {!model.items.length && <p className="text-sm text-text-secondary">{copy("No installed doors in this snapshot", "В этом снимке нет установленных дверей", "אין דלתות מותקנות בתצלום זה")}</p>}
               <h2 className="pt-3 text-sm font-semibold">{copy("Additional works", "Дополнительные работы", "עבודות נוספות")} ({model.addon_items.length})</h2>
               {model.addon_items.map((item, index) => (

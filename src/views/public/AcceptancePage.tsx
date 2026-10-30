@@ -13,12 +13,16 @@ import {
 import { apiBaseUrl } from "@/lib/api";
 
 type Point = { x: number; y: number };
+type AcceptanceRow = { accepted?: boolean; exclusion_reason?: string | null };
+
 type AcceptancePayload = {
   journal: {
     id: string;
     title: string | null;
     status: string;
     snapshot_version: number;
+    // Step 5b: the representative sees the accepted volume, what was excluded and the open issues.
+    partial_acceptance?: boolean;
   };
   project: {
     name: string;
@@ -26,17 +30,32 @@ type AcceptancePayload = {
     developer_company: string | null;
     contact_name: string | null;
   };
-  items: Array<{
+  items: Array<AcceptanceRow & {
     unit_label: string;
     door_type_name: string;
     installed_at: string | null;
   }>;
-  addon_items: Array<{
+  addon_items: Array<AcceptanceRow & {
     name: string;
     quantity: string;
     unit: string;
     done_at: string;
     comment: string | null;
+  }>;
+  stage_items?: Array<AcceptanceRow & {
+    unit_label: string;
+    door_type_name: string;
+    stage_code: string;
+    stage_name: string;
+    completed_at: string | null;
+  }>;
+  open_issues?: Array<{
+    unit_label: string;
+    stage_code: string | null;
+    source: string;
+    title: string | null;
+    workflow_state: string;
+    raised_at: string | null;
   }>;
 };
 
@@ -214,6 +233,8 @@ export default function AcceptancePage({ token }: { token: string }) {
               viewport: viewportRef.current,
               strokes,
             },
+            // The server refuses a signature on a document that changed since it was opened.
+            snapshot_version: payload?.journal.snapshot_version,
           }),
         },
       );
@@ -349,7 +370,7 @@ export default function AcceptancePage({ token }: { token: string }) {
                   )}
                 </h2>
                 <span className="rounded-full bg-[#fff4d0] px-3 py-1 text-xs font-bold text-[#78580c]">
-                  {payload.items.length}
+                  {payload.items.filter((item) => item.accepted !== false).length}
                 </span>
               </div>
               <div className="overflow-x-auto rounded-md border border-[#dfe2e7]">
@@ -374,7 +395,7 @@ export default function AcceptancePage({ token }: { token: string }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {payload.items.map((item, index) => (
+                    {payload.items.filter((item) => item.accepted !== false).map((item, index) => (
                       <tr
                         key={`${item.unit_label}-${index}`}
                         className="border-t border-[#e5e7eb] even:bg-[#f8f9fa]"
@@ -396,7 +417,23 @@ export default function AcceptancePage({ token }: { token: string }) {
               </div>
             </section>
 
-            {payload.addon_items.length ? (
+            {payload.stage_items?.some((item) => item.accepted !== false) ? (
+              <section className="mt-6" data-testid="acceptance-stages">
+                <h2 className="mb-3 text-base font-bold">
+                  {copy(locale, "Completed installation stages", "Выполненные этапы монтажа", "שלבי התקנה שהושלמו")}
+                </h2>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {payload.stage_items.filter((item) => item.accepted !== false).map((item, index) => (
+                    <div key={`${item.unit_label}-${item.stage_code}-${index}`} className="rounded-md border border-[#dfe2e7] bg-[#f8f9fa] p-4">
+                      <div className="font-semibold">{item.unit_label} · {item.stage_name}</div>
+                      <div className="mt-1 text-sm text-[#646a75]">{item.door_type_name} · {formatDate(item.completed_at)}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {payload.addon_items.some((item) => item.accepted !== false) ? (
               <section className="mt-6">
                 <h2 className="mb-3 text-base font-bold">
                   {copy(
@@ -407,7 +444,7 @@ export default function AcceptancePage({ token }: { token: string }) {
                   )}
                 </h2>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {payload.addon_items.map((item, index) => (
+                  {payload.addon_items.filter((item) => item.accepted !== false).map((item, index) => (
                     <div
                       key={`${item.name}-${index}`}
                       className="rounded-md border border-[#dfe2e7] bg-[#f8f9fa] p-4"
@@ -424,6 +461,41 @@ export default function AcceptancePage({ token }: { token: string }) {
                     </div>
                   ))}
                 </div>
+              </section>
+            ) : null}
+
+            {(() => {
+              const excluded = [
+                ...payload.items.filter((item) => item.accepted === false).map((item) => ({ label: item.unit_label, kind: item.door_type_name, reason: item.exclusion_reason })),
+                ...(payload.stage_items ?? []).filter((item) => item.accepted === false).map((item) => ({ label: item.unit_label, kind: item.stage_name, reason: item.exclusion_reason })),
+                ...payload.addon_items.filter((item) => item.accepted === false).map((item) => ({ label: item.name, kind: `${item.quantity} ${item.unit}`, reason: item.exclusion_reason })),
+              ];
+              return excluded.length ? (
+                <section className="mt-6 rounded-md border border-[#f1d9a5] bg-[#fff8e8] p-4" data-testid="acceptance-excluded">
+                  <h2 className="text-base font-bold">{copy(locale, "Not accepted in this document", "Не принято в этом документе", "לא התקבל במסמך זה")} ({excluded.length})</h2>
+                  <p className="mt-1 text-xs text-[#777d87]">{copy(locale, "These rows are not covered by your signature; they will be presented again after the office resolves them.", "Эти строки не входят в вашу подпись; их предъявят снова после решения офиса.", "שורות אלה אינן מכוסות בחתימתך; הן יוצגו שוב לאחר טיפול המשרד.")}</p>
+                  {excluded.map((row, index) => (
+                    <div key={index} className="flex flex-wrap justify-between gap-2 border-t border-[#f1d9a5] py-2 text-sm">
+                      <span>{row.label} · {row.kind}</span>
+                      <span className="text-[#646a75]">{row.reason || "-"}</span>
+                    </div>
+                  ))}
+                </section>
+              ) : null;
+            })()}
+
+            {payload.open_issues?.length ? (
+              <section className="mt-6 rounded-md border border-[#f1b9b4] bg-[#fff0ee] p-4" data-testid="acceptance-issues">
+                <h2 className="text-base font-bold">{copy(locale, "Open issues", "Открытые замечания", "תקלות פתוחות")} ({payload.open_issues.length})</h2>
+                {payload.open_issues.map((issue, index) => (
+                  <div key={index} className="flex flex-wrap justify-between gap-2 border-t border-[#f1b9b4] py-2 text-sm">
+                    <span>{issue.unit_label}{issue.stage_code ? ` / ${issue.stage_code}` : ""} · {issue.title || copy(locale, "Issue", "Замечание", "תקלה")}</span>
+                    <span className="text-[#646a75]">
+                      {issue.source === "SITE" ? copy(locale, "Site representative", "Представитель объекта", "נציג האתר") : "DIMAX"}
+                      {issue.workflow_state === "RESOLVED" ? ` · ${copy(locale, "fixed, awaiting check", "исправлено, ждёт проверки", "תוקן, ממתין לבדיקה")}` : ""}
+                    </span>
+                  </div>
+                ))}
               </section>
             ) : null}
 
