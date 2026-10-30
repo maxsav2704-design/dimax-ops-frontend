@@ -57,6 +57,6 @@ export function contractPath(contractId: string) {
 export function commercialPricesPath(contractId: string) {
   return contractPath(contractId) + "/prices";
 }
-export async function commercialWrite<T>(path: string, body: object, schema: ResponseSchema<T>, signal: AbortSignal) {
-  return apiFetch(path, { method: "POST", body: JSON.stringify(body), signal }, { schema });
+export async function commercialWrite<T>(path: string, body: object, schema: ResponseSchema<T>, signal: AbortSignal, method: "POST" | "PATCH" = "POST") {
+  return apiFetch(path, { method, body: JSON.stringify(body), signal }, { schema });
 }

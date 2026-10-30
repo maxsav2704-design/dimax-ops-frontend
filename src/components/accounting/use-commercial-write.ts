@@ -4,7 +4,7 @@ import { commercialWrite } from "@/lib/commercial-prices";
 import { priceErrorStatus } from "@/lib/factory-prices";
 import type { CommercialCopy } from "./copy";
 
-export function useCommercialWrite<T>(path: string, schema: ResponseSchema<T>, onSaved: (row: T) => void) {
+export function useCommercialWrite<T>(path: string, schema: ResponseSchema<T>, onSaved: (row: T) => void, { method = "POST" as "POST" | "PATCH" } = {}) {
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -29,7 +29,7 @@ export function useCommercialWrite<T>(path: string, schema: ResponseSchema<T>, o
     try {
       const body = pending.current ?? buildBody();
       pending.current = body;
-      const result = await commercialWrite(path, body, schema, active.signal);
+      const result = await commercialWrite(path, body, schema, active.signal, method);
       if (mounted.current) onSaved(result);
     } catch (cause) {
       if (!mounted.current) return;

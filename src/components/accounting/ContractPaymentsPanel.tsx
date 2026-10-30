@@ -15,6 +15,7 @@ import {
   moneySummaryPath, moneySummarySchema, paymentAttachmentPath, paymentPath, paymentSchema, paymentPageSchema, paymentsPath, refundPageSchema,
   refundPath, refundSchema, refundsPath, uploadPaymentProof, uploadRefundProof, type DuplicateWarning, type Payment, type Refund,
 } from "@/lib/factory-payments";
+import { openingBalancesPath, openingBalancesViewSchema, type OpeningBalance } from "@/lib/opening-balances";
 import { DraftDialog } from "./DraftDialog";
 import { amountOk, field, useMoney } from "./form";
 import { PayloadDecisionDialog } from "./PayloadDecisionDialog";
@@ -42,8 +43,11 @@ export function ContractPaymentsPanel({ contract }: { contract: CommercialContra
   // The package list is needed only by the allocation dialog.
   const claims = useQuery({ queryKey: ["factory-claims", contract.id], enabled: dialog?.kind === "allocate",
     queryFn: ({ signal }) => apiFetch(claimsPath(contract.id) + "?limit=50&offset=0", { signal }, { schema: claimPageSchema }) });
+  // Approved opening debt is the other allocation target; a 409 means step 9 is switched off, any other failure is shown.
+  const opening = useQuery({ queryKey: ["opening-balances", contract.id], enabled: dialog?.kind === "allocate", retry: false,
+    queryFn: ({ signal }) => apiFetch(openingBalancesPath(contract.id), { signal }, { schema: openingBalancesViewSchema }) });
   const refresh = () => {
-    for (const key of ["factory-payments", "factory-money", "factory-refunds", "factory-reconciliation"]) void client.invalidateQueries({ queryKey: [key, contract.id] });
+    for (const key of ["factory-payments", "factory-money", "factory-refunds", "factory-reconciliation", "opening-balances"]) void client.invalidateQueries({ queryKey: [key, contract.id] });
     setDialog(null);
   };
   async function attachProof(payment: Payment, file: File | null) {
@@ -55,6 +59,8 @@ export function ContractPaymentsPanel({ contract }: { contract: CommercialContra
     return <p role="status" className="py-4 text-sm text-text-secondary">{t.disabled}</p>;
   }
   const issued = (claims.data?.items ?? []).filter((row) => row.status === "ISSUED");
+  const openingDebts = (opening.data?.items ?? []).filter((row) => row.kind === "DEBT" && row.status === "APPROVED");
+  const openingFailed = opening.isError && priceErrorStatus(opening.error) !== 409;
   const reasonDialog = (path: string, schema: ResponseSchema<unknown>, withRequest: boolean, title: string, description: string, submit: string) =>
     <ReasonDialog path={path} schema={schema} withRequest={withRequest} title={title} description={description} submit={submit} t={t} onClose={() => setDialog(null)} onSaved={refresh} />;
   return <section aria-label={t.tab} className="min-w-0 space-y-4">
@@ -105,7 +111,7 @@ export function ContractPaymentsPanel({ contract }: { contract: CommercialContra
     {dialog?.kind === "reverse" && reasonDialog(paymentPath(contract.id, dialog.payment.id) + "/reverse", paymentSchema, true, t.reverseTitle, t.reverseDescription, t.reverse)}
     {dialog?.kind === "release" && reasonDialog(paymentPath(contract.id, dialog.payment.id) + "/allocations/" + dialog.allocationId + "/release", paymentSchema, false, t.releaseTitle, t.releaseDescription, t.release)}
     {dialog?.kind === "cancelRefund" && reasonDialog(refundPath(contract.id, dialog.refund.id) + "/cancel", refundSchema, false, t.cancelRefundTitle, t.cancelRefundDescription, t.cancelRefund)}
-    {dialog?.kind === "allocate" && <AllocateDialog contractId={contract.id} payment={dialog.payment} claims={issued} onClose={() => setDialog(null)} onSaved={refresh} />}
+    {dialog?.kind === "allocate" && <AllocateDialog contractId={contract.id} payment={dialog.payment} claims={issued} openingDebts={openingDebts} openingFailed={openingFailed} onClose={() => setDialog(null)} onSaved={refresh} />}
     {dialog?.kind === "propose" && <ProposeDialog contractId={contract.id} payment={dialog.payment} onClose={() => setDialog(null)} onSaved={refresh} />}
     {dialog?.kind === "decide" && <PayloadDecisionDialog path={refundPath(contract.id, dialog.refund.id) + "/decision"} schema={refundSchema} payloadSha256={dialog.refund.payload_sha256}
       labels={{ title: t.decideTitle, description: t.decideDescription, fingerprint: t.fingerprint, approve: t.APPROVE, reject: t.REJECT, reason: t.reason, checked: t.checked }}
@@ -140,7 +146,7 @@ function PaymentRow({ row, t, money, contractId, uploading, onProof, onAction }:
     {row.allocations.length > 0 && <tr className="border-t border-border bg-surface-sunken/40"><td colSpan={7} className="p-2 text-xs">
       <span className="font-medium">{t.allocations}:</span>
       <ul className="mt-1 space-y-1">{row.allocations.map((a) => <li key={a.id} data-testid="allocation-row" className="flex flex-wrap items-center gap-2">
-        <span className="font-mono">{a.claim_label}</span> · {t[a.part]} · <span className="font-mono tabular-nums">{money(a.amount)}</span> · {a.active ? t.active : `${t.released}: ${a.release_reason ?? ""}`}
+        <span className="font-mono">{a.target_kind === "OPENING_DEBT" ? t.openingDebt : a.claim_label}</span> · {t[a.part]} · <span className="font-mono tabular-nums">{money(a.amount)}</span> · {a.active ? t.active : `${t.released}: ${a.release_reason ?? ""}`}
         {a.active && row.status === "POSTED" && <Button size="sm" variant="outline" onClick={() => onAction({ kind: "release", payment: row, allocationId: a.id })}>{t.release}</Button>}
       </li>)}</ul>
     </td></tr>}
@@ -204,19 +210,26 @@ function ReasonDialog<T>({ path, schema, withRequest, title, description, submit
   </DraftDialog>;
 }
 
-function AllocateDialog({ contractId, payment, claims, onClose, onSaved }: DialogProps & { payment: Payment; claims: ClaimSummary[] }) {
+function AllocateDialog({ contractId, payment, claims, openingDebts, openingFailed, onClose, onSaved }: DialogProps & { payment: Payment; claims: ClaimSummary[]; openingDebts: OpeningBalance[]; openingFailed: boolean }) {
   const { locale } = useI18n(), t = paymentCopy[locale];
-  const [claimId, setClaimId] = useState("");
+  // "claim:<id>" or "opening:<id>": exactly one target per allocation; an opening debt takes only the principal, so `part` is the single truth.
+  const [target, setTarget] = useState("");
   const [part, setPart] = useState<"PRINCIPAL" | "RETENTION">("PRINCIPAL");
   const [amount, setAmount] = useState("");
   const write = useCommercialWrite(paymentPath(contractId, payment.id) + "/allocations", paymentSchema, onSaved);
-  return <DraftDialog title={t.allocateTitle} description={t.allocateDescription} dirty={claimId.length > 0 || amount.length > 0} valid={claimId.length > 0 && amountOk(amount)} write={write}
+  const [targetKind, targetId] = target.split(":");
+  const toOpening = targetKind === "opening";
+  return <DraftDialog title={t.allocateTitle} description={t.allocateDescription} dirty={target.length > 0 || amount.length > 0} valid={target.length > 0 && amountOk(amount)} write={write}
     onClose={onClose} submitLabel={t.allocate}
-    onSave={() => void write.save(() => ({ request_id: crypto.randomUUID(), claim_id: claimId, part, amount }))}>
+    onSave={() => void write.save(() => ({ request_id: crypto.randomUUID(), ...(toOpening ? { opening_balance_id: targetId } : { claim_id: targetId }), part, amount }))}>
     <p className="text-sm">{t.available}: <span className="font-mono tabular-nums">{payment.available}</span> ILS</p>
-    <label className="block space-y-1 text-sm">{t.claim}<select aria-label={t.claim} value={claimId} onChange={(e) => setClaimId(e.target.value)} className={field}>
-      <option value="">—</option>{claims.map((row) => <option key={row.id} value={row.id}>{row.number}.{row.version} · {row.period_start} · {row.amount_ex_vat}</option>)}</select></label>
-    <label className="block space-y-1 text-sm">{t.part}<select aria-label={t.part} value={part} onChange={(e) => setPart(e.target.value as "PRINCIPAL" | "RETENTION")} className={field}>
+    {openingFailed && <p role="alert" className="text-sm text-status-problem-fg">{t.openingDebt}: {t.error}</p>}
+    <label className="block space-y-1 text-sm">{t.target}<select aria-label={t.target} value={target} onChange={(e) => { setTarget(e.target.value); if (e.target.value.startsWith("opening:")) setPart("PRINCIPAL"); }} className={field}>
+      <option value="">—</option>
+      <optgroup label={t.claim}>{claims.map((row) => <option key={row.id} value={"claim:" + row.id}>{row.number}.{row.version} · {row.period_start} · {row.amount_ex_vat}</option>)}</optgroup>
+      {openingDebts.length > 0 && <optgroup label={t.openingDebt}>{openingDebts.map((row) => <option key={row.id} value={"opening:" + row.id}>{t.openingDebt} · {row.as_of} · {row.amount}</option>)}</optgroup>}
+    </select></label>
+    <label className="block space-y-1 text-sm">{t.part}<select aria-label={t.part} value={part} disabled={toOpening} onChange={(e) => setPart(e.target.value as "PRINCIPAL" | "RETENTION")} className={field}>
       <option value="PRINCIPAL">{t.PRINCIPAL}</option><option value="RETENTION">{t.RETENTION}</option></select></label>
     <label className="block space-y-1 text-sm">{t.amount}<Input inputMode="decimal" aria-label={t.amount} value={amount} onChange={(e) => setAmount(e.target.value)} /></label>
   </DraftDialog>;

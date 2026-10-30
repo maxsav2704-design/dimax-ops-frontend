@@ -52,6 +52,7 @@ function reads(url: string, init?: RequestInit) {
   if (url.includes("/payments?")) return { items: payments, total: payments.length };
   if (url.includes("/refunds?")) return { items: refunds, total: refunds.length };
   if (url.includes("/claims?")) return { items: [claim], total: 1 };
+  if (url.endsWith("/opening-balances")) return { items: [] };
   throw new Error("Unexpected URL " + url);
 }
 function mount(node: React.ReactNode) {
@@ -95,7 +96,7 @@ describe("factory payments", () => {
     fireEvent.click(within(screen.getByTestId("payment-row")).getByRole("button", { name: "Allocate" }));
     dialog = within(screen.getByRole("dialog"));
     await dialog.findByRole("option", { name: /1\.1/ });  // the package list loads when the dialog opens
-    fireEvent.change(dialog.getByLabelText("Package"), { target: { value: claimId } });
+    fireEvent.change(dialog.getByLabelText("Target"), { target: { value: "claim:" + claimId } });
     fireEvent.change(dialog.getByLabelText("Amount"), { target: { value: "15000.00" } });
     fireEvent.click(dialog.getByRole("button", { name: "Allocate" }));
     await waitFor(() => expect(api).toHaveBeenCalledWith(expect.stringMatching(/\/allocations$/), expect.objectContaining({ method: "POST" }), expect.anything()));

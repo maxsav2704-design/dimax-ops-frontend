@@ -16,7 +16,9 @@ import { approvalCopy } from "@/components/accounting/approval-copy";
 import { ContractPeriodsPanel } from "@/components/accounting/ContractPeriodsPanel";
 import { ContractClaimsPanel } from "@/components/accounting/ContractClaimsPanel";
 import { ContractPaymentsPanel } from "@/components/accounting/ContractPaymentsPanel";
+import { ContractOpeningPanel } from "@/components/accounting/ContractOpeningPanel";
 import { paymentCopy } from "@/components/accounting/payment-copy";
+import { openingCopy } from "@/components/accounting/opening-copy";
 import { claimCopy } from "@/components/accounting/claim-copy";
 import { termsCopy } from "@/components/accounting/terms-copy";
 import { commercialCopy, type CommercialCopy } from "@/components/accounting/copy";
@@ -141,7 +143,7 @@ function ContractWorkspace({ contract }: { contract: CommercialContract }) {
   const t = termsCopy[locale];
   const [view, setView] = useState("prices");
   const id = useId();
-  const tabs = [["prices", t.prices], ["terms", t.tab], ["approvals", approvalCopy[locale].tab], ["periods", agreementCopy[locale].periods], ["claims", claimCopy[locale].tab], ["payments", paymentCopy[locale].tab]];
+  const tabs = [["prices", t.prices], ["terms", t.tab], ["approvals", approvalCopy[locale].tab], ["periods", agreementCopy[locale].periods], ["claims", claimCopy[locale].tab], ["payments", paymentCopy[locale].tab], ["opening", openingCopy[locale].tab]];
   return <div className="min-w-0 space-y-4">
     <div role="tablist" aria-label={contract.reference} className="flex flex-wrap gap-1 border-b border-border">
       {tabs.map(([key, label]) => <button key={key} id={id + key} type="button" role="tab"
@@ -158,7 +160,7 @@ function ContractWorkspace({ contract }: { contract: CommercialContract }) {
         }}>{label}</button>)}
     </div>
     {tabs.map(([key]) => <div key={key} role="tabpanel" id={id + key + "-panel"} aria-labelledby={id + key} hidden={view !== key}>
-      {view === key && (key === "prices" ? <ContractPrices contract={contract} /> : key === "terms" ? <ContractTermsPanel contract={contract} /> : key === "periods" ? <ContractPeriodsPanel contract={contract} /> : key === "claims" ? <ContractClaimsPanel contract={contract} /> : key === "payments" ? <ContractPaymentsPanel contract={contract} /> : <ContractApprovalsPanel contract={contract} />)}
+      {view === key && (key === "prices" ? <ContractPrices contract={contract} /> : key === "terms" ? <ContractTermsPanel contract={contract} /> : key === "periods" ? <ContractPeriodsPanel contract={contract} /> : key === "claims" ? <ContractClaimsPanel contract={contract} /> : key === "payments" ? <ContractPaymentsPanel contract={contract} /> : key === "opening" ? <ContractOpeningPanel contract={contract} /> : <ContractApprovalsPanel contract={contract} />)}
     </div>)}
   </div>;
 }

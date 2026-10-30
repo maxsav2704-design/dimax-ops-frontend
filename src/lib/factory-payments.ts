@@ -10,7 +10,8 @@ const money = z.string().regex(/^-?\d+(?:\.\d{1,2})?$/);
 const uuid = z.string().uuid();
 
 export const allocationSchema = z.object({
-  id: uuid, payment_id: uuid, claim_id: uuid, claim_label: z.string(), part: z.enum(["PRINCIPAL", "RETENTION"]), amount: money, active: z.boolean(),
+  id: uuid, payment_id: uuid, claim_id: uuid.nullable(), opening_balance_id: uuid.nullable().default(null),
+  target_kind: z.enum(["CLAIM", "OPENING_DEBT"]).default("CLAIM"), claim_label: z.string(), part: z.enum(["PRINCIPAL", "RETENTION"]), amount: money, active: z.boolean(),
   allocated_at: z.string(), released_at: z.string().nullable(), release_reason: z.string().nullable(),
 });
 export const refundSchema = z.object({
