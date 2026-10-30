@@ -10,7 +10,8 @@ const en = {
   record: "Record stage", recordHint: "The office records a stage the assigned installer reported; the installer stays the executor.",
   progress: "Required stages", installedByStages: "Installed by stages", locked: "The door is installed; stages are closed.",
   cannotReplan: "Stages were already executed; the plan cannot change.", error: "Could not load. Try again.", load: "Loading",
-  sameInstaller: "Same installer", history: "Assignment history is kept on the server.", noEarning: "Stage facts do not create earnings yet (step 4).",
+  sameInstaller: "Same installer", history: "Assignment history is kept on the server.", earningHint: "Each stage is paid at the factory rate confirmed for the door type and stage at execution time.",
+  RECORDED: "Earning recorded", NO_RATE: "No factory rate for this stage: fact kept, nothing accrued", PRICING_INACTIVE: "Factory prices were not in effect: fact kept, nothing accrued",
 };
 export const stageCopy: Record<"en" | "ru" | "he", Record<keyof typeof en, string>> = {
   en,
@@ -26,7 +27,8 @@ export const stageCopy: Record<"en" | "ru" | "he", Record<keyof typeof en, strin
     record: "Записать этап", recordHint: "Офис записывает этап, о котором сообщил назначенный монтажник; исполнителем остаётся монтажник.",
     progress: "Обязательные этапы", installedByStages: "Установлена по этапам", locked: "Дверь установлена; этапы закрыты.",
     cannotReplan: "Этапы уже выполнялись; план изменить нельзя.", error: "Не удалось загрузить. Повторите попытку.", load: "Загрузка",
-    sameInstaller: "Тот же монтажник", history: "История назначений хранится на сервере.", noEarning: "Факты этапов пока не создают заработок (шаг 4).",
+    sameInstaller: "Тот же монтажник", history: "История назначений хранится на сервере.", earningHint: "Каждый этап оплачивается по ставке завода, подтверждённой для типа двери и этапа на момент выполнения.",
+    RECORDED: "Начисление записано", NO_RATE: "Нет ставки завода для этапа: факт сохранён, начисления нет", PRICING_INACTIVE: "Цены завода не действовали: факт сохранён, начисления нет",
   },
   he: {
     catalog: "שלבי עבודה", catalogHint: "השלבים שבהם ניתן להתקין דלת. הקודים תואמים לקודי השלבים במחירון המסחרי. אין כאן מחירים.",
@@ -40,6 +42,7 @@ export const stageCopy: Record<"en" | "ru" | "he", Record<keyof typeof en, strin
     record: "רישום שלב", recordHint: "המשרד רושם שלב שהמתקין המשויך דיווח עליו; המתקין נשאר המבצע.",
     progress: "שלבי חובה", installedByStages: "הותקנה לפי שלבים", locked: "הדלת מותקנת; השלבים סגורים.",
     cannotReplan: "השלבים כבר בוצעו; לא ניתן לשנות את התוכנית.", error: "הטעינה נכשלה. יש לנסות שוב.", load: "טעינה",
-    sameInstaller: "אותו מתקין", history: "היסטוריית השיוכים נשמרת בשרת.", noEarning: "עובדות שלבים עדיין אינן יוצרות שכר (שלב 4).",
+    sameInstaller: "אותו מתקין", history: "היסטוריית השיוכים נשמרת בשרת.", earningHint: "כל שלב משולם לפי תעריף המפעל שאושר לסוג הדלת ולשלב במועד הביצוע.",
+    RECORDED: "החיוב נרשם", NO_RATE: "אין תעריף מפעל לשלב זה: העובדה נשמרה, ללא חיוב", PRICING_INACTIVE: "מחירי המפעל לא היו בתוקף: העובדה נשמרה, ללא חיוב",
   },
 };

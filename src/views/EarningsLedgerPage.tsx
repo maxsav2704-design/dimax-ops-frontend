@@ -44,7 +44,7 @@ import { useI18n, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type LedgerEntryType = "ORIGINAL" | "REVERSAL" | "CORRECTION";
-type LedgerWorkKind = "DOOR" | "ADDON";
+type LedgerWorkKind = "DOOR" | "ADDON" | "STAGE";
 
 type EarningsLedgerItem = {
   id: string;
@@ -65,6 +65,8 @@ type EarningsLedgerItem = {
   addon_type_id?: string | null;
   addon_type_name?: string | null;
   addon_comment?: string | null;
+  stage_fact_id?: string | null;
+  stage_code?: string | null;
   installer_id: string;
   installer_name: string | null;
   can_correct: boolean;
@@ -183,7 +185,7 @@ function entryTypeValue(
 function workKindValue(
   value: string | null | undefined,
 ): LedgerWorkKind | "all" {
-  return value === "DOOR" || value === "ADDON" ? value : "all";
+  return value === "DOOR" || value === "ADDON" || value === "STAGE" ? value : "all";
 }
 
 function dateToValue(value: string): string | null {
@@ -234,6 +236,9 @@ function entryTone(entryType: LedgerEntryType): string {
 function workLabel(item: EarningsLedgerItem): string {
   if (item.work_kind === "ADDON") {
     return item.addon_type_name || item.addon_fact_id || "-";
+  }
+  if (item.work_kind === "STAGE") {
+    return `${item.door_label || item.door_code || "-"} · ${item.stage_code || "-"}`;
   }
   return item.door_label || item.door_code || "-";
 }
@@ -440,7 +445,8 @@ export default function EarningsLedgerPage() {
         : value === "CORRECTION" ? copy("Correction", "Корректировка", "תיקון")
           : value;
   const workKindLabel = (value: string) =>
-    value === "DOOR" ? copy("Door", "Дверь", "דלת") : value === "ADDON" ? copy("Addon", "Допработа", "עבודה נוספת") : value;
+    value === "DOOR" ? copy("Door", "Дверь", "דלת") : value === "ADDON" ? copy("Addon", "Допработа", "עבודה נוספת")
+      : value === "STAGE" ? copy("Stage", "Этап", "שלב") : value;
   const canPrev = offset > 0;
   const canNext = offset + LEDGER_PAGE_SIZE < (ledgerQuery.data?.total || 0);
   const parsedNewRate = Number(newRate);
@@ -774,10 +780,11 @@ export default function EarningsLedgerPage() {
               className="control-input min-w-[150px]"
             >
               <option value="all">
-                {copy("Door + addon", "Двери + допы", "דלת + תוספות")}
+                {copy("All kinds", "Все виды", "כל הסוגים")}
               </option>
               <option value="DOOR">{copy("Door", "Дверь", "דלת")}</option>
               <option value="ADDON">{copy("Addon", "Допработа", "עבודה נוספת")}</option>
+              <option value="STAGE">{copy("Stage", "Этап", "שלב")}</option>
             </select>
             <div className="field-stack min-w-[160px]">
               <label

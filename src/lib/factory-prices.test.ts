@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { invitationStatus, loadPriceCatalog, normalizeInstallerPrice, type Invitation, type PriceSummary } from "./factory-prices";
+import { invitationStatus, loadPriceCatalog, normalizeInstallerPrice, workKey, type Invitation, type PriceSummary } from "./factory-prices";
 import { apiFetch } from "./api";
 vi.mock("./api", () => ({ apiFetch: vi.fn() }));
 
@@ -19,6 +19,24 @@ describe("factory price inputs", () => {
     expect(rows).toHaveLength(202);
     expect(vi.mocked(apiFetch).mock.calls[1][0]).toContain("offset=200");
     expect(rows.at(-1)).not.toHaveProperty("installer_price");
+  });
+  it("offers a stage rate per door type and active stage, keyed by the stage, only when stages are switched on", async () => {
+    vi.mocked(apiFetch).mockReset();
+    vi.mocked(apiFetch).mockResolvedValueOnce([{ id: "d-1", name: "Entrance" }])
+      .mockResolvedValueOnce({ items: [] })
+      .mockResolvedValueOnce([{ id: "s-1", code: "FRAME", name: "Frame", sort_order: 10, is_active: true },
+        { id: "s-2", code: "OLD", name: "Old", sort_order: 20, is_active: false }]);
+    const rows = await loadPriceCatalog(new AbortController().signal);
+    expect(rows).toEqual([
+      { kind: "DOOR", target_id: "d-1", name: "Entrance", unit: "pcs" },
+      { kind: "STAGE", target_id: "d-1", stage_code: "FRAME", name: "Entrance: Frame", unit: "pcs" },
+    ]);
+    expect(workKey(rows[1])).toBe("STAGE:d-1:FRAME");
+    expect(workKey(rows[0])).toBe("DOOR:d-1");
+    vi.mocked(apiFetch).mockReset();
+    vi.mocked(apiFetch).mockResolvedValueOnce([{ id: "d-1", name: "Entrance" }]).mockResolvedValueOnce({ items: [] })
+      .mockRejectedValueOnce(Object.assign(new Error("off"), { status: 409 }));
+    expect(await loadPriceCatalog(new AbortController().signal)).toHaveLength(1);
   });
   it("keeps a recorded decision confirmed after expiry or newer versions", () => {
     const row = { confirmed_at: "2026-10-01T10:00:00Z", revoked_at: null, expires_at: "2026-10-01T11:00:00Z" } as Invitation;

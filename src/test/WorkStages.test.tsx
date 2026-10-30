@@ -17,7 +17,8 @@ const plan = { id: "a1b2c3d4-0000-4000-8000-000000000021", door_type_id: doorTyp
   created_at: "2026-10-23T08:00:00Z", items: [{ stage_code: "FRAME", required: true, sequence: 1 }, { stage_code: "LEAF", required: true, sequence: 2 }] };
 const stagesView = { door_id: doorId, door_status: "NOT_INSTALLED", door_version: 1, plan_id: plan.id, plan_version: 1, required_total: 2, required_done: 1, installed_by_stages: false,
   stages: [{ stage_code: "FRAME", name: "Frame", required: true, sequence: 1, installer_id: installers[0].id, assignment_id: "a1b2c3d4-0000-4000-8000-000000000031",
-    completed_at: "2026-10-20T08:00:00Z", completed_by: installers[0].id, fact_id: "a1b2c3d4-0000-4000-8000-000000000041" },
+    completed_at: "2026-10-20T08:00:00Z", completed_by: installers[0].id, fact_id: "a1b2c3d4-0000-4000-8000-000000000041",
+    earning_id: null, earning_status: "NO_RATE" },
   { stage_code: "LEAF", name: "Leaf", required: true, sequence: 2, installer_id: null, assignment_id: null, completed_at: null, completed_by: null, fact_id: null }] };
 
 function mount(node: React.ReactNode) {
@@ -45,13 +46,16 @@ describe("work stages admin", () => {
     api.mockImplementation(async (url: string, init?: RequestInit) => {
       if (url.endsWith("/stages") && !init?.method) return stagesView;
       if (url.endsWith("/assign")) return { ...stagesView, stages: [stagesView.stages[0], { ...stagesView.stages[1], installer_id: installers[1].id }] };
-      if (url.endsWith("/complete")) return { id: doorId, status: "INSTALLED", version: 2, applied: true, required_total: 2, required_done: 2, door_installed: true };
+      if (url.endsWith("/complete")) return { id: doorId, status: "INSTALLED", version: 2, applied: true, required_total: 2, required_done: 2, door_installed: true, earning_status: "RECORDED" };
       throw new Error("unexpected " + url);
     });
     mount(<DoorStagesCard doorId={doorId} doorTypeId={doorTypeId} canPlan installers={installers} />);
     const rows = await screen.findAllByTestId("door-stage-row");
     expect(rows).toHaveLength(2);
     expect(within(rows[0]).getByText(/Done · Installer A/)).toBeInTheDocument();
+    // Step 4: the money gap is named, never an amount.
+    expect(within(rows[0]).getByTestId("stage-earning-status")).toHaveTextContent("No factory rate for this stage: fact kept, nothing accrued");
+    expect(within(rows[1]).queryByTestId("stage-earning-status")).toBeNull();
     expect(within(rows[1]).getByText(/Pending · Installer: Not assigned/)).toBeInTheDocument();
     expect(screen.getByText(/Required stages: 1\/2/)).toBeInTheDocument();
     expect(within(rows[1]).queryByRole("button", { name: "Record stage" })).toBeNull();

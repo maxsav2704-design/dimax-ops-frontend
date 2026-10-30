@@ -15,12 +15,13 @@ export const authMeSchema = z
   })
   .passthrough();
 
-const priceKindSchema = z.enum(["DOOR", "ADDON"]);
+const priceKindSchema = z.enum(["DOOR", "ADDON", "STAGE"]);
 
 export const priceLineSchema = z
   .object({
     kind: priceKindSchema,
     target_id: z.string(),
+    stage_code: z.string().nullable().optional(),
     name: z.string(),
     unit: z.string(),
     installer_price: z.string(),
@@ -65,7 +66,8 @@ export const companyPricingStateSchema = z
         effective_from: z.string(),
         items: z.array(
           z
-            .object({ kind: priceKindSchema, target_id: z.string(), unit: z.string(), rate: z.string() })
+            // The device snapshot carries door and addon rates only; stage rates stay server-side (0090).
+            .object({ kind: z.enum(["DOOR", "ADDON"]), target_id: z.string(), unit: z.string(), rate: z.string() })
             .passthrough(),
         ),
       })
@@ -96,6 +98,8 @@ export const earningsLedgerItemSchema = z
     addon_type_id: z.string().nullable().optional(),
     addon_type_name: z.string().nullable().optional(),
     addon_comment: z.string().nullable().optional(),
+    stage_fact_id: z.string().nullable().optional(),
+    stage_code: z.string().nullable().optional(),
     installer_id: z.string(),
     installer_name: z.string().nullable(),
     can_correct: z.boolean(),

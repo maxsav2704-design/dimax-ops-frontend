@@ -16,7 +16,8 @@ export type CompanyPricingState = {
 export type EffectivePriceVersion = {
   id: string; price_list_id: string; approval_id: string; effective_from: string; created_by: string; reason: string;
 };
-export type PriceLine = { kind: "DOOR" | "ADDON"; target_id: string; name: string; unit: string; installer_price: string };
+// STAGE lines (backend 0090): target_id is the door type, stage_code its stage; one stage of one door at its own rate.
+export type PriceLine = { kind: "DOOR" | "ADDON" | "STAGE"; target_id: string; stage_code?: string | null; name: string; unit: string; installer_price: string };
 export type PriceSummary = {
   id: string; version: number; status: "DRAFT" | "CONFIRMED" | "CANCELLED"; currency: "ILS";
   reason: string; agreement_reference: string; created_at: string; created_by: string;
@@ -34,14 +35,14 @@ export type InvitationPage = { items: Invitation[]; total: number };
 export type IssuedInvitation = { invitation: Invitation; confirmation_url: string; email_outbox_id?: string | null };
 export type DraftInput = {
   request_id: string; expected_latest_version: number; reason: string; agreement_reference: string;
-  items: Pick<PriceLine, "kind" | "target_id" | "installer_price">[];
+  items: Pick<PriceLine, "kind" | "target_id" | "installer_price" | "stage_code">[];
 };
 export type CatalogWork = Omit<PriceLine, "installer_price">;
 export type ReconciliationSource = "INSTALLER_RATE" | "SCHEDULED_RATE" | "DOOR" | "ADDON_PLAN" | "ADDON_DEFAULT" | "ADDON_FACT" | "CATALOG";
 export type ReconciliationStatus = "MATCH" | "DIFFERENT" | "MISSING_PROPOSED" | "MISSING_LEGACY" | "UNAVAILABLE" | "UNIT_CHANGED";
 export type PriceApplicationIssueCode = "NOT_CONFIRMED" | "CONFIRMATION_MISSING" | "CONFIRMATION_MISMATCH" | "MAILBOX_NOT_VERIFIED" | "SUPERSEDED_CONFIRMED" |
   "NO_ITEMS" | "MISSING_DOOR_PRICES" | "MISSING_ADDON_PRICES" | "UNAVAILABLE_WORK" | "CATALOG_CHANGED" | "INSTALLER_SURCHARGES" |
-  "LEGACY_DIFFERENCES" | "DOOR_SNAPSHOTS" | "SCHEDULED_RATES" | "UNACCRUED_WORK" | "URGENCY_CHARGES";
+  "MISSING_STAGE_PRICES" | "LEGACY_DIFFERENCES" | "DOOR_SNAPSHOTS" | "SCHEDULED_RATES" | "UNACCRUED_WORK" | "URGENCY_CHARGES";
 export type PriceApplicationCheck = {
   status: "BLOCKED" | "REVIEW_REQUIRED" | "VERIFIED"; affects_earnings: false; confirmed_at: string | null;
   blockers: Array<{ code: PriceApplicationIssueCode; count: number }>;
@@ -69,8 +70,8 @@ export type ReconciliationPage = {
   items: ReconciliationLine[]; total: number;
 };
 
-export function workKey(item: Pick<PriceLine, "kind" | "target_id">): string {
-  return `${item.kind}:${item.target_id}`;
+export function workKey(item: Pick<PriceLine, "kind" | "target_id" | "stage_code">): string {
+  return `${item.kind}:${item.target_id}` + (item.kind === "STAGE" && item.stage_code ? `:${item.stage_code}` : "");
 }
 
 // Keep monetary input as decimal strings, without binary floating-point rounding.
@@ -123,5 +124,17 @@ export async function loadPriceCatalog(signal: AbortSignal): Promise<CatalogWork
   works.push(...addons.items.filter((row) => row.is_active).map((row) => ({
     kind: "ADDON" as const, target_id: row.id, name: row.name, unit: row.unit,
   })));
+  // Stage rates: every active stage of the company for every door type. Absent (409) while stages are switched off.
+  let stages: unknown = null;
+  try { stages = await apiFetch<unknown>("/api/v1/admin/work-stages", { signal }); } catch { stages = null; }
+  if (Array.isArray(stages)) {
+    const active = stages.filter((row): row is { code: string; name: string; is_active: boolean } =>
+      !!row && typeof row === "object" && typeof (row as { code?: unknown }).code === "string" && (row as { is_active?: unknown }).is_active === true);
+    for (const door of works.filter((row) => row.kind === "DOOR")) {
+      works.push(...active.map((stage) => ({
+        kind: "STAGE" as const, target_id: door.target_id, stage_code: stage.code, name: `${door.name}: ${stage.name}`, unit: "pcs",
+      })));
+    }
+  }
   return works;
 }

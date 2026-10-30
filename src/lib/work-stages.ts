@@ -15,6 +15,9 @@ export const doorStageSchema = z.object({
   stage_code: z.string(), name: z.string(), required: z.boolean(), sequence: z.number().int(),
   installer_id: z.string().uuid().nullable(), assignment_id: z.string().uuid().nullable(),
   completed_at: z.string().nullable(), completed_by: z.string().uuid().nullable(), fact_id: z.string().uuid().nullable(),
+  // Step 4: the earning that values the fact, or why there is none. Never an amount.
+  earning_id: z.string().uuid().nullable().optional(),
+  earning_status: z.enum(["RECORDED", "NO_RATE", "PRICING_INACTIVE"]).nullable().optional(),
 });
 export const doorStagesSchema = z.object({
   door_id: z.string().uuid(), door_status: z.string(), door_version: z.number().int(), plan_id: z.string().uuid(),
@@ -24,6 +27,7 @@ export const doorStagesSchema = z.object({
 export const stageCompletionSchema = z.object({
   id: z.string().uuid(), status: z.string(), version: z.number().int(), applied: z.boolean(),
   required_total: z.number().int(), required_done: z.number().int(), door_installed: z.boolean(),
+  earning_status: z.enum(["RECORDED", "NO_RATE", "PRICING_INACTIVE"]).nullable().optional(),
 });
 
 export type StageDefinition = z.infer<typeof stageDefinitionSchema>;

@@ -38,7 +38,7 @@ export function DoorStagesCard({ doorId, doorTypeId, canPlan, installers, onDoor
   const nameOf = (id: string | null) => installers.find((row) => row.id === id)?.full_name ?? (id ? id.slice(0, 8) : t.unassigned);
   const hasFacts = !!data?.stages.some((s) => s.fact_id);
   return <WidgetCard data-testid="door-stages-card" title={t.card} titleAccessory={<Layers className="size-4 text-text-secondary" aria-hidden="true" />}
-    headerMeta={data ? `${t.progress}: ${data.required_done}/${data.required_total} · ${t.plan} v${data.plan_version}` : t.noEarning}>
+    headerMeta={data ? `${t.progress}: ${data.required_done}/${data.required_total} · ${t.plan} v${data.plan_version}` : undefined}>
     <div className="space-y-3 px-4 py-3 text-13">
       {stages.isPending && <p role="status" className="text-12 text-text-secondary">{t.load}</p>}
       {stages.isError && <p role="alert" className="text-12 text-danger">{t.error}</p>}
@@ -58,7 +58,8 @@ export function DoorStagesCard({ doorId, doorTypeId, canPlan, installers, onDoor
         <ul className="divide-y divide-border-subtle">{data.stages.map((stage) => <li key={stage.stage_code} data-testid="door-stage-row" className="flex flex-wrap items-center gap-2 py-2">
           <span className="min-w-40"><span className="font-mono text-xs"><bdi>{stage.stage_code}</bdi></span> · {stage.name}
             <span className="block text-11 text-text-secondary">{stage.required ? t.required : t.optional}</span></span>
-          {stage.fact_id ? <span className="inline-flex items-center gap-1 text-12"><CheckCircle2 className="size-4 text-status-ok-fg" aria-hidden="true" />{t.done} · {nameOf(stage.completed_by)} · {stage.completed_at ? formatLocaleDateTime(stage.completed_at, locale) : ""}</span>
+          {stage.fact_id ? <span className="inline-flex flex-wrap items-center gap-1 text-12"><CheckCircle2 className="size-4 text-status-ok-fg" aria-hidden="true" />{t.done} · {nameOf(stage.completed_by)} · {stage.completed_at ? formatLocaleDateTime(stage.completed_at, locale) : ""}
+              {stage.earning_status && <span data-testid="stage-earning-status" className={stage.earning_status === "RECORDED" ? "block w-full text-11 text-text-secondary" : "block w-full text-11 text-status-warning-fg"}>{t[stage.earning_status]}</span>}</span>
             : <>
               <span className="text-12 text-text-secondary">{t.pending} · {t.installer}: {nameOf(stage.installer_id)}</span>
               {canPlan && !data.installed_by_stages && <>
@@ -77,7 +78,7 @@ export function DoorStagesCard({ doorId, doorTypeId, canPlan, installers, onDoor
               </>}
             </>}
         </li>)}</ul>
-        <p className="text-11 text-text-secondary">{t.noEarning} {t.history}</p>
+        <p className="text-11 text-text-secondary">{t.earningHint} {t.history}</p>
       </>}
       {error && <p role="alert" className="text-12 text-danger">{error}</p>}
     </div>

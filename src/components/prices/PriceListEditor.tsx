@@ -51,7 +51,8 @@ export function PriceListEditor({ base, latest, onClose, onSaved }: {
     locked.current = true; setBusy(true); setError("");
     const body = pending.current ?? {
       request_id: crypto.randomUUID(), expected_latest_version: latest, reason: reason.trim(), agreement_reference: agreement.trim(),
-      items: lines.map((row) => ({ kind: row.kind, target_id: row.target_id, installer_price: normalizeInstallerPrice(row.installer_price)! })),
+      items: lines.map((row) => ({ kind: row.kind, target_id: row.target_id, installer_price: normalizeInstallerPrice(row.installer_price)!,
+        ...(row.kind === "STAGE" ? { stage_code: row.stage_code ?? undefined } : {}) })),
     };
     pending.current = body;
     try {
@@ -81,7 +82,7 @@ export function PriceListEditor({ base, latest, onClose, onSaved }: {
           <div className="flex min-w-0 gap-2">
             <select aria-label={t.choose} value={selected} onChange={(e) => setSelected(e.target.value)} className="h-10 min-w-0 flex-1 rounded-md border border-border bg-surface px-2 text-sm">
               <option value="">{t.choose}</option>
-              {(["DOOR", "ADDON"] as const).map((kind) => <optgroup key={kind} label={t[kind]}>
+              {(["DOOR", "ADDON", "STAGE"] as const).map((kind) => <optgroup key={kind} label={t[kind]}>
                 {catalog.data?.filter((row) => row.kind === kind && !lines.some((line) => workKey(line) === workKey(row))).map((row) =>
                   <option key={workKey(row)} value={workKey(row)}>{row.name}</option>)}
               </optgroup>)}
