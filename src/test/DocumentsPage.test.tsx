@@ -12,7 +12,9 @@ const { apiFetchMock, apiDownloadMock, authSessionMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/api", () => ({
-  apiFetch: apiFetchMock,
+  // The page loads every object page by page; the mocks answer the first page under the old path.
+  apiFetch: (path: string, ...rest: unknown[]) =>
+    apiFetchMock(String(path).replace(/\/api\/v1\/admin\/projects\?limit=200&offset=0$/, "/api/v1/admin/projects?limit=200"), ...rest),
   apiDownload: apiDownloadMock,
 }));
 
@@ -202,7 +204,7 @@ describe("DocumentsPage", () => {
         expect(init.body).toBe(
           JSON.stringify({
             template_id: "template-1",
-            overrides: { "manual.note": "" },
+            overrides: { "manual.note": "Ready for the client" },
           })
         );
         return {
@@ -227,6 +229,10 @@ describe("DocumentsPage", () => {
 
     expect(await screen.findByText("project.address")).toBeInTheDocument();
     const generateButton = await screen.findByRole("button", { name: /generate document/i });
+    // The object data has no "manual.note": the office types it in its own field (no JSON), then generates.
+    const manual = await screen.findByLabelText("manual.note");
+    expect(generateButton).toBeDisabled();
+    fireEvent.change(manual, { target: { value: "Ready for the client" } });
     await waitFor(() => expect(generateButton).not.toBeDisabled());
     fireEvent.click(generateButton);
 
@@ -236,7 +242,7 @@ describe("DocumentsPage", () => {
         expect.objectContaining({ method: "POST" })
       );
     });
-    expect(await screen.findByText("Document generated: handover-5678.txt")).toBeInTheDocument();
+    expect(await screen.findByText("Document created: handover-5678.txt")).toBeInTheDocument();
   }, 15000);
 
   it("blocks document generation until all template placeholders are resolved", async () => {

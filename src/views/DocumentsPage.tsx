@@ -35,6 +35,9 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { apiDownload, apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
+import { downloadBlob, filenameFromDisposition } from "@/lib/download";
+import { fetchAllProjects } from "@/lib/projects-list";
+import { statusLabel } from "@/lib/status-labels";
 import { useI18n, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -144,48 +147,6 @@ function filterButtonClass(active: boolean): string {
 }
 
 
-function parseOverrides(value: string): Record<string, unknown> {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return {};
-  }
-  const parsed = JSON.parse(trimmed) as unknown;
-  if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") {
-    throw new Error("Overrides must be a JSON object.");
-  }
-  return parsed as Record<string, unknown>;
-}
-
-function safeOverrideKeys(value: string): string[] {
-  try {
-    return Object.keys(parseOverrides(value));
-  } catch {
-    return [];
-  }
-}
-
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  try {
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-function filenameFromDisposition(
-  disposition: string | null,
-  fallback: string,
-): string {
-  const match = (disposition || "").match(/filename="?([^"]+)"?/i);
-  return match?.[1] || fallback;
-}
-
 export default function DocumentsPage() {
   const queryClient = useQueryClient();
   const { locale } = useI18n();
@@ -198,9 +159,8 @@ export default function DocumentsPage() {
   const [uploadName, setUploadName] = useState("");
   const [uploadDescription, setUploadDescription] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [overridesText, setOverridesText] = useState(
-    '{\n  "manual.note": ""\n}',
-  );
+  // Fields the template needs that the object data does not fill: typed by the office, one input each.
+  const [manualValues, setManualValues] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [templateFilter, setTemplateFilter] =
     useState<TemplateFilter>("active");
@@ -218,8 +178,7 @@ export default function DocumentsPage() {
 
   const projectsQuery = useQuery({
     queryKey: ["documents", "projects"],
-    queryFn: () =>
-      apiFetch<ListResponse<ProjectOption>>("/api/v1/admin/projects?limit=200"),
+    queryFn: () => fetchAllProjects<ProjectOption>(),
     refetchInterval: 30_000,
   });
 
@@ -297,19 +256,14 @@ export default function DocumentsPage() {
   const selectedTemplate =
     templates.find((template) => template.id === selectedTemplateId) || null;
 
-  const overrideKeys = useMemo(
-    () => safeOverrideKeys(overridesText),
-    [overridesText],
+  const manualKeys = useMemo(
+    () => (selectedTemplate ? selectedTemplate.placeholders.filter((placeholder) => !(placeholder in fields)) : []),
+    [fields, selectedTemplate],
   );
-  const unresolvedPlaceholders = useMemo(() => {
-    if (!selectedTemplate) {
-      return [];
-    }
-    const available = new Set([...Object.keys(fields), ...overrideKeys]);
-    return selectedTemplate.placeholders.filter(
-      (placeholder) => !available.has(placeholder),
-    );
-  }, [fields, overrideKeys, selectedTemplate]);
+  const unresolvedPlaceholders = useMemo(
+    () => manualKeys.filter((key) => !(manualValues[key] || "").trim()),
+    [manualKeys, manualValues],
+  );
 
   const filteredTemplates = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -340,10 +294,10 @@ export default function DocumentsPage() {
     mutationFn: () => {
       const name = uploadName.trim();
       if (name.length < 2) {
-        throw new Error("Template name is required.");
+        throw new Error(copy("Name the template.", "Укажите название шаблона.", "תנו שם לתבנית."));
       }
       if (!uploadFile) {
-        throw new Error("Template file is required.");
+        throw new Error(copy("Choose a file.", "Выберите файл.", "בחרו קובץ."));
       }
       const formData = new FormData();
       formData.append("name", name);
@@ -360,7 +314,7 @@ export default function DocumentsPage() {
       );
     },
     onSuccess: async (template) => {
-      setMessage(`Template uploaded: ${template.name}`);
+      setMessage(`${copy("Template uploaded", "Шаблон загружен", "התבנית הועלתה")}: ${template.name}`);
       setErrorMessage(null);
       setSelectedTemplateId(template.id);
       setUploadName("");
@@ -378,7 +332,7 @@ export default function DocumentsPage() {
           locale,
           error instanceof Error
             ? error.message
-            : "Failed to upload document template.",
+            : copy("The template was not uploaded.", "Шаблон не загружен.", "התבנית לא הועלתה."),
         ),
       );
     },
@@ -396,8 +350,8 @@ export default function DocumentsPage() {
     onSuccess: async (template) => {
       setMessage(
         template.is_active
-          ? `Template restored: ${template.name}`
-          : `Template archived: ${template.name}`,
+          ? `${copy("Template restored", "Шаблон возвращён", "התבנית שוחזרה")}: ${template.name}`
+          : `${copy("Template archived", "Шаблон в архиве", "התבנית הועברה לארכיון")}: ${template.name}`,
       );
       setErrorMessage(null);
       if (!template.is_active && selectedTemplateId === template.id) {
@@ -415,7 +369,7 @@ export default function DocumentsPage() {
           locale,
           error instanceof Error
             ? error.message
-            : "Failed to update document template.",
+            : copy("The template was not changed.", "Шаблон не изменён.", "התבנית לא שונתה."),
         ),
       );
     },
@@ -424,23 +378,20 @@ export default function DocumentsPage() {
   const renderMutation = useMutation({
     mutationFn: () => {
       if (!selectedProjectId) {
-        throw new Error("Project is required.");
+        throw new Error(copy("Choose an object.", "Выберите объект.", "בחרו פרויקט."));
       }
       if (!selectedTemplateId) {
-        throw new Error("Template is required.");
+        throw new Error(copy("Choose a template.", "Выберите шаблон.", "בחרו תבנית."));
       }
       if (!selectedTemplate?.is_active) {
-        throw new Error("Archived templates cannot be generated.");
+        throw new Error(copy("An archived template cannot be used.", "Шаблон в архиве нельзя использовать.", "לא ניתן להשתמש בתבנית בארכיון."));
       }
-      const overrides = parseOverrides(overridesText);
-      const missingPlaceholders = selectedTemplate.placeholders.filter(
-        (placeholder) => !(placeholder in fields) && !(placeholder in overrides),
-      );
-      if (missingPlaceholders.length > 0) {
+      if (unresolvedPlaceholders.length > 0) {
         throw new Error(
-          `Document fields are required: ${missingPlaceholders.join(", ")}`,
+          `${copy("Fill in", "Заполните", "מלאו")}: ${unresolvedPlaceholders.join(", ")}`,
         );
       }
+      const overrides = Object.fromEntries(manualKeys.map((key) => [key, (manualValues[key] || "").trim()]));
       return apiFetch<DocumentGenerationDTO>(
         `/api/v1/admin/documents/projects/${selectedProjectId}/render`,
         {
@@ -453,7 +404,7 @@ export default function DocumentsPage() {
       );
     },
     onSuccess: async (generation) => {
-      setMessage(`Document generated: ${generation.file_name}`);
+      setMessage(`${copy("Document created", "Документ создан", "המסמך נוצר")}: ${generation.file_name}`);
       setErrorMessage(null);
       await queryClient.invalidateQueries({
         queryKey: ["documents", "generated"],
@@ -467,7 +418,7 @@ export default function DocumentsPage() {
           locale,
           error instanceof Error
             ? error.message
-            : "Failed to generate document.",
+            : copy("The document was not created.", "Документ не создан.", "המסמך לא נוצר."),
         ),
       );
     },
@@ -496,7 +447,7 @@ export default function DocumentsPage() {
           locale,
           error instanceof Error
             ? error.message
-            : "Failed to download generated document.",
+            : copy("The document was not downloaded.", "Документ не скачан.", "המסמך לא הורד."),
         ),
       );
     },
@@ -528,7 +479,7 @@ export default function DocumentsPage() {
           locale,
           error instanceof Error
             ? error.message
-            : "Failed to download document template.",
+            : copy("The template was not downloaded.", "Шаблон не скачан.", "התבנית לא הורדה."),
         ),
       );
     },
@@ -545,7 +496,7 @@ export default function DocumentsPage() {
             generatedQuery.error ||
             contextQuery.error,
           locale,
-          "Failed to load documents workspace.",
+          copy("Documents could not be loaded. Try again.", "Документы не загрузились. Повторите.", "המסמכים לא נטענו. נסו שוב."),
         )
       : null;
 
@@ -712,14 +663,14 @@ export default function DocumentsPage() {
 
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="field-stack">
-                <Label htmlFor="document-project">{copy("Project", "Проект", "פרויקט")}</Label>
+                <Label htmlFor="document-project">{copy("Object", "Объект", "פרויקט")}</Label>
                 <select
                   id="document-project"
                   value={selectedProjectId}
                   onChange={(event) => setSelectedProjectId(event.target.value)}
                   className="control-input"
                 >
-                  <option value="">{copy("Select project", "Выбор проекта", "בחר פרויקט")}</option>
+                  <option value="">{copy("Choose an object", "Выберите объект", "בחרו פרויקט")}</option>
                   {projects.map((project) => (
                     <option key={project.id} value={project.id}>
                       {project.code
@@ -767,7 +718,7 @@ export default function DocumentsPage() {
                   <span
                     className={templateStatusClass(selectedTemplate.is_active)}
                   >
-                    {selectedTemplate.is_active ? "ACTIVE" : "ARCHIVED"}
+                    {selectedTemplate.is_active ? copy("Active", "Активен", "פעילה") : copy("Archived", "В архиве", "בארכיון")}
                   </span>
                   <span className="dmx-week-pill">
                     {formatBytes(selectedTemplate.size_bytes)}
@@ -797,17 +748,29 @@ export default function DocumentsPage() {
               </div>
             ) : null}
 
-            <div className="field-stack">
-              <Label htmlFor="document-overrides">{copy("Manual fields JSON", "Ручные поля JSON", "שדות ידניים JSON")}</Label>
-              <Textarea
-                id="document-overrides"
-                rows={6}
-                value={overridesText}
-                onChange={(event) => setOverridesText(event.target.value)}
-                className="control-textarea min-h-[144px] font-mono text-[12px]"
-                spellCheck={false}
-              />
-            </div>
+            {manualKeys.length > 0 ? (
+              <fieldset className="field-stack" data-testid="document-manual-fields">
+                <legend className="text-13 font-medium text-text">
+                  {copy("Fields to fill in", "Поля для заполнения", "שדות למילוי")}
+                </legend>
+                <p className="text-12 text-text-secondary">
+                  {copy("The object data does not hold these; what you type goes into this document only.",
+                    "Их нет в данных объекта; то, что вы введёте, попадёт только в этот документ.",
+                    "הם אינם בנתוני הפרויקט; מה שתקלידו ייכנס רק למסמך זה.")}
+                </p>
+                {manualKeys.map((key) => (
+                  <div key={key} className="field-stack">
+                    <Label htmlFor={`document-field-${key}`}><bdi>{key}</bdi></Label>
+                    <Input
+                      id={`document-field-${key}`}
+                      value={manualValues[key] || ""}
+                      onChange={(event) => setManualValues((prev) => ({ ...prev, [key]: event.target.value }))}
+                      className="control-input"
+                    />
+                  </div>
+                ))}
+              </fieldset>
+            ) : null}
 
             <button
               type="button"
@@ -960,7 +923,7 @@ export default function DocumentsPage() {
                         <span
                           className={templateStatusClass(template.is_active)}
                         >
-                          {template.is_active ? "ACTIVE" : "ARCHIVED"}
+                          {template.is_active ? copy("Active", "Активен", "פעילה") : copy("Archived", "В архиве", "בארכיון")}
                         </span>
                       </TableCell>
                       <TableCell className="text-text-secondary">
@@ -1035,7 +998,7 @@ export default function DocumentsPage() {
                 </button>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <span className={templateStatusClass(template.is_active)}>
-                    {template.is_active ? "ACTIVE" : "ARCHIVED"}
+                    {template.is_active ? copy("Active", "Активен", "פעילה") : copy("Archived", "В архиве", "בארכיון")}
                   </span>
                   <button
                     type="button"
@@ -1075,7 +1038,7 @@ export default function DocumentsPage() {
               <TableHeader className="data-table-head">
                 <TableRow className="border-b border-border hover:bg-transparent">
                   <TableHead>{copy("Generated file", "Сгенерированный файл", "קובץ שנוצר")}</TableHead>
-                  <TableHead>{copy("Project", "Проект", "פרויקט")}</TableHead>
+                  <TableHead>{copy("Object", "Объект", "פרויקט")}</TableHead>
                   <TableHead>{copy("Template", "Шаблон", "תבנית")}</TableHead>
                   <TableHead>{copy("Status", "Статус", "סטטוס")}</TableHead>
                   <TableHead>{copy("Size", "Размер", "גודל")}</TableHead>
@@ -1119,7 +1082,7 @@ export default function DocumentsPage() {
                       </TableCell>
                       <TableCell>
                         <span className={statusPillClass(generation.status)}>
-                          {generation.status}
+                          {generation.status === "READY" ? copy("Ready", "Готов", "מוכן") : statusLabel(generation.status, locale)}
                         </span>
                       </TableCell>
                       <TableCell className="text-text-secondary">
@@ -1173,7 +1136,7 @@ export default function DocumentsPage() {
                     </div>
                   </div>
                   <span className={statusPillClass(generation.status)}>
-                    {generation.status}
+                    {generation.status === "READY" ? copy("Ready", "Готов", "מוכן") : statusLabel(generation.status, locale)}
                   </span>
                 </div>
                 <button

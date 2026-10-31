@@ -18,6 +18,15 @@ export function filenameFromDisposition(
   disposition: string | null,
   fallback: string,
 ): string {
-  const match = (disposition || "").match(/filename="?([^"]+)"?/i);
+  // RFC 6266: the UTF-8 name (Hebrew, Russian) comes as filename*=UTF-8''...; filename="..." is the ASCII fallback.
+  const encoded = (disposition || "").match(/filename\*=UTF-8''([^;]+)/i);
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1].trim());
+    } catch {
+      // a malformed encoding falls back to the plain name
+    }
+  }
+  const match = (disposition || "").match(/filename="?([^";]+)"?/i);
   return match?.[1] || fallback;
 }
