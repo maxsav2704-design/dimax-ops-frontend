@@ -202,6 +202,7 @@ import {
 
 
 import { useI18n, type Locale, useCopy } from "@/lib/i18n";
+import { fetchAllProjects } from "@/lib/projects-list";
 import { statusLabel, type StatusLabelDomain } from "@/lib/status-labels";
 
 
@@ -254,7 +255,6 @@ const PROJECT_COMPLETED_STATUSES = new Set([
   "CLOSED",
 ]);
 const PROJECT_ARCHIVED_STATUSES = new Set(["ARCHIVED"]);
-const PROJECTS_PAGE_SIZE = 200;
 const PROJECT_PROBLEM_STATUSES = new Set([
   "AT_RISK",
   "BLOCKED",
@@ -1336,16 +1336,8 @@ export default function ProjectsPage() {
     setLoadingProjects(true);
     setProjectsLoadError(false);
     try {
-      // The API pages at most 200 rows; read every page so search, counts and bulk actions see all projects.
-      const items: ProjectListItem[] = [];
-      for (let offset = 0; offset < PROJECTS_PAGE_SIZE * 50; offset += PROJECTS_PAGE_SIZE) {
-        const response = await apiFetch<{ items: ProjectListItem[] }>(
-          `/api/v1/admin/projects?limit=${PROJECTS_PAGE_SIZE}&offset=${offset}`,
-        );
-        const page = response.items || [];
-        items.push(...page);
-        if (page.length < PROJECTS_PAGE_SIZE) break;
-      }
+      // Every page, so search, counts and bulk actions see all projects.
+      const { items } = await fetchAllProjects<ProjectListItem>();
       setProjects(items);
       setProjectsLoaded(true);
       const ids = new Set(items.map((x) => x.id));

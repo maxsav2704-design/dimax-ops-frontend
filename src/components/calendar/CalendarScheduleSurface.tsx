@@ -33,6 +33,8 @@ export type ScheduleEvent = {
   project_id: string | null;
   installer_ids: string[];
   isAtRisk?: boolean;
+  /** Shares an installer with another event at the same time (double booking). */
+  isDoubleBooked?: boolean;
 };
 
 export type ScheduleInstaller = {
@@ -373,7 +375,12 @@ export function CalendarScheduleSurface(props: Props) {
   const renderEvent = (layout: EventLayout) => {
     const { event } = layout;
     const project = projectsById.get(event.project_id || "");
-    const width = 100 / layout.columnCount;
+    // Overlapping events are stacked with an offset (each nearly full width, the later one on top) instead of being
+    // squeezed into side-by-side slivers; only a deep stack falls back to the compact card.
+    const offset = layout.columnCount > 1 ? Math.min(28, 60 / (layout.columnCount - 1)) : 0;
+    const leftPct = layout.column * offset;
+    const widthPct = 100 - leftPct;
+    const narrow = widthPct < 45;
     return (
       <button
         type="button"
@@ -381,33 +388,59 @@ export function CalendarScheduleSurface(props: Props) {
         key={event.id}
         onClick={() => onSelectEvent(event)}
         aria-label={`${event.title}, ${timeLabel(event.starts_at)} - ${timeLabel(event.ends_at)}`}
+        title={[
+          event.title,
+          `${eventTypeLabel(event.event_type)} · ${timeLabel(event.starts_at)} - ${timeLabel(event.ends_at)}`,
+          project?.name || event.location || copy("No project", "Без проекта", "ללא פרויקט"),
+          event.installer_ids.map((id) => installersById.get(id)?.full_name).filter(Boolean).join(", "),
+          event.isDoubleBooked ? copy("Crew double-booked", "Бригада занята дважды", "הצוות משובץ פעמיים") : "",
+        ].filter(Boolean).join(String.fromCharCode(10))}
         className={cn(
-          "absolute z-10 overflow-hidden rounded-[7px] border-s-[3px] px-2.5 py-2 text-start shadow-[0_4px_14px_rgba(25,35,50,0.07)]",
+          "absolute z-10 overflow-hidden rounded-[7px] border-s-[3px] py-2 text-start shadow-[0_4px_14px_rgba(25,35,50,0.07)]",
+          narrow ? "px-1.5" : "px-2.5",
           "motion-safe:transition-[box-shadow,transform] motion-safe:duration-150 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(25,35,50,0.12)]",
           EVENT_STYLE[event.event_type],
           event.isAtRisk && "border-status-problem-border bg-status-problem-bg text-status-problem-fg",
+          event.isDoubleBooked && "border-status-warning-border",
           selectedEventId === event.id && "ring-2 ring-text ring-offset-1",
         )}
         style={{
           top: `${layout.top + 4}px`,
           height: `${layout.height}px`,
-          left: `calc(${layout.column * width}% + 5px)`,
-          width: `calc(${width}% - 9px)`,
+          left: `calc(${leftPct}% + 5px)`,
+          width: `calc(${widthPct}% - 9px)`,
+          zIndex: 10 + layout.column,
         }}
       >
         <div className="mb-1.5 flex items-center justify-between gap-1">
           <EventAvatars event={event} installersById={installersById} />
-          <span className="truncate text-[9px] font-semibold uppercase opacity-65">
-            {eventTypeLabel(event.event_type)}
-          </span>
+          {narrow ? (
+            event.isDoubleBooked ? (
+              <span data-testid="calendar-double-booked" aria-label={copy("Crew double-booked", "Бригада занята дважды", "הצוות משובץ פעמיים")}
+                className="rounded-full bg-status-warning-bg px-1 text-[9px] font-bold leading-4 text-status-warning-fg">×2</span>
+            ) : null
+          ) : (
+            <span className="truncate text-[9px] font-semibold uppercase opacity-65">
+              {eventTypeLabel(event.event_type)}
+            </span>
+          )}
         </div>
-        <div className="truncate text-[12px] font-semibold leading-4">{event.title}</div>
-        <div className="mt-0.5 truncate text-[10px] leading-4 opacity-75">
-          {project?.name || event.location || copy("No project", "Без проекта", "ללא פרויקט")}
-        </div>
-        <div className="mt-1 text-[10px] font-medium tabular-nums opacity-70">
-          {timeLabel(event.starts_at)} - {timeLabel(event.ends_at)}
-        </div>
+        <div className={cn("text-[12px] font-semibold leading-4", narrow ? "line-clamp-4 break-words [overflow-wrap:anywhere]" : "truncate")}>{event.title}</div>
+        {event.isDoubleBooked && !narrow ? (
+          <div data-testid="calendar-double-booked" className="mt-0.5 truncate text-[10px] font-semibold leading-4 text-status-warning-fg">
+            {copy("Crew double-booked", "Бригада занята дважды", "הצוות משובץ פעמיים")}
+          </div>
+        ) : null}
+        {narrow ? null : (
+          <>
+            <div className="mt-0.5 truncate text-[10px] leading-4 opacity-75">
+              {project?.name || event.location || copy("No project", "Без проекта", "ללא פרויקט")}
+            </div>
+            <div className="mt-1 text-[10px] font-medium tabular-nums opacity-70">
+              {timeLabel(event.starts_at)} - {timeLabel(event.ends_at)}
+            </div>
+          </>
+        )}
       </button>
     );
   };

@@ -15,12 +15,14 @@ import {
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
-import { InlineNotice, useEntityHighlight } from "@/components/dimax";
+import { ConfirmActionDialog, InlineNotice, useEntityHighlight } from "@/components/dimax";
 import { pickLocale } from "@/lib/locale";
 import { CalendarScheduleSurface } from "@/components/calendar/CalendarScheduleSurface";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
+import { fetchAllProjects } from "@/lib/projects-list";
+import { downloadCsv } from "@/lib/csv";
 import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { useI18n, useCopy } from "@/lib/i18n";
@@ -46,6 +48,7 @@ type CalendarEvent = {
   description: string | null;
   project_id: string | null;
   installer_ids: string[];
+  overlapping_event_ids?: string[];
 };
 
 type EventListResponse = {
@@ -90,6 +93,7 @@ type EventFormState = {
   title: string;
   event_type: EventType;
   date: string;
+  end_date: string;
   starts_at_hhmm: string;
   ends_at_hhmm: string;
   location: string;
@@ -128,6 +132,17 @@ const EVENT_TYPE_LABELS: Record<
 
 function toIsoLocal(date: string, hhmm: string): string {
   return new Date(`${date}T${hhmm}:00`).toISOString();
+}
+
+function daysBetween(from: string, to: string): number {
+  if (!from || !to) return 0;
+  return Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86_400_000);
+}
+
+function shiftDate(date: string, days: number): string {
+  if (!date || Number.isNaN(days)) return "";
+  const moved = new Date(Date.parse(`${date}T12:00:00Z`) + days * 86_400_000);
+  return moved.toISOString().slice(0, 10);
 }
 
 function fromIsoToDate(value: string): string {
@@ -251,6 +266,7 @@ function makeDefaultForm(weekStartDate: Date): EventFormState {
     title: "",
     event_type: "installation",
     date,
+    end_date: date,
     starts_at_hhmm: "09:00",
     ends_at_hhmm: "10:00",
     location: "",
@@ -266,6 +282,7 @@ function eventToForm(event: CalendarEvent): EventFormState {
     title: event.title,
     event_type: event.event_type,
     date: fromIsoToDate(event.starts_at),
+    end_date: fromIsoToDate(event.ends_at),
     starts_at_hhmm: fromIsoToHHMM(event.starts_at),
     ends_at_hhmm: fromIsoToHHMM(event.ends_at),
     location: event.location || "",
@@ -378,17 +395,6 @@ function localizedLaneLoad(lane: CalendarLane, locale?: "en" | "ru" | "he"): str
   return `${localizedEventCount(lane.events.length, locale)} · ${localizedBusyDays(activeDays, locale)}`;
 }
 
-function downloadCsv(filename: string, rows: string[][]): void {
-  const escapeCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
-  const csv = rows.map((row) => row.map(escapeCell).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  window.URL.revokeObjectURL(url);
-}
 
 export default function CalendarPage() {
   const queryClient = useQueryClient();
@@ -417,6 +423,7 @@ export default function CalendarPage() {
     makeDefaultForm(weekStartDate),
   );
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const session = useAuthSession();
   const canManageCalendar = canRunPrivilegedAdminActions(session);
   const runCalendarWrite = <T,>(action: () => Promise<T>): Promise<T> => {
@@ -463,7 +470,7 @@ export default function CalendarPage() {
 
   const projectsQuery = useQuery({
     queryKey: ["calendar-projects"],
-    queryFn: () => apiFetch<ProjectListResponse>("/api/v1/admin/projects"),
+    queryFn: () => fetchAllProjects<ProjectListResponse["items"][number]>(),
   });
 
   const selectedProjectId = selectedEvent?.project_id || "";
@@ -494,7 +501,7 @@ export default function CalendarPage() {
           title: form.title.trim(),
           event_type: form.event_type,
           starts_at: toIsoLocal(form.date, form.starts_at_hhmm),
-          ends_at: toIsoLocal(form.date, form.ends_at_hhmm),
+          ends_at: toIsoLocal(form.end_date, form.ends_at_hhmm),
           location: form.location.trim() || null,
           description: form.description.trim() || null,
           project_id: form.project_id || null,
@@ -524,7 +531,7 @@ export default function CalendarPage() {
             title: form.title.trim(),
             event_type: form.event_type,
             starts_at: toIsoLocal(form.date, form.starts_at_hhmm),
-            ends_at: toIsoLocal(form.date, form.ends_at_hhmm),
+            ends_at: toIsoLocal(form.end_date, form.ends_at_hhmm),
             location: form.location.trim() || null,
             description: form.description.trim() || null,
             project_id: form.project_id || null,
@@ -641,6 +648,7 @@ export default function CalendarPage() {
       visibleEvents.map((event) => ({
         ...event,
         isAtRisk: isProjectAtRisk(projectById.get(event.project_id || "") || null),
+        isDoubleBooked: (event.overlapping_event_ids || []).length > 0,
       })),
     [projectById, visibleEvents],
   );
@@ -782,6 +790,10 @@ export default function CalendarPage() {
     setSelectedEvent(event);
     setIsInfoFrameOpen(true);
     setSelectedLaneId(null);
+    // The details panel sits above the grid: bring it into view, otherwise a click deep in the day looks like nothing.
+    window.setTimeout(() => {
+      document.querySelector('[data-testid="calendar-event-info-frame"]')?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+    }, 50);
   };
 
   const onSelectLane = (lane: CalendarLane) => {
@@ -792,15 +804,11 @@ export default function CalendarPage() {
     }
   };
 
-  const onUnavailableQuickAction = (actionName: string) => {
-    setActionNotice(
-      copy(
-        `${actionName} is not available for this event.`,
-        `${actionName}: нет данных для этого события.`,
-        `${actionName} אינו זמין לאירוע הזה.`,
-      ),
-    );
-  };
+  const unavailableQuickActionHint = copy(
+    "No address or contact for this event: link a project or add a place.",
+    "У события нет адреса или контакта: привяжите объект или укажите место.",
+    "לאירוע אין כתובת או איש קשר: קשרו פרויקט או הוסיפו מקום.",
+  );
 
   const resetEventErrors = () => {
     createMutation.reset();
@@ -865,10 +873,14 @@ export default function CalendarPage() {
     downloadCsv(
       `dimax_calendar_${fromIsoToDate(weekStartIso)}.csv`,
       [
-        ["title", "type", "starts_at", "ends_at", "project", "installers", "location"],
+        [
+          copy("Title", "Название", "כותרת"), copy("Type", "Тип", "סוג"), copy("Start", "Начало", "התחלה"),
+          copy("End", "Конец", "סיום"), copy("Project", "Объект", "פרויקט"), copy("Installers", "Монтажники", "מתקינים"),
+          copy("Place", "Место", "מקום"),
+        ],
         ...visibleEvents.map((event) => [
           event.title,
-          event.event_type,
+          localizedEventType(event.event_type, locale),
           event.starts_at,
           event.ends_at,
           projectById.get(event.project_id || "")?.name || "",
@@ -909,7 +921,8 @@ export default function CalendarPage() {
     locale,
     calendarLoadFallback,
   );
-  const isInvalidTimeRange = form.ends_at_hhmm <= form.starts_at_hhmm;
+  // An event may run past midnight: compare the full start and end moments, not the clock times alone.
+  const isInvalidTimeRange = `${form.end_date}T${form.ends_at_hhmm}` <= `${form.date}T${form.starts_at_hhmm}`;
   const periodLabel = formatPeriodRange(periodStartDate, periodEndDate, locale);
 
   return (
@@ -927,7 +940,26 @@ export default function CalendarPage() {
             "לוח המתקינים, השיבוצים והתור ללא שיבוץ לפי תקופה.",
           )}
         />
-        {hasLoadError && <InlineNotice tone="error">{loadErrorMessage}</InlineNotice>}
+        {hasLoadError && (
+          <InlineNotice
+            tone="error"
+            action={
+              <button
+                type="button"
+                className="dmx-secondary-action h-8 text-[12px]"
+                onClick={() => {
+                  void eventsQuery.refetch();
+                  void installersQuery.refetch();
+                  void projectsQuery.refetch();
+                }}
+              >
+                {copy("Retry", "Повторить", "נסה שוב")}
+              </button>
+            }
+          >
+            {loadErrorMessage}
+          </InlineNotice>
+        )}
         {hasActionError && !isCreateOpen && !isEditOpen && (
           <InlineNotice tone="error">{actionErrorMessage}</InlineNotice>
         )}
@@ -1099,6 +1131,15 @@ export default function CalendarPage() {
                 <h2 className="text-[16px] font-medium leading-tight text-text">
                   {selectedEvent.title}
                 </h2>
+                {(selectedEvent.overlapping_event_ids || []).length > 0 ? (
+                  <p data-testid="calendar-overlap-note" className="mt-1 text-[12px] font-medium text-status-warning-fg">
+                    {copy(
+                      `The crew is also booked for ${selectedEvent.overlapping_event_ids!.length} other event(s) at this time.`,
+                      `Эта бригада в это же время назначена ещё на ${selectedEvent.overlapping_event_ids!.length} событие(я).`,
+                      `הצוות משובץ באותו זמן גם ל-${selectedEvent.overlapping_event_ids!.length} אירועים נוספים.`,
+                    )}
+                  </p>
+                ) : null}
                 <p className="mt-1 max-w-[760px] text-[12px] leading-5 text-text-secondary">
                   {selectedProject?.name || selectedEvent.location || copy("No project linked", "Проект не привязан", "אין פרויקט מקושר")}
                   {" · "}
@@ -1160,8 +1201,9 @@ export default function CalendarPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => onUnavailableQuickAction("Waze")}
-                    className="dmx-secondary-action h-9"
+                    disabled
+                    title={unavailableQuickActionHint}
+                    className="dmx-secondary-action h-9 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Navigation className="h-4 w-4" />
                     Waze
@@ -1180,8 +1222,9 @@ export default function CalendarPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => onUnavailableQuickAction("WhatsApp")}
-                    className="dmx-secondary-action h-9"
+                    disabled
+                    title={unavailableQuickActionHint}
+                    className="dmx-secondary-action h-9 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <MessageCircle className="h-4 w-4" />
                     WhatsApp
@@ -1195,8 +1238,9 @@ export default function CalendarPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => onUnavailableQuickAction(copy("Call", "Звонок", "שיחה"))}
-                    className="dmx-secondary-action h-9"
+                    disabled
+                    title={unavailableQuickActionHint}
+                    className="dmx-secondary-action h-9 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Phone className="h-4 w-4" />
                     {copy("Call", "Звонок", "שיחה")}
@@ -1212,17 +1256,12 @@ export default function CalendarPage() {
                   <Pencil className="h-4 w-4" />
                   {copy("Edit", "Изменить", "ערוך")}
                 </button>
-                <a
-                  href={
-                    selectedEvent.project_id
-                      ? `/projects?project_id=${selectedEvent.project_id}`
-                      : "/projects"
-                  }
-                  className="dmx-primary-action h-9"
-                >
-                  {copy("Open project", "Открыть проект", "פתח פרויקט")}
-                  <ExternalLink className="h-4 w-4" />
-                </a>
+                {selectedEvent.project_id ? (
+                  <a href={`/projects?project_id=${selectedEvent.project_id}`} className="dmx-primary-action h-9">
+                    {copy("Open project", "Открыть проект", "פתח פרויקט")}
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setIsInfoFrameOpen(false)}
@@ -1353,7 +1392,28 @@ export default function CalendarPage() {
                   type="date"
                   value={form.date}
                   onChange={(event) =>
-                    setForm((prev) => ({ ...prev, date: event.target.value }))
+                    setForm((prev) => ({
+                      ...prev,
+                      date: event.target.value,
+                      // The end moves by the same number of days, so the event keeps its length.
+                      end_date: shiftDate(prev.end_date, daysBetween(prev.date, event.target.value)) || event.target.value,
+                    }))
+                  }
+                  disabled={!canManageCalendar}
+                  className="control-input"
+                />
+              </div>
+              <div className="field-stack">
+                <label className="field-label">
+                  {copy("End date", "Дата окончания", "תאריך סיום")}
+                </label>
+                <input
+                  aria-label={copy("End date", "Дата окончания", "תאריך סיום")}
+                  type="date"
+                  value={form.end_date}
+                  min={form.date}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, end_date: event.target.value }))
                   }
                   disabled={!canManageCalendar}
                   className="control-input"
@@ -1473,9 +1533,9 @@ export default function CalendarPage() {
             {isInvalidTimeRange && (
               <div role="alert" className="mt-4 rounded-lg border border-status-warning-border bg-status-warning-bg px-3 py-2 text-[12px] text-status-warning-fg">
                 {copy(
-                  "End time must be later than start time.",
-                  "Время окончания должно быть позже времени начала.",
-                  "שעת הסיום חייבת להיות מאוחרת משעת ההתחלה.",
+                  "The end must be later than the start.",
+                  "Окончание должно быть позже начала.",
+                  "הסיום חייב להיות מאוחר מההתחלה.",
                 )}
               </div>
             )}
@@ -1487,7 +1547,7 @@ export default function CalendarPage() {
               {isEditOpen && editingEvent ? (
                 <button
                   type="button"
-                  onClick={() => deleteMutation.mutate(editingEvent.id)}
+                  onClick={() => setConfirmDeleteOpen(true)}
                   disabled={!canManageCalendar || deleteMutation.isPending || updateMutation.isPending}
                   title={privilegedActionHint}
                   className="dmx-secondary-action h-10 text-status-problem-fg disabled:cursor-not-allowed disabled:opacity-60"
@@ -1495,6 +1555,31 @@ export default function CalendarPage() {
                   <Trash2 className="h-4 w-4" />
                   {copy("Delete", "Удалить", "מחק")}
                 </button>
+              ) : null}
+              {editingEvent ? (
+                <ConfirmActionDialog
+                  open={confirmDeleteOpen}
+                  onOpenChange={setConfirmDeleteOpen}
+                  title={copy("Delete the event?", "Удалить событие?", "למחוק את האירוע?")}
+                  changes={copy(
+                    `"${editingEvent.title}" is removed from the schedule of every assigned installer.`,
+                    `«${editingEvent.title}» исчезнет из графика всех назначенных монтажников.`,
+                    `"${editingEvent.title}" יוסר מהלוח של כל המתקינים המשובצים.`,
+                  )}
+                  confirmLabel={copy("Delete", "Удалить", "מחק")}
+                  tone="danger"
+                  busy={deleteMutation.isPending}
+                  onConfirm={async () => {
+                    try {
+                      await deleteMutation.mutateAsync(editingEvent.id);
+                    } catch {
+                      // The error is shown inside the event editor, which stays open for a retry.
+                    } finally {
+                      setConfirmDeleteOpen(false);
+                    }
+                  }}
+                  testId="calendar-delete-confirm"
+                />
               ) : null}
               <button
                 onClick={closeEventDialog}

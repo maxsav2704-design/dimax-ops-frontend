@@ -19,7 +19,9 @@ vi.mock("@/components/DashboardLayout", () => ({
 }));
 
 vi.mock("@/lib/api", () => ({
-  apiFetch: apiFetchMock,
+  // The page reads the project list page by page; the mocks answer the first page under the plain path.
+  apiFetch: (path: string, ...rest: unknown[]) =>
+    apiFetchMock(String(path).replace(/\/api\/v1\/admin\/projects\?limit=200&offset=0$/, "/api/v1/admin/projects"), ...rest),
 }));
 
 vi.mock("@/hooks/use-auth-session", () => ({
@@ -97,9 +99,11 @@ describe("CalendarPage", () => {
     const remove = within(dialog).getByRole("button", { name: "Delete" });
     apiFetchMock.mockRejectedValueOnce(new Error("Deletion failed"));
     fireEvent.click(remove);
+    fireEvent.click(within(await screen.findByTestId("calendar-delete-confirm")).getByRole("button", { name: "Delete" }));
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("Deletion failed");
     expect(dialog).toBeInTheDocument();
     fireEvent.click(remove);
+    fireEvent.click(within(await screen.findByTestId("calendar-delete-confirm")).getByRole("button", { name: "Delete" }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(screen.queryByTestId("calendar-event-info-frame")).not.toBeInTheDocument();
@@ -472,8 +476,46 @@ describe("CalendarPage", () => {
       target: { value: "15:00" },
     });
 
-    expect(screen.getByText("End time must be later than start time.")).toBeInTheDocument();
+    expect(screen.getByText("The end must be later than the start.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create Event" })).toBeDisabled();
+
+    // The same clock times are valid when the event ends on the next day (a night shift).
+    const startDate = (screen.getByLabelText("Date") as HTMLInputElement).value;
+    const next = new Date(`${startDate}T12:00:00`);
+    next.setDate(next.getDate() + 1);
+    const nextDay = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
+    fireEvent.change(screen.getByLabelText("End date"), { target: { value: nextDay } });
+    expect(screen.queryByText("The end must be later than the start.")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create Event" })).toBeEnabled();
+
+    // Moving the start a day earlier moves the end too: the event keeps its length.
+    const before = new Date(`${startDate}T12:00:00`);
+    before.setDate(before.getDate() - 1);
+    const prevDay = `${before.getFullYear()}-${String(before.getMonth() + 1).padStart(2, "0")}-${String(before.getDate()).padStart(2, "0")}`;
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: prevDay } });
+    expect((screen.getByLabelText("End date") as HTMLInputElement).value).toBe(startDate);
+  }, 15000);
+
+  it("marks a crew booked twice at the same time", async () => {
+    const start = new Date();
+    start.setHours(9, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(11);
+    const event = (id: string, title: string, other: string) => ({
+      id, title, event_type: "installation", starts_at: start.toISOString(), ends_at: end.toISOString(), location: null,
+      waze_url: null, description: null, project_id: null, installer_ids: ["installer-1"], overlapping_event_ids: [other],
+    });
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/calendar/events?")) return { items: [event("e1", "Tower A", "e2"), event("e2", "Tower B", "e1")] };
+      if (path.includes("/installers?")) return [{ id: "installer-1", full_name: "Dana", is_active: true }];
+      return { items: [] };
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={queryClient}><CalendarPage /></QueryClientProvider>);
+    expect((await screen.findAllByTestId("calendar-double-booked", {}, { timeout: 5000 })).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByTestId("calendar-event-card")[0]);
+    expect(await screen.findByTestId("calendar-overlap-note")).toHaveTextContent("also booked for 1 other event");
+    queryClient.clear();
   }, 15000);
 
   it("keeps viewer calendar actions read-only", async () => {
