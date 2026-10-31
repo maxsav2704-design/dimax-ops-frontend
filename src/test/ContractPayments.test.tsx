@@ -105,6 +105,23 @@ describe("factory payments", () => {
     expect(screen.getByTestId("allocation-row")).toHaveTextContent("Principal");
   });
 
+  it("names why a refund was refused: money that still covers open packages is not an overpayment", async () => {
+    payments = [{ ...base, proof, status: "POSTED", available: "15000.00" }];
+    api.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (init?.method === "POST" && url.endsWith("/refunds")) {
+        throw new ApiError(409, "refused", { error: { meta: { reason: "EXCEEDS_OVERPAYMENT", overpayment: "0.00" } } });
+      }
+      return reads(url, init);
+    });
+    mount(<ContractPaymentsPanel contract={contract} />);
+    fireEvent.click(within(await screen.findByTestId("payment-row")).getByRole("button", { name: "Propose refund" }));
+    const dialog = within(screen.getByRole("dialog"));
+    fireEvent.change(dialog.getByLabelText("Amount"), { target: { value: "1000.00" } });
+    fireEvent.change(dialog.getByLabelText("Reason"), { target: { value: "Looks unallocated" } });
+    fireEvent.click(dialog.getByRole("button", { name: "Propose refund" }));
+    expect(await dialog.findByRole("alert")).toHaveTextContent("The refund is larger than the overpayment");
+  });
+
   it("proposes a refund, lets the owner decide against the fingerprint and reverses a posted payment with a reason", async () => {
     payments = [{ ...base, proof, status: "POSTED", available: "15000.00" }];
     mount(<ContractPaymentsPanel contract={contract} />);

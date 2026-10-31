@@ -41,7 +41,7 @@ export const releaseSchema = z.object({
 });
 export const figuresSchema = z.object({
   currency: z.literal("ILS"), presented_ex_vat: money, answer_state: z.enum(["UNANSWERED", "NEEDS_CLARIFICATION", "ANSWERED"]),
-  acknowledged_ex_vat: money.nullable(), disputed_ex_vat: money, written_off_ex_vat: money, outstanding_ex_vat: money, retention_ex_vat: money,
+  acknowledged_ex_vat: money.nullable(), disputed_ex_vat: money, carried_dispute_ex_vat: money.optional(), written_off_ex_vat: money, outstanding_ex_vat: money, retention_ex_vat: money,
   retention_released_ex_vat: money, retention_held_ex_vat: money, principal_due_ex_vat: money, principal_paid_ex_vat: money,
   principal_remaining_ex_vat: money, retention_paid_ex_vat: money, retention_payable_ex_vat: money, paid_ex_vat: money, balance_due_ex_vat: money,
   payable_now_ex_vat: money, settlement: z.enum(["OPEN", "PRINCIPAL_PAID_RETENTION_PENDING", "SETTLED"]), vat: z.null(),

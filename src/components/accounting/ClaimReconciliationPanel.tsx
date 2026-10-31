@@ -32,8 +32,11 @@ function Figures({ figures, t }: { figures: ReconciliationFigures; t: Reconcilia
     [t.payableNow, money(figures.payable_now_ex_vat)], [t.paid, money(figures.paid_ex_vat)], [t.retentionPaid, money(figures.retention_paid_ex_vat)],
     [t.balanceDue, money(figures.balance_due_ex_vat)],
   ];
+  const carried = Number(figures.carried_dispute_ex_vat ?? 0);
   return <dl data-testid="reconciliation-figures" className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
     {cells.map(([label, value]) => <div key={label}><dt className="text-xs text-text-secondary">{label}</dt><dd className="font-mono tabular-nums">{value}</dd></div>)}
+    {carried > 0 && <div data-testid="carried-dispute" className="col-span-2 sm:col-span-5"><dt className="text-xs text-status-warning-fg">{t.carriedDispute}</dt>
+      <dd className="font-mono tabular-nums">{money(figures.carried_dispute_ex_vat ?? "0")}</dd></div>}
     <div className="col-span-2 sm:col-span-5"><dt className="sr-only">{t.status}</dt><dd className="text-xs">{t[figures.answer_state]} · {t[figures.settlement]}</dd></div>
   </dl>;
 }

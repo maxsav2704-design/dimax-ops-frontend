@@ -119,6 +119,18 @@ describe("claim reconciliation", () => {
     expect(screen.getByTestId("reconciliation-figures")).toHaveTextContent("18,000.00");
   });
 
+  it("keeps the dispute of a replaced version in view until the factory answers the correction", async () => {
+    api.mockImplementation(async (url: string) => {
+      if (url.endsWith("/reconciliation")) return { contract_id: contractId, issued_claims: 1, answered_claims: 0, clarification_required_claims: 0,
+        pending_corrections: 0, figures: figures({ carried_dispute_ex_vat: "5000.00" }), opening: null };
+      throw new Error("Unexpected URL " + url);
+    });
+    mount(<ContractReconciliationSummary contractId={contractId} />);
+    const carried = await screen.findByTestId("carried-dispute");
+    expect(carried).toHaveTextContent("Dispute on the replaced version");
+    expect(carried).toHaveTextContent("5,000.00");
+  });
+
   it("records a retention, releases part of it and shows the summary; tells the owner when the flag is off", async () => {
     mount(<ClaimReconciliationPanel contractId={contractId} claim={claim} onClose={() => undefined} />);
     const panel = within(await screen.findByTestId("claim-reconciliation"));

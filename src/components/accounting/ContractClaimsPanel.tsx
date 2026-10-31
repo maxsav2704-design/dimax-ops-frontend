@@ -14,6 +14,7 @@ import {
   claimDetailSchema, claimPageSchema, claimPeriodPath, claimPeriodViewSchema, claimsPath, type ClaimSummary,
 } from "@/lib/factory-claims";
 import { claimCopy } from "./claim-copy";
+import { conflictReasonText } from "./conflict-reasons";
 import { ClaimReconciliationPanel, ContractReconciliationSummary } from "./ClaimReconciliationPanel";
 import { reconciliationCopy } from "./reconciliation-copy";
 import { DraftDialog } from "./DraftDialog";
@@ -67,7 +68,7 @@ export function ContractClaimsPanel({ contract }: { contract: CommercialContract
       <Button size="sm" disabled={compose.locked || !!view.data.blocked_reason || view.data.claimable_lines === 0}
         onClick={() => void compose.save(() => ({ request_id: crypto.randomUUID(), period_start: period }))}>{t.compose}</Button>
       {view.data.claimable_lines === 0 && !view.data.blocked_reason && <p className="text-xs text-text-secondary">{t.nothing}</p>}
-      {compose.error && <p role="alert" className="text-xs text-status-problem-fg">{t.error}</p>}
+      {compose.error && <p role="alert" className="text-xs text-status-problem-fg">{conflictReasonText(compose.conflictMeta, locale) ?? t.error}</p>}
       <div className="overflow-x-auto border-y border-border">
         <table className="w-full text-sm"><caption className="sr-only">{t.lines}</caption>
           <thead className="bg-surface-sunken text-xs text-text-secondary"><tr>

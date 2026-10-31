@@ -6,11 +6,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { commercialCopy } from "./copy";
+import { conflictReasonText } from "./conflict-reasons";
 import type { useCommercialWrite } from "./use-commercial-write";
 
 export function DraftDialog({ title, description, dirty, valid, write, onClose, onSave, children, submitLabel }: {
   title: string; description: string; dirty: boolean; valid: boolean;
-  write: Pick<ReturnType<typeof useCommercialWrite>, "busy" | "locked" | "blocked" | "uncertain" | "error">;
+  write: Pick<ReturnType<typeof useCommercialWrite>, "busy" | "locked" | "blocked" | "uncertain" | "error"> & { conflictMeta?: Record<string, unknown> | null };
   onClose: () => void; onSave: () => void; children: ReactNode;
   submitLabel?: string;
 }) {
@@ -31,7 +32,8 @@ export function DraftDialog({ title, description, dirty, valid, write, onClose, 
         if (!write.busy && !write.blocked && (write.uncertain || valid)) onSave();
       }}>
         <fieldset disabled={write.locked} className="min-w-0 space-y-4">{children}</fieldset>
-        {write.error && <p role="alert" className="text-sm text-status-problem-fg">{t[write.error]}</p>}
+        {write.error && <p role="alert" className="text-sm text-status-problem-fg">
+          {(write.error === "conflict" && conflictReasonText(write.conflictMeta, locale)) || t[write.error]}</p>}
         <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="outline" onClick={close} disabled={write.busy}>{t.cancel}</Button>
           <Button type="submit" disabled={write.busy || write.blocked || (!write.uncertain && !valid)}
