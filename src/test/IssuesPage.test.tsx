@@ -288,7 +288,7 @@ describe("IssuesPage", () => {
 
     expect(await screen.findByText("Install blocked B")).toBeInTheDocument();
     expect(await screen.findByText("Issue #1fe3476d")).toBeInTheDocument();
-    expect(screen.getByText("B-202 / 8fa68e09-d216-4b3c-b5ef-206efe47d458")).toBeInTheDocument();
+    expect(screen.getByText("Project · B-202")).toBeInTheDocument();
   }, 15000);
 
   it("does not select another issue when issue_id deep link is unavailable", async () => {
@@ -400,7 +400,7 @@ describe("IssuesPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Apply to filtered/i }));
     const dialog = await screen.findByTestId("issues-bulk-confirm");
     expect(dialog).toHaveTextContent("2 filtered issues");
-    expect(dialog).toHaveTextContent("workflow: IN_PROGRESS");
+    expect(dialog).toHaveTextContent("workflow: In progress");
     expect(apiFetchMock.mock.calls.some((call) => String(call[0]).includes("/workflow/bulk"))).toBe(false);
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Apply" }));
@@ -410,10 +410,43 @@ describe("IssuesPage", () => {
       const body = JSON.parse(String(bulkCall?.[1]?.body));
       expect(body.issue_ids).toEqual([issueId, otherId]);
       expect(body.workflow_state).toBe("IN_PROGRESS");
+      // Untouched fields are never copied from the selected issue onto the others.
+      expect(body).not.toHaveProperty("priority");
+      expect(body).not.toHaveProperty("owner_user_id");
+      expect(body).not.toHaveProperty("status");
       expect(body).not.toHaveProperty("details");
       expect(body).not.toHaveProperty("due_at");
     });
     expect(await screen.findByText("Bulk updated 2 issues")).toBeInTheDocument();
+  }, 15000);
+
+  it("bulk closing leaves issues raised by the site open and lists issues by site name", async () => {
+    const issue = (id: string, title: string, source: "INTERNAL" | "SITE") => ({
+      id, company_id: "8ea9b2c0-0848-4997-a5dd-58e5df3787e0", door_id: `door-${id}`, project_id: "7fa68e09-d216-4b3c-b5ef-206efe47d457",
+      project_name: "Tower A", door_unit_label: `U-${id}`, status: "OPEN", workflow_state: "RESOLVED", priority: "P3",
+      owner_user_id: null, due_at: null, is_overdue: false, title, details: null, created_at: "2026-02-20T10:00:00Z",
+      updated_at: "2026-02-22T10:00:00Z", source,
+    });
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/api/v1/admin/installers")) return [];
+      if (path.includes("/api/v1/admin/issues/workflow/bulk")) return { updated: 1, missing_issue_ids: [], items: [] };
+      if (path.includes("/api/v1/admin/issues")) return { items: [issue("in-1", "Office defect", "INTERNAL"), issue("site-1", "Site defect", "SITE")] };
+      return {};
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={queryClient}><IssuesPage /></QueryClientProvider>);
+    fireEvent.click(await screen.findByText("Office defect", {}, { timeout: 5000 }));
+    expect(screen.getAllByText(/Tower A · door U-in-1/).length).toBeGreaterThan(0);
+    fireEvent.change(await screen.findByLabelText("Issue workflow state"), { target: { value: "CLOSED" } });
+    fireEvent.click(screen.getByRole("button", { name: /Apply to filtered/i }));
+    const dialog = await screen.findByTestId("issues-bulk-confirm");
+    expect(dialog).toHaveTextContent("Apply to 1 filtered issues");
+    expect(dialog).toHaveTextContent("only the site representative closes them");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Apply" }));
+    await waitFor(() => {
+      const bulkCall = apiFetchMock.mock.calls.find((call) => String(call[0]).includes("/workflow/bulk"));
+      expect(JSON.parse(String(bulkCall?.[1]?.body)).issue_ids).toEqual(["in-1"]);
+    });
   }, 15000);
 
   it("keeps viewer workflow actions read-only", async () => {

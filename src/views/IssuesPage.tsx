@@ -22,6 +22,7 @@ import { readableApiError } from "@/lib/api-error-display";
 import { canRunPrivilegedAdminActions } from "@/lib/admin-access";
 import { attentionAttr, attentionLevel, ConfirmActionDialog, EmptyState, InlineNotice, KpiTile, TableSkeleton } from "@/components/dimax";
 import { useI18n, type Locale, useCopy } from "@/lib/i18n";
+import { formatLocaleDateTime } from "@/lib/formatting";
 import { cn } from "@/lib/utils";
 
 const issuesOverrides: Partial<Record<Locale, Record<string, string>>> = {
@@ -61,6 +62,7 @@ type AdminIssue = {
   company_id: string;
   door_id: string;
   project_id: string;
+  project_name?: string | null;
   door_unit_label: string;
   status: IssueStatus;
   workflow_state: IssueWorkflowState;
@@ -204,15 +206,12 @@ function toForm(issue: AdminIssue): WorkflowFormState {
   };
 }
 
-function formatDateTime(value: string | null): string {
+// Dates in the reader's language.
+function formatDateTime(value: string | null, locale: Locale): string {
   if (!value) {
     return "-";
   }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleString();
+  return formatLocaleDateTime(value, locale);
 }
 
 function shortId(value: string): string {
@@ -257,6 +256,24 @@ function downloadTextFile(filename: string, content: string, mimeType: string): 
 // Bulk apply carries only the workflow fields: the selected issue's details
 // and due date are its own and must never be copied onto other issues.
 const BULK_WORKFLOW_FIELDS = ["status", "workflow_state", "priority", "owner_user_id"] as const;
+
+type BulkField = "status" | "workflow_state" | "priority" | "owner_user_id";
+
+/** "Apply to filtered" sends only the fields the user changed in the form, with the form's values, so untouched
+ *  fields (priority, owner) are never copied from the selected issue onto every filtered issue. */
+function bulkPatchFromTouched(form: WorkflowFormState, touched: ReadonlySet<BulkField>): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  if (touched.has("status")) patch.status = form.status;
+  if (touched.has("workflow_state")) patch.workflow_state = form.workflow_state;
+  if (touched.has("priority")) patch.priority = form.priority;
+  if (touched.has("owner_user_id")) patch.owner_user_id = form.owner_user_id.trim() || null;
+  return patch;
+}
+
+/** A defect raised by the site is closed only by the site representative, never by a bulk office action. */
+function closesIssues(patch: Record<string, unknown>): boolean {
+  return patch.status === "CLOSED" || patch.workflow_state === "CLOSED";
+}
 
 function bulkWorkflowPatch(payload: Record<string, unknown>): Record<string, unknown> {
   const bulk: Record<string, unknown> = {};
@@ -356,6 +373,8 @@ export default function IssuesPage() {
     string | null
   >(null);
   const [form, setForm] = useState<WorkflowFormState>(emptyForm());
+  const [touchedFields, setTouchedFields] = useState<Set<BulkField>>(new Set());
+  const touch = (field: BulkField) => setTouchedFields((prev) => new Set(prev).add(field));
   const statusLabel = (value: IssueStatus) =>
     value === "OPEN" ? copy("Open", "Открыта", "פתוחה") : copy("Closed", "Закрыта", "סגורה");
   const workflowLabel = (value: IssueWorkflowState) =>
@@ -651,10 +670,12 @@ export default function IssuesPage() {
   useEffect(() => {
     if (!selectedIssue) {
       setForm(emptyForm());
+      setTouchedFields(new Set());
       return;
     }
     setIssueMediaOpen(false);
     setForm(toForm(selectedIssue));
+    setTouchedFields(new Set());
     setFormError(null);
     setSaveNote(null);
   }, [selectedIssue]);
@@ -825,7 +846,7 @@ export default function IssuesPage() {
       if (!canManageIssues) {
         throw new Error("Issue write access is required.");
       }
-      const issueIds = visibleIssues.map((item) => item.id);
+      const issueIds = bulkTargets(payload).map((item) => item.id);
       if (issueIds.length === 0) {
         throw new Error(
           copy(
@@ -881,7 +902,7 @@ export default function IssuesPage() {
     if (!selectedIssue) {
       return;
     }
-    const payload = bulkWorkflowPatch(buildWorkflowPatch(selectedIssue, form));
+    const payload = bulkPatchFromTouched(form, touchedFields);
     if (Object.keys(payload).length === 0) {
       setSaveNote(null);
       setFormError(
@@ -908,6 +929,8 @@ export default function IssuesPage() {
     setSaveNote(null);
     setBulkConfirm(payload);
   };
+  const bulkTargets = (payload: Record<string, unknown>) =>
+    closesIssues(payload) ? visibleIssues.filter((issue) => issue.source !== "SITE") : visibleIssues;
   const bulkChangeSummary = (payload: Record<string, unknown>) =>
     Object.entries(payload)
       .map(([key, value]) => {
@@ -922,7 +945,11 @@ export default function IssuesPage() {
         const shown =
           key === "owner_user_id"
             ? (value ? ownerNameByUserId.get(String(value)) ?? String(value) : copy("none", "нет", "אין"))
-            : String(value);
+            : key === "priority"
+              ? String(value)
+              : key === "status"
+                ? statusLabel(value as IssueStatus)
+                : workflowLabel(value as IssueWorkflowState);
         return `${label}: ${shown}`;
       })
       .join(", ");
@@ -940,7 +967,7 @@ export default function IssuesPage() {
               meta={
                 <span>
                   <span className="font-semibold text-status-problem-fg">
-                    {metrics.overdue} {copy("SLA breached", "Нарушено соглашение об уровне обслуживания", "SLA הופר")}
+                    {metrics.overdue} {copy("overdue", "просрочено", "באיחור")}
                   </span>{" "}
                   - <b className="font-semibold text-text">{metrics.open}</b>{" "}
                   {copy("open -", "открыто -", "פתוח -")}{" "}
@@ -1143,15 +1170,27 @@ export default function IssuesPage() {
         {issuesQuery.isError && (
           <div className="flex items-start gap-2 rounded-lg border border-status-problem-border bg-status-problem-bg px-4 py-3 text-[13px] text-status-problem-fg">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>
+            <span className="min-w-0 flex-1">
               {readableApiError(
                 issuesQuery.error,
                 locale,
                 t("issues.failedToLoad"),
               )}
             </span>
+            <button type="button" className="dmx-secondary-action h-8 text-[12px]" onClick={() => void issuesQuery.refetch()}>
+              {copy("Retry", "Повторить", "נסה שוב")}
+            </button>
           </div>
         )}
+        {issuesQuery.data && (issuesQuery.data.items || []).length >= 200 ? (
+          <div className="rounded-lg border border-status-warning-border bg-status-warning-bg px-4 py-3 text-[13px] text-status-warning-fg">
+            {copy(
+              "Showing the first 200 issues: narrow the filters to see the rest; counts cover these 200.",
+              "Показаны первые 200 проблем: сузьте фильтры, чтобы увидеть остальные; счётчики считают только их.",
+              "מוצגות 200 התקלות הראשונות: צמצמו את המסננים כדי לראות את השאר; הספירה כוללת רק אותן.",
+            )}
+          </div>
+        ) : null}
         {!canManageIssues && (
           <div className="rounded-lg border border-status-warning-border bg-status-warning-bg px-4 py-3 text-[13px] text-status-warning-fg">
             {t("issues.readOnlyNotice")}
@@ -1216,14 +1255,15 @@ export default function IssuesPage() {
               <div className="overflow-x-auto">
                 {visibleIssues.map((issue) => {
                   const active = issue.id === selectedIssueId;
+                  // An owner who is not an installer (an office user) has no name in this list: say so instead of an id.
                   const ownerName = issue.owner_user_id
                     ? ownerNameByUserId.get(issue.owner_user_id) ||
-                      issue.owner_user_id
+                      copy("Office user", "Сотрудник офиса", "משתמש משרד")
                     : "";
                   const dueText = issue.is_overdue
                     ? tt("issues.overdue")
                     : issue.due_at
-                      ? formatDateTime(issue.due_at)
+                      ? formatDateTime(issue.due_at, locale)
                       : copy("No due date", "Без срока", "ללא מועד");
                   return (
                     <div
@@ -1276,9 +1316,8 @@ export default function IssuesPage() {
                           className="mt-1 block truncate text-[11px] text-text-secondary"
                           title={issue.door_id}
                         >
-                          {issue.door_unit_label} {copy("- project", "- проект", "- פרויקט")}{" "}
-                          {shortId(issue.project_id)} {copy("- door", "- дверь", "- דלת")}{" "}
-                          {shortId(issue.door_id)}
+                          {issue.project_name || copy("Project", "Объект", "פרויקט")} · {copy("door", "дверь", "דלת")}{" "}
+                          {issue.door_unit_label}
                           {issue.source === "SITE" ? ` · ${copy("site", "объект", "אתר")}` : ""}
                           {issue.stage_code ? ` · ${issue.stage_code}` : ""}
                         </span>
@@ -1307,7 +1346,7 @@ export default function IssuesPage() {
                               "bg-surface-subtle text-text-secondary",
                           )}
                         >
-                          {issue.workflow_state.replace(/_/g, " ")}
+                          {workflowLabel(issue.workflow_state)}
                         </span>
                       </div>
                       <div className="mt-0.5 flex min-w-0 items-center gap-2">
@@ -1339,7 +1378,7 @@ export default function IssuesPage() {
                         </div>
                         <div className="mt-0.5 truncate text-[10.5px] text-text-tertiary">
                           {t("issues.updated")}:{" "}
-                          {formatDateTime(issue.updated_at)}
+                          {formatDateTime(issue.updated_at, locale)}
                         </div>
                       </div>
                       <button
@@ -1394,7 +1433,7 @@ export default function IssuesPage() {
                     {copy("Selected issue", "\u0412\u044b\u0431\u0440\u0430\u043d\u043d\u0430\u044f \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0430", "\u05d4\u05ea\u05e7\u05dc\u05d4 \u05e9\u05e0\u05d1\u05d7\u05e8\u05d4")}
                   </div>
                   <div className="font-medium mt-0.5">
-                    {selectedIssue.door_unit_label} / {selectedIssue.project_id}
+                    {selectedIssue.project_name || copy("Project", "Объект", "פרויקט")} · {selectedIssue.door_unit_label}
                   </div>
                   <div className="mt-1.5 flex flex-wrap gap-1.5" data-testid="issue-trail">
                     {selectedIssue.source === "SITE" ? (
@@ -1409,7 +1448,7 @@ export default function IssuesPage() {
                     ) : null}
                     {selectedIssue.status === "OPEN" && selectedIssue.workflow_state === "RESOLVED" ? (
                       <span className="inline-flex rounded-full bg-status-ok-bg px-2 py-0.5 text-11 font-medium text-status-ok-fg">
-                        {copy("Fix reported", "Исправление заявлено", "דווח על תיקון")}{selectedIssue.fix_reported_at ? ` · ${formatDateTime(selectedIssue.fix_reported_at)}` : ""}
+                        {copy("Fix reported", "Исправление заявлено", "דווח על תיקון")}{selectedIssue.fix_reported_at ? ` · ${formatDateTime(selectedIssue.fix_reported_at, locale)}` : ""}
                       </span>
                     ) : null}
                     {selectedIssue.status === "CLOSED" && selectedIssue.confirmed_by_kind ? (
@@ -1479,7 +1518,7 @@ export default function IssuesPage() {
                                 comment.author_user_id ||
                                 "System"}
                               {comment.created_at
-                                ? ` • ${formatDateTime(comment.created_at)}`
+                                ? ` • ${formatDateTime(comment.created_at, locale)}`
                                 : ""}
                             </div>
                             <div className="mt-1 text-[12px] text-text">
@@ -1591,7 +1630,7 @@ export default function IssuesPage() {
                                   {[
                                     media.content_type,
                                     media.created_at
-                                      ? formatDateTime(media.created_at)
+                                      ? formatDateTime(media.created_at, locale)
                                       : null,
                                   ]
                                     .filter(Boolean)
@@ -1623,12 +1662,13 @@ export default function IssuesPage() {
                   <select
                     aria-label={copy("Issue status", "Статус проблемы", "סטטוס תקלה")}
                     value={form.status}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      touch("status");
                       setForm((prev) => ({
                         ...prev,
                         status: e.target.value as IssueStatus,
                       }))
-                    }
+                    }}
                     disabled={!canManageIssues}
                     className="control-input h-9 text-[12px]"
                   >
@@ -1641,12 +1681,13 @@ export default function IssuesPage() {
                   <select
                     aria-label={copy("Issue priority", "Приоритет проблемы", "עדיפות תקלה")}
                     value={form.priority}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      touch("priority");
                       setForm((prev) => ({
                         ...prev,
                         priority: e.target.value as IssuePriority,
                       }))
-                    }
+                    }}
                     disabled={!canManageIssues}
                     className="control-input h-9 text-[12px]"
                   >
@@ -1661,12 +1702,13 @@ export default function IssuesPage() {
                 <select
                   aria-label={copy("Issue workflow state", "Этап обработки проблемы", "שלב טיפול בתקלה")}
                   value={form.workflow_state}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    touch("workflow_state");
                     setForm((prev) => ({
                       ...prev,
                       workflow_state: e.target.value as IssueWorkflowState,
                     }))
-                  }
+                  }}
                   disabled={!canManageIssues}
                   className="control-input h-9 text-[12px]"
                 >
@@ -1688,12 +1730,13 @@ export default function IssuesPage() {
                         ? form.owner_user_id
                         : ""
                     }
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      touch("owner_user_id");
                       setForm((prev) => ({
                         ...prev,
                         owner_user_id: e.target.value,
                       }))
-                    }
+                    }}
                     disabled={!canManageIssues}
                     className="control-input h-9 text-[12px]"
                   >
@@ -1707,12 +1750,13 @@ export default function IssuesPage() {
                   <input
                     aria-label={copy("Issue owner input", "ID ответственного", "מזהה אחראי")}
                     value={form.owner_user_id}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      touch("owner_user_id");
                       setForm((prev) => ({
                         ...prev,
                         owner_user_id: e.target.value,
                       }))
-                    }
+                    }}
                     placeholder={t("issues.manualOwnerUuid")}
                     disabled={!canManageIssues}
                     className="control-input h-9 text-[12px]"
@@ -1750,11 +1794,11 @@ export default function IssuesPage() {
 
                 <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2 text-[11px] text-text-secondary">
                   {t("issues.created")}:{" "}
-                  {formatDateTime(selectedIssue.created_at)} |{" "}
+                  {formatDateTime(selectedIssue.created_at, locale)} |{" "}
                   {t("issues.updated")}:{" "}
-                  {formatDateTime(selectedIssue.updated_at)} |{" "}
+                  {formatDateTime(selectedIssue.updated_at, locale)} |{" "}
                   {tt("issues.currentDue")}:{" "}
-                  {formatDateTime(selectedIssue.due_at)}
+                  {formatDateTime(selectedIssue.due_at, locale)}
                 </div>
 
                 {formError && (
@@ -1805,16 +1849,24 @@ export default function IssuesPage() {
                     tone="danger"
                     busy={bulkWorkflowMutation.isPending}
                     title={copy(
-                      `Apply to ${visibleIssues.length} filtered issues`,
-                      `Применить к ${visibleIssues.length} отфильтрованным проблемам`,
-                      `להחיל על ${visibleIssues.length} תקלות מסוננות`,
+                      `Apply to ${bulkConfirm ? bulkTargets(bulkConfirm).length : 0} filtered issues`,
+                      `Применить к ${bulkConfirm ? bulkTargets(bulkConfirm).length : 0} отфильтрованным проблемам`,
+                      `להחיל על ${bulkConfirm ? bulkTargets(bulkConfirm).length : 0} תקלות מסוננות`,
                     )}
                     changes={bulkConfirm ? bulkChangeSummary(bulkConfirm) : null}
-                    keeps={copy(
-                      "Details, due dates and comments of those issues stay as they are.",
-                      "Описание, сроки и комментарии этих проблем не меняются.",
-                      "הפרטים, המועדים וההערות של התקלות נשארים כפי שהם.",
-                    )}
+                    keeps={
+                      bulkConfirm && closesIssues(bulkConfirm) && visibleIssues.length > bulkTargets(bulkConfirm).length
+                        ? copy(
+                            `${visibleIssues.length - bulkTargets(bulkConfirm).length} issue(s) raised by the site stay open: only the site representative closes them.`,
+                            `${visibleIssues.length - bulkTargets(bulkConfirm).length} замечаний объекта останутся открытыми: их закрывает только представитель объекта.`,
+                            `${visibleIssues.length - bulkTargets(bulkConfirm).length} תקלות שדווחו על ידי האתר נשארות פתוחות: רק נציג האתר סוגר אותן.`,
+                          )
+                        : copy(
+                            "Details, due dates and comments of those issues stay as they are.",
+                            "Описание, сроки и комментарии этих проблем не меняются.",
+                            "הפרטים, המועדים וההערות של התקלות נשארים כפי שהם.",
+                          )
+                    }
                     confirmLabel={copy("Apply", "Применить", "החל")}
                     onConfirm={() => {
                       const payload = bulkConfirm;
