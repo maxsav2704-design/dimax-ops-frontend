@@ -16,10 +16,13 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import {
+  ConfirmActionDialog,
   InlineNotice,
   KpiCard as DimaxKpiCard,
   WidgetCard,
 } from "@/components/dimax";
+import { formatLocaleMoney } from "@/lib/formatting";
+import { statusLabel } from "@/lib/status-labels";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useCompanyPricingState } from "@/hooks/use-company-pricing-state";
 import { CompanyPriceStatus } from "@/components/prices/CompanyPriceStatus";
@@ -40,6 +43,9 @@ type Installer = {
   full_name: string;
   phone: string | null;
   email: string | null;
+  address?: string | null;
+  notes?: string | null;
+  passport_id_hint?: string | null;
   status: string;
   is_active: boolean;
   user_id: string | null;
@@ -96,13 +102,29 @@ function emptyForm(): InstallerFormState {
   };
 }
 
-function toPayload(form: InstallerFormState): InstallerPayload {
+// The edit form starts from what is stored, so saving one change never wipes the other fields.
+function formFromInstaller(installer: Installer): InstallerFormState {
+  return {
+    full_name: installer.full_name,
+    phone: installer.phone || "",
+    email: installer.email || "",
+    address: installer.address || "",
+    passport_id: "",
+    notes: installer.notes || "",
+    status: installer.status || "ACTIVE",
+    is_active: installer.is_active,
+  };
+}
+
+function toPayload(form: InstallerFormState, { editing = false } = {}): Partial<InstallerPayload> {
+  // The stored document number is never sent back to the page: an empty field while editing keeps it.
+  const passport = form.passport_id.trim();
   return {
     full_name: form.full_name.trim(),
     phone: form.phone.trim() || null,
     email: form.email.trim() || null,
     address: form.address.trim() || null,
-    passport_id: form.passport_id.trim() || null,
+    ...(passport || !editing ? { passport_id: passport || null } : {}),
     notes: form.notes.trim() || null,
     status: form.status.trim() || "ACTIVE",
     is_active: form.is_active,
@@ -157,7 +179,7 @@ function InstallerCard({
               {installer.full_name}
             </h3>
             <p className="mt-0.5 text-[12px] leading-6 text-text-secondary">
-              {installer.status}
+              {statusLabel(installer.status, locale, "installer")}
             </p>
           </div>
         </div>
@@ -195,10 +217,12 @@ function InstallerCard({
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
             <div className="text-[11px] font-medium uppercase text-text-secondary">
-              {copy("User link", "Ссылка пользователя", "קישור משתמש")}
+              {copy("Phone app account", "Учётная запись приложения", "חשבון באפליקציה")}
             </div>
             <div className="mt-1 break-all leading-6 text-text">
-              {installer.user_id || copy("not linked", "не связан", "לא מקושר")}
+              {installer.user_id
+                ? copy("Linked: can sign in on the phone", "Привязана: может входить в приложение", "מקושר: יכול להתחבר בטלפון")
+                : copy("Not linked: cannot sign in yet", "Не привязана: вход в приложение пока невозможен", "לא מקושר: עדיין לא יכול להתחבר")}
             </div>
           </div>
           <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
@@ -241,11 +265,13 @@ function InstallerBaseForm({
   onChange,
   disabled,
   locale,
+  passportHint,
 }: {
   form: InstallerFormState;
   onChange: (next: InstallerFormState) => void;
   disabled: boolean;
   locale: Locale;
+  passportHint?: string | null;
 }) {
   const copy = useCopy();
   // Every control gets a programmatic label (screen readers, click-to-focus, tests).
@@ -315,8 +341,14 @@ function InstallerBaseForm({
             value={form.passport_id}
             onChange={(e) => onChange({ ...form, passport_id: e.target.value })}
             disabled={disabled}
+            placeholder={passportHint ? copy(`On file: ${passportHint}`, `Сохранён: ${passportHint}`, `שמור: ${passportHint}`) : undefined}
             className="control-input"
           />
+          {passportHint ? (
+            <span className="text-[11px] text-text-secondary">
+              {copy("Leave empty to keep the saved number.", "Оставьте пустым, чтобы сохранить прежний номер.", "השאירו ריק כדי לשמור את המספר הקיים.")}
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -365,6 +397,8 @@ export default function InstallersPage() {
   );
   const [notice, setNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Removing an installer or a rate and unlinking an account are asked first.
+  const [pendingConfirm, setPendingConfirm] = useState<{ kind: "delete-installer" | "delete-rate" | "unlink"; id: string; name: string } | null>(null);
   const [deepLinkApplied, setDeepLinkApplied] = useState(false);
   const session = useAuthSession();
   const canManageInstallers = canManageUsers(session);
@@ -448,10 +482,13 @@ export default function InstallersPage() {
   useEffect(() => {
     const rates = ratesQuery.data || [];
     const nextDrafts: Record<string, string> = {};
-    for (const rate of rates) {
-      nextDrafts[rate.id] = String(rate.price);
-    }
-    setRateDrafts(nextDrafts);
+    // A refetch after saving one row keeps the unsaved prices typed in the other rows.
+    setRateDrafts((prev) => {
+      for (const rate of rates) {
+        nextDrafts[rate.id] = prev[rate.id] ?? String(rate.price);
+      }
+      return nextDrafts;
+    });
   }, [ratesQuery.data]);
 
   const createMutation = useMutation({
@@ -488,7 +525,7 @@ export default function InstallersPage() {
         `/api/v1/admin/installers/${editingInstaller.id}`,
         {
           method: "PATCH",
-          body: JSON.stringify(toPayload(form)),
+          body: JSON.stringify(toPayload(form, { editing: true })),
         },
       );
     },
@@ -701,16 +738,7 @@ export default function InstallersPage() {
     setActionError(null);
     setNotice(null);
     setEditingInstaller(matchedInstaller);
-    setForm({
-      full_name: matchedInstaller.full_name,
-      phone: matchedInstaller.phone || "",
-      email: matchedInstaller.email || "",
-      address: "",
-      passport_id: "",
-      notes: "",
-      status: matchedInstaller.status || "ACTIVE",
-      is_active: matchedInstaller.is_active,
-    });
+    setForm(formFromInstaller(matchedInstaller));
     setIsEditOpen(true);
   }, [
     canOpenInstallerDetails,
@@ -766,21 +794,48 @@ export default function InstallersPage() {
     setNotice(null);
     setActionError(null);
     setEditingInstaller(installer);
-    setForm({
-      full_name: installer.full_name,
-      phone: installer.phone || "",
-      email: installer.email || "",
-      address: "",
-      passport_id: "",
-      notes: "",
-      status: installer.status || "ACTIVE",
-      is_active: installer.is_active,
-    });
+    setForm(formFromInstaller(installer));
     setIsEditOpen(true);
   };
 
   return (
     <DashboardLayout>
+      <ConfirmActionDialog
+        open={pendingConfirm !== null}
+        onOpenChange={(open) => { if (!open) setPendingConfirm(null); }}
+        testId="installers-confirm"
+        tone="danger"
+        title={
+          pendingConfirm?.kind === "delete-installer"
+            ? copy(`Delete ${pendingConfirm.name}?`, `Удалить монтажника ${pendingConfirm.name}?`, `למחוק את ${pendingConfirm.name}?`)
+            : pendingConfirm?.kind === "delete-rate"
+              ? copy("Delete this rate?", "Удалить эту ставку?", "למחוק את התעריף?")
+              : copy("Unlink the phone account?", "Отвязать учётную запись телефона?", "לנתק את חשבון הטלפון?")
+        }
+        changes={
+          pendingConfirm?.kind === "delete-installer"
+            ? copy("The installer disappears from lists and assignment. Doors still to install must be reassigned first.",
+                "Монтажник исчезнет из списков и назначений. Двери, которые ещё не установлены, нужно сначала переназначить.",
+                "המתקין ייעלם מהרשימות ומהשיבוצים. יש לשבץ מחדש קודם את הדלתות שטרם הותקנו.")
+            : pendingConfirm?.kind === "delete-rate"
+              ? copy("Future work of this door type is no longer priced by this rate. Earnings already recorded stay as they are.",
+                  "Будущие работы этого типа двери больше не оцениваются этой ставкой. Уже начисленный заработок не меняется.",
+                  "עבודות עתידיות מסוג דלת זה לא יתומחרו עוד בתעריף זה. רווחים שכבר נרשמו לא משתנים.")
+              : copy("The installer can no longer sign in on the phone until an account is linked again.",
+                  "Монтажник не сможет входить в приложение, пока учётную запись не привяжут снова.",
+                  "המתקין לא יוכל להיכנס לאפליקציה עד שחשבון יקושר מחדש.")
+        }
+        confirmLabel={pendingConfirm?.kind === "unlink" ? copy("Unlink", "Отвязать", "נתק") : copy("Delete", "Удалить", "מחק")}
+        busy={deleteMutation.isPending || deleteRateMutation.isPending || unlinkUserMutation.isPending}
+        onConfirm={() => {
+          const action = pendingConfirm;
+          setPendingConfirm(null);
+          if (!action) return;
+          if (action.kind === "delete-installer") deleteMutation.mutate(action.id);
+          else if (action.kind === "delete-rate") deleteRateMutation.mutate(action.id);
+          else unlinkUserMutation.mutate();
+        }}
+      />
       <div className="page-shell page-stack-tight motion-stagger">
         <DimaxPageHeader
           eyebrow={t("installers.eyebrow")}
@@ -816,7 +871,7 @@ export default function InstallersPage() {
           <DimaxKpiCard
             label={t("common.inactive")}
             value={metrics.inactive}
-            hint={`${t("installers.scope")}: ${statusFilter}`}
+            hint={`${t("installers.scope")}: ${statusFilter === "all" ? copy("all", "все", "הכל") : statusLabel(statusFilter, locale, "installer")}`}
             barColor="yellow"
           />
           <DimaxKpiCard
@@ -966,7 +1021,7 @@ export default function InstallersPage() {
               installer={installer}
               locale={locale}
               onEdit={() => onOpenEdit(installer)}
-              onDelete={() => deleteMutation.mutate(installer.id)}
+              onDelete={() => setPendingConfirm({ kind: "delete-installer", id: installer.id, name: installer.full_name })}
               editDisabled={!canOpenInstallerDetails}
               deleteDisabled={!canManageInstallers}
               editHint={
@@ -990,6 +1045,7 @@ export default function InstallersPage() {
               onChange={setForm}
               disabled={!canManageInstallers}
               locale={locale}
+              passportHint={editingInstaller?.passport_id_hint}
             />
 
             <DialogFooter className="mt-5">
@@ -1036,6 +1092,7 @@ export default function InstallersPage() {
               onChange={setForm}
               disabled={!canManageInstallers}
               locale={locale}
+              passportHint={editingInstaller?.passport_id_hint}
             />
 
             <WidgetCard
@@ -1102,7 +1159,7 @@ export default function InstallersPage() {
                   {copy("Link", "Привязать", "קשר")}
                 </button>
                 <button
-                  onClick={() => unlinkUserMutation.mutate()}
+                  onClick={() => setPendingConfirm({ kind: "unlink", id: editingInstaller?.id || "", name: editingInstaller?.full_name || "" })}
                   disabled={
                     !canManageInstallers ||
                     !editingInstaller?.user_id ||
@@ -1190,7 +1247,7 @@ export default function InstallersPage() {
                               ? `${doorType.code} - ${doorType.name}`
                               : rate.door_type_id}
                           </div>
-                          {factoryPrices ? <span className="text-sm tabular-nums">{rate.price} ILS</span> : <input
+                          {factoryPrices ? <span className="text-sm tabular-nums">{formatLocaleMoney(rate.price, "ILS", locale)}</span> : <input
                             aria-label={copy("Rate for {door}", "Ставка для {door}", "תעריף עבור {door}").replace("{door}", doorType ? `${doorType.code} - ${doorType.name}` : rate.door_type_id)}
                             value={rateDrafts[rate.id] ?? String(rate.price)}
                             disabled={!canManageRates}
@@ -1213,7 +1270,7 @@ export default function InstallersPage() {
                             {copy("Save", "Сохранить", "שמור")}
                           </button>}
                           {!factoryPrices && <button
-                            onClick={() => deleteRateMutation.mutate(rate.id)}
+                            onClick={() => setPendingConfirm({ kind: "delete-rate", id: rate.id, name: rate.door_type_id })}
                             disabled={
                               !canManageRates || deleteRateMutation.isPending
                             }

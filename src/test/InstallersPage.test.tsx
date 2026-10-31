@@ -183,6 +183,38 @@ describe("InstallersPage", () => {
     expect(pushMock).toHaveBeenCalledWith("/installers");
   });
 
+  it("keeps the stored address, notes and document when only the phone is changed", async () => {
+    searchParamsMock.mockReturnValue(new URLSearchParams("installer_id=installer-1"));
+    authSessionMock.mockReturnValue({ role: "ADMIN", admin_scope: "OWNER", can_view_rates: true, can_manage_imports: true, can_manage_users: true });
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      const url = String(path);
+      if (url === "/api/v1/admin/installers/installer-1" && init?.method === "PATCH") return { id: "installer-1" };
+      if (url.includes("/api/v1/admin/installers?")) {
+        return [{ id: "installer-1", company_id: "company-1", full_name: "Dana Levi", phone: "+972501234567", email: null,
+          address: "Herzl 5", notes: "Night shifts", passport_id_hint: "•••8877", status: "ACTIVE", is_active: true, user_id: null,
+          created_at: "2026-03-21T10:00:00Z", updated_at: "2026-03-21T11:00:00Z", deleted_at: null }];
+      }
+      if (url.includes("/api/v1/admin/door-types")) return [];
+      return [];
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={queryClient}><InstallersPage /></QueryClientProvider>);
+    expect(await screen.findByText("Edit Installer")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Herzl 5")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Night shifts")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("On file: •••8877")).toBeInTheDocument();
+    fireEvent.change(screen.getByDisplayValue("+972501234567"), { target: { value: "+972527654321" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Save/ }));
+    await waitFor(() => {
+      const call = apiFetchMock.mock.calls.find(([url, init]) => url === "/api/v1/admin/installers/installer-1" && (init as RequestInit)?.method === "PATCH");
+      expect(call).toBeTruthy();
+      const body = JSON.parse(String((call![1] as RequestInit).body));
+      expect(body.address).toBe("Herzl 5");
+      expect(body.notes).toBe("Night shifts");
+      expect(body).not.toHaveProperty("passport_id");  // the stored document is kept
+    });
+  });
+
   it("does not open another installer when deep-link installer_id is unavailable", async () => {
     searchParamsMock.mockReturnValue(
       new URLSearchParams("installer_id=missing-installer"),
