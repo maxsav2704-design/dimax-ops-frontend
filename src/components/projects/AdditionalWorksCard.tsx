@@ -570,7 +570,15 @@ export function AdditionalWorksCard({
                   }))
                 }
                 placeholder="1"
+                aria-describedby="additional-work-qty-hint"
               />
+              <p id="additional-work-qty-hint" className="text-11 text-text-secondary">
+                {copy(
+                  "Installers can record up to this quantity; 0 means nothing can be recorded yet.",
+                  "Монтажники могут записать не больше этого количества; 0 — записывать пока нечего.",
+                  "המתקינים יכולים לרשום עד כמות זו; 0 פירושו שעדיין אין מה לרשום.",
+                )}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="additional-work-client-price">

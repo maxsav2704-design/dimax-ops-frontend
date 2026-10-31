@@ -21,7 +21,7 @@ export const openingBalanceSchema = z.object({
 });
 export const openingFiguresSchema = z.object({
   currency: z.literal("ILS"), as_of: z.string().date(), debt: money, retention: money, advance: money, disputed: money, principal_due: money,
-  principal_paid: money, principal_remaining: money, covers_early_work: z.boolean(),
+  principal_paid: money, principal_remaining: money, needs_vat_rule: money.optional(), covers_early_work: z.boolean(),
 });
 export const earlyWorkRowSchema = z.object({
   item_kind: z.enum(["DOOR", "ADDON", "STAGE"]), journal_id: uuid, journal_item_id: uuid, project_name: z.string(), label: z.string(),

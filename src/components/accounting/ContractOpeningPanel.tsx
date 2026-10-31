@@ -47,6 +47,8 @@ export function ContractOpeningPanel({ contract }: { contract: CommercialContrac
       [t.advance, money(data.figures.advance)], [t.disputed, money(data.figures.disputed)], [t.principalDue, money(data.figures.principal_due)],
       [t.principalPaid, money(data.figures.principal_paid)], [t.principalRemaining, money(data.figures.principal_remaining)]]}>
       <div><dt className="text-xs text-text-secondary">{t.coversEarlyWork}</dt><dd>{data.figures.covers_early_work ? t.yes : t.no}</dd></div>
+      {Number(data.figures.needs_vat_rule ?? 0) > 0 && <div data-testid="opening-needs-vat-rule">
+        <dt className="text-xs text-status-warning-fg">{t.needsVatRule}</dt><dd className="font-mono tabular-nums">{money(data.figures.needs_vat_rule ?? "0")}</dd></div>}
     </FiguresGrid>}
     <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">{t.rows} ({data?.items.length ?? 0})</h3>
       <Button size="sm" onClick={() => setDialog({ kind: "add" })}>{t.add}</Button></div>
