@@ -48,6 +48,7 @@ const GENERIC: Record<string, Triple> = {
   NEEDS_PROJECT: ["Needs a project", "Нужен объект", "נדרש פרויקט"],
   IMPORTED: ["Imported", "Импортировано", "יובא"],
   DISMISSED: ["Dismissed", "Отклонено", "נדחה"],
+  NONE: ["Not sent", "Не отправлялось", "לא נשלח"],
 };
 
 const BY_DOMAIN: Partial<Record<StatusLabelDomain, Record<string, Triple>>> = {

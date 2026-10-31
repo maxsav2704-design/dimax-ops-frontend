@@ -20,9 +20,12 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import {
+  ConfirmActionDialog,
   KpiCard as DimaxKpiCard,
   WidgetCard,
 } from "@/components/dimax";
+import { fetchAllProjects } from "@/lib/projects-list";
+import { statusLabel } from "@/lib/status-labels";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { readableApiError } from "@/lib/api-error-display";
@@ -378,13 +381,14 @@ export default function JournalPage() {
       setQueueLoading(true);
       setPageError("");
       try {
+        // Settings for sending (integrations, templates) are optional here: their failure must not hide the journals.
         const [
           projectsResponse,
           journalsResponse,
           integrationsResponse,
           templatesResponse,
         ] = await Promise.all([
-          apiFetch<ProjectListResponse>("/api/v1/admin/projects?limit=200"),
+          fetchAllProjects<ProjectListResponse["items"][number]>(),
           apiFetch<JournalListResponse>(
             `/api/v1/admin/journals?limit=100${
               statusFilter !== "ALL"
@@ -393,12 +397,12 @@ export default function JournalPage() {
             }`,
           ),
           canManage
-            ? apiFetch<IntegrationsSettings>("/api/v1/admin/settings/integrations")
+            ? apiFetch<IntegrationsSettings>("/api/v1/admin/settings/integrations").catch(() => null)
             : Promise.resolve<IntegrationsSettings | null>(null),
           canManage
             ? apiFetch<CommunicationTemplatesResponse>(
                 "/api/v1/admin/settings/communication-templates",
-              )
+              ).catch(() => ({ items: [] }) as CommunicationTemplatesResponse)
             : Promise.resolve<CommunicationTemplatesResponse>({ items: [] }),
         ]);
 
@@ -615,6 +619,9 @@ export default function JournalPage() {
   const effectiveSendEmail = sendEmail && Boolean(integrations?.email_enabled);
   const effectiveSendWhatsapp =
     sendWhatsapp && Boolean(integrations?.whatsapp_enabled);
+  // Opening for signing, sending to the client and deleting a template are asked first.
+  const [pendingJournalAction, setPendingJournalAction] = useState<"ready" | "send" | "delete-template" | null>(null);
+
   async function handleCreateDraft() {
     if (!canManage || !selectedProjectId) {
       return;
@@ -798,9 +805,9 @@ export default function JournalPage() {
         tone: "success",
         message: pickByLocale(
           locale,
-          `Queued send via ${sentChannels || "selected channels"}. Object key: ${response.object_key}`,
-          `Отправка поставлена в очередь через ${sentChannels || "выбранные каналы"}. Object key: ${response.object_key}`,
-          `השליחה הוכנסה לתור דרך ${sentChannels || "הערוצים שנבחרו"}. Object key: ${response.object_key}`,
+          `Queued send via ${sentChannels || "selected channels"}.`,
+          `Отправка поставлена в очередь через ${sentChannels || "выбранные каналы"}.`,
+          `השליחה הוכנסה לתור דרך ${sentChannels || "הערוצים שנבחרו"}.`,
         ),
       });
     } catch (error) {
@@ -1022,6 +1029,42 @@ export default function JournalPage() {
 
   return (
     <DashboardLayout>
+      <ConfirmActionDialog
+        open={pendingJournalAction !== null}
+        onOpenChange={(open) => { if (!open) setPendingJournalAction(null); }}
+        testId="journal-confirm"
+        tone={pendingJournalAction === "delete-template" ? "danger" : "default"}
+        title={
+          pendingJournalAction === "ready"
+            ? copy("Open the journal for signing?", "Открыть журнал для подписи?", "לפתוח את היומן לחתימה?")
+            : pendingJournalAction === "send"
+              ? copy("Send the journal to the client?", "Отправить журнал клиенту?", "לשלוח את היומן ללקוח?")
+              : copy("Delete the template?", "Удалить шаблон?", "למחוק את התבנית?")
+        }
+        changes={
+          pendingJournalAction === "ready"
+            ? copy("A signing link is created; the work table is frozen for this version.",
+                "Создаётся ссылка для подписи; таблица работ фиксируется в этой версии.",
+                "נוצר קישור לחתימה; טבלת העבודות ננעלת בגרסה זו.")
+            : pendingJournalAction === "send"
+              ? copy("The message goes out through the selected channels and cannot be called back.",
+                  "Сообщение уйдёт по выбранным каналам, отозвать его нельзя.",
+                  "ההודעה תישלח בערוצים שנבחרו ולא ניתן לבטל אותה.")
+              : copy("Messages already sent are not affected.", "Уже отправленные сообщения не изменятся.", "הודעות שכבר נשלחו לא יושפעו.")
+        }
+        confirmLabel={
+          pendingJournalAction === "ready" ? copy("Open for signing", "Открыть для подписи", "פתח לחתימה")
+            : pendingJournalAction === "send" ? copy("Send", "Отправить", "שלח")
+              : copy("Delete", "Удалить", "מחק")
+        }
+        onConfirm={() => {
+          const action = pendingJournalAction;
+          setPendingJournalAction(null);
+          if (action === "ready") void handleMarkReady();
+          else if (action === "send") void handleQueueSend();
+          else if (action === "delete-template") void deleteTemplate();
+        }}
+      />
       <div className="page-shell page-stack-tight motion-stagger">
         <DimaxPageHeader
           eyebrow={t("journal.eyebrow")}
@@ -1246,7 +1289,7 @@ export default function JournalPage() {
                               badgeTone(journal.status),
                             )}
                           >
-                            {journal.status}
+                            {statusLabel(journal.status, locale, "journal")}
                           </span>
                         </div>
                         <div className="mt-3 flex items-center justify-between text-[11px] text-text-secondary">
@@ -1307,7 +1350,7 @@ export default function JournalPage() {
                               badgeTone(selectedJournal.status),
                             )}
                           >
-                            {selectedJournal.status}
+                            {statusLabel(selectedJournal.status, locale, "journal")}
                           </span>
                         </div>
                         <div className="mt-1 text-[12px] text-text-secondary">
@@ -1325,7 +1368,7 @@ export default function JournalPage() {
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
-                          onClick={handleMarkReady}
+                          onClick={() => setPendingJournalAction("ready")}
                           disabled={!canManage || selectedJournal.status !== "DRAFT" || busyAction === "ready"}
                           title={
                             !canManage
@@ -1384,7 +1427,7 @@ export default function JournalPage() {
                             badgeTone(selectedJournal.email_delivery_status),
                           )}
                         >
-                          {selectedJournal.email_delivery_status}
+                          {statusLabel(selectedJournal.email_delivery_status, locale, "delivery")}
                         </div>
                         <div className="mt-2 text-[12px] text-text-secondary">
                           {t("journal.lastSent")}:{" "}
@@ -1406,19 +1449,15 @@ export default function JournalPage() {
                             badgeTone(selectedJournal.whatsapp_delivery_status),
                           )}
                         >
-                          {selectedJournal.whatsapp_delivery_status}
+                          {statusLabel(selectedJournal.whatsapp_delivery_status, locale, "delivery")}
                         </div>
                         <div className="mt-2 text-[12px] text-text-secondary">
                           {t("journal.lastSent")}:{" "}
-                          {formatDateTime(
-                            selectedJournal.whatsapp_last_sent_at,
-                          )}
+                          {formatDateTime(selectedJournal.whatsapp_last_sent_at, copy("Not set", "Не задано", "לא הוגדר"))}
                         </div>
                         <div className="mt-1 text-[12px] text-text-secondary">
                           {t("journal.delivered")}:{" "}
-                          {formatDateTime(
-                            selectedJournal.whatsapp_delivered_at,
-                          )}
+                          {formatDateTime(selectedJournal.whatsapp_delivered_at, copy("Not set", "Не задано", "לא הוגדר"))}
                         </div>
                         {selectedJournal.whatsapp_last_error ? (
                           <div className="mt-2 text-[12px] text-status-problem-fg">
@@ -1472,7 +1511,7 @@ export default function JournalPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={deleteTemplate}
+                          onClick={() => setPendingJournalAction("delete-template")}
                           disabled={selectedTemplateActionsBlocked}
                           className="dmx-secondary-action h-10"
                         >
@@ -1631,7 +1670,7 @@ export default function JournalPage() {
                     <div className="mt-4 flex flex-wrap gap-2">
                       <button
                         type="button"
-                        onClick={handleQueueSend}
+                        onClick={() => setPendingJournalAction("send")}
                         disabled={!canManage || busyAction === "send"}
                         title={
                           !canManage
@@ -1741,7 +1780,7 @@ export default function JournalPage() {
                                     badgeTone(item.status),
                                   )}
                                 >
-                                  {item.status}
+                                  {statusLabel(item.status, locale, "delivery")}
                                 </span>
                               </div>
                               <div className="mt-1 text-[12px] text-text-secondary">
@@ -1749,7 +1788,7 @@ export default function JournalPage() {
                                   t("journal.recipientMissing")}
                               </div>
                             </div>
-                            <button
+                            {item.status === "FAILED" || item.delivery_status === "FAILED" ? <button
                               type="button"
                               onClick={() => handleRetryOutbox(item.id)}
                               disabled={
@@ -1767,7 +1806,7 @@ export default function JournalPage() {
                                 strokeWidth={1.8}
                               />
                               {t("journal.retry")}
-                            </button>
+                            </button> : null}
                           </div>
                           {item.subject ? (
                             <div className="mt-2 text-[12px] font-medium text-text">
@@ -1794,7 +1833,7 @@ export default function JournalPage() {
                               {item.max_attempts}
                             </div>
                             <div>
-                              {t("journal.delivery")}: {item.delivery_status}
+                              {t("journal.delivery")}: {statusLabel(item.delivery_status, locale, "delivery")}
                             </div>
                             {item.attachment_name ? (
                               <div>

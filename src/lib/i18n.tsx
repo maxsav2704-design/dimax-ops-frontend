@@ -1197,7 +1197,7 @@ export const messages: Record<Locale, Messages> = {
     "journal.statusFilter": "Фильтр статуса журнала",
     "journal.storageConfigured": "Хранилище настроено",
     "journal.subject": "Тема",
-    "journal.tableLocked": "Стол заблокирован",
+    "journal.tableLocked": "Таблица работ заблокирована",
     "journal.template": "Шаблон",
     "journal.templateName": "Имя шаблона",
     "journal.templatePlaceholder": "Сохранить текущее сообщение как шаблон",

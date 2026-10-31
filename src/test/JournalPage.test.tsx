@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -19,7 +19,9 @@ vi.mock("@/components/DashboardLayout", () => ({
 }));
 
 vi.mock("@/lib/api", () => ({
-  apiFetch: apiFetchMock,
+  // The page reads the project list page by page; the mocks answer the first page under the old path.
+  apiFetch: (path: string, ...rest: unknown[]) =>
+    apiFetchMock(String(path).replace(/\/api\/v1\/admin\/projects\?limit=200&offset=0$/, "/api/v1/admin/projects?limit=200"), ...rest),
 }));
 
 vi.mock("@/hooks/use-auth-session", () => ({
@@ -378,6 +380,10 @@ describe("JournalPage", () => {
     const base = buildApiMock();
     apiFetchMock.mockImplementation((url: string, init?: RequestInit) => url === path ? pending : base(url, init));
     fireEvent.click(target);
+    if (action === "Delete") {
+      // Deleting a shared template is asked first.
+      fireEvent.click(within(await screen.findByTestId("journal-confirm")).getByRole("button", { name: "Delete" }));
+    }
     expect(apply).toBeDisabled();
     expect(remove).toBeDisabled();
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
@@ -445,6 +451,8 @@ describe("JournalPage", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Queue Send" }));
+    // Sending to the client is asked first.
+    fireEvent.click(within(await screen.findByTestId("journal-confirm")).getByRole("button", { name: "Send" }));
 
     await waitFor(() => {
       const sendCall = apiFetchMock.mock.calls.find(
@@ -464,7 +472,7 @@ describe("JournalPage", () => {
     });
 
     expect(
-      await screen.findByText(/Queued send via email \+ WhatsApp\. Object key: journals\/journal-1\.pdf/)
+      await screen.findByText(/Queued send via email \+ WhatsApp\./)
     ).toBeInTheDocument();
   }, 15000);
 
