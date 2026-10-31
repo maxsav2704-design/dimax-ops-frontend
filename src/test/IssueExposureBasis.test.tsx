@@ -16,7 +16,7 @@ describe("issue exposure basis", () => {
       unpriced_exposure_doors: 2, unpriced_open_issue_doors: 1, unpriced_blocked_issue_doors: 0, unpriced_delayed_doors: 2,
       reason_rows_total: 9, addon_rows_total: 7, incomplete_addon_rows: 3,
       addon_unrecorded_completed_works: 2, addon_missing_client_prices: 1 }} reasonsShown={1} addonsShown={1} />);
-    for (const text of [scope, overlap, version, reasons, addons, "- NIS", "1 / 7", "1 / 0 / 2"]) {
+    for (const text of [scope, overlap, version, reasons, addons, "- ILS", "1 / 7", "1 / 0 / 2"]) {
       expect(screen.getByRole("status")).toHaveTextContent(text);
     }
   });
@@ -25,7 +25,7 @@ describe("issue exposure basis", () => {
     locale.value = "en";
     render(<IssueExposureBasis data={{ pricing_mode: "FACTORY", price_list_version: 1, exposure_profit_total: 0,
       exposure_doors: 0, reason_rows_total: 0, addon_rows_total: 0 }} reasonsShown={0} addonsShown={0} />);
-    expect(screen.getByRole("status")).toHaveTextContent("Risk across unique doors: 0.00 NIS. Doors: 0");
+    expect(screen.getByRole("status")).toHaveTextContent("Risk across unique doors: 0.00 ILS. Doors: 0");
     expect(screen.queryByText(/Doors without a confirmed rate/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Add-ons without earnings/)).not.toBeInTheDocument();
   });

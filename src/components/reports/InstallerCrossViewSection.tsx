@@ -63,7 +63,7 @@ export function InstallerCrossViewSection({ query, sortBy, sortDir, onSortByChan
           >
             {SORT_DIR_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {optionLabel(option.label)}
               </option>
             ))}
           </select>

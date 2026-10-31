@@ -111,8 +111,9 @@ export function OperationsCenterSection({ center, loading, unreadCount }: Operat
                 {center?.outbox?.failed_total ?? 0}
               </div>
               <div className="mt-1 text-[12px] text-text-secondary">
-                {copy("Failed | Overdue", "Ошибка | Просрочено", "נכשל | באיחור")}{" "}
-                {center?.outbox?.pending_overdue_15m ?? 0}
+                {copy("failed", "ошибок", "נכשלו")} {center?.outbox?.failed_total ?? "-"} ·{" "}
+                {copy("waiting over 15 min", "ждут дольше 15 мин", "ממתינות מעל 15 דק׳")}{" "}
+                {center?.outbox?.pending_overdue_15m ?? "-"}
               </div>
             </div>
 

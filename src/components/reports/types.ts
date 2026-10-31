@@ -642,7 +642,8 @@ export type ReportsInsight = {
 };
 
 export type ReportsLibraryRow = {
-  badge?: "live" | "new" | "pinned";
+  badge?: "live";
+  badgeText?: string;
   icon: string;
   meta: string;
   onClick?: () => void;
@@ -651,7 +652,6 @@ export type ReportsLibraryRow = {
 };
 
 export type ReportsLibraryGroup = {
-  count: number;
   icon: LucideIcon;
   rows: ReportsLibraryRow[];
   subtitle: string;

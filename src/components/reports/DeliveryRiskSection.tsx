@@ -115,13 +115,13 @@ export function DeliveryRiskSection({ deliveryQuery, outboxSummaryQuery, failedI
               <div>
                 {copy("Channel:", "Канал:", "ערוץ:")}{" "}
                 <span className="font-medium text-text">
-                  {scopedDeliveryChannel || "all channels"}
+                  {scopedDeliveryChannel || copy("all channels", "все каналы", "כל הערוצים")}
                 </span>
               </div>
               <div>
                 {copy("Webhook provider:", "Провайдер вебхука:", "ספק Webhook:")}{" "}
                 <span className="font-medium text-text">
-                  {scopedWebhookProvider || "all providers"}
+                  {scopedWebhookProvider || copy("all providers", "все провайдеры", "כל הספקים")}
                 </span>
               </div>
               {scopedOutboxId ? (

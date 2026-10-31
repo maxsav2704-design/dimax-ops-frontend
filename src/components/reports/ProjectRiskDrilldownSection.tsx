@@ -5,6 +5,8 @@ import { ProjectPricingNotice } from "@/components/prices/ProjectPricingNotice";
 
 import { formatAmount, formatPercent, reportsPanelClass, useReportsText } from "./shared";
 import { SectionMessage } from "./widgets";
+import { useI18n } from "@/lib/i18n";
+import { statusLabel } from "@/lib/status-labels";
 import type { ProjectOption, ProjectRiskDrilldownResponse } from "./types";
 
 type ProjectRiskDrilldownSectionProps = {
@@ -15,8 +17,18 @@ type ProjectRiskDrilldownSectionProps = {
 };
 
 // Reports → "Project risk drill-down": per-project risk breakdown with a project picker. Markup moved verbatim from ReportsPage (section split).
+// Risk drivers come with stable codes and English labels; the office reads them in its own language.
+const DRIVERS: Record<string, readonly [string, string, string]> = {
+  profit_gap_total: ["Profit gap", "Недополученная прибыль", "פער רווח"],
+  delayed_profit_total: ["Delayed profit", "Отложенная прибыль", "רווח מעוכב"],
+  blocked_issue_profit_at_risk: ["Profit at risk from blocked issues", "Прибыль под риском из-за блокирующих проблем", "רווח בסיכון מתקלות חוסמות"],
+  open_issues: ["Open issues", "Открытые проблемы", "תקלות פתוחות"],
+  data_risk: ["Data gaps", "Пробелы в данных", "פערי נתונים"],
+};
+
 export function ProjectRiskDrilldownSection({ query, projectsQuery, projectId, onProjectIdChange }: ProjectRiskDrilldownSectionProps) {
   const { t, tt, copy, readError } = useReportsText();
+  const { locale } = useI18n();
   const drilldown = query.data;
   const projectOptions = projectsQuery.data?.items || [];
 
@@ -169,7 +181,7 @@ export function ProjectRiskDrilldownSection({ query, projectsQuery, projectId, o
             <div className="grid gap-4 xl:grid-cols-3">
               <div className="rounded-lg border border-border bg-surface p-3 xl:col-span-1">
                 <div className="text-[11px] uppercase text-text-secondary">
-                  {copy("Drivers", "Драйверы", "דרייברים")}
+                  {copy("What drives the risk", "Из чего складывается риск", "מה מניע את הסיכון")}
                 </div>
                 <div className="mt-3 space-y-2">
                   {(drilldown.drivers || []).map((driver) => (
@@ -179,10 +191,10 @@ export function ProjectRiskDrilldownSection({ query, projectsQuery, projectId, o
                     >
                       <div>
                         <div className="text-[12px] font-medium text-text">
-                          {driver.label}
+                          {DRIVERS[driver.code] ? copy(...DRIVERS[driver.code]) : driver.label}
                         </div>
                         <div className="text-[11px] text-text-secondary">
-                          {driver.severity}
+                          {statusLabel(driver.severity, locale)}
                         </div>
                       </div>
                       <div className="text-[12px] font-semibold text-text">

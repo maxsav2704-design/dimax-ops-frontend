@@ -1291,7 +1291,7 @@ describe("ReportsPage", () => {
     expect(screen.getByText("Scheduled exports")).toBeInTheDocument();
     expect(screen.getByText("Door financial exposure")).toBeInTheDocument();
     expect(screen.getByText("Risk concentration watch")).toBeInTheDocument();
-    expect(screen.getByText("Installer KPI trend")).toBeInTheDocument();
+    expect(screen.getAllByText("Installer scorecard").length).toBeGreaterThan(0);
     expect(screen.getByText("Failed Outbox Queue")).toBeInTheDocument();
     expect(screen.getAllByText("DOOR_TYPE_UPDATE").length).toBeGreaterThan(0);
     expect(screen.getAllByText("ISSUE_WORKFLOW_UPDATE").length).toBeGreaterThan(0);
@@ -1303,7 +1303,10 @@ describe("ReportsPage", () => {
       screen.getByRole("button", { name: "Open Actionable Ops" })
     ).toBeInTheDocument();
     expect(screen.getByText("Operations SLA")).toBeInTheDocument();
-    expect(screen.getByText("Retry failed imports in bulk")).toBeInTheDocument();
+    // Server codes are shown in the reader's words, not the server's English titles and raw statuses.
+    expect(screen.getByText("Retry failed imports")).toBeInTheDocument();
+    expect(screen.getByText("Failed imports (24 h)")).toBeInTheDocument();
+    expect(screen.queryByText("DANGER")).toBeNull();
     expect(screen.getByText("SLA Trend (last 30 days)")).toBeInTheDocument();
     expect(screen.getByText("Issues Analytics")).toBeInTheDocument();
     expect(screen.getByText("Project Plan vs Fact")).toBeInTheDocument();

@@ -63,7 +63,7 @@ export function InstallersKpiSection({ query, sortBy, sortDir, onSortByChange, o
           >
             {SORT_DIR_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {optionLabel(option.label)}
               </option>
             ))}
           </select>

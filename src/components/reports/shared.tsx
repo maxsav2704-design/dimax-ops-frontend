@@ -447,6 +447,20 @@ export function useReportsText() {
           return copy("Planned Revenue", "Плановая выручка", "הכנסה מתוכננת");
         case "Installed Revenue":
           return copy("Installed Revenue", "Выручка по монтажу", "הכנסה מותקנת");
+        case "Revenue":
+          return copy("Revenue", "Выручка", "הכנסה");
+        case "Payroll":
+          return copy("Payroll", "Начисления", "שכר");
+        case "Missing Rates":
+          return copy("Missing rates", "Нет ставок", "תעריפים חסרים");
+        case "Installer Name":
+          return copy("Installer name", "Имя монтажника", "שם המתקין");
+        case "Order Number":
+          return copy("Order number", "Номер заказа", "מספר הזמנה");
+        case "Desc":
+          return copy("High to low", "По убыванию", "מהגבוה לנמוך");
+        case "Asc":
+          return copy("Low to high", "По возрастанию", "מהנמוך לגבוה");
         default:
           return label;
       }
@@ -620,6 +634,30 @@ export const ISSUE_AUDIT_ACTION_OPTIONS = [
   "ISSUE_WORKFLOW_BULK_UPDATE",
 ] as const;
 
+// People-facing names of the audit filter codes (the codes stay the filter values).
+export const AUDIT_CODE_LABELS: Record<string, readonly [en: string, ru: string, he: string]> = {
+  door_type: ["Door type", "Тип двери", "סוג דלת"],
+  reason: ["Reason", "Причина", "סיבה"],
+  company: ["Company settings", "Настройки компании", "הגדרות חברה"],
+  project: ["Object", "Объект", "פרויקט"],
+  sync_state: ["Phone sync", "Синхронизация телефона", "סנכרון טלפון"],
+  DOOR_TYPE_CREATE: ["Door type created", "Тип двери создан", "סוג דלת נוצר"],
+  DOOR_TYPE_UPDATE: ["Door type changed", "Тип двери изменён", "סוג דלת שונה"],
+  DOOR_TYPE_DELETE: ["Door type deleted", "Тип двери удалён", "סוג דלת נמחק"],
+  REASON_CREATE: ["Reason created", "Причина создана", "סיבה נוצרה"],
+  REASON_UPDATE: ["Reason changed", "Причина изменена", "סיבה שונתה"],
+  REASON_DELETE: ["Reason deleted", "Причина удалена", "סיבה נמחקה"],
+  SETTINGS_COMPANY_UPDATE: ["Company settings changed", "Настройки компании изменены", "הגדרות החברה שונו"],
+  PROJECT_DOORS_IMPORT_ANALYZE: ["Door import checked", "Импорт дверей проверен", "ייבוא דלתות נבדק"],
+  PROJECT_DOORS_IMPORT_APPLY: ["Door import applied", "Импорт дверей применён", "ייבוא דלתות הוחל"],
+  PROJECT_DOORS_IMPORT_RETRY: ["Door import retried", "Импорт дверей повторён", "ייבוא דלתות נוסה שוב"],
+  PROJECT_DOORS_IMPORT_RETRY_BULK: ["Door imports retried in bulk", "Импорты дверей повторены пакетом", "ייבוא דלתות נוסה שוב במרוכז"],
+  SYNC_STATE_RESET: ["Phone sync reset", "Синхронизация телефона сброшена", "סנכרון טלפון אופס"],
+  ISSUE_STATUS_UPDATE: ["Issue status changed", "Статус проблемы изменён", "סטטוס תקלה שונה"],
+  ISSUE_WORKFLOW_UPDATE: ["Issue stage changed", "Этап проблемы изменён", "שלב תקלה שונה"],
+  ISSUE_WORKFLOW_BULK_UPDATE: ["Issue stages changed in bulk", "Этапы проблем изменены пакетом", "שלבי תקלות שונו במרוכז"],
+};
+
 export const SLA_HISTORY_DAYS_OPTIONS = [7, 30] as const;
 
 export const SORT_DIR_OPTIONS: Array<{ value: SortDir; label: string }> = [
@@ -753,7 +791,8 @@ export function buildOperationsHref(params: {
 }
 
 export function formatAmount(value: number | null | undefined): string {
-  if (value === null) return "-";
+  // Missing data (not loaded, failed) is never shown as zero.
+  if (value === null || value === undefined) return "-";
   return formatLocalizedNumber(value ?? 0, undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -766,7 +805,8 @@ export function formatPercent(value: number | null | undefined): string {
 }
 
 export function formatCount(value: number | string | null | undefined): string {
-  return formatLocalizedNumber(value ?? 0, undefined, {
+  if (value === null || value === undefined) return "-";
+  return formatLocalizedNumber(value, undefined, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });

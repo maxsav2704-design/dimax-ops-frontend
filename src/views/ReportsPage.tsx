@@ -50,6 +50,8 @@ import {
 import { useI18n, type Locale, useCopy } from "@/lib/i18n";
 import { createRequestLimiter } from "@/lib/request-limiter";
 import { cn } from "@/lib/utils";
+import { pluralNoun } from "@/lib/plural";
+import { statusLabel } from "@/lib/status-labels";
 import { OperationsCenterSection } from "@/components/reports/OperationsCenterSection";
 import { ProjectPlanFactSection } from "@/components/reports/ProjectPlanFactSection";
 import { IssueAuditSection } from "@/components/reports/IssueAuditSection";
@@ -1308,7 +1310,9 @@ export default function ReportsPage() {
     (sum, item) => sum + item.missing_rates_installed_doors,
     0,
   );
-  const topInstaller = installersKpiItems[0]?.installer_name || "n/a";
+  const topInstaller = installersKpiItems[0]?.installer_name || "—";
+  // While the scorecard is loading or failed, its numbers are unknown, not zero.
+  const installersKpiKnown = Boolean(installersKpiQuery.data) && !installersKpiQuery.isError;
   const reportsInsights: ReportsInsight[] = [
     {
       eyebrow: copy("Door financial exposure", "Финансовый риск по дверям", "חשיפה כספית לפי דלתות"),
@@ -1329,7 +1333,8 @@ export default function ReportsPage() {
       eyebrow: copy("Risk concentration watch", "Концентрация рисков", "ריכוז סיכונים"),
       title: copy("Backlog and profit risk by project", "Отставание и риск прибыли по объектам", "פיגור וסיכון לרווח לפי פרויקט"),
       value: canExportFinancialReports
-        ? `${formatCount(riskConcentration?.summary?.risky_projects)} ${copy("projects", "объектов", "פרויקטים")}`
+        ? (riskConcentration?.summary?.risky_projects == null ? "-"
+          : `${formatCount(riskConcentration.summary.risky_projects)} ${pluralNoun(locale, Number(riskConcentration.summary.risky_projects), { en: ["project", "projects"], ru: ["объект", "объекта", "объектов"], he: ["פרויקט", "פרויקטים"] })}`)
         : copy("Restricted", "Нет доступа", "אין הרשאה"),
       delta: canExportFinancialReports
         ? `${formatAmount(
@@ -1349,147 +1354,93 @@ export default function ReportsPage() {
       variant: "bars",
     },
     {
-      eyebrow: "Installer KPI trend",
-      title: "Team delivery and rate coverage",
-      value: formatCount(installerDoorTotal),
-      delta: `${formatCount(installerMissingRates)} installed doors missing rates`,
-      detail: `Top installer in current sort: ${topInstaller}.`,
-      cta: "Open installer KPI",
+      eyebrow: copy("Installer scorecard", "Показатели монтажников", "מדדי מתקינים"),
+      title: copy("Team delivery and rate coverage", "Выполнение и покрытие ставками", "ביצוע וכיסוי תעריפים"),
+      value: installersKpiKnown ? formatCount(installerDoorTotal) : "—",
+      delta: installersKpiKnown
+        ? `${copy("Installed doors without a rate", "Установлено без ставки", "דלתות שהותקנו ללא תעריף")}: ${formatCount(installerMissingRates)}`
+        : copy("No data yet", "Данных пока нет", "אין עדיין נתונים"),
+      detail: `${copy("First in the current sort", "Первый в текущей сортировке", "ראשון במיון הנוכחי")}: ${topInstaller}.`,
+      cta: copy("Open installer scorecard", "Открыть показатели монтажников", "לפתוח את מדדי המתקינים"),
       onClick: () => scrollToReport("reports-installers-kpi"),
-      tone: installerMissingRates > 0 ? "orange" : "green",
+      tone: !installersKpiKnown ? "orange" : installerMissingRates > 0 ? "orange" : "green",
       variant: "line-up",
     },
   ];
+  const minutes = (value: number) => copy(`${value} min`, `${value} мин`, `${value} דק׳`);
+  const live = copy("live", "онлайн", "חי");
   const reportsLibraryGroups: ReportsLibraryGroup[] = [
     {
-      title: "Financial control",
-      subtitle: "revenue, payroll, margin",
-      count: 6,
+      title: copy("Financial control", "Финансы", "בקרה כספית"),
+      subtitle: copy("revenue, payroll, margin", "выручка, начисления, маржа", "הכנסות, שכר, רווח"),
       icon: ReceiptText,
       tone: "green",
       rows: [
-        {
-          icon: "PF",
-          title: "Project commercial plan/fact",
-          subtitle: "planned vs actual revenue and payroll",
-          badge: "live",
-          meta: "5m",
-          onClick: () => scrollToReport("reports-project-plan-fact"),
-        },
-        {
-          icon: "PL",
-          title: "Payroll and earnings ledger",
-          subtitle: "installer payouts and project filters",
-          badge: "pinned",
-          meta: "5m",
-          onClick: () => router.push("/earnings-ledger"),
-        },
-        {
-          icon: "ML",
-          title: "Leakage and add-on impact",
-          subtitle: "missing plans, urgency uplift, delayed profit",
-          badge: "new",
-          meta: "30m",
-          onClick: () => scrollToReport("reports-issues-addons-impact"),
-        },
+        { icon: "PF", title: copy("Project commercial plan/fact", "План/факт по объектам", "תכנון מול ביצוע בפרויקטים"),
+          subtitle: copy("planned vs actual revenue and payroll", "план и факт выручки и начислений", "הכנסות ושכר מתוכננים מול בפועל"),
+          badge: "live", badgeText: live, meta: minutes(5), onClick: () => scrollToReport("reports-project-plan-fact") },
+        { icon: "PL", title: copy("Payroll and earnings ledger", "Реестр начислений", "יומן תשלומים"),
+          subtitle: copy("installer payouts and project filters", "выплаты монтажникам с фильтрами", "תשלומים למתקינים לפי פרויקט"),
+          meta: minutes(5), onClick: () => router.push("/earnings-ledger") },
+        { icon: "ML", title: copy("Leakage and add-on impact", "Потери и влияние допработ", "דליפות והשפעת תוספות"),
+          subtitle: copy("missing plans, urgency uplift, delayed profit", "нет плана, срочность, отложенная прибыль", "חסר תכנון, דחיפות, רווח מעוכב"),
+          meta: minutes(30), onClick: () => scrollToReport("reports-issues-addons-impact") },
       ],
     },
     {
-      title: "Operational control",
-      subtitle: "imports, outbox, SLA, issues",
-      count: 7,
+      title: copy("Operational control", "Операции", "בקרה תפעולית"),
+      subtitle: copy("imports, outbox, SLA, issues", "импорт, отправка, сроки, проблемы", "ייבוא, שליחה, SLA, תקלות"),
       icon: Wrench,
       tone: "orange",
       rows: [
-        {
-          icon: "OC",
-          title: "Operations command snapshot",
-          subtitle: "failed imports, delivery risk, unread alerts",
-          badge: "live",
-          meta: "live",
-          onClick: () => scrollToReport("reports-operations-center"),
-        },
-        {
-          icon: "SLA",
-          title: "SLA and playbook health",
-          subtitle: "recovery metrics and action playbooks",
-          meta: "30m",
-          onClick: () => scrollToReport("reports-operations-sla"),
-        },
-        {
-          icon: "DL",
-          title: "Delivery and outbox failures",
-          subtitle: "failed communication, retry trail, webhook scope",
-          meta: "live",
-          onClick: () => scrollToReport("reports-delivery-risk"),
-        },
+        { icon: "OC", title: copy("Operations command snapshot", "Сводка операций", "תמונת מצב תפעולית"),
+          subtitle: copy("failed imports, delivery risk, unread alerts", "сбои импорта, риск доставки, непрочитанные", "ייבוא שנכשל, סיכון משלוח, התראות"),
+          badge: "live", badgeText: live, meta: live, onClick: () => scrollToReport("reports-operations-center") },
+        { icon: "SLA", title: copy("SLA and playbook health", "Сроки и сценарии восстановления", "SLA ותרחישי שחזור"),
+          subtitle: copy("recovery metrics and action playbooks", "метрики восстановления и действия", "מדדי שחזור ופעולות"),
+          meta: minutes(30), onClick: () => scrollToReport("reports-operations-sla") },
+        { icon: "DL", title: copy("Delivery and outbox failures", "Сбои доставки и отправки", "כשלי משלוח ושליחה"),
+          subtitle: copy("failed communication, retry trail, webhook scope", "неотправленные сообщения и повторы", "הודעות שנכשלו וניסיונות חוזרים"),
+          meta: live, onClick: () => scrollToReport("reports-delivery-risk") },
       ],
     },
     {
-      title: "Installers",
-      subtitle: "performance, workload, cross-view",
-      count: 6,
+      title: copy("Installers", "Монтажники", "מתקינים"),
+      subtitle: copy("performance, workload, cross-view", "выполнение, загрузка, сводки", "ביצועים, עומס, הצלבות"),
       icon: Users,
       tone: "blue",
       rows: [
-        {
-          icon: "KPI",
-          title: "Installer scorecard",
-          subtitle: "doors, earnings, missing rates, issues",
-          badge: "live",
-          meta: "5m",
-          onClick: () => scrollToReport("reports-installers-kpi"),
-        },
-        {
-          icon: "XP",
-          title: "Installer/project profitability",
-          subtitle: "who worked where and margin by combination",
-          meta: "1h",
-          onClick: () => scrollToReport("reports-installer-cross-view"),
-        },
-        {
-          icon: "ON",
-          title: "Order number progress",
-          subtitle: "door completion and profit by order number",
-          meta: "30m",
-          onClick: () => scrollToReport("reports-order-numbers-kpi"),
-        },
+        { icon: "KPI", title: copy("Installer scorecard", "Показатели монтажников", "מדדי מתקינים"),
+          subtitle: copy("doors, earnings, missing rates, issues", "двери, начисления, нет ставок, проблемы", "דלתות, תשלומים, תעריפים חסרים, תקלות"),
+          badge: "live", badgeText: live, meta: minutes(5), onClick: () => scrollToReport("reports-installers-kpi") },
+        { icon: "XP", title: copy("Installer/project profitability", "Прибыльность монтажник/объект", "רווחיות מתקין/פרויקט"),
+          subtitle: copy("who worked where and margin by combination", "кто где работал и маржа по паре", "מי עבד היכן והרווח לכל צירוף"),
+          meta: minutes(60), onClick: () => scrollToReport("reports-installer-cross-view") },
+        { icon: "ON", title: copy("Order number progress", "Ход по номерам заказов", "התקדמות לפי מספר הזמנה"),
+          subtitle: copy("door completion and profit by order number", "готовность дверей и прибыль по заказу", "השלמת דלתות ורווח לפי הזמנה"),
+          meta: minutes(30), onClick: () => scrollToReport("reports-order-numbers-kpi") },
       ],
     },
     {
-      title: "System and audit",
-      subtitle: "audit, integrations, sync",
-      count: 4,
+      title: copy("System and audit", "Система и аудит", "מערכת וביקורת"),
+      subtitle: copy("audit, integrations, sync", "аудит, интеграции, синхронизация", "ביקורת, אינטגרציות, סנכרון"),
       icon: ShieldAlert,
       tone: "neutral",
       rows: [
-        {
-          icon: "AU",
-          title: "Catalog audit export",
-          subtitle: "catalog, sync-state and admin changes",
-          meta: "5m",
-          onClick: () => scrollToReport("reports-audit-catalogs"),
-        },
-        {
-          icon: "IS",
-          title: "Issue audit timeline",
-          subtitle: "problem lifecycle and operator activity",
-          meta: "5m",
-          onClick: () => scrollToReport("reports-issue-audit"),
-        },
-        {
-          icon: "WH",
-          title: "Webhook and delivery trail",
-          subtitle: "provider events and retry audit",
-          badge: "live",
-          meta: "live",
-          onClick: () => scrollToReport("reports-delivery-scope"),
-        },
+        { icon: "AU", title: copy("Catalog audit export", "Аудит справочников", "ביקורת קטלוגים"),
+          subtitle: copy("catalog, sync-state and admin changes", "изменения справочников и настроек", "שינויי קטלוג והגדרות"),
+          meta: minutes(5), onClick: () => scrollToReport("reports-audit-catalogs") },
+        { icon: "IS", title: copy("Issue audit timeline", "История проблем", "ציר זמן של תקלות"),
+          subtitle: copy("problem lifecycle and operator activity", "жизненный цикл проблем и действия офиса", "מחזור חיי תקלה ופעולות המשרד"),
+          meta: minutes(5), onClick: () => scrollToReport("reports-issue-audit") },
+        { icon: "WH", title: copy("Webhook and delivery trail", "След доставки сообщений", "מעקב משלוח הודעות"),
+          subtitle: copy("provider events and retry audit", "события провайдера и повторы", "אירועי ספק וניסיונות חוזרים"),
+          badge: "live", badgeText: live, meta: live, onClick: () => scrollToReport("reports-delivery-scope") },
       ],
     },
   ];
   const reportsLibraryCount = reportsLibraryGroups.reduce(
-    (sum, group) => sum + group.count,
+    (sum, group) => sum + group.rows.length,
     0,
   );
   const pinnedSavedViews = savedPresets.slice(0, 4);
@@ -1515,7 +1466,7 @@ export default function ReportsPage() {
                   <b className="font-medium text-text">
                     {reportsLibraryCount}
                   </b>{" "}
-                  {copy("report signals ·", "сигналы отчета ·", "אותות דיווח ·")}{" "}
+                  {pluralNoun(locale, reportsLibraryCount, { en: ["report ·", "reports ·"], ru: ["отчёт ·", "отчёта ·", "отчётов ·"], he: ["דוח ·", "דוחות ·"] })}{" "}
                   <b className="font-medium text-text">
                     {savedPresets.length}
                   </b>{" "}
@@ -1599,7 +1550,7 @@ export default function ReportsPage() {
                     {copy("Attention this week", "Внимание на этой неделе", "שימו לב השבוע")}
                   </div>
                   <div className="rounded-full bg-surface px-2 py-0.5 text-[10.5px] text-text-secondary">
-                    {copy("live reports", "прямые репортажи", "דיווחים חיים")}
+                    {copy("live reports", "отчёты онлайн", "דוחות חיים")}
                   </div>
                 </div>
                 <button
@@ -1625,11 +1576,11 @@ export default function ReportsPage() {
                     {copy("Report library", "Библиотека отчетов", "ספריית דוחות")}
                   </div>
                   <div className="rounded-full bg-surface px-2 py-0.5 text-[10.5px] text-text-secondary">
-                    {reportsLibraryCount} {copy("mapped", "сопоставлено", "ממופה")}
+                    {reportsLibraryCount}
                   </div>
                 </div>
                 <div className="text-[11.5px] font-medium text-text-secondary">
-                  {copy("API-first, no fake reports", "API-прежде всего, никаких поддельных отчетов", "תחילה API, ללא דוחות מזויפים")}
+                  {copy("Every figure is computed from live data", "Все цифры считаются по текущим данным", "כל נתון מחושב מהנתונים העדכניים")}
                 </div>
               </div>
               <div className="grid gap-3 xl:grid-cols-2">
@@ -2178,7 +2129,7 @@ export default function ReportsPage() {
                         ) : (
                           <AlertTriangle className="w-3.5 h-3.5" />
                         )}
-                        {item.level}
+                        {statusLabel(item.level, locale)}
                       </span>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
@@ -2232,7 +2183,7 @@ export default function ReportsPage() {
                         ) : (
                           <AlertTriangle className="w-3.5 h-3.5" />
                         )}
-                        {item.level}
+                        {statusLabel(item.level, locale)}
                       </span>
                     </div>
                     <div className="font-medium text-text capitalize">

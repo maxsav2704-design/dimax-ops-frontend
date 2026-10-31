@@ -2,6 +2,7 @@
 
 import { useCopy, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { pluralNoun } from "@/lib/plural";
 import { Star } from "lucide-react";
 import { reportsDashboardToneClasses } from "./shared";
 import type { ReportsDashboardTone, ReportsInsight, ReportsLibraryGroup } from "./types";
@@ -62,7 +63,7 @@ export function ReportsLibraryCard({ group, locale }: { group: ReportsLibraryGro
             {group.title}
           </div>
           <div className="truncate text-11 text-text-secondary">
-            {group.count} {copy("reports ·", "отчётов ·", "דוחות ·")} {group.subtitle}
+            {group.rows.length} {pluralNoun(locale, group.rows.length, { en: ["report ·", "reports ·"], ru: ["отчёт ·", "отчёта ·", "отчётов ·"], he: ["דוח ·", "דוחות ·"] })} {group.subtitle}
           </div>
         </div>
       </div>
@@ -89,12 +90,10 @@ export function ReportsLibraryCard({ group, locale }: { group: ReportsLibraryGro
               className={cn(
                 "rounded-full px-2 py-0.5 text-11 font-medium",
                 row.badge === "live" && "bg-status-ok-bg text-status-ok-fg",
-                row.badge === "new" && "bg-blue-50 text-link",
-                row.badge === "pinned" && "bg-accent/20 text-text",
                 !row.badge && "bg-transparent text-transparent",
               )}
             >
-              {row.badge === "pinned" ? "pin" : row.badge || "-"}
+              {row.badge ? row.badgeText ?? row.badge : "-"}
             </span>
             <span className="text-end text-11 font-medium text-text-tertiary">
               {row.meta}

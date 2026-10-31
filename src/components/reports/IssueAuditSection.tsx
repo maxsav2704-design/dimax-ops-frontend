@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 import { AUDIT_PREVIEW_LIMIT, ISSUE_AUDIT_ACTION_OPTIONS, changedFieldKeys, formatDateTime, prettyJson, reportsPanelClass, useReportsText } from "./shared";
+import { AUDIT_CODE_LABELS } from "./shared";
 import type { AuditCatalogChangesResponse } from "./types";
 
 type IssueAuditSectionProps = {
@@ -58,7 +59,7 @@ export function IssueAuditSection({ query, actionFilter, onActionFilterChange, d
           </option>
           {ISSUE_AUDIT_ACTION_OPTIONS.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {AUDIT_CODE_LABELS[option] ? copy(...AUDIT_CODE_LABELS[option]) : option}
             </option>
           ))}
         </select>

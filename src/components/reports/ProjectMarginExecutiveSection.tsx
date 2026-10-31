@@ -5,6 +5,7 @@ import { ProjectMarginBasis, ProjectMarginNotice } from "@/components/prices/Pro
 import { projectMarginDataRisk } from "@/lib/project-margin";
 
 import { formatAmount, formatPercent, reportsPanelClass, useReportsText } from "./shared";
+import { statusLabel } from "@/lib/status-labels";
 import type { ProjectsMarginResponse } from "./types";
 
 type ProjectMarginExecutiveSectionProps = {
@@ -14,7 +15,7 @@ type ProjectMarginExecutiveSectionProps = {
 
 // Reports → "Project margin executive": top-margin and low-margin / risk project tables. Markup moved verbatim from ReportsPage (section split).
 export function ProjectMarginExecutiveSection({ topQuery, riskQuery }: ProjectMarginExecutiveSectionProps) {
-  const { t, tt, copy, readError } = useReportsText();
+  const { t, tt, copy, readError, locale } = useReportsText();
   const topProjects = topQuery.data?.items || [];
   const riskProjects = riskQuery.data?.items || [];
 
@@ -71,7 +72,7 @@ export function ProjectMarginExecutiveSection({ topQuery, riskQuery }: ProjectMa
                       <ProjectMarginNotice data={item} />
                       <div className="mt-1 text-[11px] leading-4 text-text-secondary">
                         {tt("reports.statusIssues")
-                          .replace("{status}", item.project_status)
+                          .replace("{status}", statusLabel(item.project_status, locale, "project"))
                           .replace("{issues}", String(item.open_issues))}
                       </div>
                       <div className="mt-3 grid grid-cols-3 gap-2">
@@ -144,7 +145,7 @@ export function ProjectMarginExecutiveSection({ topQuery, riskQuery }: ProjectMa
                           <ProjectMarginNotice data={item} />
                           <div className="text-[11px] text-text-secondary">
                             {tt("reports.statusIssues")
-                              .replace("{status}", item.project_status)
+                              .replace("{status}", statusLabel(item.project_status, locale, "project"))
                               .replace(
                                 "{issues}",
                                 String(item.open_issues),

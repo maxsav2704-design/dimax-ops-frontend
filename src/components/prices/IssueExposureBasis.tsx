@@ -31,7 +31,7 @@ export function IssueExposureBasis({ data, reasonsShown, addonsShown }: {
   const copy = useCopy();
   if (!data?.pricing_mode) return null;
   return <div role="status" className="min-w-0 space-y-1 px-3 py-2 text-xs text-text-secondary">
-    <p>{copy("Risk across unique doors", "Риск по уникальным дверям", "סיכון לפי דלתות ייחודיות")}: {data.exposure_profit_total == null ? "-" : Number(data.exposure_profit_total).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} NIS.
+    <p>{copy("Risk across unique doors", "Риск по уникальным дверям", "סיכון לפי דלתות ייחודיות")}: {data.exposure_profit_total == null ? "-" : Number(data.exposure_profit_total).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ILS.
       {" "}{copy("Doors", "Двери", "דלתות")}: {data.exposure_doors ?? "-"}.</p>
     <p>{copy("Forecast exposure, not earned wages or an invoice. Issue and delay figures overlap; the total counts each door once.",
       "Это оценка риска, не начисленный заработок и не счёт клиенту. Проблемы и задержки пересекаются; в общем итоге каждая дверь учтена один раз.",

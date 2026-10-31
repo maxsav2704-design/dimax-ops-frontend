@@ -3,6 +3,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 
 import { ISSUES_ANALYTICS_DAYS, formatCount, formatDateTime, formatPercent, reportsPanelClass, useReportsText } from "./shared";
+import { statusLabel } from "@/lib/status-labels";
 import type { IssuesAnalyticsResponse } from "./types";
 
 type IssuesAnalyticsSectionProps = {
@@ -11,7 +12,7 @@ type IssuesAnalyticsSectionProps = {
 
 // Reports → "Issues analytics": issue counts, reasons and ageing for the last window. Markup moved verbatim from ReportsPage (section split).
 export function IssuesAnalyticsSection({ query }: IssuesAnalyticsSectionProps) {
-  const { tt, copy, readError } = useReportsText();
+  const { tt, copy, readError, locale } = useReportsText();
   const analytics = query.data;
 
   return (
@@ -96,7 +97,7 @@ export function IssuesAnalyticsSection({ query }: IssuesAnalyticsSectionProps) {
             </div>
             <div className="rounded-lg border border-border bg-surface-subtle px-3 py-3">
               <div className="text-[11px] uppercase text-text-secondary">
-                {copy("P1 Open", "P1 Открыть", "P1 פתוח")}
+                {copy("P1 open", "P1 открыто", "P1 פתוחות")}
               </div>
               <div className="mt-1 text-lg font-semibold text-status-problem-fg">
                 {analytics?.summary.p1_open_issues ?? 0}
@@ -117,7 +118,7 @@ export function IssuesAnalyticsSection({ query }: IssuesAnalyticsSectionProps) {
                     key={workflow}
                     className="flex items-center justify-between"
                   >
-                    <span className="text-text-secondary">{workflow}</span>
+                    <span className="text-text-secondary">{statusLabel(workflow, locale, "issue")}</span>
                     <span className="font-medium text-text">
                       {count}
                     </span>

@@ -3,6 +3,7 @@
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 import { AUDIT_ACTION_OPTIONS, AUDIT_ENTITY_OPTIONS, AUDIT_PREVIEW_LIMIT, formatDateTime, reportsPanelClass, useReportsText } from "./shared";
+import { AUDIT_CODE_LABELS } from "./shared";
 import type { AuditCatalogChangesResponse } from "./types";
 
 type AuditCatalogsSectionProps = {
@@ -56,7 +57,7 @@ export function AuditCatalogsSection({ query, entityType, onEntityTypeChange, ac
           </option>
           {AUDIT_ENTITY_OPTIONS.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {AUDIT_CODE_LABELS[option] ? copy(...AUDIT_CODE_LABELS[option]) : option}
             </option>
           ))}
         </select>
@@ -74,7 +75,7 @@ export function AuditCatalogsSection({ query, entityType, onEntityTypeChange, ac
           </option>
           {AUDIT_ACTION_OPTIONS.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {AUDIT_CODE_LABELS[option] ? copy(...AUDIT_CODE_LABELS[option]) : option}
             </option>
           ))}
         </select>

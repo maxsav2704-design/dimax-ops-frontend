@@ -25,7 +25,7 @@ type InstallersKpiTableSectionProps = {
 
 // Reports → installers KPI table (section id reports-order-numbers-kpi): paged, sortable scorecard with CSV export. Markup moved verbatim from ReportsPage (section split).
 export function InstallersKpiTableSection({ query, items, sortBy, sortDir, onSortByChange, onSortDirChange, onOffsetChange, canPrev, canNext, exportMutation, canExportFinancialReports, ratesScopeHint }: InstallersKpiTableSectionProps) {
-  const { t, tt, copy, readError } = useReportsText();
+  const { t, tt, copy, readError, optionLabel } = useReportsText();
 
   return (
     <div
@@ -53,7 +53,7 @@ export function InstallersKpiTableSection({ query, items, sortBy, sortDir, onSor
           >
             {INSTALLERS_SORT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {optionLabel(option.label)}
               </option>
             ))}
           </select>
@@ -68,7 +68,7 @@ export function InstallersKpiTableSection({ query, items, sortBy, sortDir, onSor
           >
             {SORT_DIR_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {optionLabel(option.label)}
               </option>
             ))}
           </select>

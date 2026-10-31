@@ -116,7 +116,7 @@ export function OrderNumbersSection({ kpiQuery, projectsQuery, searchText, onSea
           >
             {SORT_DIR_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {optionLabel(option.label)}
               </option>
             ))}
           </select>

@@ -15,9 +15,45 @@ type OperationsSlaSectionProps = {
 };
 
 // Reports → "Operations SLA": SLA metrics, playbooks and the SLA history trend. Markup moved verbatim from ReportsPage (section split).
+type Triple = readonly [en: string, ru: string, he: string];
+
+// The server sends stable codes with English titles; the office reads them in its own language.
+const METRIC_TITLES: Record<string, Triple> = {
+  imports_failure_rate_24h: ["Failed imports (24 h)", "Неудачные импорты (24 ч)", "ייבוא שנכשל (24 ש׳)"],
+  outbox_failed_rate: ["Failed outgoing messages", "Неотправленные сообщения", "הודעות יוצאות שנכשלו"],
+  outbox_pending_overdue_15m: ["Messages waiting over 15 min", "Сообщения ждут больше 15 мин", "הודעות ממתינות מעל 15 דק׳"],
+  limit_alerts_danger_24h: ["Critical limit alerts (24 h)", "Критичные предупреждения лимитов (24 ч)", "התראות מגבלה קריטיות (24 ש׳)"],
+  sync_danger_installers: ["Installers with sync problems", "Монтажники с проблемами синхронизации", "מתקינים עם בעיות סנכרון"],
+};
+const PLAYBOOKS: Record<string, { title: Triple; description: Triple }> = {
+  PLAYBOOK_IMPORTS_RETRY_FAILED: {
+    title: ["Retry failed imports", "Повторить неудачные импорты", "לנסות שוב ייבוא שנכשל"],
+    description: ["Open Objects with the failed runs selected and retry only those.", "Открыть объекты с выбранными неудачными запусками и повторить только их.", "לפתוח פרויקטים עם הריצות שנכשלו ולנסות שוב רק אותן."],
+  },
+  PLAYBOOK_OUTBOX_TRIAGE: {
+    title: ["Sort out failed messages", "Разобрать неотправленные сообщения", "לטפל בהודעות שנכשלו"],
+    description: ["Review the failed queue and retry in a controlled way.", "Проверить очередь ошибок и повторить отправку под контролем.", "לבדוק את תור הכשלים ולשלוח שוב בצורה מבוקרת."],
+  },
+  PLAYBOOK_LIMIT_CAPACITY: {
+    title: ["Relieve plan limits", "Снять давление лимитов", "להקל על מגבלות התוכנית"],
+    description: ["Review plan limits for users, objects and doors.", "Проверить лимиты тарифа по пользователям, объектам и дверям.", "לבדוק מגבלות למשתמשים, פרויקטים ודלתות."],
+  },
+  PLAYBOOK_SYNC_RECOVERY: {
+    title: ["Recover installers with sync problems", "Восстановить синхронизацию монтажников", "לשחזר סנכרון מתקינים"],
+    description: ["Check sync health and help installers who are far behind or long offline.", "Проверить синхронизацию и помочь отстающим или долго офлайн.", "לבדוק סנכרון ולעזור למתקינים שמפגרים או לא מחוברים זמן רב."],
+  },
+};
+const STATUS: Record<string, Triple> = {
+  OK: ["OK", "Норма", "תקין"], WARN: ["At risk", "Риск", "אזהרה"], DANGER: ["Danger", "Опасно", "סכנה"],
+  INFO: ["Info", "Сведения", "מידע"], LOW: ["Low", "Низкий", "נמוך"], MEDIUM: ["Medium", "Средний", "בינוני"], HIGH: ["High", "Высокий", "גבוה"],
+};
+
 export function OperationsSlaSection({ query, historyQuery, historyDays, onHistoryDaysChange }: OperationsSlaSectionProps) {
   const router = useRouter();
   const { tt, copy, readError } = useReportsText();
+  const say = (triple: Triple | undefined, fallback: string) => (triple ? copy(...triple) : fallback);
+  const statusText = (value: string | null | undefined) => (value ? say(STATUS[value], value) : "");
+  const unitText = (unit: string) => (unit === "pct" ? "%" : unit === "count" ? "" : unit);
   const sla = query.data;
   const history = historyQuery.data;
   const slaMetrics = sla?.metrics || [];
@@ -47,7 +83,7 @@ export function OperationsSlaSection({ query, historyQuery, historyDays, onHisto
               "text-text-secondary bg-surface-subtle border-border",
           )}
         >
-          {sla?.overall_status || tt("reports.notAvailableShort")}
+          {statusText(sla?.overall_status) || tt("reports.notAvailableShort")}
         </span>
       </div>
 
@@ -77,13 +113,13 @@ export function OperationsSlaSection({ query, historyQuery, historyDays, onHisto
                 )}
               >
                 <div className="text-[11px] uppercase text-text-secondary">
-                  {metric.title}
+                  {say(METRIC_TITLES[metric.code], metric.title)}
                 </div>
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <div className="text-lg font-semibold text-text">
                     {metric.current}
                     <span className="ms-1 text-[11px] font-normal text-text-secondary">
-                      {metric.unit}
+                      {unitText(metric.unit)}
                     </span>
                   </div>
                   <span
@@ -93,7 +129,7 @@ export function OperationsSlaSection({ query, historyQuery, historyDays, onHisto
                         "text-text-secondary bg-surface-subtle border-border",
                     )}
                   >
-                    {metric.status}
+                    {statusText(metric.status)}
                   </span>
                 </div>
                 <div className="mt-1 text-[11px] text-text-secondary">
@@ -122,7 +158,7 @@ export function OperationsSlaSection({ query, historyQuery, historyDays, onHisto
               >
                 <div>
                   <div className="font-medium text-text">
-                    {playbook.title}
+                    {say(PLAYBOOKS[playbook.code]?.title, playbook.title)}
                     <span
                       className={cn(
                         "ms-2 inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold",
@@ -130,11 +166,11 @@ export function OperationsSlaSection({ query, historyQuery, historyDays, onHisto
                           "text-text-secondary bg-surface-subtle border-border",
                       )}
                     >
-                      {playbook.severity}
+                      {statusText(playbook.severity)}
                     </span>
                   </div>
                   <div className="text-text-secondary">
-                    {playbook.description}
+                    {say(PLAYBOOKS[playbook.code]?.description, playbook.description)}
                   </div>
                 </div>
                 <button
@@ -192,18 +228,18 @@ export function OperationsSlaSection({ query, historyQuery, historyDays, onHisto
                       {copy("Current", "Текущее", "נוכחי")}
                     </div>
                     <div className="font-semibold">
-                      {slaHistorySummary?.current_status ||
+                      {statusText(slaHistorySummary?.current_status) ||
                         tt("reports.notAvailableShort")}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
                     <div className="text-text-secondary">
-                      {copy("Status Days", "Дней в статусе", "ימים בסטטוס")}
+                      {copy("Days by status", "Дней по статусам", "ימים לפי סטטוס")}
                     </div>
                     <div className="font-semibold">
-                      OK {slaHistorySummary?.ok_days || 0} {copy("| WARN", "| ПРЕДУПРЕЖДАТЬ", "| הזהר")}{" "}
-                      {slaHistorySummary?.warn_days || 0} {copy("| DANGER", "| ОПАСНОСТЬ", "| סכנה")}{" "}
-                      {slaHistorySummary?.danger_days || 0}
+                      {statusText("OK")} {slaHistorySummary?.ok_days ?? "-"} · {statusText("WARN")}{" "}
+                      {slaHistorySummary?.warn_days ?? "-"} · {statusText("DANGER")}{" "}
+                      {slaHistorySummary?.danger_days ?? "-"}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
@@ -239,7 +275,7 @@ export function OperationsSlaSection({ query, historyQuery, historyDays, onHisto
                             "text-text-secondary bg-surface-subtle border-border",
                         )}
                       >
-                        {point.overall_status}
+                        {statusText(point.overall_status)}
                       </span>
                       <div className="h-2 rounded bg-surface-sunken overflow-hidden">
                         <div
