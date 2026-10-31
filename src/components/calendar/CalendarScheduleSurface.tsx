@@ -417,7 +417,7 @@ export function CalendarScheduleSurface(props: Props) {
           {narrow ? (
             event.isDoubleBooked ? (
               <span data-testid="calendar-double-booked" aria-label={copy("Crew double-booked", "Бригада занята дважды", "הצוות משובץ פעמיים")}
-                className="rounded-full bg-status-warning-bg px-1 text-[9px] font-bold leading-4 text-status-warning-fg">×2</span>
+                className="rounded-full bg-status-warning-bg px-1 text-11 font-bold leading-4 text-status-warning-fg">×2</span>
             ) : null
           ) : (
             <span className="truncate text-[9px] font-semibold uppercase opacity-65">
@@ -427,7 +427,7 @@ export function CalendarScheduleSurface(props: Props) {
         </div>
         <div className={cn("text-[12px] font-semibold leading-4", narrow ? "line-clamp-4 break-words [overflow-wrap:anywhere]" : "truncate")}>{event.title}</div>
         {event.isDoubleBooked && !narrow ? (
-          <div data-testid="calendar-double-booked" className="mt-0.5 truncate text-[10px] font-semibold leading-4 text-status-warning-fg">
+          <div data-testid="calendar-double-booked" className="mt-0.5 truncate text-11 font-semibold leading-4 text-status-warning-fg">
             {copy("Crew double-booked", "Бригада занята дважды", "הצוות משובץ פעמיים")}
           </div>
         ) : null}

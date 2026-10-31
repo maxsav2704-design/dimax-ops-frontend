@@ -11,7 +11,7 @@ const { api, auth, language, callbacks, search } = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ useSearchParams: () => search.params, useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/lib/api", () => ({ apiFetch: api }));
 vi.mock("@/hooks/use-auth-session", () => ({ useAuthSession: auth }));
-vi.mock("@/lib/auth-session", () => ({ onAuthChanged: (callback: () => void) => {
+vi.mock("@/lib/auth-session", () => ({ onSessionIdentityChanged: (callback: () => void) => {
   callbacks.add(callback); return () => callbacks.delete(callback);
 } }));
 vi.mock("@/lib/i18n", () => ({

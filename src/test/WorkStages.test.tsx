@@ -42,6 +42,37 @@ describe("work stages admin", () => {
     await waitFor(() => expect(api).toHaveBeenCalledWith(expect.stringContaining("/work-plan"), expect.objectContaining({ method: "POST", body: JSON.stringify({ plan_id: plan.id }) })));
   });
 
+  it("lets the office confirm a doubtful stage time with what it checked, never with a price", async () => {
+    const review = { ...stagesView, stages: [{ ...stagesView.stages[0], earning_status: "TIME_REVIEW" }, stagesView.stages[1]] };
+    let current = review;
+    api.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.endsWith("/stages") && !init?.method) return current;
+      if (url.endsWith("/FRAME/confirm-time")) {
+        current = { ...stagesView, stages: [{ ...stagesView.stages[0], earning_status: "RECORDED" }, stagesView.stages[1]] };
+        return { id: doorId, status: "NOT_INSTALLED", version: 1, applied: true, required_total: 2, required_done: 1, door_installed: false, earning_status: "RECORDED" };
+      }
+      throw new Error("unexpected " + url);
+    });
+    mount(<DoorStagesCard doorId={doorId} doorTypeId={doorTypeId} canPlan installers={installers} />);
+    const rows = await screen.findAllByTestId("door-stage-row");
+    expect(within(rows[0]).getByTestId("stage-earning-status")).toHaveTextContent("cannot be confirmed");
+    fireEvent.click(within(rows[0]).getByRole("button", { name: "Confirm the time" }));
+    const submit = within(rows[0]).getByRole("button", { name: "Confirm and value" });
+    expect(submit).toBeDisabled();
+    fireEvent.change(within(rows[0]).getByLabelText("What did you check? FRAME"), { target: { value: "Site log" } });
+    fireEvent.click(submit);
+    await waitFor(() => expect(api).toHaveBeenCalledWith(expect.stringContaining("/FRAME/confirm-time"),
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ reason: "Site log" }) })));
+    expect(await screen.findByText("Earning recorded")).toBeInTheDocument();
+  });
+
+  it("does not offer the time check to someone who cannot plan stages", async () => {
+    api.mockResolvedValue({ ...stagesView, stages: [{ ...stagesView.stages[0], earning_status: "TIME_REVIEW" }, stagesView.stages[1]] });
+    mount(<DoorStagesCard doorId={doorId} doorTypeId={doorTypeId} canPlan={false} installers={installers} />);
+    await screen.findAllByTestId("door-stage-row");
+    expect(screen.queryByRole("button", { name: "Confirm the time" })).toBeNull();
+  });
+
   it("shows done and pending stages, assigns an installer and records a stage without any price", async () => {
     api.mockImplementation(async (url: string, init?: RequestInit) => {
       if (url.endsWith("/stages") && !init?.method) return stagesView;

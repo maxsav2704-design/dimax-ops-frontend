@@ -1,10 +1,15 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { StrictMode, type ReactNode } from "react";
 import PriceListsPage from "@/views/PriceListsPage";
 import { FactoryContactPanel } from "@/components/prices/FactoryContactPanel";
 import { PRICE_API, type FactoryContact } from "@/lib/factory-prices";
+import { clearStoredSession, persistAccessToken } from "@/lib/auth-session";
+
+// A signed access token for a person; the page drops its financial workspace only when the person changes.
+const jwt = (sub: string, n = 1) => `h.${btoa(JSON.stringify({ sub, n })).replace(/=+$/, "")}.s`;
+const signInAs = (sub: string, n = 1) => act(() => persistAccessToken(jwt(sub, n)));
 
 const { api, auth } = vi.hoisted(() => ({ api: vi.fn(), auth: vi.fn() }));
 vi.mock("@/lib/api", () => ({ apiFetch: api }));
@@ -53,6 +58,7 @@ async function inviteForm() {
 
 describe("factory price management", () => {
   beforeEach(() => {
+    clearStoredSession(); persistAccessToken(jwt("owner-1"));
     auth.mockReturnValue({ role: "ADMIN", admin_scope: "OWNER", can_view_rates: true });
     api.mockReset(); api.mockImplementation(async (path: string) => reads(path));
   });
@@ -233,6 +239,22 @@ describe("factory price management", () => {
     expect(form.getByRole("button", { name: "Save draft" })).toBeDisabled();
     expect(api.mock.calls.filter(([path, init]) => path === PRICE_API && init?.method === "POST")).toHaveLength(1);
   });
+  it("keeps an unsaved new version open through a routine token refresh, not through another account", async () => {
+    persistAccessToken(jwt("owner-1", 1));
+    try {
+      mount(); await screen.findByText("Entrance");
+      await waitFor(() => expect(screen.getByRole("button", { name: "New version" })).toBeEnabled());
+      fireEvent.click(screen.getByRole("button", { name: "New version" }));
+      const form = within(screen.getByRole("dialog"));
+      fireEvent.change(form.getByLabelText("Change request / reason"), { target: { value: "Factory offer" } });
+      act(() => persistAccessToken(jwt("owner-1", 2)));
+      expect(within(screen.getByRole("dialog")).getByLabelText("Change request / reason")).toHaveValue("Factory offer");
+      act(() => persistAccessToken(jwt("owner-2", 3)));
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    } finally {
+      clearStoredSession();
+    }
+  });
   it("drops the financial workspace and any open link on a session change", async () => {
     const secret = `https://factory.example.test/price-approval#${"A".repeat(43)}`;
     api.mockImplementation(async (path: string, init?: RequestInit) => path.endsWith("/approvals") && init?.method === "POST" ?
@@ -241,7 +263,7 @@ describe("factory price management", () => {
     fireEvent.click(form.getByRole("button", { name: "Create link" }));
     await screen.findByText("Link created, not sent");
     auth.mockReturnValue({ role: "INSTALLER" });
-    fireEvent(window, new CustomEvent("dimax-auth-changed"));
+    signInAs("installer-1");
     expect(await screen.findByText("Price access is unavailable")).toBeInTheDocument();
     expect(screen.queryByLabelText("Personal confirmation link")).not.toBeInTheDocument();
     expect(screen.queryByText("Entrance")).not.toBeInTheDocument();
@@ -306,7 +328,7 @@ describe("factory price management", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(api.mock.calls.every(([, init]) => !init?.method)).toBe(true);
     auth.mockReturnValue({ role: "INSTALLER" });
-    fireEvent(window, new CustomEvent("dimax-auth-changed"));
+    signInAs("installer-1");
     await screen.findByText("Price access is unavailable");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.queryByText("No items for these filters")).not.toBeInTheDocument();

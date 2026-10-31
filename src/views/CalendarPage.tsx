@@ -946,7 +946,7 @@ export default function CalendarPage() {
             action={
               <button
                 type="button"
-                className="dmx-secondary-action h-8 text-[12px]"
+                className="dmx-secondary-action h-8 text-12"
                 onClick={() => {
                   void eventsQuery.refetch();
                   void installersQuery.refetch();
@@ -1132,7 +1132,7 @@ export default function CalendarPage() {
                   {selectedEvent.title}
                 </h2>
                 {(selectedEvent.overlapping_event_ids || []).length > 0 ? (
-                  <p data-testid="calendar-overlap-note" className="mt-1 text-[12px] font-medium text-status-warning-fg">
+                  <p data-testid="calendar-overlap-note" className="mt-1 text-12 font-medium text-status-warning-fg">
                     {copy(
                       `The crew is also booked for ${selectedEvent.overlapping_event_ids!.length} other event(s) at this time.`,
                       `Эта бригада в это же время назначена ещё на ${selectedEvent.overlapping_event_ids!.length} событие(я).`,

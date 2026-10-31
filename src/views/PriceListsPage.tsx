@@ -20,7 +20,7 @@ import { CompanyPriceStatus } from "@/components/prices/CompanyPriceStatus";
 import { apiFetch } from "@/lib/api";
 import { priceDetailSchema, pricePageSchema } from "@/lib/api-schemas";
 import { canAccessAdminModule, canRunPrivilegedAdminActions } from "@/lib/admin-access";
-import { onAuthChanged } from "@/lib/auth-session";
+import { onSessionIdentityChanged } from "@/lib/auth-session";
 import { useI18n } from "@/lib/i18n";
 import { formatLocaleDateTime, formatLocaleMoney } from "@/lib/formatting";
 import { cn } from "@/lib/utils";
@@ -36,7 +36,7 @@ function Badge({ status, t }: { status: "DRAFT" | "CONFIRMED" | "CANCELLED" | "R
 
 function Pager({ offset, total, onChange, t }: { offset: number; total: number; onChange: (value: number) => void; t: PriceCopy }) {
   return <div className="flex items-center justify-end gap-2 py-3 text-xs text-text-secondary">
-    <span>{total ? offset + 1 : 0}-{Math.min(offset + PRICE_PAGE_SIZE, total)} / {total}</span>
+    <span dir="ltr" className="tabular-nums">{total ? offset + 1 : 0}-{Math.min(offset + PRICE_PAGE_SIZE, total)} / {total}</span>
     <Button variant="outline" size="icon" title={t.previous} aria-label={t.previous} disabled={!offset} onClick={() => onChange(Math.max(0, offset - PRICE_PAGE_SIZE))}><ChevronLeft className="size-4 rtl:rotate-180" /></Button>
     <Button variant="outline" size="icon" title={t.next} aria-label={t.next} disabled={offset + PRICE_PAGE_SIZE >= total} onClick={() => onChange(offset + PRICE_PAGE_SIZE)}><ChevronRight className="size-4 rtl:rotate-180" /></Button>
   </div>;
@@ -173,7 +173,8 @@ export default function PriceListsPage() {
   const session = useAuthSession();
   const { locale } = useI18n();
   const [epoch, setEpoch] = useState(0);
-  useEffect(() => onAuthChanged(() => setEpoch((value) => value + 1)), []);
+  // A routine token refresh keeps open work; another person (or none) drops it.
+  useEffect(() => onSessionIdentityChanged(() => setEpoch((value) => value + 1)), []);
   return <DashboardLayout>{canAccessAdminModule(session, "price-lists") ?
     <PriceSession key={epoch} writable={canRunPrivilegedAdminActions(session)} owner={session?.admin_scope === "OWNER"} /> :
     <p role="status" className="p-6 text-sm">{priceCopy[locale].denied}</p>}

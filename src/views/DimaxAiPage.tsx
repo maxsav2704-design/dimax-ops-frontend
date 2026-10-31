@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
-import { onAuthChanged } from "@/lib/auth-session";
+import { onSessionIdentityChanged } from "@/lib/auth-session";
 import {
   AI_SURFACES, aiCopy, canUseAiSurface, parseAiContext, previewRows, previewValue, safeAiSourcePath, speechRecognitionFactory, PREVIEW_FIELD_LABEL, PROPOSAL_TOOL_LABEL, SPEECH_LANG,
   type AiContext, type AiConversation, type AiPage, type AiProposal, type AiReply, type AiStatus, type AiSurface, type AiTask, type AiTaskRequest,
@@ -562,7 +562,8 @@ export default function DimaxAiPage({ surface = "admin" }: { surface?: AiSurface
   const session = useAuthSession();
   const { locale } = useI18n();
   const [epoch, setEpoch] = useState(0);
-  useEffect(() => onAuthChanged(() => setEpoch((old) => old + 1)), []);
+  // A routine token refresh keeps open work; another person (or none) drops it.
+  useEffect(() => onSessionIdentityChanged(() => setEpoch((old) => old + 1)), []);
   const allowed = canUseAiSurface(session, surface);
   const Layout = surface === "installer" ? InstallerShell : DashboardLayout;
   return <Layout>{allowed ? <Workspace key={`${epoch}:${session?.role}:${session?.admin_scope}`} surface={surface} /> :

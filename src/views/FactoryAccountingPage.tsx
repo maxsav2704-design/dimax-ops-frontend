@@ -25,7 +25,7 @@ import { commercialCopy, type CommercialCopy } from "@/components/accounting/cop
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiFetch } from "@/lib/api";
 import { canAccessAdminModule } from "@/lib/admin-access";
-import { onAuthChanged } from "@/lib/auth-session";
+import { onSessionIdentityChanged } from "@/lib/auth-session";
 import { useI18n } from "@/lib/i18n";
 import { formatLocaleDateTime, formatLocaleMoney } from "@/lib/formatting";
 import { priceErrorStatus } from "@/lib/factory-prices";
@@ -221,7 +221,8 @@ export default function FactoryAccountingPage() {
   const session = useAuthSession();
   const { locale } = useI18n();
   const [epoch, setEpoch] = useState(0);
-  useEffect(() => onAuthChanged(() => setEpoch((value) => value + 1)), []);
+  // A routine token refresh keeps open work; another person (or none) drops it.
+  useEffect(() => onSessionIdentityChanged(() => setEpoch((value) => value + 1)), []);
   return <DashboardLayout>{canAccessAdminModule(session, "factory-accounting") ?
     <CommercialSession key={epoch} /> : <p role="status" className="p-6 text-sm">{commercialCopy[locale].denied}</p>}
   </DashboardLayout>;

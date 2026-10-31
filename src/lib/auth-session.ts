@@ -103,6 +103,40 @@ export function onAuthChanged(listener: () => void): () => void {
   };
 }
 
+function tokenSubject(token: string | null): string | null {
+  if (!token) {
+    return null;
+  }
+  try {
+    const part = token.split(".")[1] ?? "";
+    const base64 = part.replace(/-/g, "+").replace(/_/g, "/");
+    const claims = JSON.parse(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="))) as { sub?: unknown };
+    return typeof claims.sub === "string" && claims.sub ? claims.sub : token;
+  } catch {
+    return token;
+  }
+}
+
+/**
+ * Fires when the signed-in person changes: sign-out, a failed refresh, or another account in this tab.
+ * A routine access-token refresh (same person) does not fire, so open forms and dialogs survive it.
+ * Signing in after a sign-out does not fire again: the sign-out already dropped what was on screen.
+ */
+export function onSessionIdentityChanged(listener: () => void): () => void {
+  let current = tokenSubject(getAccessToken());
+  return onAuthChanged(() => {
+    const next = tokenSubject(getAccessToken());
+    if (next === current) {
+      return;
+    }
+    const previous = current;
+    current = next;
+    if (previous !== null) {
+      listener();
+    }
+  });
+}
+
 export function normalizeAuthSession(value: RawAuthSession | null | undefined): AuthSession | null {
   if (!value || (value.role !== "ADMIN" && value.role !== "INSTALLER")) {
     return null;

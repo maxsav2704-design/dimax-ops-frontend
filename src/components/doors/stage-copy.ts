@@ -12,6 +12,9 @@ const en = {
   cannotReplan: "Stages were already executed; the plan cannot change.", error: "Could not load. Try again.", load: "Loading",
   sameInstaller: "Same installer", history: "Assignment history is kept on the server.", earningHint: "Each stage is paid at the factory rate confirmed for the door type and stage at execution time.",
   RECORDED: "Earning recorded", NO_RATE: "No factory rate for this stage: fact kept, nothing accrued", PRICING_INACTIVE: "Factory prices were not in effect: fact kept, nothing accrued",
+  confirmTime: "Confirm the time", confirmTimeReason: "What did you check?", confirmTimeSubmit: "Confirm and value",
+  confirmTimeHint: "After checking (site log, client, photos), the stage is paid at the factory rate in effect at its recorded time, not today's rate.",
+  TIME_REVIEW: "The phone time of this stage cannot be confirmed (before the assignment or under another price version): fact kept, nothing accrued until the office checks it",
 };
 export const stageCopy: Record<"en" | "ru" | "he", Record<keyof typeof en, string>> = {
   en,
@@ -29,6 +32,9 @@ export const stageCopy: Record<"en" | "ru" | "he", Record<keyof typeof en, strin
     cannotReplan: "Этапы уже выполнялись; план изменить нельзя.", error: "Не удалось загрузить. Повторите попытку.", load: "Загрузка",
     sameInstaller: "Тот же монтажник", history: "История назначений хранится на сервере.", earningHint: "Каждый этап оплачивается по ставке завода, подтверждённой для типа двери и этапа на момент выполнения.",
     RECORDED: "Начисление записано", NO_RATE: "Нет ставки завода для этапа: факт сохранён, начисления нет", PRICING_INACTIVE: "Цены завода не действовали: факт сохранён, начисления нет",
+    confirmTime: "Подтвердить время", confirmTimeReason: "Что проверено?", confirmTimeSubmit: "Подтвердить и начислить",
+    confirmTimeHint: "После проверки (журнал объекта, клиент, фото) этап оплачивается по ставке завода, действовавшей на записанное время, а не по сегодняшней.",
+    TIME_REVIEW: "Время этапа с телефона не подтверждается (раньше назначения или при другой версии цен): факт сохранён, начисления нет до проверки офисом",
   },
   he: {
     catalog: "שלבי עבודה", catalogHint: "השלבים שבהם ניתן להתקין דלת. הקודים תואמים לקודי השלבים במחירון המסחרי. אין כאן מחירים.",
@@ -44,5 +50,8 @@ export const stageCopy: Record<"en" | "ru" | "he", Record<keyof typeof en, strin
     cannotReplan: "השלבים כבר בוצעו; לא ניתן לשנות את התוכנית.", error: "הטעינה נכשלה. יש לנסות שוב.", load: "טעינה",
     sameInstaller: "אותו מתקין", history: "היסטוריית השיוכים נשמרת בשרת.", earningHint: "כל שלב משולם לפי תעריף המפעל שאושר לסוג הדלת ולשלב במועד הביצוע.",
     RECORDED: "החיוב נרשם", NO_RATE: "אין תעריף מפעל לשלב זה: העובדה נשמרה, ללא חיוב", PRICING_INACTIVE: "מחירי המפעל לא היו בתוקף: העובדה נשמרה, ללא חיוב",
+    confirmTime: "אישור הזמן", confirmTimeReason: "מה נבדק?", confirmTimeSubmit: "אישור וחיוב",
+    confirmTimeHint: "לאחר בדיקה (יומן אתר, לקוח, תמונות) השלב משולם לפי תעריף המפעל שהיה בתוקף בזמן שנרשם, לא לפי התעריף של היום.",
+    TIME_REVIEW: "לא ניתן לאשר את זמן השלב מהטלפון (לפני השיוך או בגרסת מחירים אחרת): העובדה נשמרה, ללא חיוב עד בדיקת המשרד",
   },
 };

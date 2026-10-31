@@ -1,9 +1,13 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { StrictMode, type ReactNode } from "react";
 import FactoryAccountingPage from "@/views/FactoryAccountingPage";
 import { COMMERCIAL_API as API, commercialPricesPath } from "@/lib/commercial-prices";
 import { LanguageProvider } from "@/lib/i18n";
+import { clearStoredSession, persistAccessToken } from "@/lib/auth-session";
+
+// The page drops its open work only when the signed-in person changes, not on a routine token refresh.
+const jwt = (sub: string, n = 1) => `h.${btoa(JSON.stringify({ sub, n })).replace(/=+$/, "")}.s`;
 
 const { api, auth } = vi.hoisted(() => ({ api: vi.fn(), auth: vi.fn() }));
 vi.mock("@/lib/api", () => ({ apiFetch: api }));
@@ -51,6 +55,7 @@ async function editor() {
 describe("commercial draft UI", () => {
   beforeEach(() => {
     localStorage.clear();
+    clearStoredSession(); persistAccessToken(jwt("owner-1"));
     auth.mockReturnValue({ role: "ADMIN", admin_scope: "OWNER" });
     api.mockReset(); api.mockImplementation(async (url: string) => reads(url));
   });
@@ -149,7 +154,7 @@ describe("commercial draft UI", () => {
     fireEvent.click(warning.getByRole("button", { name: "Keep editing" }));
     expect(form.getByLabelText("Change reason")).toHaveValue("Test amendment");
     auth.mockReturnValue({ role: "INSTALLER" });
-    fireEvent(window, new CustomEvent("dimax-auth-changed"));
+    act(() => persistAccessToken(jwt("installer-1")));
     await screen.findByText("Contracts & billing access requires OWNER.");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.queryByText("Entrance")).not.toBeInTheDocument();

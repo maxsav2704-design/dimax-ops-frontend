@@ -22,6 +22,8 @@ export function DoorStagesCard({ doorId, doorTypeId, canPlan, installers, onDoor
   const { locale } = useI18n(), t = stageCopy[locale], client = useQueryClient();
   const [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null);
   const [planId, setPlanId] = useState(""), [picked, setPicked] = useState<Record<string, string>>({});
+  // A stage whose phone time is in doubt is valued only after the office checks it and says what it checked.
+  const [checking, setChecking] = useState<string | null>(null), [checkReason, setCheckReason] = useState("");
   const stages = useQuery({ queryKey: ["door-stages", doorId],
     queryFn: async ({ signal }) => { const raw = await apiFetch<unknown>(doorStagesPath(doorId), { signal }); return raw === null ? null : doorStagesSchema.parse(raw); } });
   const plans = useQuery({ queryKey: ["stage-plans", doorTypeId], enabled: stages.data === null && canPlan,
@@ -59,7 +61,18 @@ export function DoorStagesCard({ doorId, doorTypeId, canPlan, installers, onDoor
           <span className="min-w-40"><span className="font-mono text-xs"><bdi>{stage.stage_code}</bdi></span> · {stage.name}
             <span className="block text-11 text-text-secondary">{stage.required ? t.required : t.optional}</span></span>
           {stage.fact_id ? <span className="inline-flex flex-wrap items-center gap-1 text-12"><CheckCircle2 className="size-4 text-status-ok-fg" aria-hidden="true" />{t.done} · {nameOf(stage.completed_by)} · {stage.completed_at ? formatLocaleDateTime(stage.completed_at, locale) : ""}
-              {stage.earning_status && <span data-testid="stage-earning-status" className={stage.earning_status === "RECORDED" ? "block w-full text-11 text-text-secondary" : "block w-full text-11 text-status-warning-fg"}>{t[stage.earning_status]}</span>}</span>
+              {stage.earning_status && <span data-testid="stage-earning-status" className={stage.earning_status === "RECORDED" ? "block w-full text-11 text-text-secondary" : "block w-full text-11 text-status-warning-fg"}>{t[stage.earning_status]}</span>}
+              {stage.earning_status === "TIME_REVIEW" && canPlan && (checking === stage.stage_code
+                ? <span className="flex w-full flex-wrap items-center gap-2">
+                  <input aria-label={`${t.confirmTimeReason} ${stage.stage_code}`} placeholder={t.confirmTimeReason} value={checkReason} maxLength={500}
+                    onChange={(e) => setCheckReason(e.target.value)} className="h-8 min-w-48 flex-1 rounded-md border border-border bg-surface px-2 text-12" />
+                  <Button size="sm" disabled={busy || !checkReason.trim()} onClick={() => void run(() => post(doorStagesPath(doorId) + "/" + stage.stage_code + "/confirm-time",
+                    { reason: checkReason.trim() }).then((raw) => { stageCompletionSchema.parse(raw); setChecking(null); setCheckReason(""); }))}>{t.confirmTimeSubmit}</Button>
+                  <Button size="sm" variant="outline" disabled={busy} onClick={() => { setChecking(null); setCheckReason(""); }}>{t.cancel}</Button>
+                  <span className="block w-full text-11 text-text-secondary">{t.confirmTimeHint}</span>
+                </span>
+                : <Button size="sm" variant="outline" disabled={busy} onClick={() => { setChecking(stage.stage_code); setCheckReason(""); }}>{t.confirmTime}</Button>)}
+            </span>
             : <>
               <span className="text-12 text-text-secondary">{t.pending} · {t.installer}: {nameOf(stage.installer_id)}</span>
               {canPlan && !data.installed_by_stages && <>

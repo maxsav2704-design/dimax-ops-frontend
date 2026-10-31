@@ -345,7 +345,7 @@ function InstallerBaseForm({
             className="control-input"
           />
           {passportHint ? (
-            <span className="text-[11px] text-text-secondary">
+            <span className="text-11 text-text-secondary">
               {copy("Leave empty to keep the saved number.", "Оставьте пустым, чтобы сохранить прежний номер.", "השאירו ריק כדי לשמור את המספר הקיים.")}
             </span>
           ) : null}
