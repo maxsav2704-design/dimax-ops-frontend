@@ -1572,20 +1572,26 @@ export default function OperationsPage() {
       : "/projects?only_failed_runs=1";
   }, [batchResultOutboxIds, batchResultProjectIds, lastBatchResult]);
 
+  // A source that failed or has not loaded is unknown: never a green zero ("all clear").
+  const loadingNote = copy("Loading…", "Загрузка…", "טוען…");
+  const failedNote = copy("Data did not load", "Данные не загрузились", "הנתונים לא נטענו");
+  const syncKnown = Boolean(sync) && !syncQuery.isError;
+  const importsKnown = Boolean(failedImportsQuery.data) && !failedImportsQuery.isError;
+  const outboxKnown = Boolean(outboxSummary) && !outboxSummaryQuery.isError;
   const cards = useMemo(
     () => [
       {
         // `label` is the internal key used for aliases and links; `title` is what the tile shows.
         label: "Sync danger",
         title: copy("Sync danger", "Риск синхронизации", "סיכון סנכרון"),
-        value: onlyActionable
+        value: !syncKnown ? "-" : onlyActionable
           ? visibleSyncItems.length
           : (sync?.counts.danger ?? 0),
-        note: sync
+        note: sync && syncKnown
           ? `${sync.counts.danger_pct.toFixed(1)}% ${copy("of", "из", "מתוך")} ${sync.counts.total} ${copy("installers", "монтажников", "מתקינים")}`
-          : copy("Sync health pending", "Состояние синхронизации уточняется", "מצב הסנכרון בבדיקה"),
+          : syncQuery.isError ? failedNote : loadingNote,
         icon: ShieldAlert,
-        tone:
+        tone: !syncKnown ? "warning" :
           (onlyActionable
             ? visibleSyncItems.length
             : (sync?.counts.danger ?? 0)) > 0
@@ -1595,17 +1601,17 @@ export default function OperationsPage() {
       {
         label: "Failed imports",
         title: copy("Failed imports", "Сбойные импорты", "ייבואים שנכשלו"),
-        value: onlyActionable
+        value: !importsKnown ? "-" : onlyActionable
           ? visibleFailedImports.length
           : (failedImportsQuery.data?.total ?? 0),
-        note:
+        note: !importsKnown ? (failedImportsQuery.isError ? failedNote : loadingNote) :
           visibleFailedImports.length > 0
             ? visibleFailedImports[0]?.project_name
             : onlyActionable
               ? copy("No actionable imports", "Нет импортов, требующих действий", "אין ייבואים הדורשים פעולה")
               : copy("No failed imports", "Сбойных импортов нет", "אין ייבואים שנכשלו"),
         icon: ServerCrash,
-        tone:
+        tone: !importsKnown ? "warning" :
           (onlyActionable
             ? visibleFailedImports.length
             : (failedImportsQuery.data?.total ?? 0)) > 0
@@ -1615,14 +1621,14 @@ export default function OperationsPage() {
       {
         label: "Failed outbox",
         title: copy("Failed outbox", "Сбойные отправки", "שליחות שנכשלו"),
-        value: onlyActionable
+        value: !outboxKnown ? "-" : onlyActionable
           ? visibleFailedOutbox.length
           : (outboxSummary?.failed_total ?? 0),
-        note: outboxSummary
+        note: outboxSummary && outboxKnown
           ? compactMap(outboxSummary.by_channel, copy("n/a", "н/д", "לא זמין"))
-          : copy("No outbox data", "Нет данных об отправках", "אין נתוני שליחה"),
+          : outboxSummaryQuery.isError ? failedNote : loadingNote,
         icon: Siren,
-        tone:
+        tone: !outboxKnown ? "warning" :
           (onlyActionable
             ? visibleFailedOutbox.length
             : (outboxSummary?.failed_total ?? 0)) > 0
@@ -1632,21 +1638,29 @@ export default function OperationsPage() {
       {
         label: "Pending > 15m",
         title: copy("Pending > 15m", "Ожидают > 15 мин", "ממתינים > 15 דק׳"),
-        value: outboxSummary?.pending_overdue_15m ?? 0,
-        note: outboxSummary
+        value: !outboxKnown ? "-" : (outboxSummary?.pending_overdue_15m ?? 0),
+        note: outboxSummary && outboxKnown
           ? compactMap(outboxSummary.by_delivery_status, copy("n/a", "н/д", "לא זמין"))
-          : copy("No queue data", "Нет данных очереди", "אין נתוני תור"),
+          : outboxSummaryQuery.isError ? failedNote : loadingNote,
         icon: TimerReset,
-        tone:
+        tone: !outboxKnown ? "warning" :
           (outboxSummary?.pending_overdue_15m ?? 0) > 0 ? "warning" : "neutral",
       },
     ],
     [
       copy,
       failedImportsQuery.data?.total,
+      importsKnown,
       onlyActionable,
+      outboxKnown,
       outboxSummary,
       sync,
+      syncKnown,
+      syncQuery.isError,
+      failedImportsQuery.isError,
+      outboxSummaryQuery.isError,
+      loadingNote,
+      failedNote,
       visibleFailedImports,
       visibleFailedOutbox.length,
       visibleSyncItems.length,
@@ -1801,12 +1815,21 @@ export default function OperationsPage() {
     setBusyAction("imports:bulk");
     setActionFeedback(null);
     try {
+      // The page previews 8; "retry all" reaches every retryable failed run (the server takes up to 100 per call).
+      const queue = await apiFetch<FailedImportRunsQueueResponse>(
+        "/api/v1/admin/projects/import-runs/failed-queue?limit=100&offset=0",
+      );
+      const scope = (queue.items || []).filter((item) => item.retry_available);
+      if (scope.length === 0) {
+        await refreshImportState();
+        return;
+      }
       const response = await apiFetch<RetryFailedRunsResponse>(
         "/api/v1/admin/projects/import-runs/retry-failed",
         {
           method: "POST",
           body: JSON.stringify({
-            run_ids: actionableFailedImports.map((item) => item.run_id),
+            run_ids: scope.map((item) => item.run_id),
           }),
         },
       );
@@ -1817,7 +1840,7 @@ export default function OperationsPage() {
         successful: response.successful_runs,
         failed: response.failed_runs,
         skipped: response.skipped_runs,
-        scope: actionableFailedImports.length,
+        scope: scope.length,
         items: response.items || [],
       });
       setActionFeedback({
@@ -1900,12 +1923,22 @@ export default function OperationsPage() {
     setBusyAction("outbox:bulk");
     setActionFeedback(null);
     try {
+      // The page previews 8; "retry all" reaches every failed message of the chosen channel (up to 200 per run).
+      const channel = pendingOutboxChannel || deliveryChannelFilter;
+      const failed = await apiFetch<OutboxListResponse>(
+        `/api/v1/admin/outbox?status=FAILED&limit=200${channel ? `&channel=${encodeURIComponent(channel)}` : ""}`,
+      );
+      const scope = (failed.items || []).filter((item) => !channel || item.channel.toUpperCase() === channel);
+      if (scope.length === 0) {
+        await refreshDeliveryState();
+        return;
+      }
       const response = await apiFetch<BulkOutboxRetryResponse>(
         "/api/v1/admin/outbox/retry-failed",
         {
           method: "POST",
           body: JSON.stringify({
-            outbox_ids: outboxRetryScope.map((item) => item.id),
+            outbox_ids: scope.map((item) => item.id),
             reason: "operations_center_bulk_retry",
           }),
         },
@@ -1917,7 +1950,7 @@ export default function OperationsPage() {
         successful: response.successful_messages,
         failed: response.failed_messages,
         skipped: response.skipped_messages,
-        scope: outboxRetryScope.length,
+        scope: scope.length,
         items: response.items || [],
       });
       setActionFeedback({
@@ -1961,23 +1994,26 @@ export default function OperationsPage() {
 
   function batchActionDescription(): string {
     if (pendingBatchAction === "retry") {
+      const total = failedImportsQuery.data?.total ?? actionableFailedImports.length;
       return copy(
-        `This will retry ${actionableFailedImports.length} actionable import runs across ${actionableImportProjectIds.length} projects.`,
-        `Будут повторены ${actionableFailedImports.length} проблемных импортов по ${actionableImportProjectIds.length} объектам.`,
-        `יבוצע ניסיון חוזר ל-${actionableFailedImports.length} ייבואים ב-${actionableImportProjectIds.length} פרויקטים.`,
+        `Every retryable failed import run is retried (failed now: ${total}, up to 100 per run), not only the ones shown.`,
+        `Будут повторены все сбойные импорты, которые можно повторить (сейчас сбойных: ${total}, до 100 за раз), а не только показанные.`,
+        `יבוצע ניסיון חוזר לכל הייבואים שנכשלו וניתנים לניסיון חוזר (כעת: ${total}, עד 100 בכל פעם), לא רק המוצגים.`,
       );
     }
     if (pendingBatchAction === "outbox-retry") {
-      return pendingOutboxChannel
+      const channel = pendingOutboxChannel || deliveryChannelFilter;
+      const total = channel ? (outboxSummary?.by_channel?.[channel] ?? outboxRetryScope.length) : (outboxSummary?.failed_total ?? outboxRetryScope.length);
+      return channel
         ? copy(
-            `This will retry ${outboxRetryScope.length} failed ${pendingOutboxChannel} outbox messages and write recovery audit entries.`,
-            `Будут повторены ${outboxRetryScope.length} неудачных сообщений ${pendingOutboxChannel} с записью в аудит.`,
-            `יבוצע ניסיון חוזר ל-${outboxRetryScope.length} הודעות ${pendingOutboxChannel} שנכשלו עם רישום ביומן הביקורת.`,
+            `Every failed ${channel} message is retried (failed now: ${total}, up to 200 per run), with recovery audit entries.`,
+            `Будут повторены все неудачные сообщения ${channel} (сейчас: ${total}, до 200 за раз) с записью в аудит.`,
+            `יבוצע ניסיון חוזר לכל הודעות ${channel} שנכשלו (כעת: ${total}, עד 200 בכל פעם) עם רישום ביומן הביקורת.`,
           )
         : copy(
-            `This will retry ${outboxRetryScope.length} failed outbox messages and write recovery audit entries.`,
-            `Будут повторены ${outboxRetryScope.length} неудачных сообщений с записью в аудит.`,
-            `יבוצע ניסיון חוזר ל-${outboxRetryScope.length} הודעות שנכשלו עם רישום ביומן הביקורת.`,
+            `Every failed message is retried (failed now: ${total}, up to 200 per run), with recovery audit entries.`,
+            `Будут повторены все неудачные сообщения (сейчас: ${total}, до 200 за раз) с записью в аудит.`,
+            `יבוצע ניסיון חוזר לכל ההודעות שנכשלו (כעת: ${total}, עד 200 בכל פעם) עם רישום ביומן הביקורת.`,
           );
     }
     if (pendingBatchAction === "reconcile") {
@@ -2068,10 +2104,15 @@ export default function OperationsPage() {
       : activeIncidentCount > 0
         ? "orange"
         : "green";
-  const recoveryStatusLabel =
-    recoveryStatusTone === "green"
-      ? copy("System nominal", "Система в норме", "המערכת תקינה")
-      : `${copy("System degraded", "Система деградирует", "המערכת במצב ירוד")} · ${countNoun(locale, activeIncidentCount, INCIDENT_NOUN)}`;
+  // "All clear" needs every source to have answered: before that the page is checking, after a failure it says so.
+  const sourcesAnswered = Boolean(sync && outboxSummary && failedImportsQuery.data && webhookSummary);
+  const recoveryStatusLabel = hasError
+    ? copy("Some data did not load", "Часть данных не загрузилась", "חלק מהנתונים לא נטענו")
+    : !sourcesAnswered
+      ? copy("Checking the systems…", "Проверяем системы…", "בודקים את המערכות…")
+      : recoveryStatusTone === "green"
+        ? copy("System nominal", "Система в норме", "המערכת תקינה")
+        : `${copy("System degraded", "Система деградирует", "המערכת במצב ירוד")} · ${countNoun(locale, activeIncidentCount, INCIDENT_NOUN)}`;
   const freshnessValue =
     freshnessState === "fresh"
       ? copy("fresh", "свежие", "עדכני")
@@ -2192,7 +2233,7 @@ export default function OperationsPage() {
     }),
   ].slice(0, 7);
   const hasRecoveryIncidents = recoveryIncidents.length > 0;
-  const recoveryIntegrations = [
+  const integrationsRaw = [
     {
       label: copy("WhatsApp / delivery outbox", "WhatsApp / очередь доставки", "WhatsApp / תור משלוחים"),
       detail:
@@ -2239,6 +2280,13 @@ export default function OperationsPage() {
       icon: Zap,
     },
   ];
+  const recoveryIntegrations = integrationsRaw.map((row) =>
+    hasError
+      ? { ...row, detail: copy("data did not load", "данные не загрузились", "הנתונים לא נטענו"), tone: "orange" as OperationsTone }
+      : !sourcesAnswered
+        ? { ...row, detail: copy("checking…", "проверяем…", "בודקים…"), tone: "blue" as OperationsTone }
+        : row,
+  );
 
   return (
     <DashboardLayout>
@@ -2381,7 +2429,9 @@ export default function OperationsPage() {
                     }
                     label={card.title}
                     status={
-                      tone === "red" ? "P1" : tone === "orange" ? "warn" : "ok"
+                      tone === "red" ? "P1"
+                        : tone === "orange" ? copy("check", "проверить", "לבדוק")
+                          : tone === "green" ? copy("ok", "норма", "תקין") : copy("…", "…", "…")
                     }
                     tone={tone}
                     value={card.value}
@@ -2490,7 +2540,10 @@ export default function OperationsPage() {
                                 {incident.priority}
                               </span>
                               <span className="rounded-full bg-surface-subtle px-2 py-0.5 text-[9.5px] font-medium uppercase text-text-secondary">
-                                {incident.kind}
+                                {incident.kind === "delivery" ? copy("delivery", "доставка", "משלוח")
+                                  : incident.kind === "webhook" ? copy("webhook", "вебхук", "webhook")
+                                    : incident.kind === "sync" ? copy("sync", "синхронизация", "סנכרון")
+                                      : incident.kind === "import" ? copy("import", "импорт", "ייבוא") : incident.kind}
                               </span>
                             </div>
                             <div className="mt-1 truncate text-[10.5px] text-text-secondary">

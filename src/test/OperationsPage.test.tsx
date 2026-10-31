@@ -10,7 +10,14 @@ const { apiFetchMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/api", () => ({
-  apiFetch: apiFetchMock,
+  // "Retry all" first loads the full failed lists; the mocks answer them with the preview lists.
+  apiFetch: (path: string, ...rest: unknown[]) =>
+    apiFetchMock(
+      String(path)
+        .replace(/\/api\/v1\/admin\/outbox\?status=FAILED&limit=200(&channel=[^&]+)?$/, "/api/v1/admin/outbox?status=FAILED&limit=8")
+        .replace("/import-runs/failed-queue?limit=100&offset=0", "/import-runs/failed-queue?limit=8&offset=0"),
+      ...rest,
+    ),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -1190,7 +1197,7 @@ describe("OperationsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry actionable imports (2)" }));
     expect(screen.getByText("Retry actionable imports")).toBeInTheDocument();
     expect(
-      screen.getByText("This will retry 2 actionable import runs across 2 projects.")
+      screen.getByText(/Every retryable failed import run is retried/)
     ).toBeInTheDocument();
     expect(
       apiFetchMock.mock.calls.some(
@@ -1474,7 +1481,7 @@ describe("OperationsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry actionable deliveries (2)" }));
     expect(screen.getByText("Retry actionable delivery failures")).toBeInTheDocument();
     expect(
-      screen.getByText("This will retry 2 failed outbox messages and write recovery audit entries.")
+      screen.getByText(/Every failed message is retried/)
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
@@ -1620,6 +1627,34 @@ describe("OperationsPage", () => {
         reason: "operations_center_bulk_retry",
       }),
     });
+  }, 10000);
+
+  it("shows an unknown, never a green zero, when the delivery summary did not load", async () => {
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const webhookMock = mockWebhookSignals(path);
+      if (webhookMock) {
+        return webhookMock;
+      }
+      if (path === "/api/v1/admin/outbox/summary") {
+        throw new Error("Synthetic outage");
+      }
+      if (path === "/api/v1/admin/sync/health/summary") {
+        return { max_cursor: 1, counts: { ok: 1, warn: 0, danger: 0, total: 1, dead: 0, never_seen: 0, danger_pct: 0 },
+          alerts_sent: 0, top_laggers: [], top_offline: [] };
+      }
+      if (path === "/api/v1/admin/projects/import-runs/failed-queue?limit=8&offset=0") {
+        return { items: [], total: 0, limit: 8, offset: 0 };
+      }
+      return { items: [], total: 0 };
+    });
+
+    renderSubject();
+
+    expect(await screen.findByText("Operations Center")).toBeInTheDocument();
+    // Both delivery tiles depend on the summary: they say the data did not load instead of "0, all clear".
+    await waitFor(() => expect(screen.getAllByText("Data did not load").length).toBeGreaterThanOrEqual(2));
+    expect(screen.getByText("Some data did not load")).toBeInTheDocument();
+    expect(screen.queryByText("System nominal")).toBeNull();
   }, 10000);
 
   it("cancels batch actions without calling the api", async () => {
