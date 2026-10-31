@@ -1,4 +1,6 @@
-﻿"use client";
+"use client";
+import { safeInternalNextPath } from "@/lib/auth-redirect";
+import { statusLabel } from "@/lib/status-labels";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -115,7 +117,9 @@ export default function LibraryPage() {
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
-  const returnTo = (searchParams?.get("return_to") || "").trim();
+  // Only a path inside this app may be a return target; anything else (another site) is ignored.
+  const rawReturnTo = (searchParams?.get("return_to") || "").trim();
+  const returnTo = rawReturnTo ? safeInternalNextPath(rawReturnTo, "") : "";
   const focusedInstallType = (searchParams?.get("install_type") || "").trim();
   const hasFocusedProjectFlow = Boolean(returnTo);
   const buildProjectFlowHref = (
@@ -461,7 +465,7 @@ export default function LibraryPage() {
                     </div>{" "}
                     <span className={libraryStatusClass(item.status)}>
                       {" "}
-                      {item.status}{" "}
+                      {statusLabel(item.status, locale)}{" "}
                     </span>{" "}
                   </div>{" "}
                   <div className="mt-3 grid grid-cols-2 gap-2">
@@ -575,7 +579,7 @@ export default function LibraryPage() {
                         {" "}
                         <span className={libraryStatusClass(item.status)}>
                           {" "}
-                          {item.status}{" "}
+                          {statusLabel(item.status, locale)}{" "}
                         </span>{" "}
                       </TableCell>{" "}
                       <TableCell className="text-text-secondary">

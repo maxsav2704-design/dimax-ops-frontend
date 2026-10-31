@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -190,6 +190,10 @@ export function CatalogCrudPage({
     "all" | "active" | "inactive"
   >("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // A bulk action must never reach rows the current filter hides: changing the filter clears the selection.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [search, statusFilter]);
   // Deleting a catalog entry is a one-click hard delete on the server: confirm first.
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; code: string } | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -223,7 +227,7 @@ export function CatalogCrudPage({
     onSuccess: async () => {
       setIsCreateOpen(false);
       setForm(emptyForm());
-      setMessage(`${entityLabel} created.`);
+      setMessage(copy(`${entityLabel} created.`, "Запись создана.", "הרשומה נוצרה."));
       await queryClient.invalidateQueries({ queryKey: [queryKey] });
     },
   });
@@ -238,7 +242,10 @@ export function CatalogCrudPage({
       }));
     },
     onSuccess: async () => {
-      setMessage(`${entityLabel} updated.`);
+      // The dialog closes on success, like creation does.
+      setIsEditOpen(false);
+      setEditingItem(null);
+      setMessage(copy(`${entityLabel} updated.`, "Изменения сохранены.", "השינויים נשמרו."));
       await queryClient.invalidateQueries({ queryKey: [queryKey] });
     },
   });
@@ -248,7 +255,7 @@ export function CatalogCrudPage({
         apiFetch<void>(`${endpoint}/${id}`, { method: "DELETE" }),
       ),
     onSuccess: async () => {
-      setMessage(`${entityLabel} deleted.`);
+      setMessage(copy(`${entityLabel} deleted.`, "Запись удалена.", "הרשומה נמחקה."));
       await queryClient.invalidateQueries({ queryKey: [queryKey] });
     },
   });
@@ -260,9 +267,11 @@ export function CatalogCrudPage({
       })),
     onSuccess: async (data, operation) => {
       setSelectedIds(new Set());
-      setMessage(
-        `Bulk ${operation}: affected ${data.affected}, unchanged ${data.unchanged}, not found ${data.not_found}`,
-      );
+      setMessage(copy(
+        `Bulk ${operation}: changed ${data.affected}, unchanged ${data.unchanged}, not found ${data.not_found}`,
+        `Массовое действие: изменено ${data.affected}, без изменений ${data.unchanged}, не найдено ${data.not_found}`,
+        `פעולה מרוכזת: שונו ${data.affected}, ללא שינוי ${data.unchanged}, לא נמצאו ${data.not_found}`,
+      ));
       await queryClient.invalidateQueries({ queryKey: [queryKey] });
     },
   });
@@ -272,7 +281,7 @@ export function CatalogCrudPage({
       const stamp = new Date().toISOString().replaceAll(":", "-");
       const safeName = title.toLowerCase().replaceAll(" ", "_");
       downloadJson(`${safeName}_export_${stamp}.json`, data.items);
-      setMessage(`${title} export downloaded (${data.items.length} rows).`);
+      setMessage(copy(`${title} export downloaded (${data.items.length} rows).`, `Выгрузка скачана (${data.items.length} строк).`, `הייצוא הורד (${data.items.length} שורות).`));
     },
   });
   const importMutation = useMutation({
@@ -282,9 +291,11 @@ export function CatalogCrudPage({
         body: JSON.stringify({ items, create_only: createOnlyImport }),
       })),
     onSuccess: async (result) => {
-      setMessage(
+      setMessage(copy(
         `Import done: created ${result.created}, updated ${result.updated}, unchanged ${result.unchanged}, skipped ${result.skipped_existing}`,
-      );
+        `Импорт завершён: создано ${result.created}, обновлено ${result.updated}, без изменений ${result.unchanged}, пропущено ${result.skipped_existing}`,
+        `הייבוא הושלם: נוצרו ${result.created}, עודכנו ${result.updated}, ללא שינוי ${result.unchanged}, דולגו ${result.skipped_existing}`,
+      ));
       await queryClient.invalidateQueries({ queryKey: [queryKey] });
     },
   });
@@ -346,9 +357,12 @@ export function CatalogCrudPage({
       const parsedItems = parseImportPayload(text);
       importMutation.mutate(parsedItems);
     } catch (error) {
-      setMessage(readableApiError(error, locale, "Import parsing failed."));
+      setMessage(readableApiError(error, locale, copy("Import parsing failed.", "Файл импорта не прочитан.", "קריאת קובץ הייבוא נכשלה.")));
     }
   };
+  const anyCatalogError =
+    listQuery.isError || createMutation.isError || updateMutation.isError || deleteMutation.isError ||
+    bulkMutation.isError || importMutation.isError || exportMutation.isError;
   return (
     <DashboardLayout>
       {" "}
@@ -388,8 +402,8 @@ export function CatalogCrudPage({
                 <div className="rounded-lg border border-border bg-surface px-3 py-3">
                   {" "}
                   <div className={catalogMetricLabelClass()}>{copy("Scope", "Раздел", "תחום")}</div>{" "}
-                  <div className="mt-1 text-lg font-semibold text-text capitalize">
-                    {statusFilter}
+                  <div className="mt-1 text-lg font-semibold text-text">
+                    {statusFilter === "active" ? copy("Active", "Активные", "פעילים") : statusFilter === "inactive" ? copy("Inactive", "Неактивные", "לא פעילים") : copy("All", "Все", "הכל")}
                   </div>{" "}
                 </div>{" "}
                 <div className="rounded-lg border border-border bg-surface px-3 py-3">
@@ -404,7 +418,7 @@ export function CatalogCrudPage({
                   <div className={catalogMetricLabelClass()}>{copy("Import mode", "Режим импорта", "מצב ייבוא")}</div>{" "}
                   <div className="mt-1 text-lg font-semibold text-text">
                     {" "}
-                    {createOnlyImport ? "Create only" : "Create + update"}{" "}
+                    {createOnlyImport ? copy("Create only", "Только создание", "יצירה בלבד") : copy("Create + update", "Создание и обновление", "יצירה ועדכון")}{" "}
                   </div>{" "}
                 </div>{" "}
               </div>{" "}
@@ -589,7 +603,7 @@ export function CatalogCrudPage({
             <span>{copy("Import in create-only mode", "Импорт в режиме «только создание»", "ייבוא במצב יצירה בלבד")}</span>{" "}
           </label>{" "}
         </section>{" "}
-        {message && (
+        {message && !anyCatalogError && (
           <div className={catalogNoticeClass("success")}>
             {" "}
             <CheckCheck className="h-4 w-4 shrink-0" /> {message}{" "}
@@ -616,7 +630,7 @@ export function CatalogCrudPage({
                   importMutation.error ||
                   exportMutation.error,
                 locale,
-                "Request failed.",
+                copy("Request failed.", "Запрос не выполнен.", "הבקשה נכשלה."),
               )}{" "}
             </span>{" "}
           </div>
@@ -798,6 +812,7 @@ export function CatalogCrudPage({
             </Table>
           </div>
         </section>{" "}
+        {footer}
       </div>{" "}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         {" "}
@@ -1003,7 +1018,6 @@ export function CatalogCrudPage({
           bulkMutation.mutate("delete");
         }}
       />
-      {footer}
     </DashboardLayout>
   );
 }
