@@ -39,6 +39,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { apiDownload, apiFetch } from "@/lib/api";
 import { earningsLedgerResponseSchema } from "@/lib/api-schemas";
 import { readableApiError } from "@/lib/api-error-display";
+import { fetchAllProjects } from "@/lib/projects-list";
 import { canRunPrivilegedAdminActions, canViewRates } from "@/lib/admin-access";
 import { useI18n, useCopy } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -243,13 +244,12 @@ function workLabel(item: EarningsLedgerItem): string {
   return item.door_label || item.door_code || "-";
 }
 
+// Readable references only; raw ids stay in the CSV export for audits.
 function workReference(item: EarningsLedgerItem): string | null {
   if (item.work_kind === "ADDON") {
-    return (
-      item.addon_comment || item.addon_fact_id || item.addon_type_id || null
-    );
+    return item.addon_comment || null;
   }
-  return item.door_code || item.door_id || null;
+  return item.door_code || null;
 }
 
 export default function EarningsLedgerPage() {
@@ -345,10 +345,7 @@ export default function EarningsLedgerPage() {
 
   const projectsQuery = useQuery({
     queryKey: ["earnings-ledger-projects"],
-    queryFn: async () =>
-      normalizeItems(
-        await apiFetch<ListResponse<ProjectOption>>("/api/v1/admin/projects"),
-      ),
+    queryFn: async () => (await fetchAllProjects<ProjectOption>()).items,
     enabled: hasRateAccess,
     refetchInterval: 120_000,
   });
@@ -445,7 +442,7 @@ export default function EarningsLedgerPage() {
         : value === "CORRECTION" ? copy("Correction", "Корректировка", "תיקון")
           : value;
   const workKindLabel = (value: string) =>
-    value === "DOOR" ? copy("Door", "Дверь", "דלת") : value === "ADDON" ? copy("Addon", "Допработа", "עבודה נוספת")
+    value === "DOOR" ? copy("Door", "Дверь", "דלת") : value === "ADDON" ? copy("Extra work", "Допработа", "עבודה נוספת")
       : value === "STAGE" ? copy("Stage", "Этап", "שלב") : value;
   const canPrev = offset > 0;
   const canNext = offset + LEDGER_PAGE_SIZE < (ledgerQuery.data?.total || 0);
@@ -454,11 +451,18 @@ export default function EarningsLedgerPage() {
     newRate.trim() !== "" &&
     Number.isFinite(parsedNewRate) &&
     parsedNewRate > 0;
+  const currentRate = selectedEntry ? Number(selectedEntry.rate_snapshot) : NaN;
+  const sameRate = hasValidNewRate && Math.round(parsedNewRate * 100) === Math.round(currentRate * 100);
+  // What the office will write: the row is reversed and replaced at the new rate (quantity unchanged).
+  const newAmount = selectedEntry && hasValidNewRate
+    ? Math.round(Number(selectedEntry.quantity) * parsedNewRate * 100) / 100 : null;
+  const amountDelta = newAmount !== null && selectedEntry ? Math.round((newAmount - Number(selectedEntry.amount_snapshot)) * 100) / 100 : null;
   const correctionDisabled =
     !canCorrectRates ||
     correctionMutation.isPending ||
     !selectedEntry ||
     !hasValidNewRate ||
+    sameRate ||
     !correctionReason.trim();
   const selectedInstallerName =
     installersQuery.data?.find((installer) => installer.id === installerId)
@@ -603,7 +607,7 @@ export default function EarningsLedgerPage() {
                   </div>
                   <div className="mt-1 text-sm font-semibold text-text">
                     {workKind === "all"
-                      ? copy("Door + addon", "Двери + допы", "דלת + תוספות")
+                      ? copy("All work", "Все работы", "כל העבודות")
                       : workKindLabel(workKind)}
                   </div>
                 </div>
@@ -997,6 +1001,7 @@ export default function EarningsLedgerPage() {
                         className="dmx-secondary-action h-8 shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={!canCorrectRates || !item.can_correct}
                         onClick={() => {
+                          correctionMutation.reset();
                           setSelectedEntry(item);
                           setNewRate(String(item.rate_snapshot ?? ""));
                           setCorrectionReason("");
@@ -1133,6 +1138,7 @@ export default function EarningsLedgerPage() {
                           className="dmx-secondary-action h-8 disabled:cursor-not-allowed disabled:opacity-50"
                           disabled={!canCorrectRates || !item.can_correct}
                           onClick={() => {
+                            correctionMutation.reset();
                             setSelectedEntry(item);
                             setNewRate(String(item.rate_snapshot ?? ""));
                             setCorrectionReason("");
@@ -1229,6 +1235,30 @@ export default function EarningsLedgerPage() {
                 step="0.01"
               />
             </div>
+            {selectedEntry ? (
+              <dl data-testid="correction-preview" className="grid grid-cols-3 gap-2 rounded-lg border border-border px-3 py-3 text-13">
+                <div>
+                  <dt className="text-11 text-text-secondary">{copy("Now", "Сейчас", "כעת")}</dt>
+                  <dd className="tabular-nums">{formatQuantity(selectedEntry.quantity)} × {formatMoney(selectedEntry.rate_snapshot)} = {formatMoney(selectedEntry.amount_snapshot)}</dd>
+                </div>
+                <div>
+                  <dt className="text-11 text-text-secondary">{copy("After", "После", "אחרי")}</dt>
+                  <dd className="tabular-nums">{newAmount === null ? "—" : `${formatQuantity(selectedEntry.quantity)} × ${formatMoney(parsedNewRate)} = ${formatMoney(newAmount)}`}</dd>
+                </div>
+                <div>
+                  <dt className="text-11 text-text-secondary">{copy("Difference", "Разница", "הפרש")}</dt>
+                  <dd className="tabular-nums font-semibold">{amountDelta === null ? "—" : `${amountDelta > 0 ? "+" : ""}${formatMoney(amountDelta)}`}</dd>
+                </div>
+                {sameRate ? (
+                  <p className="col-span-3 text-12 text-status-warning-fg">
+                    {copy("The new rate is the same as the recorded one.", "Новая ставка совпадает с записанной.", "התעריף החדש זהה לתעריף שנרשם.")}
+                  </p>
+                ) : null}
+                <p className="col-span-3 text-12 text-text-secondary">
+                  {copy("A correction is written once and cannot be undone.", "Коррекция записывается один раз и не отменяется.", "תיקון נרשם פעם אחת ולא ניתן לבטל אותו.")}
+                </p>
+              </dl>
+            ) : null}
             <div className="field-stack">
               <Label htmlFor="earnings-correction-reason">
                 {copy("Reason", "Причина", "סיבה")}

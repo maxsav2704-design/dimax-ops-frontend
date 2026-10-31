@@ -18,7 +18,9 @@ const { authSessionMock, searchParamsMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/api", () => ({
-  apiFetch: apiFetchMock,
+  // The page loads every project page by page; the mocks answer the first page under the old path.
+  apiFetch: (path: string, ...rest: unknown[]) =>
+    apiFetchMock(String(path).replace(/\/api\/v1\/admin\/projects\?limit=200&offset=0$/, "/api/v1/admin/projects"), ...rest),
   apiDownload: apiDownloadMock,
 }));
 
@@ -234,7 +236,16 @@ describe("EarningsLedgerPage", () => {
     const saveButton = screen.getByRole("button", { name: /save correction/i });
     fireEvent.change(screen.getByLabelText("New rate"), { target: { value: "0" } });
     expect(saveButton).toBeDisabled();
+    // The recorded rate changes nothing: not offered.
+    fireEvent.change(screen.getByLabelText("New rate"), { target: { value: "120" } });
+    expect(saveButton).toBeDisabled();
+    expect(screen.getByTestId("correction-preview")).toHaveTextContent("The new rate is the same as the recorded one.");
     fireEvent.change(screen.getByLabelText("New rate"), { target: { value: "135.00" } });
+    // Before saving the office sees the money effect: 1 × 120 now, 1 × 135 after, +15.
+    const preview = screen.getByTestId("correction-preview");
+    expect(preview).toHaveTextContent(/120[,.]00/);
+    expect(preview).toHaveTextContent(/\+.?15[,.]00/);
+    expect(preview).toHaveTextContent("cannot be undone");
     fireEvent.click(saveButton);
 
     expect(await screen.findByText(/Correction saved: 135[,.]00/)).toBeInTheDocument();
