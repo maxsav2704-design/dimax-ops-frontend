@@ -79,6 +79,21 @@ describe("ImportInboxCard", () => {
     expect(screen.getByText("Beta")).toBeInTheDocument();
   });
 
+  it("says why a clean file from the mail waits: the sender was not confirmed", async () => {
+    mockApi([
+      item({
+        id: "item-1", status: "ANALYZED", matched_project_id: "p-1", matched_project_name: "Alpha", match_reason: "PROJECT_NAME",
+        analysis: { mode: "analyze", parsed_rows: 2, prepared_rows: 2, would_import: 2, would_skip: 0, errors: 0, held: "UNVERIFIED_SENDER" },
+      }),
+      item({ id: "item-2", status: "ANALYZED", matched_project_id: "p-1", matched_project_name: "Alpha",
+        analysis: { mode: "analyze", parsed_rows: 2, prepared_rows: 2, would_import: 2, would_skip: 0, errors: 1 } }),
+    ]);
+    render(<ImportInboxCard canManage isOwner={false} />);
+    const held = await screen.findAllByTestId("import-inbox-held");
+    expect(held).toHaveLength(1);
+    expect(held[0]).toHaveTextContent("did not confirm the sender");
+  });
+
   it("offers a partial import when the analysis has row errors and refuses the whole file", async () => {
     mockApi([
       item({

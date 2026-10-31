@@ -27,6 +27,8 @@ export type ImportInboxSummary = {
   first_errors?: Array<{ row: number | null; message: string }>;
   missing_required_fields?: string[];
   mapping_profile?: string | null;
+  // Mail whose sender the receiving server did not confirm: it never imports by itself.
+  held?: "UNVERIFIED_SENDER" | null;
 };
 
 export type ImportInboxItem = {
@@ -361,6 +363,15 @@ export function ImportInboxCard({ canManage, isOwner }: ImportInboxCardProps) {
                       </span>
                     )}
                     {summary ? <div>{summaryLine(summary)}</div> : null}
+                    {item.status === "ANALYZED" && item.analysis?.held === "UNVERIFIED_SENDER" ? (
+                      <div data-testid="import-inbox-held" className="text-text">
+                        {copy(
+                          "The mail server did not confirm the sender, so this file was not imported by itself. Check that it really came from the factory, then import it.",
+                          "Почтовый сервер не подтвердил отправителя, поэтому файл не импортирован сам. Проверьте, что он действительно от завода, и импортируйте.",
+                          "שרת הדואר לא אימת את השולח, ולכן הקובץ לא יובא מעצמו. ודאו שהוא באמת מהמפעל ואז ייבאו אותו.",
+                        )}
+                      </div>
+                    ) : null}
                     {summary?.first_errors?.length ? (
                       <ul className="list-disc ps-5">
                         {summary.first_errors.slice(0, 3).map((row, index) => (
