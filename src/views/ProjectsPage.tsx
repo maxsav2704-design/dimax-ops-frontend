@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 
 
 import { useRouter, useSearchParams } from "next/navigation";
@@ -159,6 +159,7 @@ import type { ProjectFormState } from "@/components/projects/project-form";
 
 import {
   Breadcrumbs,
+  ConfirmActionDialog,
   FactStrip,
   PillButton,
   WidgetCard,
@@ -201,6 +202,7 @@ import {
 
 
 import { useI18n, type Locale, useCopy } from "@/lib/i18n";
+import { statusLabel, type StatusLabelDomain } from "@/lib/status-labels";
 
 
 import { cn } from "@/lib/utils";
@@ -252,6 +254,7 @@ const PROJECT_COMPLETED_STATUSES = new Set([
   "CLOSED",
 ]);
 const PROJECT_ARCHIVED_STATUSES = new Set(["ARCHIVED"]);
+const PROJECTS_PAGE_SIZE = 200;
 const PROJECT_PROBLEM_STATUSES = new Set([
   "AT_RISK",
   "BLOCKED",
@@ -444,47 +447,8 @@ export default function ProjectsPage() {
     return LOCATION_LABELS[value]?.[locale] || value;
   };
   const { importRowErrorLabel, importProfileLabel } = useImportCopy();
-  const tokenLabel = (value: string) => {
-    const normalized = value.trim().toUpperCase();
-    switch (normalized) {
-      case "PROBLEM":
-        return copy("PROBLEM", "Проблема", "בעיה");
-      case "OK":
-        return copy("OK", "Норма", "תקין");
-      case "SUCCESS":
-        return copy("SUCCESS", "Успешно", "הצליח");
-      case "FAILED":
-        return copy("FAILED", "Ошибка", "נכשל");
-      case "PARTIAL":
-        return copy("PARTIAL", "Частично", "חלקי");
-      case "ANALYZED":
-        return copy("ANALYZED", "Анализ", "נותח");
-      case "OPEN":
-        return copy("OPEN", "Открыто", "פתוח");
-      case "BLOCKED":
-        return copy("BLOCKED", "Заблокировано", "חסום");
-      case "INSTALLED":
-        return copy("INSTALLED", "Установлено", "הותקן");
-      case "NOT_INSTALLED":
-        return copy("NOT_INSTALLED", "Не установлено", "לא הותקן");
-      case "LOCKED":
-        return copy("LOCKED", "Заблокировано", "נעול");
-      case "READY":
-        return copy("READY", "Готово", "מוכן");
-      case "DONE":
-        return copy("DONE", "Выполнено", "בוצע");
-      case "DANGER":
-        return copy("DANGER", "Опасно", "סכנה");
-      case "WARN":
-        return copy("WARN", "Риск", "אזהרה");
-      case "AT_RISK":
-        return copy("AT_RISK", "Под риском", "בסיכון");
-      case "UNASSIGNED":
-        return copy("UNASSIGNED", "Не назначено", "לא משויך");
-      default:
-        return value;
-    }
-  };
+  // Server status codes in the reader's language (shared table, so other pages name them the same way).
+  const tokenLabel = (value: string, domain: StatusLabelDomain = "generic") => statusLabel(value, locale, domain);
   const router = useRouter();
   const searchParams = useSearchParams();
   const session = useAuthSession();
@@ -496,6 +460,13 @@ export default function ProjectsPage() {
     "Коммерческий доступ ограничен",
     "הגישה המסחרית מוגבלת",
   );
+  // A money tile without its figures says why: no right to see them, still loading, or the request failed.
+  const financeTileState = (query: { isError: boolean; isSuccess: boolean }) =>
+    !canViewProjectRates
+      ? commercialAccessRestrictedTitle
+      : query.isError || query.isSuccess
+        ? copy("No data", "Нет данных", "אין נתונים")
+        : copy("Loading…", "Загрузка…", "טוען…");
   const commercialAccessRestrictedDetail = copy(
     "This admin scope can manage project operations, doors and imports, but prices, payroll, profit, add-on plans and urgency surcharge rows require finance access.",
     "Этот админ-доступ может управлять операциями проекта, дверями и импортом, но цены, зарплаты, прибыль, планы доп. работ и срочные надбавки требуют финансового доступа.",
@@ -527,6 +498,8 @@ export default function ProjectsPage() {
     "Справочник недоступен. Повторите его загрузку.",
     "נתוני הקטלוג אינם זמינים. יש לטעון אותם שוב.",
   );
+  const appliedDeepLinkRef = useRef<string | null>(null);
+  const layoutRequestRef = useRef<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null,
   );
@@ -915,10 +888,16 @@ export default function ProjectsPage() {
       },
     ];
 
+  const [confirmBulkReconcileOpen, setConfirmBulkReconcileOpen] = useState(false);
   const filteredProjectIds = useMemo(
     () => filteredProjects.map((p) => p.id),
     [filteredProjects],
   );
+
+  const hiddenBulkSelectionCount = useMemo(() => {
+    const visible = new Set(filteredProjectIds);
+    return bulkSelectedProjectIds.filter((id) => !visible.has(id)).length;
+  }, [bulkSelectedProjectIds, filteredProjectIds]);
 
   const allFilteredSelected = useMemo(
     () =>
@@ -1357,15 +1336,23 @@ export default function ProjectsPage() {
     setLoadingProjects(true);
     setProjectsLoadError(false);
     try {
-      const response = await apiFetch<{ items: ProjectListItem[] }>(
-        "/api/v1/admin/projects",
-      );
-      const items = response.items || [];
+      // The API pages at most 200 rows; read every page so search, counts and bulk actions see all projects.
+      const items: ProjectListItem[] = [];
+      for (let offset = 0; offset < PROJECTS_PAGE_SIZE * 50; offset += PROJECTS_PAGE_SIZE) {
+        const response = await apiFetch<{ items: ProjectListItem[] }>(
+          `/api/v1/admin/projects?limit=${PROJECTS_PAGE_SIZE}&offset=${offset}`,
+        );
+        const page = response.items || [];
+        items.push(...page);
+        if (page.length < PROJECTS_PAGE_SIZE) break;
+      }
       setProjects(items);
       setProjectsLoaded(true);
       const ids = new Set(items.map((x) => x.id));
       setBulkSelectedProjectIds((prev) => prev.filter((id) => ids.has(id)));
-      if (deepLinkProjectId) {
+      // A deep link chooses the project once; later reloads (after a door action) keep what the user selected.
+      if (deepLinkProjectId && appliedDeepLinkRef.current !== deepLinkProjectId) {
+        appliedDeepLinkRef.current = deepLinkProjectId;
         if (ids.has(deepLinkProjectId)) {
           setSelectedProjectId(deepLinkProjectId);
           setDeepLinkProjectMissing(false);
@@ -1374,7 +1361,7 @@ export default function ProjectsPage() {
           setDeepLinkProjectMissing(true);
         }
       } else {
-        setDeepLinkProjectMissing(false);
+        if (!deepLinkProjectId) setDeepLinkProjectMissing(false);
         setSelectedProjectId((currentProjectId) =>
           currentProjectId && ids.has(currentProjectId)
             ? currentProjectId
@@ -1389,18 +1376,21 @@ export default function ProjectsPage() {
   }, [deepLinkProjectId]);
 
   const loadLayout = useCallback(async (projectId: string) => {
+    // Only the latest requested project may write the layout: a slow answer for the previous project is dropped.
+    layoutRequestRef.current = projectId;
     setLoadingLayout(true);
     setError(null);
     try {
       const response = await apiFetch<ProjectDoorsLayoutResponse>(
         `/api/v1/admin/projects/${projectId}/doors/layout`,
       );
-      setLayout(response);
+      if (layoutRequestRef.current === projectId) setLayout(response);
     } catch (e) {
+      if (layoutRequestRef.current !== projectId) return;
       setLayout(null);
       setError(readableApiError(e, locale, t("projects.failedLoadLayout")));
     } finally {
-      setLoadingLayout(false);
+      if (layoutRequestRef.current === projectId) setLoadingLayout(false);
     }
   }, [locale, t]);
 
@@ -2506,10 +2496,9 @@ export default function ProjectsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      void handleBulkReconcile();
-                    }}
+                    onClick={() => setConfirmBulkReconcileOpen(true)}
                     disabled={
+                      !canManageProjectImports ||
                       bulkReconcileLoading ||
                       bulkSelectedProjectIds.length === 0
                     }
@@ -2522,6 +2511,28 @@ export default function ProjectsPage() {
                         : `${tt("projects.reconcile")} (${bulkSelectedProjectIds.length})`}
                   </button>
                 </div>
+                <ConfirmActionDialog
+                  open={confirmBulkReconcileOpen}
+                  onOpenChange={setConfirmBulkReconcileOpen}
+                  title={bulkOnlyFailedRuns ? tt("projects.retryFailed") : tt("projects.reconcile")}
+                  changes={copy(
+                    `The latest import of ${bulkSelectedProjectIds.length} selected project(s) is applied again${bulkOnlyFailedRuns ? " where it failed" : ""}. Doors already present are kept.`,
+                    `Последний импорт ${bulkSelectedProjectIds.length} выбранных объектов будет применён снова${bulkOnlyFailedRuns ? " там, где он завершился ошибкой" : ""}. Уже созданные двери сохраняются.`,
+                    `הייבוא האחרון של ${bulkSelectedProjectIds.length} פרויקטים שנבחרו יוחל שוב${bulkOnlyFailedRuns ? " היכן שנכשל" : ""}. דלתות קיימות נשמרות.`,
+                  )}
+                  keeps={hiddenBulkSelectionCount > 0 ? copy(
+                    `${hiddenBulkSelectionCount} of the selected projects are hidden by the current filter and are included.`,
+                    `${hiddenBulkSelectionCount} из выбранных объектов скрыты текущим фильтром и тоже будут обработаны.`,
+                    `${hiddenBulkSelectionCount} מהפרויקטים שנבחרו מוסתרים על ידי המסנן הנוכחי וייכללו גם הם.`,
+                  ) : undefined}
+                  confirmLabel={bulkOnlyFailedRuns ? tt("projects.retryFailed") : tt("projects.reconcile")}
+                  busy={bulkReconcileLoading}
+                  onConfirm={async () => {
+                    await handleBulkReconcile();
+                    setConfirmBulkReconcileOpen(false);
+                  }}
+                  testId="bulk-reconcile-confirm"
+                />
               </div>
               <div className="mt-3 border-t border-border-subtle pt-3">
                 <label className="inline-flex items-center gap-2 text-[12px] text-text-secondary">
@@ -2596,14 +2607,14 @@ export default function ProjectsPage() {
                         {t("projects.statusPrefix")}:{" "}
                         <StatusBadge
                           status={project.lifecycle_status || project.status}
-                          label={tokenLabel(project.lifecycle_status || project.status)}
+                          label={tokenLabel(project.lifecycle_status || project.status, "project")}
                           domain="project"
                         />
                         {project.health_status &&
                         project.health_status !== "NORMAL" ? (
                           <StatusBadge
                             status={project.health_status}
-                            label={tokenLabel(project.health_status)}
+                            label={tokenLabel(project.health_status, "health")}
                             domain="project"
                           />
                         ) : null}
@@ -2635,7 +2646,7 @@ export default function ProjectsPage() {
                   <span className="truncate text-14 font-medium text-text">{selectedProject.name}</span>
                   <StatusBadge
                     status={selectedProject.lifecycle_status || selectedProject.status}
-                    label={tokenLabel(selectedProject.lifecycle_status || selectedProject.status)}
+                    label={tokenLabel(selectedProject.lifecycle_status || selectedProject.status, "project")}
                     domain="project"
                   />
                   <span className="flex-1" />
@@ -2667,6 +2678,7 @@ export default function ProjectsPage() {
                             label={tokenLabel(
                               selectedProject.lifecycle_status ||
                                 selectedProject.status,
+                              "project",
                             )}
                             domain="project"
                           />
@@ -2674,7 +2686,7 @@ export default function ProjectsPage() {
                           selectedProject.health_status !== "NORMAL" ? (
                             <StatusBadge
                               status={selectedProject.health_status}
-                              label={tokenLabel(selectedProject.health_status)}
+                              label={tokenLabel(selectedProject.health_status, "health")}
                               domain="project"
                             />
                           ) : null}
@@ -2892,7 +2904,7 @@ export default function ProjectsPage() {
                         detail:
                           canViewProjectRates && projectPlanFact
                             ? `${copy("plan", "план", "תכנון")} ${formatMoney(projectPlanFact.planned_revenue_total)}`
-                            : commercialAccessRestrictedTitle,
+                            : financeTileState(projectPlanFactQuery),
                       },
                       {
                         key: "margin",
@@ -2901,7 +2913,7 @@ export default function ProjectsPage() {
                         detail:
                           canViewProjectRates && projectRisk
                             ? `${copy("profit", "прибыль", "רווח")} ${formatMoney(projectRisk.summary.actual_profit_total)}`
-                            : commercialAccessRestrictedTitle,
+                            : financeTileState(projectRiskQuery),
                       },
                     ]}
                   />

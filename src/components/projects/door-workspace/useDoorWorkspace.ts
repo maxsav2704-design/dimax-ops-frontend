@@ -554,8 +554,8 @@ export function useDoorWorkspace({
     setFocusedDoorComment("");
     setFocusedDoorOverrideReason("");
     setBulkAssignInstallerId("");
-    setMatrixIssueFilter("all");
-    setMatrixInstaller("all");
+    // Floors, houses and markings belong to one project: a filter kept from the previous one would hide every door.
+    resetMatrixFilters();
   }, [selectedProjectId]);
   useEffect(() => {
     const available = new Set(matrixDoorIds);

@@ -36,7 +36,9 @@ vi.mock("@/components/DashboardLayout", () => ({
 }));
 
 vi.mock("@/lib/api", () => ({
-  apiFetch: apiFetchMock,
+  // The page reads the project list page by page; the mocks below answer the first page under the plain path.
+  apiFetch: (path: string, ...rest: unknown[]) =>
+    apiFetchMock(String(path).replace(/\/api\/v1\/admin\/projects\?limit=200&offset=0$/, "/api/v1/admin/projects"), ...rest),
   apiDownload: apiDownloadMock,
   ApiError: class ApiError extends Error {
     code?: string;
@@ -1853,7 +1855,7 @@ describe("ProjectsPage", () => {
     expect(screen.getAllByText("55.0%").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Site access blocked").length).toBeGreaterThan(0);
     expect(screen.getAllByText("AZ-5001").length).toBeGreaterThan(0);
-    expect(screen.getByText("DANGER")).toBeInTheDocument();
+    expect(screen.getByText("Danger")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open project report" }));
     expect(pushMock).toHaveBeenCalledWith("/reports?project_id=project-1");
   }, 20000);
@@ -4443,4 +4445,49 @@ describe("ProjectsPage", () => {
     Object.defineProperty(window, "scrollY", { configurable: true, writable: true, value: 0 });
     Object.defineProperty(window, "matchMedia", { configurable: true, writable: true, value: originalMatchMedia });
   });
+  it("reads every page of projects so search and counts are not cut at the first page", async () => {
+    const firstPage = Array.from({ length: 200 }, (_, i) => ({ id: `project-${i + 1}`, name: `Site ${i + 1}`, address: `Street ${i + 1}`, status: "NEW" }));
+    apiFetchMock.mockImplementation(async (path: string) => {
+      const url = String(path);
+      if (url.includes("/api/v1/admin/door-types")) return [];
+      if (url === "/api/v1/admin/projects") return { items: firstPage };
+      if (url === "/api/v1/admin/projects?limit=200&offset=200") return { items: [{ id: "project-201", name: "Site 201", address: "Street 201", status: "NEW" }] };
+      if (url.includes("/import-mapping-profiles")) return { default_code: "auto_v1", items: [] };
+      if (url.includes("/doors/layout")) return { project_id: "project-1", total_doors: 0, buckets: [] };
+      if (url.includes("/import-runs/failed-queue")) return { items: [], total: 0, limit: 10, offset: 0 };
+      return {};
+    });
+    render(<ProjectsPage />, { wrapper: Providers });
+    expect(await screen.findByText("Select all filtered (201)")).toBeInTheDocument();
+    expect(apiFetchMock).toHaveBeenCalledWith("/api/v1/admin/projects?limit=200&offset=200");
+  }, 20000);
+
+  it("asks before reconciling the latest imports and names projects hidden by the filter", async () => {
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      const url = String(path);
+      if (url.includes("/api/v1/admin/door-types")) return [];
+      if (url === "/api/v1/admin/projects") return { items: [
+        { id: "project-1", name: "Project A", address: "Address A", status: "NEW" },
+        { id: "project-2", name: "Project B", address: "Address B", status: "NEW" },
+      ] };
+      if (url.includes("/import-runs/reconcile-latest")) {
+        expect(init?.method).toBe("POST");
+        return { items: [], total_projects: 2, reconciled_projects: 0, skipped_projects: 2, failed_projects: 0 };
+      }
+      if (url.includes("/import-mapping-profiles")) return { default_code: "auto_v1", items: [] };
+      if (url.includes("/doors/layout")) return { project_id: "project-1", total_doors: 0, buckets: [] };
+      if (url.includes("/import-runs/failed-queue")) return { items: [], total: 0, limit: 10, offset: 0 };
+      return {};
+    });
+    render(<ProjectsPage />, { wrapper: Providers });
+    expect(await screen.findByText("Select all filtered (2)")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Batch actions"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select all filtered (2)" }));
+    fireEvent.click(screen.getByRole("button", { name: /Reconcile \(2\)/ }));
+    const dialog = await screen.findByTestId("bulk-reconcile-confirm");
+    expect(dialog).toHaveTextContent("2 selected project(s)");
+    expect(apiFetchMock.mock.calls.some(([path]) => String(path).includes("reconcile-latest"))).toBe(false);
+    fireEvent.click(within(dialog).getByRole("button", { name: /Reconcile/ }));
+    await waitFor(() => expect(apiFetchMock.mock.calls.some(([path]) => String(path).includes("reconcile-latest"))).toBe(true));
+  }, 20000);
 });
