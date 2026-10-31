@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { AiSettingsCard } from "@/components/ai/AiSettingsCard";
+import { CompanyUsersCard } from "@/components/settings/CompanyUsersCard";
+import { MyPasswordCard } from "@/components/settings/MyPasswordCard";
 import { DimaxPageHeader } from "@/components/DimaxPageHeader";
 import {
   InlineNotice,
@@ -477,6 +479,7 @@ export default function SettingsPage() {
               </div>{" "}
             </WidgetCard>{" "}
             <AiSettingsCard canManage={canManageSettings} />
+            <MyPasswordCard />
             <WidgetCard
               title={copy(
                 "Integrations Snapshot",
@@ -854,6 +857,7 @@ export default function SettingsPage() {
                 </div>{" "}
               </div>{" "}
             </WidgetCard>{" "}
+            {session?.can_manage_users ? <CompanyUsersCard /> : null}
           </div>
         )}{" "}
       </div>{" "}
