@@ -52,8 +52,9 @@ export function MyPasswordCard() {
         </div>
         <div className="field-stack">
           <label className="field-label" htmlFor="my-repeat-password">{copy("Repeat the new password", "Повторите новый пароль", "חזרו על הסיסמה החדשה")}</label>
-          <input id="my-repeat-password" type="password" autoComplete="new-password" className="control-input" value={repeat} onChange={(e) => setRepeat(e.target.value)} aria-invalid={mismatch} />
-          {mismatch && <p className="text-12 text-status-problem-fg">{copy("The two passwords differ.", "Пароли не совпадают.", "הסיסמאות שונות.")}</p>}
+          <input id="my-repeat-password" type="password" autoComplete="new-password" className="control-input" value={repeat} onChange={(e) => setRepeat(e.target.value)} aria-invalid={mismatch}
+            aria-describedby={mismatch ? "my-repeat-password-error" : undefined} />
+          {mismatch && <p id="my-repeat-password-error" className="text-12 text-status-problem-fg">{copy("The two passwords differ.", "Пароли не совпадают.", "הסיסמאות שונות.")}</p>}
         </div>
         <button type="submit" className="dmx-primary-action h-10 w-full disabled:cursor-not-allowed disabled:opacity-60" disabled={!ready || save.isPending}>
           {copy("Change password", "Сменить пароль", "שנה סיסמה")}

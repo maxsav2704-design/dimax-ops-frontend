@@ -159,11 +159,54 @@ describe("InstallerProjectPage", () => {
     });
   }, 15000);
 
+  it("offers only planned extra work and refuses more than is left of the plan", async () => {
+    setupApiMock({ ...projectDetails, addons: { ...projectDetails.addons, plan: [] } });
+    renderSubject();
+    expect(await screen.findByText("Project One")).toBeInTheDocument();
+    // Nothing planned: nothing to record, the button stays off.
+    expect(screen.getByRole("button", { name: "Queue add-on fact" })).toBeDisabled();
+  }, 15000);
+
+  it("a second click after a lost answer reuses the key, so the server never records the work twice", async () => {
+    const withPlan = { ...projectDetails, addons: { ...projectDetails.addons,
+      plan: [{ addon_type_id: "addon-1", qty_planned: "5.00", qty_left: "5.00" }] } };
+    setupApiMock(withPlan);
+    const base = apiFetchMock.getMockImplementation()!;
+    let attempts = 0;
+    apiFetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path === "/api/v1/installer/addons/projects/project-1/facts" && init?.method === "POST") {
+        attempts += 1;
+        if (attempts === 1) throw new Error("Network lost");
+        return { ok: true };
+      }
+      return base(path, init);
+    });
+    renderSubject();
+    expect(await screen.findByText("Project One")).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText("1"), { target: { value: "2" } });
+    const button = screen.getByRole("button", { name: "Queue add-on fact" });
+    fireEvent.click(button);
+    await waitFor(() => expect(attempts).toBe(1));
+    await waitFor(() => expect(button).not.toBeDisabled());
+    fireEvent.click(button);
+    await waitFor(() => expect(attempts).toBe(2));
+    const keys = (apiFetchMock.mock.calls as Array<[string, RequestInit | undefined]>)
+      .filter(([path, init]) => path === "/api/v1/installer/addons/projects/project-1/facts" && init?.method === "POST")
+      .map(([, init]) => JSON.parse(String(init?.body)).client_event_id);
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toBe(keys[1]);
+  }, 15000);
+
   it("sends installer add-on fact action with payload", async () => {
-    setupApiMock();
+    setupApiMock({ ...projectDetails, addons: { ...projectDetails.addons,
+      plan: [{ addon_type_id: "addon-1", qty_planned: "5.00", qty_left: "4.00" }] } });
     renderSubject();
 
     expect(await screen.findByText("Project One")).toBeInTheDocument();
+    expect(screen.getByTestId("addon-left-hint")).toHaveTextContent("Left of the plan: 4");
+    fireEvent.change(screen.getByPlaceholderText("1"), { target: { value: "5" } });
+    expect(screen.getByTestId("addon-left-hint")).toHaveTextContent("More than is left of the plan (4)");
+    expect(screen.getByRole("button", { name: "Queue add-on fact" })).toBeDisabled();
 
     fireEvent.change(screen.getByPlaceholderText("1"), { target: { value: "3" } });
     fireEvent.change(screen.getByPlaceholderText("Optional comment"), {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { eventTypeLabel } from "@/lib/event-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
@@ -118,17 +119,6 @@ const EVENT_TYPE_OPTIONS: Array<{ value: EventType; label: string }> = [
   { value: "consultation", label: "Consultation" },
   { value: "inspection", label: "Inspection" },
 ];
-
-const EVENT_TYPE_LABELS: Record<
-  EventType,
-  { en: string; ru: string; he: string }
-> = {
-  installation: { en: "Installation", ru: "Установка", he: "התקנה" },
-  delivery: { en: "Delivery", ru: "Доставка", he: "אספקה" },
-  meeting: { en: "Meeting", ru: "Встреча", he: "פגישה" },
-  consultation: { en: "Consultation", ru: "Консультация", he: "ייעוץ" },
-  inspection: { en: "Inspection", ru: "Осмотр", he: "בדיקה" },
-};
 
 function toIsoLocal(date: string, hhmm: string): string {
   return new Date(`${date}T${hhmm}:00`).toISOString();
@@ -296,11 +286,7 @@ function localizedEventType(
   eventType: EventType,
   locale?: "en" | "ru" | "he",
 ): string {
-  return locale === "ru"
-    ? EVENT_TYPE_LABELS[eventType].ru
-    : locale === "he"
-      ? EVENT_TYPE_LABELS[eventType].he
-      : EVENT_TYPE_LABELS[eventType].en;
+  return eventTypeLabel(eventType, locale);
 }
 
 function getInitials(value: string): string {

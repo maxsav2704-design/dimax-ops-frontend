@@ -1,4 +1,5 @@
 "use client";
+import { eventTypeLabel } from "@/lib/event-types";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -32,6 +33,7 @@ type CalendarEvent = {
   waze_url: string | null;
   description: string | null;
   project_id: string | null;
+  project_name?: string | null;
   installer_ids: string[];
 };
 type CalendarEventsResponse = { items: CalendarEvent[] };
@@ -61,6 +63,8 @@ function scheduleQuickFilterClass(active: boolean): string {
 function scheduleStateCardClass(): string {
   return "rounded-lg border border-border bg-surface p-4 text-sm text-text-secondary";
 }
+const PAST_DAYS = 14;
+
 export default function InstallerSchedulePage() {
   const { locale, t } = useI18n();
   const copy = useCopy();
@@ -133,11 +137,15 @@ export default function InstallerSchedulePage() {
   }, [eventTypeFilter, isQueryInitialized, overdueOnly, preset, projectFilter]);
   const range = useMemo(() => {
     const starts = new Date(anchor);
+    if (overdueOnly) {
+      // Past events live before "now": look back 14 days instead of forward (before, this filter was always empty).
+      return { startsAt: new Date(starts.getTime() - PAST_DAYS * 24 * 60 * 60 * 1000).toISOString(), endsAt: starts.toISOString() };
+    }
     const ends = new Date(
       starts.getTime() + RANGE_HOURS[preset] * 60 * 60 * 1000,
     );
     return { startsAt: starts.toISOString(), endsAt: ends.toISOString() };
-  }, [anchor, preset]);
+  }, [anchor, overdueOnly, preset]);
   const eventsQuery = useQuery({
     queryKey: ["installer-schedule-events", range.startsAt, range.endsAt],
     queryFn: () =>
@@ -159,6 +167,13 @@ export default function InstallerSchedulePage() {
     }
     return unique;
   }, [eventTypeFilter, events]);
+  // The object's name as the server sends it; an object the list no longer holds is shown by its id.
+  const projectNames = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const event of events) if (event.project_id && event.project_name) names.set(event.project_id, event.project_name);
+    return names;
+  }, [events]);
+  const projectLabel = (projectId: string) => projectNames.get(projectId) || projectId;
   const projectOptions = useMemo(() => {
     const unique = Array.from(
       new Set(
@@ -226,10 +241,12 @@ export default function InstallerSchedulePage() {
                   {formatLocaleNumber(filteredEvents.length, locale)}
                 </LtrText>
               </span>{" "}
-              <span className="metric-chip">
-                {copy("Preset", "Пресет", "טווח")}{" "}
-                <LtrText>{preset.toUpperCase()}</LtrText>
-              </span>{" "}
+              {!overdueOnly && (
+                <span className="metric-chip">
+                  {copy("Preset", "Пресет", "טווח")}{" "}
+                  <LtrText>{preset.toUpperCase()}</LtrText>
+                </span>
+              )}{" "}
               <span className="metric-chip">
                 {overdueOnly
                   ? t("installerSchedule.overdueFocus")
@@ -240,7 +257,7 @@ export default function InstallerSchedulePage() {
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="metric-chip">
                   {copy("Focused project", "Фокус на проекте", "פרויקט במיקוד")}{" "}
-                  <LtrText>{projectFilter}</LtrText>
+                  {projectNames.has(projectFilter) ? projectLabel(projectFilter) : <LtrText>{projectFilter}</LtrText>}
                 </span>
                 <Link
                   href="/installer/calendar"
@@ -274,13 +291,18 @@ export default function InstallerSchedulePage() {
               >
                 {" "}
                 {RANGE_PRESET_BUTTONS.map((item) => {
-                  const active = preset === item;
+                  // The past window replaces the forward range, so no forward range reads as chosen while it is on;
+                  // picking one goes back to the forward view.
+                  const active = !overdueOnly && preset === item;
                   return (
                     <button
                       key={item}
                       type="button"
                       aria-pressed={active}
-                      onClick={() => setPreset(item)}
+                      onClick={() => {
+                        setPreset(item);
+                        setOverdueOnly(false);
+                      }}
                       className={scheduleQuickFilterClass(active)}
                     >
                       {" "}
@@ -333,7 +355,7 @@ export default function InstallerSchedulePage() {
                   {eventTypeOptions.map((eventType) => (
                     <option key={eventType} value={eventType}>
                       {" "}
-                      {eventType}{" "}
+                      {eventTypeLabel(eventType, locale)}{" "}
                     </option>
                   ))}{" "}
                 </select>{" "}
@@ -359,7 +381,7 @@ export default function InstallerSchedulePage() {
                   {projectOptions.map((projectId) => (
                     <option key={projectId} value={projectId}>
                       {" "}
-                      {projectId}{" "}
+                      {projectLabel(projectId)}{" "}
                     </option>
                   ))}{" "}
                 </select>{" "}
@@ -481,8 +503,7 @@ export default function InstallerSchedulePage() {
               key={event.id}
               className={cn(
                 "rounded-lg border border-border bg-surface p-4",
-                isOverdue &&
-                  "border-status-problem-border bg-status-problem-bg",
+                isOverdue && "bg-surface-subtle text-text-secondary",
               )}
             >
               {" "}
@@ -492,7 +513,13 @@ export default function InstallerSchedulePage() {
                   {" "}
                   <div className="font-medium">{event.title}</div>{" "}
                   <div className="mt-1 text-xs text-text-secondary">
-                    {event.event_type}
+                    {eventTypeLabel(event.event_type, locale)}
+                    {isOverdue && (
+                      // Past is said in words, not only by the muted colour.
+                      <span className="ms-2 rounded border border-border px-1.5 py-0.5 text-text-secondary">
+                        {copy("Past", "Прошло", "עבר")}
+                      </span>
+                    )}
                   </div>{" "}
                 </div>{" "}
                 <LtrText className="text-xs text-text-secondary">
@@ -506,7 +533,7 @@ export default function InstallerSchedulePage() {
                 <span className="rounded-md border border-border px-2 py-1 text-text">
                   {" "}
                   {event.project_id
-                    ? `${t("installerSchedule.projectPrefix")} ${event.project_id}`
+                    ? `${t("installerSchedule.projectPrefix")} ${projectLabel(event.project_id)}`
                     : t("installerSchedule.noProject")}
                 </span>{" "}
               </div>{" "}

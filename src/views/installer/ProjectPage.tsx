@@ -89,7 +89,8 @@ type InstallerIssue = {
 };
 type Reason = { id: string; code: string; name: string };
 type AddonType = { id: string; name: string; unit: string };
-type AddonPlan = { addon_type_id: string; qty_planned: string };
+// qty_left: what is left of the office plan after the work every installer recorded (the server bounds facts by it).
+type AddonPlan = { addon_type_id: string; qty_planned: string; qty_left?: string | null };
 type AddonFact = {
   id: string;
   addon_type_id: string;
@@ -622,6 +623,10 @@ export default function InstallerProjectPage({
       );
     },
   });
+  const [addonEventKey, setAddonEventKey] = useState(() => crypto.randomUUID());
+  useEffect(() => {
+    setAddonEventKey(crypto.randomUUID());
+  }, [selectedAddonTypeId, addonQtyDone, addonComment]);
   const addonMutation = useMutation({
     mutationFn: (payload: {
       addonTypeId: string;
@@ -646,6 +651,7 @@ export default function InstallerProjectPage({
       setActionError(null);
       setAddonQtyDone("1");
       setAddonComment("");
+      setAddonEventKey(crypto.randomUUID());
       await queryClient.invalidateQueries({
         queryKey: ["installer-project-details", projectId],
       });
@@ -664,7 +670,14 @@ export default function InstallerProjectPage({
     installMutation.isPending ||
     notInstalledMutation.isPending ||
     addonMutation.isPending;
-  const activeAddonTypeId = selectedAddonTypeId || addonTypes[0]?.id || "";
+  // Only the extra work the office planned can be recorded: other types are not offered at all.
+  const plannedAddonTypes = addonTypes.filter((type) => details?.addons.plan.some((item) => item.addon_type_id === type.id));
+  const activeAddonTypeId = plannedAddonTypes.some((type) => type.id === selectedAddonTypeId)
+    ? selectedAddonTypeId : plannedAddonTypes[0]?.id || "";
+  const activePlan = details?.addons.plan.find((item) => item.addon_type_id === activeAddonTypeId);
+  const addonLeft = activePlan?.qty_left == null ? null : Number(activePlan.qty_left);
+  const addonQty = Number(addonQtyDone.replace(",", "."));
+  const addonOverPlan = addonLeft !== null && Number.isFinite(addonQty) && addonQty > addonLeft;
   const activeDoorFilterCount = [
     orderFilter !== "ALL",
     locationFilter !== "ALL",
@@ -1259,12 +1272,12 @@ export default function InstallerProjectPage({
                   className="control-input mt-1"
                 >
                   {" "}
-                  {addonTypes.length === 0 && (
+                  {plannedAddonTypes.length === 0 && (
                     <option value="">
-                      {pt("installerProject.noAddonTypes")}
+                      {copy("The office has not planned extra work here", "Офис не запланировал доп. работы на этом объекте", "המשרד לא תכנן כאן עבודות נוספות")}
                     </option>
                   )}{" "}
-                  {addonTypes.map((item) => (
+                  {plannedAddonTypes.map((item) => (
                     <option key={item.id} value={item.id}>
                       {" "}
                       {item.name}{" "}
@@ -1282,7 +1295,20 @@ export default function InstallerProjectPage({
                   onChange={(event) => setAddonQtyDone(event.target.value)}
                   className="control-input mt-1"
                   placeholder="1"
+                  inputMode="decimal"
+                  aria-describedby="addon-left-hint"
+                  aria-invalid={addonOverPlan}
                 />{" "}
+                {addonLeft !== null && (
+                  <span id="addon-left-hint" data-testid="addon-left-hint" aria-live="polite"
+                    className={addonOverPlan ? "mt-1 block text-xs text-status-problem-fg" : "mt-1 block text-xs text-text-secondary"}>
+                    {addonOverPlan
+                      ? copy(`More than is left of the plan (${addonLeft}). Ask the office to raise the plan.`,
+                          `Больше, чем осталось по плану (${addonLeft}). Попросите офис увеличить план.`,
+                          `יותר ממה שנותר בתוכנית (${addonLeft}). בקשו מהמשרד להגדיל את התוכנית.`)
+                      : copy(`Left of the plan: ${addonLeft}`, `Осталось по плану: ${addonLeft}`, `נותר בתוכנית: ${addonLeft}`)}
+                  </span>
+                )}
               </label>{" "}
               <label className="block">
                 {" "}
@@ -1299,14 +1325,14 @@ export default function InstallerProjectPage({
               <button
                 type="button"
                 disabled={
-                  pendingAction || !activeAddonTypeId || !addonQtyDone.trim()
+                  pendingAction || !activeAddonTypeId || !addonQtyDone.trim() || addonOverPlan
                 }
                 onClick={() => {
                   addonMutation.mutate({
                     addonTypeId: activeAddonTypeId,
                     qtyDone: addonQtyDone.trim(),
                     comment: addonComment.trim(),
-                    clientEventId: crypto.randomUUID(),
+                    clientEventId: addonEventKey,
                   });
                 }}
                 className="dmx-primary-action h-10 disabled:cursor-not-allowed disabled:opacity-60"
@@ -1810,7 +1836,8 @@ export default function InstallerProjectPage({
                     <div className="text-xs text-text-secondary">
                       {" "}
                       {t("installerProject.plannedQty")}:{" "}
-                      {item.qty_planned}{" "}
+                      {item.qty_planned}
+                      {item.qty_left != null ? ` · ${copy("left", "осталось", "נותר")}: ${item.qty_left}` : ""}{" "}
                     </div>{" "}
                   </div>
                 );

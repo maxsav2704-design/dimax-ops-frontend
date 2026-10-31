@@ -69,6 +69,29 @@ describe("InstallerSchedulePage", () => {
     );
   });
 
+  it("names the object and the event type in words, in the card and in the filters", async () => {
+    window.history.pushState({}, "", "/installer/calendar?project_id=project-7");
+    const start = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const end = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+    apiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes("/api/v1/installer/calendar/events?")) {
+        return { items: [{ id: "event-7", title: "Frames", event_type: "installation", starts_at: start, ends_at: end,
+          location: null, waze_url: null, description: null, project_id: "project-7", project_name: "Bat Yam 1", installer_ids: [] }] };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <InstallerSchedulePage />
+      </QueryClientProvider>
+    );
+    expect(await screen.findByText("Project Bat Yam 1")).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Bat Yam 1" })).toHaveValue("project-7");
+    expect(screen.getByRole("option", { name: "Installation" })).toHaveValue("installation");
+    expect(screen.getByText(/Focused project/)).toHaveTextContent("Bat Yam 1");
+    expect(screen.queryByText(/project-7/)).toBeNull();
+  });
+
   it("applies project query filter and event-type filter", async () => {
     window.history.pushState({}, "", "/installer/calendar?project_id=project-2");
     const now = Date.now();
@@ -131,7 +154,7 @@ describe("InstallerSchedulePage", () => {
       "/installer/calendar"
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Overdue only" }));
+    fireEvent.click(screen.getByRole("button", { name: "Past 14 days" }));
     expect(await screen.findByText("No events match current filters.")).toBeInTheDocument();
   });
 
@@ -285,6 +308,13 @@ describe("InstallerSchedulePage", () => {
     expect(screen.getAllByText("No project").length).toBeGreaterThan(0);
     expect(screen.queryByText("Future no-project")).not.toBeInTheDocument();
     expect(screen.queryByText("Overdue with project")).not.toBeInTheDocument();
+    // The past filter asks the server for the 14 days before now, not the week ahead (it used to be always empty).
+    const eventsCall = (apiFetchMock.mock.calls as Array<[string]>).map(([path]) => path).filter((path) => path.includes("/calendar/events?")).at(-1)!;
+    const params = new URLSearchParams(eventsCall.split("?")[1]);
+    const from = new Date(params.get("starts_at")!).getTime();
+    const to = new Date(params.get("ends_at")!).getTime();
+    expect(Math.round((to - from) / 86_400_000)).toBe(14);
+    expect(to).toBeLessThanOrEqual(Date.now());
   });
 
   it("applies event type query filter on load", async () => {
@@ -425,8 +455,14 @@ describe("InstallerSchedulePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Today" }));
     expect(window.location.search).toContain("preset=today");
 
-    fireEvent.click(screen.getByRole("button", { name: "Overdue only" }));
+    fireEvent.click(screen.getByRole("button", { name: "Past 14 days" }));
     expect(window.location.search).toContain("overdue=1");
+    // The past window replaces the forward range: no forward range reads as chosen.
+    expect(screen.getByRole("button", { name: "Today" })).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(screen.getByRole("button", { name: "Today" }));
+    expect(window.location.search).not.toContain("overdue=1");
+    expect(screen.getByRole("button", { name: "Today" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Past 14 days" }));
 
     fireEvent.change(screen.getByLabelText("Project"), {
       target: { value: "NONE" },
@@ -441,7 +477,7 @@ describe("InstallerSchedulePage", () => {
     );
     expect(screen.getByLabelText("Event type")).toHaveValue("ALL");
     expect(screen.getByLabelText("Project")).toHaveValue("ALL");
-    expect(screen.getByRole("button", { name: "Overdue only" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Past 14 days" })).toHaveAttribute(
       "aria-pressed",
       "false"
     );

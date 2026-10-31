@@ -23,6 +23,7 @@ import { buildInstallerIssuesHref } from "@/views/installer/issue-links";
 import { LtrText } from "@/components/ui/LtrText";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
+import { MyPasswordCard } from "@/components/settings/MyPasswordCard";
 type ProjectQuickFilter = "ALL" | "PROBLEM" | "ACTIVE" | "TODAY_TASKS";
 type PriorityItem = {
   id: string;
@@ -1028,6 +1029,9 @@ export default function InstallerWorkspacePage() {
           ))}{" "}
         </section>{" "}
       </div>{" "}
+      <div className="mt-6 max-w-xl" id="my-password">
+        <MyPasswordCard />
+      </div>
     </div>
   );
 }

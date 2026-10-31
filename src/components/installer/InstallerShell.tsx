@@ -10,16 +10,35 @@ import {
   Wallet,
   Workflow,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { logoutSession } from "@/lib/api";
 import { MAIN_CONTENT_ID, SkipToContent } from "@/components/dimax/SkipToContent";
 import { useI18n } from "@/lib/i18n";
+import { pickLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
+// The web cabinet needs the network: without it nothing is saved, so the installer is told at once (the phone app
+// is the one that works offline).
+function useOnline(): boolean {
+  const [online, setOnline] = useState(true);
+  useEffect(() => {
+    const update = () => setOnline(typeof navigator === "undefined" ? true : navigator.onLine !== false);
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
+  return online;
+}
+
 export function InstallerShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const online = useOnline();
   const navItems = [
     {
       title: t("installerShell.workspace"),
@@ -134,6 +153,17 @@ export function InstallerShell({ children }: { children: ReactNode }) {
         </aside>{" "}
         <main id={MAIN_CONTENT_ID} tabIndex={-1} className="motion-page w-full min-w-0 max-w-full flex-1 outline-none">
           {" "}
+          {/* The live region stays in the page so screen readers announce the moment the network drops. */}
+          <div role="status" aria-live="polite">
+            {!online && (
+              <div data-testid="installer-offline" className="mb-4 rounded-lg border border-status-warning-border bg-status-warning-bg px-4 py-3 text-sm text-status-warning-fg">
+                {pickLocale(locale,
+                  "No network: nothing you do here is saved until the connection is back. The phone app keeps working offline.",
+                  "Нет сети: здесь ничего не сохранится, пока связь не вернётся. Приложение на телефоне работает и без сети.",
+                  "אין רשת: שום דבר כאן לא יישמר עד שהחיבור יחזור. האפליקציה בטלפון עובדת גם בלי רשת.")}
+              </div>
+            )}
+          </div>
           {children}{" "}
         </main>{" "}
       </div>{" "}
